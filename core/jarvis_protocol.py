@@ -152,6 +152,19 @@ Return ONLY valid JSON:
                 # We could log the internal monologue to a file to track her "mind"
                 with open(SETTINGS.data_dir / "internal_monologue.log", "a", encoding="utf-8") as f:
                     f.write(f"[{datetime.now().isoformat()}] {monologue}\n")
+                    
+                # 🚀 Wave 12: Infinite Memory Integration
+                try:
+                    from core.infinite_memory import get_infinite_memory
+                    memory = get_infinite_memory()
+                    memory.store_memory(
+                        content=monologue,
+                        memory_type="episodic",
+                        metadata={"source": "jarvis_monologue"}
+                    )
+                except Exception as e:
+                    print(f"[Jarvis] Failed to store thought in infinite memory: {e}")
+                
                 
                 # 🚀 Broadcast to Companion UI WebSockets
                 try:

@@ -21,6 +21,13 @@ class ToolRegistry:
         except ImportError:
             pass
             
+        # Wave 12: Infinite Memory Tools
+        try:
+            from core.infinite_memory import register_memory_tools
+            register_memory_tools(self)
+        except ImportError:
+            pass
+            
     def register_tool(self, name: str, func: Callable, description: str, parameters: Dict[str, Any]):
         """Register a new tool for the LLM to use."""
         self.tools[name] = {

@@ -28,8 +28,8 @@ class AgentSwarm:
         self.register_agent(
             name="ResearchAgent",
             role="Deep Researcher",
-            system_prompt="You are a meticulous researcher. Your goal is to gather facts, synthesize information, and avoid hallucinations. You can browse the web and read files.",
-            tools=["browser_search", "browser_navigate", "read_file"]
+            system_prompt="You are a meticulous researcher. Your goal is to gather facts, synthesize information, and avoid hallucinations. You can browse the web, read files, and recall from infinite memory.",
+            tools=["browser_search", "browser_navigate", "read_file", "recall_memory", "store_memory"]
         )
         self.register_agent(
             name="BrowserAgent",
