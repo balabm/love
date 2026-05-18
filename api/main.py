@@ -1457,7 +1457,7 @@ async def chat_endpoint(msg: Message):
 
 @app.get("/health")
 async def health():
-    return {"status": "Love is online", "user": "User"}
+    return {"status": "Love is online", "user": "Karthi"}
 
 @app.get("/modes")
 async def modes():
@@ -1465,6 +1465,97 @@ async def modes():
         "modes": ["general", "work", "personal", "fitness", "finance"]
     }
 
+@app.get("/connect")
+async def mobile_connect_page(request: Request):
+    """Mobile device landing page — shows QR, auto-registers device."""
+    local_ip = "192.168.1.4"
+    companion_url = f"http://{local_ip}:8000/companion"
+    tailscale_url = "http://100.93.81.95:8000/companion"
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Connect to LOVE</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:#030811;color:#b8d4e8;font-family:'Inter',sans-serif;min-height:100vh;
+display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:24px;}}
+h1{{font-family:'Orbitron',monospace;color:#00c8ff;font-size:1.8rem;letter-spacing:3px;text-align:center}}
+p{{color:#4a6a80;font-size:0.9rem;text-align:center;max-width:340px;line-height:1.6}}
+.card{{background:rgba(6,18,34,0.9);border:1px solid rgba(0,200,255,0.25);border-radius:16px;
+padding:28px;display:flex;flex-direction:column;align-items:center;gap:16px;max-width:380px;width:100%;
+box-shadow:0 0 40px rgba(0,200,255,0.08);}}
+.qr-wrap{{background:#030811;padding:16px;border-radius:12px;border:2px solid rgba(0,200,255,0.3)}}
+.qr-wrap img{{display:block;width:220px;height:220px}}
+.step{{display:flex;align-items:flex-start;gap:10px;font-size:0.85rem;color:#b8d4e8;width:100%}}
+.step-num{{background:rgba(0,200,255,0.15);color:#00c8ff;border-radius:50%;width:24px;height:24px;
+display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0}}
+.url-box{{background:rgba(0,200,255,0.07);border:1px solid rgba(0,200,255,0.2);border-radius:8px;
+padding:10px 14px;font-family:monospace;font-size:0.8rem;color:#00c8ff;word-break:break-all;width:100%;cursor:pointer;}}
+.url-box:hover{{background:rgba(0,200,255,0.12)}}
+.btn{{background:linear-gradient(135deg,rgba(0,200,255,0.25),rgba(0,200,255,0.1));
+color:#00c8ff;border:1px solid rgba(0,200,255,0.4);border-radius:8px;padding:12px 28px;
+font-family:'Orbitron',monospace;font-size:0.7rem;letter-spacing:2px;cursor:pointer;
+text-decoration:none;transition:all 0.2s;display:inline-block;}}
+.btn:hover{{background:rgba(0,200,255,0.3);box-shadow:0 0 20px rgba(0,200,255,0.3)}}
+.divider{{width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,200,255,0.3),transparent)}}
+.badge{{font-size:0.65rem;font-family:'Orbitron',monospace;letter-spacing:2px;
+padding:4px 10px;border-radius:99px;background:rgba(0,255,136,0.1);color:#00ff88;border:1px solid rgba(0,255,136,0.25)}}
+</style>
+</head>
+<body>
+<h1>L · O · V · E</h1>
+<p>Connect your mobile device to LOVE's neural network. Install as a PWA for a native app experience.</p>
+
+<div class="card">
+  <span class="badge">● MIND SYNC ACTIVE</span>
+
+  <div class="qr-wrap">
+    <img src="/static/mobile_qr.png" alt="Scan to connect">
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>Scan the QR code with your phone camera (same WiFi network)</div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>Safari/Chrome will open the Companion HUD — tap <strong style="color:#00c8ff">Add to Home Screen</strong></div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>LOVE installs as a native PWA — no App Store needed</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <p style="font-size:0.78rem;color:#4a6a80">Local WiFi URL:</p>
+  <div class="url-box" onclick="navigator.clipboard.writeText(this.textContent)">{companion_url}</div>
+
+  <a href="{companion_url}" class="btn">OPEN COMPANION HUD →</a>
+</div>
+
+<div class="card" style="gap:12px;padding:20px">
+  <p style="font-size:0.8rem;color:#9b5de5;font-weight:600">🌐 Remote Access (Tailscale)</p>
+  <p>Access LOVE from anywhere — mobile data, other networks, globally.</p>
+  <div class="url-box" onclick="navigator.clipboard.writeText(this.textContent)">{tailscale_url}</div>
+</div>
+
+<script>
+// Auto-register this device
+const deviceId = localStorage.getItem('love_device_id') || crypto.randomUUID();
+localStorage.setItem('love_device_id', deviceId);
+const name = navigator.userAgent.includes('Mobile') ? 'Mobile Device' : 'Browser Tab';
+fetch('/agi/sync/register', {{
+  method:'POST', headers:{{'Content-Type':'application/json'}},
+  body: JSON.stringify({{device_id: deviceId, device_name: name, device_type: navigator.userAgent.includes('Mobile') ? 'mobile' : 'browser'}})
+}});
+</script>
+</body></html>"""
+    return __import__('fastapi.responses', fromlist=['HTMLResponse']).HTMLResponse(html)
 
 # ========== SELF-EVOLUTION CORE ENDPOINTS ==========
 

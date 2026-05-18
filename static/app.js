@@ -7,7 +7,41 @@ const API_BASE = window.location.origin;
 const WS_PROTO = location.protocol === 'https:' ? 'wss:' : 'ws:';
 const WS_URL   = `${WS_PROTO}//${location.host}/agi/companion/ws`;
 
-/* ── DOM Refs ──────────────────────────────────────────────────── */
+/* ── Device Identity (Mind Sync) ───────────────────────────────── */
+const DEVICE_ID = (() => {
+  let id = localStorage.getItem('love_device_id');
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem('love_device_id', id); }
+  return id;
+})();
+const DEVICE_NAME = (() => {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua)) return 'iPad';
+  if (/Android.*Mobile/.test(ua)) return 'Android Phone';
+  if (/Android/.test(ua)) return 'Android Tablet';
+  return 'Desktop Browser';
+})();
+const DEVICE_TYPE = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+
+async function registerDevice() {
+  try {
+    await fetch(`${API_BASE}/agi/sync/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: DEVICE_ID, device_name: DEVICE_NAME, device_type: DEVICE_TYPE })
+    });
+  } catch { /* non-blocking */ }
+}
+
+// Heartbeat every 30s to stay marked online
+registerDevice();
+setInterval(() => {
+  fetch(`${API_BASE}/agi/sync/heartbeat`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_id: DEVICE_ID })
+  }).catch(() => {});
+}, 30000);
+
 const $  = id => document.getElementById(id);
 const wsStatus      = $('ws-status');
 const monologueFeed = $('monologue-feed');
