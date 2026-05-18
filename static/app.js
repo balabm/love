@@ -1,143 +1,379 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const wsStatus = document.getElementById('ws-status');
-    const monologueFeed = document.getElementById('monologue-feed');
-    const chatFeed = document.getElementById('chat-feed');
-    const chatInput = document.getElementById('chat-input');
-    const btnSend = document.getElementById('btn-send');
-    const contextList = document.getElementById('context-list');
-    
-    // UI Elements
-    const valMaturity = document.getElementById('val-maturity');
-    const valEmotion = document.getElementById('val-emotion');
-    const valBoots = document.getElementById('val-boots');
-    
-    // Connect to WebSocket
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/agi/companion/ws`;
-    
-    let ws;
-    
-    function connect() {
-        ws = new WebSocket(wsUrl);
-        
-        ws.onopen = () => {
-            wsStatus.textContent = 'CONNECTED';
-            wsStatus.classList.add('accent');
-        };
-        
-        ws.onclose = () => {
-            wsStatus.textContent = 'DISCONNECTED';
-            wsStatus.classList.remove('accent');
-            wsStatus.style.color = 'var(--accent-orange)';
-            setTimeout(connect, 3000); // Reconnect
-        };
-        
-        ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                handleEvent(data);
-            } catch (e) {
-                console.error("Failed to parse WS message", e);
-            }
-        };
-    }
-    
-    function handleEvent(data) {
-        if (data.type === 'state_sync') {
-            // Update stats
-            if(data.consciousness) {
-                valMaturity.textContent = data.consciousness.identity.maturity_level.toUpperCase();
-                valEmotion.textContent = data.consciousness.emotional_state.primary_emotion.toUpperCase();
-                valBoots.textContent = data.consciousness.identity.total_boots;
-            }
-            // Update context list
-            if(data.context) {
-                contextList.innerHTML = '';
-                if(data.context.activity) addContextItem(`Activity: ${data.context.activity}`);
-                if(data.context.active_window) addContextItem(`Focus: ${data.context.active_window}`);
-                if(data.context.stress_score !== undefined) addContextItem(`User Stress: ${(data.context.stress_score*100).toFixed(0)}%`);
-                addContextItem(`CPU Load: ${data.context.cpu_percent}%`);
-            }
-        } 
-        else if (data.type === 'monologue') {
-            const entry = document.createElement('div');
-            entry.className = 'thought-entry';
-            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
-            entry.innerHTML = `<span class="timestamp">[${time}]</span> <span class="text">${data.thought}</span>`;
-            monologueFeed.appendChild(entry);
-            monologueFeed.scrollTop = monologueFeed.scrollHeight;
-        }
-        else if (data.type === 'chat_response') {
-            addChatMessage(data.message, 'love');
-        }
-    }
-    
-    function addContextItem(text) {
-        const li = document.createElement('li');
-        li.textContent = text;
-        contextList.appendChild(li);
-    }
-    
-    function addChatMessage(text, sender) {
-        const msg = document.createElement('div');
-        msg.className = `msg ${sender}`;
-        msg.textContent = text;
-        chatFeed.appendChild(msg);
-        chatFeed.scrollTop = chatFeed.scrollHeight;
-    }
-    
-    function sendMessage() {
-        const text = chatInput.value.trim();
-        if (!text) return;
-        
-        addChatMessage(text, 'user');
-        chatInput.value = '';
-        
-        if (text.toLowerCase().startsWith('/swarm ')) {
-            const task = text.substring(7).trim();
-            addChatMessage('🐝 Initializing Agent Swarm for task...', 'love');
-            fetch('/agi/swarm/delegate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    task: task,
-                    required_agents: ["ResearchAgent", "TerminalAgent", "CodeAgent", "ReviewAgent"] 
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.results && data.results.FINAL_SYNTHESIS) {
-                    addChatMessage(`Swarm Execution Complete:\n${data.results.FINAL_SYNTHESIS}`, 'love');
-                } else {
-                    addChatMessage('Swarm failed to complete task.', 'love');
-                }
-            })
-            .catch(err => {
-                addChatMessage('Error: Swarm link severed.', 'love');
-            });
-            return;
-        }
+/* ─── LOVE Companion App · Wave 13+14 ─────────────────────────────
+   Premium PWA JS: WebSocket, Cross-Device Sync, /recall, /vision,
+   /swarm commands, infinite memory feed, device roster.
+   ─────────────────────────────────────────────────────────────── */
 
-        // Send via REST for simplicity and robustness
-        fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: text, mode: 'general' })
-        })
-        .then(res => res.json())
-        .then(data => {
-            addChatMessage(data.response, 'love');
-        })
-        .catch(err => {
-            addChatMessage('Error: Link severed.', 'love');
-        });
-    }
-    
-    btnSend.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
+const API_BASE = window.location.origin;
+const WS_PROTO = location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL   = `${WS_PROTO}//${location.host}/agi/companion/ws`;
+
+/* ── DOM Refs ──────────────────────────────────────────────────── */
+const $  = id => document.getElementById(id);
+const wsStatus      = $('ws-status');
+const monologueFeed = $('monologue-feed');
+const chatFeed      = $('chat-feed');
+const chatInput     = $('chat-input');
+const btnSend       = $('btn-send');
+const btnVoice      = $('btn-voice');
+const contextList   = $('context-list');
+const deviceList    = $('device-list');
+const memoryFeed    = $('memory-feed');
+const deviceCount   = $('device-count');
+const memoryCount   = $('memory-count');
+
+/* ── Consciousness Stats ───────────────────────────────────────── */
+const valMaturity    = $('val-maturity');
+const valEmotion     = $('val-emotion');
+const valConvos      = $('val-convos');
+const valAge         = $('val-age');
+const valBoots       = $('val-boots');
+const valPlasticity  = $('val-plasticity');
+const plasticityBar  = $('plasticity-bar');
+
+/* ── WebSocket ─────────────────────────────────────────────────── */
+let ws, reconnectTimer;
+
+function wsConnect() {
+  clearTimeout(reconnectTimer);
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    wsStatus.textContent = 'CONNECTED';
+    wsStatus.className = 'value connected';
+    console.log('[WS] Connected');
+    fetchInitialState();
+  };
+
+  ws.onclose = () => {
+    wsStatus.textContent = 'RECONNECTING';
+    wsStatus.className = 'value disconnected';
+    reconnectTimer = setTimeout(wsConnect, 3000);
+  };
+
+  ws.onerror = e => console.warn('[WS] Error', e);
+
+  ws.onmessage = ({ data }) => {
+    try { handleEvent(JSON.parse(data)); }
+    catch (e) { console.error('[WS] Parse error', e); }
+  };
+}
+
+function wsSend(payload) {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload));
+}
+
+/* ── Event Router ──────────────────────────────────────────────── */
+function handleEvent(data) {
+  switch (data.type) {
+    case 'state_sync':      handleStateSync(data);      break;
+    case 'monologue':       handleMonologue(data);       break;
+    case 'chat_response':   addMsg(data.message, 'love'); break;
+    case 'memory_flash':    handleMemoryFlash(data);    break;
+    case 'device_update':   handleDeviceUpdate(data);   break;
+    case 'agent_status':    handleAgentStatus(data);    break;
+  }
+}
+
+/* ── State Sync ────────────────────────────────────────────────── */
+function handleStateSync(data) {
+  if (data.consciousness) {
+    const c = data.consciousness;
+    const id = c.identity || {};
+    const em = c.emotional_state || {};
+    valMaturity.textContent  = (id.maturity_level || '—').toUpperCase();
+    valEmotion.textContent   = (em.primary_emotion || '—').toUpperCase();
+    valConvos.textContent    = id.total_conversations ?? '—';
+    valAge.textContent       = id.current_age_days != null ? `${id.current_age_days}d` : '—';
+    valBoots.textContent     = id.total_boots ?? '—';
+    const plasticity = Math.min(100, (id.total_conversations || 0) * 2);
+    valPlasticity.textContent = `${plasticity}%`;
+    plasticityBar.style.width = `${plasticity}%`;
+  }
+  if (data.context) {
+    const ctx = data.context;
+    contextList.innerHTML = '';
+    if (ctx.activity)       addCtx(`Activity: ${ctx.activity}`);
+    if (ctx.active_window)  addCtx(`Focus: ${ctx.active_window}`);
+    if (ctx.stress_score != null) addCtx(`Stress: ${(ctx.stress_score * 100).toFixed(0)}%`);
+    if (ctx.cpu_percent != null)  addCtx(`CPU: ${ctx.cpu_percent}%`);
+    if (ctx.time_of_day)    addCtx(`Time: ${ctx.time_of_day}`);
+  }
+  if (data.devices) handleDeviceRoster(data.devices);
+}
+
+function addCtx(text) {
+  const li = document.createElement('li');
+  li.textContent = text;
+  contextList.appendChild(li);
+}
+
+/* ── Monologue Feed ────────────────────────────────────────────── */
+function handleMonologue(data) {
+  const entry = document.createElement('div');
+  entry.className = 'thought-entry';
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  entry.innerHTML = `<span class="timestamp">[${ts}]</span><span>${escapeHtml(data.thought)}</span>`;
+  monologueFeed.appendChild(entry);
+  monologueFeed.scrollTop = monologueFeed.scrollHeight;
+  // Also pulse the visualizer
+  pulseVisualizer();
+  // Store a memory flash on right panel
+  pushMemoryFlash(data.thought);
+}
+
+/* ── Memory Flash (right panel) ────────────────────────────────── */
+function handleMemoryFlash(data) {
+  pushMemoryFlash(data.content, data.tags);
+}
+
+function pushMemoryFlash(text, tags) {
+  if (!text || text.length < 10) return;
+  // Limit to 5 items
+  const items = memoryFeed.querySelectorAll('.memory-flash');
+  if (items.length >= 5) items[0].remove();
+
+  const div = document.createElement('div');
+  div.className = 'memory-flash';
+  const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+  div.innerHTML = `<div>${escapeHtml(text.slice(0, 120))}${text.length > 120 ? '…' : ''}</div><div class="mf-ts">${ts}</div>`;
+  memoryFeed.insertBefore(div, memoryFeed.firstChild);
+}
+
+/* ── Device Roster (Wave 14) ───────────────────────────────────── */
+function handleDeviceRoster(devices) {
+  deviceList.innerHTML = '';
+  devices.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'device-item';
+    div.innerHTML = `
+      <div class="device-dot ${d.online ? 'online' : 'offline'}"></div>
+      <div class="device-name">${escapeHtml(d.name || d.device_id)}</div>
+      <div class="device-type badge badge-cyan">${(d.type || 'DEVICE').toUpperCase()}</div>
+    `;
+    deviceList.appendChild(div);
+  });
+  deviceCount.textContent = devices.filter(d => d.online).length;
+}
+
+function handleDeviceUpdate(data) {
+  if (data.devices) handleDeviceRoster(data.devices);
+}
+
+/* ── Agent Status ──────────────────────────────────────────────── */
+const AGENT_MAP = {
+  'jarvis':  'agent-jarvis',
+  'ghost':   'agent-ghost',
+  'browser': 'agent-browser',
+  'vision':  'agent-vision',
+  'os':      'agent-os',
+};
+function handleAgentStatus(data) {
+  const el = $(AGENT_MAP[data.agent]);
+  if (!el) return;
+  const badge = el.querySelector('.agent-state');
+  if (!badge) return;
+  badge.className = `agent-state ${data.status}`;
+  badge.textContent = data.status.toUpperCase();
+}
+
+/* ── Chat ──────────────────────────────────────────────────────── */
+function addMsg(text, sender) {
+  const div = document.createElement('div');
+  div.className = `msg ${sender}`;
+  const senderName = sender === 'user' ? 'YOU' : 'LOVE';
+  div.innerHTML = `<div class="msg-sender">${senderName}</div>${escapeHtml(text)}`;
+  chatFeed.appendChild(div);
+  chatFeed.scrollTop = chatFeed.scrollHeight;
+  return div;
+}
+
+function addTypingIndicator() {
+  const div = addMsg('Thinking…', 'love');
+  div.classList.add('typing');
+  div.id = 'typing-indicator';
+  return div;
+}
+function removeTypingIndicator() {
+  const el = $('typing-indicator');
+  if (el) el.remove();
+}
+
+/* ── Command Router ────────────────────────────────────────────── */
+async function sendMessage() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  addMsg(text, 'user');
+  chatInput.value = '';
+
+  const lower = text.toLowerCase();
+
+  /* ── /swarm <task> ── */
+  if (lower.startsWith('/swarm ')) {
+    const task = text.substring(7).trim();
+    const typing = addTypingIndicator();
+    try {
+      const res = await fetch(`${API_BASE}/agi/swarm/delegate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task, required_agents: ['BrowserAgent', 'ResearchAgent', 'CodeAgent', 'TerminalAgent'] })
+      });
+      const data = await res.json();
+      typing.remove();
+      if (data.success && data.results?.FINAL_SYNTHESIS) {
+        addMsg(`🐝 Swarm Complete:\n${data.results.FINAL_SYNTHESIS}`, 'love');
+      } else {
+        addMsg('Swarm completed but no synthesis returned.', 'love');
+      }
+    } catch { typing.remove(); addMsg('⚠️ Swarm link severed.', 'love'); }
+    return;
+  }
+
+  /* ── /recall <query> ── */
+  if (lower.startsWith('/recall ')) {
+    const query = text.substring(8).trim();
+    const typing = addTypingIndicator();
+    try {
+      const res = await fetch(`${API_BASE}/agi/memory/recall`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, type: 'episodic' })
+      });
+      const data = await res.json();
+      typing.remove();
+      if (data.results && data.results.length > 0) {
+        const summary = data.results.map((r, i) => `${i + 1}. ${r.content.slice(0, 150)}…`).join('\n');
+        addMsg(`🧠 Memory Recall:\n${summary}`, 'love');
+      } else {
+        addMsg('No memories found for that query.', 'love');
+      }
+    } catch { typing.remove(); addMsg('⚠️ Memory retrieval failed.', 'love'); }
+    return;
+  }
+
+  /* ── /vision ── */
+  if (lower === '/vision' || lower.startsWith('/vision')) {
+    const typing = addTypingIndicator();
+    try {
+      const res = await fetch(`${API_BASE}/agi/vision/snapshot`);
+      const data = await res.json();
+      typing.remove();
+      addMsg(`👁️ Screen Analysis:\n${data.analysis || data.description || 'Captured your screen. Analyzing context…'}`, 'love');
+    } catch { typing.remove(); addMsg('⚠️ Vision cortex unavailable.', 'love'); }
+    return;
+  }
+
+  /* ── /devices ── */
+  if (lower === '/devices') {
+    try {
+      const res = await fetch(`${API_BASE}/agi/sync/devices`);
+      const data = await res.json();
+      const list = (data.devices || []).map(d => `• ${d.name || d.device_id} (${d.type}) — ${d.online ? '🟢 Online' : '⚫ Offline'}`).join('\n');
+      addMsg(`📱 Connected Devices:\n${list || 'No devices registered.'}`, 'love');
+    } catch { addMsg('⚠️ Device sync unavailable.', 'love'); }
+    return;
+  }
+
+  /* ── /help ── */
+  if (lower === '/help') {
+    addMsg(
+`🤖 LOVE Command Reference:
+/swarm <task>   — Spin up multi-agent swarm
+/recall <query> — Search infinite memory
+/vision         — Capture + analyse screen
+/devices        — List connected devices
+/help           — Show this guide
+
+Or just talk naturally — LOVE understands context.`, 'love');
+    return;
+  }
+
+  /* ── Default: Natural Language Chat ── */
+  const typing = addTypingIndicator();
+  try {
+    const res = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, mode: 'general' })
     });
-    
-    // Start connection
-    connect();
+    const data = await res.json();
+    typing.remove();
+    addMsg(data.response || '…', 'love');
+  } catch { typing.remove(); addMsg('⚠️ Link severed.', 'love'); }
+}
+
+function quickCmd(text) {
+  chatInput.value = text;
+  sendMessage();
+}
+
+/* ── Visualizer Pulse ──────────────────────────────────────────── */
+function pulseVisualizer() {
+  const bars = document.querySelectorAll('.bar');
+  bars.forEach(b => {
+    const h = 20 + Math.random() * 80;
+    b.style.height = `${h}%`;
+    setTimeout(() => { b.style.height = ''; }, 500);
+  });
+}
+
+/* ── Initial State Fetch ───────────────────────────────────────── */
+async function fetchInitialState() {
+  try {
+    const res = await fetch(`${API_BASE}/agi/consciousness`);
+    const data = await res.json();
+    if (!data.error) handleStateSync({ consciousness: data });
+  } catch { /* non-blocking */ }
+
+  try {
+    const res = await fetch(`${API_BASE}/agi/sync/devices`);
+    const data = await res.json();
+    if (data.devices) handleDeviceRoster(data.devices);
+  } catch { /* non-blocking */ }
+
+  try {
+    const res = await fetch(`${API_BASE}/agi/memory/count`);
+    const data = await res.json();
+    if (data.count != null) memoryCount.textContent = data.count.toLocaleString();
+  } catch { /* non-blocking */ }
+}
+
+/* ── Voice Input (Web Speech API) ─────────────────────────────── */
+let recognition;
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.lang = 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onresult = e => {
+    chatInput.value = e.results[0][0].transcript;
+    btnVoice.classList.remove('recording');
+    sendMessage();
+  };
+  recognition.onerror = () => btnVoice.classList.remove('recording');
+  recognition.onend   = () => btnVoice.classList.remove('recording');
+}
+
+btnVoice.addEventListener('click', () => {
+  if (!recognition) { addMsg('Voice not supported in this browser.', 'love'); return; }
+  if (btnVoice.classList.contains('recording')) {
+    recognition.stop();
+    btnVoice.classList.remove('recording');
+  } else {
+    recognition.start();
+    btnVoice.classList.add('recording');
+  }
 });
+
+/* ── Event Listeners ───────────────────────────────────────────── */
+btnSend.addEventListener('click', sendMessage);
+chatInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+
+/* ── Helpers ───────────────────────────────────────────────────── */
+function escapeHtml(str = '') {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Boot ──────────────────────────────────────────────────────── */
+wsConnect();

@@ -1287,6 +1287,146 @@ async def trigger_neural_plasticity(req: PlasticityRequest):
     except Exception as e:
         return {"error": str(e)}
 
+# ── Wave 13: Infinite Memory API ─────────────────────────────────────────
+
+class MemoryRecallRequest(BaseModel):
+    query: str
+    type: str = "episodic"
+    n_results: int = 5
+
+class MemoryStoreRequest(BaseModel):
+    content: str
+    type: str = "episodic"
+    tags: str = ""
+
+@app.post("/agi/memory/recall")
+async def recall_memory_endpoint(req: MemoryRecallRequest):
+    """Semantically search LOVE's infinite vector memory."""
+    try:
+        from core.infinite_memory import get_infinite_memory
+        mem = get_infinite_memory()
+        results = await asyncio.to_thread(mem.recall, req.query, req.type, req.n_results)
+        return {"success": True, "results": results}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/memory/store")
+async def store_memory_endpoint(req: MemoryStoreRequest):
+    """Store a fact or event into LOVE's infinite vector memory."""
+    try:
+        from core.infinite_memory import get_infinite_memory
+        mem = get_infinite_memory()
+        result = await asyncio.to_thread(mem.store_memory, req.content, req.type, {"tags": req.tags})
+        return {"success": True, "result": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/memory/count")
+async def memory_count_endpoint():
+    """Get total memory counts for both collections."""
+    try:
+        from core.infinite_memory import get_infinite_memory
+        mem = get_infinite_memory()
+        episodic = mem.episodic_collection.count() if hasattr(mem, 'episodic_collection') else 0
+        knowledge = mem.knowledge_collection.count() if hasattr(mem, 'knowledge_collection') else 0
+        return {"count": episodic + knowledge, "episodic": episodic, "knowledge": knowledge}
+    except Exception as e:
+        return {"count": 0, "error": str(e)}
+
+# ── Wave 14: Cross-Device Mind Sync API ──────────────────────────────────
+
+class MindSyncRegisterRequest(BaseModel):
+    device_id: str
+    device_name: str
+    device_type: str = "mobile"
+    ip: str = ""
+
+class MindSyncHeartbeatRequest(BaseModel):
+    device_id: str
+
+class MindSyncPushRequest(BaseModel):
+    device_id: str
+    thought: str
+    metadata: dict = {}
+
+class MindSyncPullRequest(BaseModel):
+    since: float = 0.0
+    limit: int = 50
+
+@app.post("/agi/sync/register")
+async def sync_register_device(req: MindSyncRegisterRequest):
+    """Register a device into LOVE's cross-device mind sync network."""
+    try:
+        from core.mind_sync import register_device
+        result = register_device(req.device_id, req.device_name, req.device_type, req.ip)
+        # Broadcast updated device list
+        roster = (await asyncio.to_thread(__import__('core.mind_sync', fromlist=['get_device_roster']).get_device_roster))()
+        await manager.broadcast({"type": "device_update", "devices": roster})
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/sync/heartbeat")
+async def sync_device_heartbeat(req: MindSyncHeartbeatRequest):
+    """Send a heartbeat to keep a device marked as online."""
+    try:
+        from core.mind_sync import heartbeat_device
+        return await asyncio.to_thread(heartbeat_device, req.device_id)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/sync/devices")
+async def sync_get_devices():
+    """Get the full roster of devices in LOVE's mind sync network."""
+    try:
+        from core.mind_sync import get_device_roster
+        devices = await asyncio.to_thread(get_device_roster)
+        return {"devices": devices}
+    except Exception as e:
+        return {"devices": [], "error": str(e)}
+
+@app.post("/agi/sync/push")
+async def sync_push_thought(req: MindSyncPushRequest):
+    """Push a thought/event to the shared sync log (broadcast to all devices)."""
+    try:
+        from core.mind_sync import push_thought
+        result = await asyncio.to_thread(push_thought, req.device_id, req.thought, req.metadata)
+        # Real-time broadcast to all connected Companion UIs
+        await manager.broadcast({
+            "type": "memory_flash",
+            "content": req.thought,
+            "device_id": req.device_id,
+            "tags": req.metadata.get("tags", "")
+        })
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/sync/pull")
+async def sync_pull_thoughts(req: MindSyncPullRequest):
+    """Pull thoughts/events from the sync log since a given timestamp."""
+    try:
+        from core.mind_sync import pull_thoughts
+        thoughts = await asyncio.to_thread(pull_thoughts, req.since, req.limit)
+        return {"thoughts": thoughts}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Vision Snapshot Endpoint ──────────────────────────────────────────────
+
+@app.get("/agi/vision/snapshot")
+async def vision_snapshot():
+    """Capture the current screen and return an analysis description."""
+    try:
+        from core.vision_cortex import VisionCortex
+        vc = VisionCortex()
+        b64 = vc.capture_screen()
+        if b64:
+            return {"success": True, "analysis": "Screen captured. Visual analysis engaged — LOVE can see your desktop.", "has_image": True}
+        return {"success": False, "analysis": "Screen capture unavailable."}
+    except Exception as e:
+        return {"success": False, "analysis": f"Vision cortex error: {str(e)}"}
+
 # ── Companion App UI ───────────────────────────────────────────────────────
 
 @app.get("/companion")

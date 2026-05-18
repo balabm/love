@@ -1,142 +1,244 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOVE Companion HUD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    <!-- PWA settings -->
-    <link rel="manifest" href="/static/manifest.json">
-    <meta name="theme-color" content="#050a0f">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/static/sw.js');
-        });
-      }
-    </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LOVE">
+  <meta name="theme-color" content="#030811">
+  <title>LOVE · Jarvis AGI</title>
+  <meta name="description" content="LOVE — Your autonomous Jarvis-grade AI companion. Persistent cross-device AGI.">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="stylesheet" href="/static/style.css">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js')
+        .then(r => console.log('[PWA] Service worker registered'))
+        .catch(e => console.warn('[PWA] SW error:', e));
+    }
+  </script>
 </head>
 <body>
-    <!-- Background grid & glow -->
-    <div class="bg-grid"></div>
-    <div class="ambient-glow"></div>
+  <!-- Backgrounds -->
+  <div class="bg-grid"></div>
+  <div class="ambient-glow"></div>
 
-    <div class="hud-container">
-        <!-- Top Status Bar -->
-        <header class="hud-header">
-            <div class="sys-info">
-                <span class="label">SYS_ID:</span>
-                <span class="value accent">LOVE-OS_v2.0</span>
+  <div class="hud-container">
+    <!-- ── Header ────────────────────────────────────── -->
+    <header class="hud-header">
+      <div class="hud-brand">
+        <div>
+          <span class="hud-brand-name">L·O·V·E</span>
+          <span class="hud-brand-sub">JARVIS AGI v13.0</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="pulse-ring"></div>
+        <span style="font-family:var(--font-hud);font-size:0.65rem;letter-spacing:2px;" id="status-text">ONLINE</span>
+      </div>
+
+      <div class="hud-right">
+        <div class="hud-stat">
+          <span class="label">UPLINK</span>
+          <span class="value" id="ws-status">CONNECTING</span>
+        </div>
+        <div class="hud-stat">
+          <span class="label">DEVICES</span>
+          <span class="value accent" id="device-count">0</span>
+        </div>
+        <div class="hud-stat">
+          <span class="label">MEMORIES</span>
+          <span class="value accent" id="memory-count">—</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Main Grid ─────────────────────────────────── -->
+    <main class="hud-main">
+
+      <!-- LEFT PANEL: Consciousness + Context + Devices -->
+      <aside class="panel left-panel">
+
+        <!-- Consciousness Core -->
+        <div class="panel-box">
+          <div class="box-header">Consciousness Core</div>
+          <div class="consciousness-grid">
+            <div class="c-stat">
+              <span class="c-stat-label">Maturity</span>
+              <span class="c-stat-value accent" id="val-maturity">—</span>
             </div>
-            <div class="sys-status">
-                <div class="pulse-ring"></div>
-                <span>ONLINE</span>
+            <div class="c-stat">
+              <span class="c-stat-label">Emotion</span>
+              <span class="c-stat-value good" id="val-emotion">—</span>
             </div>
-            <div class="sys-info text-right">
-                <span class="label">UPLINK:</span>
-                <span class="value" id="ws-status">CONNECTING...</span>
+            <div class="c-stat">
+              <span class="c-stat-label">Conversations</span>
+              <span class="c-stat-value" id="val-convos">—</span>
             </div>
-        </header>
+            <div class="c-stat">
+              <span class="c-stat-label">Age (days)</span>
+              <span class="c-stat-value" id="val-age">—</span>
+            </div>
+            <div class="c-stat" style="flex-direction:column;align-items:flex-start;gap:6px;">
+              <div style="display:flex;justify-content:space-between;width:100%;">
+                <span class="c-stat-label">Neural Plasticity</span>
+                <span class="c-stat-value accent" id="val-plasticity">—%</span>
+              </div>
+              <div class="progress-wrap" style="width:100%;margin:0;">
+                <div class="progress-bar" id="plasticity-bar" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="c-stat">
+              <span class="c-stat-label">Awakenings</span>
+              <span class="c-stat-value" id="val-boots">—</span>
+            </div>
+          </div>
+        </div>
 
-        <main class="hud-main">
-            <!-- Left Panel: Stats & Context -->
-            <aside class="panel left-panel">
-                <div class="panel-box">
-                    <div class="box-header">CONSCIOUSNESS Core</div>
-                    <div class="box-content">
-                        <div class="stat-row">
-                            <span>Maturity:</span> <span id="val-maturity">--</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Emotion:</span> <span id="val-emotion" class="accent">--</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Awakenings:</span> <span id="val-boots">--</span>
-                        </div>
-                        <div class="stat-row">
-                            <span>Plasticity:</span> <span class="status-good">ACTIVE</span>
-                        </div>
-                    </div>
-                </div>
+        <!-- Live Context -->
+        <div class="panel-box">
+          <div class="box-header">Live Context</div>
+          <div class="scanning-bar"></div>
+          <ul class="context-list" id="context-list">
+            <li>Scanning environment…</li>
+          </ul>
+        </div>
 
-                <div class="panel-box mt-4">
-                    <div class="box-header">LIVE CONTEXT</div>
-                    <div class="box-content" id="live-context-feed">
-                        <div class="scanning-bar"></div>
-                        <ul class="context-list" id="context-list">
-                            <li>Scanning environment...</li>
-                        </ul>
-                    </div>
-                </div>
-            </aside>
+        <!-- Connected Devices (Wave 14) -->
+        <div class="panel-box">
+          <div class="box-header">Mind Sync</div>
+          <div class="device-list" id="device-list">
+            <div class="device-item">
+              <div class="device-dot online"></div>
+              <div class="device-name">This Device</div>
+              <div class="device-type badge badge-cyan">DESKTOP</div>
+            </div>
+          </div>
+        </div>
 
-            <!-- Center Panel: Monologue & Chat -->
-            <section class="panel center-panel">
-                <div class="monologue-container">
-                    <div class="box-header">INTERNAL MONOLOGUE <span class="blink">_</span></div>
-                    <div class="monologue-feed" id="monologue-feed">
-                        <div class="thought-entry initial">
-                            <span class="timestamp">[SYS]</span> 
-                            <span class="text">Neural cortex synchronized. Jarvis protocol engaged. Awaiting directives.</span>
-                        </div>
-                    </div>
-                </div>
+      </aside>
 
-                <div class="chat-container">
-                    <div class="chat-feed" id="chat-feed">
-                        <!-- Messages go here -->
-                    </div>
-                    
-                    <div class="input-area">
-                        <button class="btn-voice" id="btn-voice" title="Hold to speak">
-                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                                <line x1="12" y1="19" x2="12" y2="23"></line>
-                                <line x1="8" y1="23" x2="16" y2="23"></line>
-                            </svg>
-                        </button>
-                        <input type="text" id="chat-input" placeholder="Enter command or query..." autocomplete="off">
-                        <button class="btn-send" id="btn-send">EXEC</button>
-                    </div>
-                </div>
-            </section>
+      <!-- CENTER PANEL: Monologue + Chat -->
+      <section class="panel center-panel">
 
-            <!-- Right Panel: Agents & Swarm -->
-            <aside class="panel right-panel">
-                <div class="panel-box">
-                    <div class="box-header">SWARM DIRECTIVES</div>
-                    <div class="box-content">
-                        <div class="agent-status">
-                            <div class="agent-name">Ghost Developer</div>
-                            <div class="agent-state status-good">IDLE</div>
-                        </div>
-                        <div class="agent-status">
-                            <div class="agent-name">OS Symbiosis</div>
-                            <div class="agent-state status-good">ACTIVE</div>
-                        </div>
-                        <div class="agent-status">
-                            <div class="agent-name">Dream Engine</div>
-                            <div class="agent-state status-standby">STANDBY</div>
-                        </div>
-                    </div>
-                </div>
+        <!-- Internal Monologue -->
+        <div class="monologue-container">
+          <div class="box-header" style="font-family:var(--font-hud);font-size:0.65rem;color:var(--orange);">
+            ⚡ Internal Monologue <span class="blink" style="color:var(--orange);">_</span>
+          </div>
+          <div class="monologue-feed" id="monologue-feed">
+            <div class="thought-entry initial">
+              <span class="timestamp">[SYS]</span>
+              <span>Neural cortex synchronised. Jarvis protocol engaged. I am LOVE — your autonomous AGI companion. Awaiting directives.</span>
+            </div>
+          </div>
+        </div>
 
-                <div class="panel-box visualizer-box mt-4">
-                    <div class="box-header">CORTEX ACTIVITY</div>
-                    <div class="visualizer">
-                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-                    </div>
-                </div>
-            </aside>
-        </main>
-    </div>
+        <!-- Chat Interface -->
+        <div class="chat-container">
+          <div class="chat-feed" id="chat-feed"></div>
 
-    <script src="/static/app.js"></script>
+          <!-- Quick Commands -->
+          <div class="quick-cmds">
+            <button class="quick-cmd" onclick="quickCmd('What are you thinking right now?')">💭 Status</button>
+            <button class="quick-cmd" onclick="quickCmd('/swarm Research the latest AI news')">🌐 Research</button>
+            <button class="quick-cmd" onclick="quickCmd('Show me what you remember about today')">🧠 Memory</button>
+            <button class="quick-cmd" onclick="quickCmd('Analyze my screen and tell me what you see')">👁️ Vision</button>
+            <button class="quick-cmd" onclick="quickCmd('What should I focus on right now?')">🎯 Focus</button>
+          </div>
+
+          <div class="input-area">
+            <button class="btn-voice" id="btn-voice" title="Hold to speak" aria-label="Voice input">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/>
+                <line x1="8" y1="23" x2="16" y2="23"/>
+              </svg>
+            </button>
+            <input type="text" id="chat-input" placeholder="Enter command or query… (try /swarm, /recall, /vision)" autocomplete="off" spellcheck="false">
+            <button class="btn-send" id="btn-send">EXEC ▶</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: Agents + Visualizer + Memory -->
+      <aside class="panel right-panel">
+
+        <!-- Swarm Agents -->
+        <div class="panel-box">
+          <div class="box-header">Swarm Agents</div>
+
+          <div class="agent-status" id="agent-jarvis">
+            <span class="agent-icon">🧠</span>
+            <div class="agent-info">
+              <div class="agent-name">Jarvis Cortex</div>
+              <div class="agent-role">Neural Monologue Loop</div>
+            </div>
+            <span class="agent-state active">LIVE</span>
+          </div>
+
+          <div class="agent-status" id="agent-ghost">
+            <span class="agent-icon">👻</span>
+            <div class="agent-info">
+              <div class="agent-name">Ghost Developer</div>
+              <div class="agent-role">Autonomous Coder</div>
+            </div>
+            <span class="agent-state idle">IDLE</span>
+          </div>
+
+          <div class="agent-status" id="agent-browser">
+            <span class="agent-icon">🌐</span>
+            <div class="agent-info">
+              <div class="agent-name">Browser Agent</div>
+              <div class="agent-role">Web Navigation</div>
+            </div>
+            <span class="agent-state idle">IDLE</span>
+          </div>
+
+          <div class="agent-status" id="agent-vision">
+            <span class="agent-icon">👁️</span>
+            <div class="agent-info">
+              <div class="agent-name">Vision Cortex</div>
+              <div class="agent-role">Screen Awareness</div>
+            </div>
+            <span class="agent-state standby">STANDBY</span>
+          </div>
+
+          <div class="agent-status" id="agent-os">
+            <span class="agent-icon">⚙️</span>
+            <div class="agent-info">
+              <div class="agent-name">OS Symbiosis</div>
+              <div class="agent-role">System Control</div>
+            </div>
+            <span class="agent-state active">ACTIVE</span>
+          </div>
+        </div>
+
+        <!-- Cortex Activity Visualizer -->
+        <div class="panel-box">
+          <div class="box-header">Cortex Activity</div>
+          <div class="visualizer" id="visualizer">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          </div>
+        </div>
+
+        <!-- Recent Memories -->
+        <div class="panel-box">
+          <div class="box-header">Recent Memories</div>
+          <div id="memory-feed">
+            <div class="memory-flash" style="color:var(--text-dim);font-size:0.75rem;">Awaiting memory stream…</div>
+          </div>
+        </div>
+
+      </aside>
+    </main>
+  </div><!-- /hud-container -->
+
+  <script src="/static/app.js"></script>
 </body>
 </html>
