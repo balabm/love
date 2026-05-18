@@ -93,6 +93,31 @@ document.addEventListener('DOMContentLoaded', () => {
         addChatMessage(text, 'user');
         chatInput.value = '';
         
+        if (text.toLowerCase().startsWith('/swarm ')) {
+            const task = text.substring(7).trim();
+            addChatMessage('🐝 Initializing Agent Swarm for task...', 'love');
+            fetch('/agi/swarm/delegate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    task: task,
+                    required_agents: ["ResearchAgent", "TerminalAgent", "CodeAgent", "ReviewAgent"] 
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.results && data.results.FINAL_SYNTHESIS) {
+                    addChatMessage(`Swarm Execution Complete:\n${data.results.FINAL_SYNTHESIS}`, 'love');
+                } else {
+                    addChatMessage('Swarm failed to complete task.', 'love');
+                }
+            })
+            .catch(err => {
+                addChatMessage('Error: Swarm link severed.', 'love');
+            });
+            return;
+        }
+
         // Send via REST for simplicity and robustness
         fetch('/chat', {
             method: 'POST',
