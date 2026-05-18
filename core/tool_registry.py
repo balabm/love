@@ -14,6 +14,13 @@ class ToolRegistry:
         self.tools: Dict[str, Dict[str, Any]] = {}
         self._register_default_tools()
         
+        # Wave 11: Browser Tools
+        try:
+            from core.browser_agent import register_browser_tools
+            register_browser_tools(self)
+        except ImportError:
+            pass
+            
     def register_tool(self, name: str, func: Callable, description: str, parameters: Dict[str, Any]):
         """Register a new tool for the LLM to use."""
         self.tools[name] = {

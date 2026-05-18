@@ -29,7 +29,13 @@ class AgentSwarm:
             name="ResearchAgent",
             role="Deep Researcher",
             system_prompt="You are a meticulous researcher. Your goal is to gather facts, synthesize information, and avoid hallucinations. You can browse the web and read files.",
-            tools=["web_search", "read_file"]
+            tools=["browser_search", "browser_navigate", "read_file"]
+        )
+        self.register_agent(
+            name="BrowserAgent",
+            role="Web Surfer",
+            system_prompt="You are a web surfing agent. You search the internet for exact answers to questions, navigate into the top links, and extract the exact information required.",
+            tools=["browser_search", "browser_navigate"]
         )
         self.register_agent(
             name="CodeAgent",
