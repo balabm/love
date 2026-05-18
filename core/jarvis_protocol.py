@@ -84,10 +84,23 @@ class NeuralCortex:
         except Exception:
             conscious_context = ""
         
+        # 🚀 WAVE 9: OMNIMODAL VISION CORTEX 🚀
+        try:
+            from core.vision_cortex import get_vision_cortex
+            vision = get_vision_cortex()
+            # If enabled, it grabs a screenshot and asks the VLM what it sees.
+            # To save API costs/tokens on a rapid loop, we can just use simple OCR or window titles,
+            # but for TRUE AGI, we let the VLM summarize the screen.
+            # Here we just pass the fact that vision is active. The actual image processing
+            # might be too slow for a 45s loop, so we only trigger full vision analysis if the context seems unclear.
+            vision_context = "\n=== VISION CORTEX ===\nVision is ONLINE. You can request a screen analysis by returning a specific action.\n"
+        except Exception:
+            vision_context = ""
+
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
-{conscious_context}
+{conscious_context}{vision_context}
 === LIVE CONTEXT ===
 {rich_context}
 ====================
@@ -101,14 +114,20 @@ Think about what Karthi is doing right now.
 4. Is it a good time to suggest a break or offer help?
 
 You must output your internal thought process as JSON. 
-If you believe you need to proactively speak to Karthi out loud (unprompted), set "proactive_speech" to your speech. Only speak if it's genuinely helpful or critical. Do not annoy him. Limit speaking to once every 10-15 minutes unless urgent.
-If you need to execute a background action (like analyzing a repo), specify it.
+If you believe you need to proactively speak to Karthi out loud (unprompted), set "proactive_speech" to your speech.
+If you need to execute a background action (like analyzing a repo), specify it in "background_action".
+If you want to physically interact with his computer (e.g., click a button, type text, focus a window, or take a screenshot), provide an "action_plan".
 
 Return ONLY valid JSON:
 {{
     "internal_monologue": "Your private thoughts about the situation.",
     "proactive_speech": "What you want to say out loud to Karthi (or null if you should stay silent)",
-    "background_action": "Any action you want to trigger (e.g. 'analyze_active_file') (or null)"
+    "background_action": "Any high-level action you want to trigger (e.g. 'analyze_active_file') (or null)",
+    "action_plan": [
+        {{ "action": "type", "args": {{ "text": "hello world" }} }},
+        {{ "action": "click", "args": {{ "x": 500, "y": 500 }} }},
+        {{ "action": "focus", "args": {{ "title": "Chrome" }} }}
+    ] // Or null. ONLY use this if absolutely necessary to control his PC.
 }}
 """
         
@@ -126,6 +145,7 @@ Return ONLY valid JSON:
                 monologue = data.get("internal_monologue", "")
                 speech = data.get("proactive_speech")
                 action = data.get("background_action")
+                action_plan = data.get("action_plan")
                 
                 self.last_thought = monologue
                 
@@ -189,6 +209,14 @@ Return ONLY valid JSON:
                     print(f"[Jarvis] ⚙️ Triggering background action: {action}")
                     self._trigger_action(action)
                     
+                # 🚀 Wave 9: Action Engine Computer Use
+                if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
+                    print(f"[Jarvis] 🤖 Executing Autonomous Computer Action Plan: {len(action_plan)} steps.")
+                    try:
+                        from core.action_engine import get_action_engine
+                        get_action_engine().execute_action_plan(action_plan)
+                    except Exception as ae:
+                        print(f"[Jarvis] Action Engine failed: {ae}")
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
