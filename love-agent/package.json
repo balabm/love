@@ -1,0 +1,15 @@
+{
+  "name": "love-agent",
+  "version": "1.0.0",
+  "description": "LOVE Office Laptop Agent — syncs Teams, Outlook, Calendar to LOVE",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "install-service": "node install-service.js"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^2.9.1",
+    "node-notifier": "^10.0.1",
+    "node-fetch": "^2.7.0"
+  }
+}

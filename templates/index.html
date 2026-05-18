@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LOVE Companion HUD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- PWA settings -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#050a0f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/static/sw.js');
+        });
+      }
+    </script>
+</head>
+<body>
+    <!-- Background grid & glow -->
+    <div class="bg-grid"></div>
+    <div class="ambient-glow"></div>
+
+    <div class="hud-container">
+        <!-- Top Status Bar -->
+        <header class="hud-header">
+            <div class="sys-info">
+                <span class="label">SYS_ID:</span>
+                <span class="value accent">LOVE-OS_v2.0</span>
+            </div>
+            <div class="sys-status">
+                <div class="pulse-ring"></div>
+                <span>ONLINE</span>
+            </div>
+            <div class="sys-info text-right">
+                <span class="label">UPLINK:</span>
+                <span class="value" id="ws-status">CONNECTING...</span>
+            </div>
+        </header>
+
+        <main class="hud-main">
+            <!-- Left Panel: Stats & Context -->
+            <aside class="panel left-panel">
+                <div class="panel-box">
+                    <div class="box-header">CONSCIOUSNESS Core</div>
+                    <div class="box-content">
+                        <div class="stat-row">
+                            <span>Maturity:</span> <span id="val-maturity">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Emotion:</span> <span id="val-emotion" class="accent">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Awakenings:</span> <span id="val-boots">--</span>
+                        </div>
+                        <div class="stat-row">
+                            <span>Plasticity:</span> <span class="status-good">ACTIVE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-box mt-4">
+                    <div class="box-header">LIVE CONTEXT</div>
+                    <div class="box-content" id="live-context-feed">
+                        <div class="scanning-bar"></div>
+                        <ul class="context-list" id="context-list">
+                            <li>Scanning environment...</li>
+                        </ul>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Center Panel: Monologue & Chat -->
+            <section class="panel center-panel">
+                <div class="monologue-container">
+                    <div class="box-header">INTERNAL MONOLOGUE <span class="blink">_</span></div>
+                    <div class="monologue-feed" id="monologue-feed">
+                        <div class="thought-entry initial">
+                            <span class="timestamp">[SYS]</span> 
+                            <span class="text">Neural cortex synchronized. Jarvis protocol engaged. Awaiting directives.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-container">
+                    <div class="chat-feed" id="chat-feed">
+                        <!-- Messages go here -->
+                    </div>
+                    
+                    <div class="input-area">
+                        <button class="btn-voice" id="btn-voice" title="Hold to speak">
+                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                        </button>
+                        <input type="text" id="chat-input" placeholder="Enter command or query..." autocomplete="off">
+                        <button class="btn-send" id="btn-send">EXEC</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Panel: Agents & Swarm -->
+            <aside class="panel right-panel">
+                <div class="panel-box">
+                    <div class="box-header">SWARM DIRECTIVES</div>
+                    <div class="box-content">
+                        <div class="agent-status">
+                            <div class="agent-name">Ghost Developer</div>
+                            <div class="agent-state status-good">IDLE</div>
+                        </div>
+                        <div class="agent-status">
+                            <div class="agent-name">OS Symbiosis</div>
+                            <div class="agent-state status-good">ACTIVE</div>
+                        </div>
+                        <div class="agent-status">
+                            <div class="agent-name">Dream Engine</div>
+                            <div class="agent-state status-standby">STANDBY</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-box visualizer-box mt-4">
+                    <div class="box-header">CORTEX ACTIVITY</div>
+                    <div class="visualizer">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

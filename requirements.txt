@@ -1,0 +1,59 @@
+# Project LOVE — Core Dependencies
+# Install with: pip install -r requirements.txt
+
+# API & Web
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+python-multipart>=0.0.9
+
+# LLM & AI
+langchain>=0.1.0
+langchain-community>=0.0.20
+# For newer Ollama integration (removes deprecation warning)
+langchain-ollama>=0.1.0
+
+# Memory & Vector Search
+chromadb>=0.4.18
+sentence-transformers>=2.2.2
+
+# Data & Config
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# Finance & Market Data
+requests>=2.31.0
+# Optional: For real-time market data
+# websocket-client>=1.6.0
+
+# Voice (Optional - install separately as needed)
+# openai-whisper>=20231117      # Speech-to-text
+# pvporcupine>=3.0.0            # Wake word detection
+# gtts>=2.4.0                   # Google TTS
+# pyttsx3>=2.90                 # Offline TTS
+
+# Git Integration (Optional)
+# GitPython>=3.1.40             # Auto-commit features
+
+# ── JARVIS AWARENESS LAYER ──
+
+# System awareness (CPU, RAM, battery, processes, active window)
+psutil>=5.9.0                   # Required for awareness engine
+
+# Google Services Integration (Calendar, Gmail, Drive)
+# Run: pip install google-auth-oauthlib google-auth-httplib2 google-api-python-client
+# google-auth-oauthlib>=1.2.0
+# google-auth-httplib2>=0.2.0
+# google-api-python-client>=2.120.0
+
+# PDF parsing for document analyst (optional)
+# pypdf>=3.17.0                 # Read PDF files
+
+# Phone Bridge via KDE Connect (Android)
+# No pip package needed — uses kdeconnect-cli via subprocess
+# Install KDE Connect from Microsoft Store
+
+# Development
+# pytest>=7.4.0                 # Testing
+# black>=23.0.0                 # Code formatting
+# mypy>=1.7.0                   # Type checking

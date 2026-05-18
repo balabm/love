@@ -1,0 +1,4450 @@
+# ── LOVE Self-Bootstrap: silently installs anything missing ──
+# LOVE never tells the user to run pip manually. It does it itself.
+import sys, subprocess
+
+_REQUIRED = {
+    # Core API
+    "python-multipart":  "python-multipart",
+    "langchain_ollama":  "langchain-ollama",
+    # Google integration
+    "google.auth":                   "google-auth",
+    "google.oauth2.credentials":     "google-auth",
+    "google_auth_oauthlib":          "google-auth-oauthlib",
+    "googleapiclient":               "google-api-python-client",
+    # Whisper voice transcription
+    "whisper":           "openai-whisper",
+}
+
+for _mod, _pkg in _REQUIRED.items():
+    try:
+        __import__(_mod)
+    except (ImportError, ModuleNotFoundError):
+        print(f"[LOVE] Auto-installing {_pkg}...", flush=True)
+        try:
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "--quiet", _pkg],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            print(f"[LOVE] [OK] {_pkg} installed", flush=True)
+        except Exception as _e:
+            print(f"[LOVE] Could not install {_pkg}: {_e}", flush=True)
+# ── End Bootstrap ──
+
+import asyncio
+from pathlib import Path
+from typing import Optional, Dict, Any, List
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi.requests import Request
+from pydantic import BaseModel
+from datetime import datetime
+
+# Companion App WebSocket Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                pass
+
+manager = ConnectionManager()
+
+from core.agent import chat
+from core.evolution import (
+    check_for_crashes,
+    propose_fix_for_crash,
+    apply_fix,
+    auto_install_for_feature,
+    format_crash_for_chat,
+    crash_monitor,
+    CRASH_LOG_DIR as EVOLUTION_DATA_DIR,
+    run_weekly_optimization_check,
+    apply_code_optimization,
+    get_optimization_status
+)
+from tools.guardian import (
+    check_work_status,
+    morning_checkin,
+    enforce_work_limit,
+    add_dev_folder,
+    add_meeting,
+    format_work_status_for_chat,
+    execute_nine_hour_hard_stop,
+    get_day_summary,
+    get_ghost_suggestions,
+    scan_project_for_staging
+)
+from tools.finance import (
+    get_market_signal,
+    scan_all_markets,
+    get_portfolio,
+    record_trade,
+    add_to_watchlist,
+    format_signal_for_chat,
+    get_sentiment_analysis,
+    get_trade_advice,
+    format_trade_advice_for_chat,
+    scan_alpha_opportunities
+)
+from voice.stt import quick_listen, is_voice_available
+from voice.tts import speak_text, is_tts_available, execute_system_command
+from core.sync import (
+    sync_heartbeat,
+    register_device,
+    get_sync_status,
+    push_sync_entry,
+    pull_sync_entries,
+    get_personality_modifications,
+    get_hardware_profile,
+    launch_work_sequence,
+    DEVICE_MOBILE,
+    DEVICE_DESKTOP,
+    DEVICE_GAMING,
+    DEVICE_LAPTOP
+)
+from agents import (
+    get_fitness_status,
+    log_workout,
+    get_learning_progress,
+    add_study_material,
+    log_mood,
+    get_emotional_insights,
+    get_task_overview,
+    create_project
+)
+from core.orchestrator import (
+    get_unified_state,
+    run_orchestrator_cycle,
+    get_active_interventions,
+    get_orchestrator
+)
+from core.heartbeat import (
+    start_heartbeat,
+    stop_heartbeat,
+    get_heartbeat,
+    add_notification_callback
+)
+from core.awareness import start_awareness, get_full_snapshot, get_context_summary
+from core.context_engine import start_context_engine, get_context_dict, get_live_context
+from core.doc_analyst import start_doc_analyst, get_analyst
+from core.settings import get_settings as _get_settings
+import uvicorn
+
+# Autonomous systems
+try:
+    from core.internet import web_search, research_topic, get_news, read_page
+    INTERNET_AVAILABLE = True
+except ImportError:
+    INTERNET_AVAILABLE = False
+
+try:
+    from core.idle_mind import (
+        start_idle_mind, stop_idle_mind, get_idle_status,
+        force_think, get_news_digest, ping_active as idle_ping
+    )
+    IDLE_MIND_AVAILABLE = True
+except ImportError:
+    IDLE_MIND_AVAILABLE = False
+
+try:
+    from core.adaptive import get_adaptive_summary, get_adaptation_context
+    ADAPTIVE_AVAILABLE = True
+except ImportError:
+    ADAPTIVE_AVAILABLE = False
+
+try:
+    from core.decisions import get_decision_stats, get_recent_decisions
+    DECISIONS_AVAILABLE = True
+except ImportError:
+    DECISIONS_AVAILABLE = False
+
+try:
+    from core.file_inspector import inspect_and_ask, get_inspection_summary
+    FILE_INSPECTOR_AVAILABLE = True
+except ImportError:
+    FILE_INSPECTOR_AVAILABLE = False
+
+try:
+    from core.unified_awareness import fuse_all, what_should_love_do_now
+    UNIFIED_AVAILABLE = True
+except ImportError:
+    UNIFIED_AVAILABLE = False
+
+try:
+    from core.sandbox import test_feature_draft
+    SANDBOX_AVAILABLE = True
+except ImportError:
+    SANDBOX_AVAILABLE = False
+
+try:
+    from core.vision import read_image_text, describe_image, analyze_screenshot, detect_image_objects
+    VISION_AVAILABLE = True
+except ImportError:
+    VISION_AVAILABLE = False
+
+try:
+    from core.planner import plan_and_execute, is_complex_query
+    PLANNER_AVAILABLE = True
+except ImportError:
+    PLANNER_AVAILABLE = False
+
+try:
+    from core.on_demand_models import (
+        list_capabilities, check_capability, install_capability,
+        run_capability, auto_detect_needed_capability
+    )
+    ONDEMAND_AVAILABLE = True
+except ImportError:
+    ONDEMAND_AVAILABLE = False
+
+try:
+    from core.system_control import (
+        open_app, open_url, open_file, take_screenshot, type_text,
+        press_key, media_control, lock_screen, list_open_windows,
+        focus_window, run_shell, handle_user_command, get_recent_actions
+    )
+    SYSCTRL_AVAILABLE = True
+except ImportError:
+    SYSCTRL_AVAILABLE = False
+
+try:
+    from core.predictive import (
+        predict_next_need, get_predictive_summary, get_recent_predictions,
+        detect_routines, record_event
+    )
+    PREDICTIVE_AVAILABLE = True
+except ImportError:
+    PREDICTIVE_AVAILABLE = False
+
+try:
+    from core.knowledge_graph import (
+        graph_summary, how_is, find_entities, get_relations,
+        stale_things, ingest_text as kg_ingest
+    )
+    KG_AVAILABLE = True
+except ImportError:
+    KG_AVAILABLE = False
+
+try:
+    from core.conversation_flow import get_session_summary, reset_session
+    FLOW_AVAILABLE = True
+except ImportError:
+    FLOW_AVAILABLE = False
+
+try:
+    from core.voice_loop import start_voice_loop, stop_voice_loop, get_voice_status
+    VOICE_LOOP_AVAILABLE = True
+except ImportError:
+    VOICE_LOOP_AVAILABLE = False
+
+try:
+    from core.proactive import (
+        evaluate_and_act, score_interruption, deliver_interruption,
+        record_reaction, set_do_not_disturb, clear_dnd, get_interruption_stats
+    )
+    PROACTIVE_AVAILABLE = True
+except ImportError:
+    PROACTIVE_AVAILABLE = False
+
+try:
+    from core.executive import (
+        prep_for_meeting, extract_tasks, add_task, complete_task, get_tasks,
+        draft_follow_up, generate_daily_brief, set_reminder, check_due_reminders
+    )
+    EXECUTIVE_AVAILABLE = True
+except ImportError:
+    EXECUTIVE_AVAILABLE = False
+
+try:
+    from core.emotional import (
+        detect_mood, record_mood, get_emotional_summary, get_tone_override
+    )
+    EMOTIONAL_AVAILABLE = True
+except ImportError:
+    EMOTIONAL_AVAILABLE = False
+
+try:
+    from core.system_control import (
+        get_clipboard, set_clipboard, get_active_window,
+        list_processes, kill_process, search_files, get_system_info
+    )
+    SYSCTRL_DEEP = True
+except ImportError:
+    SYSCTRL_DEEP = False
+
+try:
+    from core.long_term_memory import (
+        add_episodic, add_semantic, add_procedural,
+        query_episodic, query_semantic, query_procedural,
+        remember, get_life_timeline, get_life_summary,
+        get_karthi_profile
+    )
+    LTM_AVAILABLE = True
+except ImportError:
+    LTM_AVAILABLE = False
+
+try:
+    from core.memory_consolidation import consolidate_period, get_consolidation_history
+    CONSOLIDATION_AVAILABLE = True
+except ImportError:
+    CONSOLIDATION_AVAILABLE = False
+
+# AGI-Level Systems
+try:
+    from core.autonomous_agent import get_autonomous_agent
+    AUTONOMOUS_AGENT_AVAILABLE = True
+except ImportError:
+    AUTONOMOUS_AGENT_AVAILABLE = False
+
+try:
+    from core.psychological_model import get_psychological_model
+    PSYCHOLOGICAL_MODEL_AVAILABLE = True
+except ImportError:
+    PSYCHOLOGICAL_MODEL_AVAILABLE = False
+
+try:
+    from core.predictive_intelligence import get_predictive_engine
+    PREDICTIVE_INTELLIGENCE_AVAILABLE = True
+except ImportError:
+    PREDICTIVE_INTELLIGENCE_AVAILABLE = False
+
+try:
+    from core.self_improvement import get_self_improvement_engine
+    SELF_IMPROVEMENT_AVAILABLE = True
+except ImportError:
+    SELF_IMPROVEMENT_AVAILABLE = False
+
+try:
+    from core.strategic_planning import get_strategic_planner
+    STRATEGIC_PLANNING_AVAILABLE = True
+except ImportError:
+    STRATEGIC_PLANNING_AVAILABLE = False
+
+try:
+    from core.autonomous_actions import get_autonomous_executor
+    AUTONOMOUS_ACTIONS_AVAILABLE = True
+except ImportError:
+    AUTONOMOUS_ACTIONS_AVAILABLE = False
+
+try:
+    from core.world_model import get_world_model
+    WORLD_MODEL_AVAILABLE = True
+except ImportError:
+    WORLD_MODEL_AVAILABLE = False
+
+try:
+    from core.meta_cognition import get_meta_cognition_engine
+    META_COGNITION_AVAILABLE = True
+except ImportError:
+    META_COGNITION_AVAILABLE = False
+
+try:
+    from core.cross_domain_reasoning import get_cross_domain_reasoner
+    CROSS_DOMAIN_REASONING_AVAILABLE = True
+except ImportError:
+    CROSS_DOMAIN_REASONING_AVAILABLE = False
+
+try:
+    from core.continuous_learning import get_continuous_learning_engine
+    CONTINUOUS_LEARNING_AVAILABLE = True
+except ImportError:
+    CONTINUOUS_LEARNING_AVAILABLE = False
+
+# ═══ EXTREME AGI MODULES ═══
+try:
+    from core.consciousness import get_consciousness
+    CONSCIOUSNESS_AVAILABLE = True
+except ImportError:
+    CONSCIOUSNESS_AVAILABLE = False
+
+try:
+    from core.temporal_memory import get_temporal_memory
+    TEMPORAL_MEMORY_AVAILABLE = True
+except ImportError:
+    TEMPORAL_MEMORY_AVAILABLE = False
+
+try:
+    from core.reasoning_chain import get_reasoning_chain
+    REASONING_CHAIN_AVAILABLE = True
+except ImportError:
+    REASONING_CHAIN_AVAILABLE = False
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # ========== STARTUP ==========
+    print("[API] Project LOVE starting up...")
+    
+    # Register TTS notification callback for heartbeat
+    def tts_notification(trigger):
+        # Use unified awareness + decision engine before speaking
+        should_speak = True
+        try:
+            if UNIFIED_AVAILABLE and DECISIONS_AVAILABLE:
+                action = what_should_love_do_now()
+                if not action or action.get("action") != "notify_user":
+                    should_speak = False
+                elif action.get("situation", {}).get("title") != getattr(trigger, 'title', ''):
+                    # Heartbeat trigger might be stale compared to unified awareness
+                    should_speak = action.get("situation", {}).get("score", 0) > 0.5
+        except Exception:
+            pass
+
+        if should_speak and is_tts_available():
+            try:
+                speak_text(trigger.message, block=False)
+            except Exception:
+                pass
+    
+    try:
+        add_notification_callback(tts_notification)
+        start_heartbeat()
+        print("[API] Proactive heartbeat started")
+    except Exception as e:
+        print(f"[API] Heartbeat start error: {e}")
+    
+    # Start Jarvis awareness engine
+    try:
+        from core.awareness import start_awareness
+        settings = _get_settings()
+        watch_paths = getattr(settings.work, 'dev_folders', []) or []
+        start_awareness(watch_paths=watch_paths if watch_paths else None)
+        print("[API] Awareness engine started")
+    except Exception as e:
+        print(f"[API] Awareness engine error: {e}")
+    
+    # Start document analyst
+    try:
+        from pathlib import Path
+        settings = _get_settings()
+        watch_paths = getattr(settings.work, 'dev_folders', []) or []
+        analyst = start_doc_analyst(watch_paths=watch_paths if watch_paths else None)
+        # Auto-watch the project's own directory
+        import os as _os
+        project_root = str(Path(__file__).parent.parent)
+        analyst.add_watch_path(project_root)
+        print("[API] Document analyst started")
+    except Exception as e:
+        print(f"[API] Doc analyst error: {e}")
+
+    # Start context engine (fuses everything)
+    try:
+        start_context_engine(interval_seconds=60)
+        print("[API] Context engine started")
+    except Exception as e:
+        print(f"[API] Context engine error: {e}")
+
+    # Try connecting Google services silently
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if gs.is_connected():
+            print("[API] Google services connected")
+        else:
+            print("[API] Google services not configured (optional — see /integrations/google/status)")
+    except Exception as e:
+        print(f"[API] Google services: {e}")
+
+    # Try connecting phone bridge silently
+    try:
+        from integrations.phone_bridge import PhoneBridge
+        bridge = PhoneBridge.get_instance()
+        if bridge.is_connected():
+            print("[API] Phone bridge connected")
+        else:
+            print("[API] Phone bridge not connected (optional — see /integrations/phone/status)")
+    except Exception as e:
+        print(f"[API] Phone bridge: {e}")
+
+    # Run initial orchestration cycle
+    try:
+        run_orchestrator_cycle()
+        print("[API] Initial orchestration cycle complete")
+    except Exception as e:
+        print(f"[API] Orchestrator error: {e}")
+
+    # Start idle mind — autonomous exploration
+    try:
+        if IDLE_MIND_AVAILABLE:
+            start_idle_mind()
+            print("[API] Idle mind started — LOVE will think autonomously when quiet")
+    except Exception as e:
+        print(f"[API] Idle mind error: {e}")
+
+    # Start voice loop — always-listening wake word
+    try:
+        if VOICE_LOOP_AVAILABLE:
+            result = start_voice_loop()
+            if result.get("success"):
+                print("[API] Voice loop started — say 'Hey LOVE' to wake me up")
+            else:
+                print(f"[API] Voice loop not started: {result.get('error', 'unknown')}")
+    except Exception as e:
+        print(f"[API] Voice loop error: {e}")
+
+    # Load saved user profile into memory
+    try:
+        import json as _json
+        from pathlib import Path
+        profile_path = Path("data/profile.json")
+        if profile_path.exists():
+            with open(profile_path) as f:
+                profile_data = _json.load(f)
+            name = profile_data.get("name", "Karthi")
+            profession = profile_data.get("profession", "")
+            company = profile_data.get("company", "")
+            location = profile_data.get("location", "")
+            goals = ", ".join(profile_data.get("goals", []))
+            interests = ", ".join(profile_data.get("interests", [])) if isinstance(profile_data.get("interests"), list) else profile_data.get("interests", "")
+            routine = profile_data.get("routine", {})
+            profile_summary = (
+                f"User profile: Name={name}, Profession={profession}, Company={company}, "
+                f"Location={location}, Goals=[{goals}], Interests=[{interests}], "
+                f"Wake={routine.get('wakeTime','')}, Work hours={routine.get('workHours','')}"
+            )
+            from core.long_term_memory import add_episodic
+            add_episodic(
+                summary=profile_summary,
+                detail="User profile information",
+                timestamp=datetime.now().isoformat(),
+                emotion="neutral",
+                intensity=0.5,
+                tags=["profile", "user"],
+                source="profile_load"
+            )
+            print(f"[API] Profile loaded for {name}")
+    except Exception as e:
+        print(f"[API] Profile load: {e}")
+
+    print("[API] LOVE is online and monitoring")
+    
+    # Self-healing check on startup
+    try:
+        from core.self_healing import monitor_log_file
+        import sys
+        from pathlib import Path
+        
+        # Check for recent errors
+        error_alert = monitor_log_file(Path("data/api_log.txt"))
+        if error_alert:
+            print(f"[Self-Healing] {error_alert}")
+    except Exception:
+        pass
+
+    # ═══ CONSCIOUSNESS AWAKENING ═══
+    try:
+        if CONSCIOUSNESS_AVAILABLE:
+            consciousness = get_consciousness()
+            is_fresh = consciousness.is_fresh_instance()
+            is_new_hw = consciousness.is_new_hardware()
+            identity = consciousness.identity
+            if is_fresh:
+                print(f"[AGI] ✦ LOVE born for the first time. Soul ID: {identity.soul_id[:8]}")
+            elif is_new_hw:
+                print(f"[AGI] ✦ LOVE detected new hardware. Adapting...")
+            else:
+                print(f"[AGI] ✦ Awakening #{identity.total_boots}. Age: {identity.current_age_days} days. "
+                      f"Maturity: {identity.maturity_level}. Conversations: {identity.total_conversations}.")
+    except Exception as e:
+        print(f"[AGI] Consciousness init error: {e}")
+
+    # ═══ TEMPORAL MEMORY CONSOLIDATION ═══
+    try:
+        if TEMPORAL_MEMORY_AVAILABLE:
+            tmem = get_temporal_memory()
+            result = tmem.consolidate()
+            print(f"[AGI] * Memory consolidation: {result.get('consolidated', 0)} strengthened, "
+                  f"{result.get('decayed', 0)} faded, {result.get('remaining', 0)} alive.")
+    except Exception as e:
+        print(f"[AGI] Temporal memory init error: {e}")
+
+    # ═══ SELF-IMPROVEMENT DAEMON AUTO-START ═══
+    try:
+        if DAEMON_AVAILABLE:
+            daemon = get_improvement_daemon()
+            daemon.start(interval_minutes=30)
+            print("[AGI] * Self-improvement daemon started (every 30 min).")
+    except Exception as e:
+        print(f"[AGI] Daemon start error: {e}")
+
+    # ═══ OS SYMBIOSIS & AWARENESS AUTO-START ═══
+    try:
+        from core.awareness import start_awareness
+        from core.os_symbiosis import get_os_symbiosis
+        from core.ghost_dev import get_ghost_dev
+        from core.jarvis_protocol import start_jarvis_protocol
+        
+        # Start awareness scanner (every 10s)
+        start_awareness()
+        
+        # Start OS Symbiosis daemon
+        os_engine = get_os_symbiosis()
+        os_engine.start()
+        
+        # Start Ghost Developer daemon
+        ghost_dev = get_ghost_dev()
+        ghost_dev.start()
+        
+        # Start Jarvis Protocol (Continuous Neural Cortex)
+        start_jarvis_protocol()
+        
+        print("[AGI] * OS Symbiosis, Awareness, Ghost Developer & Jarvis Protocol started.")
+    except Exception as e:
+        print(f"[AGI] Daemon start error: {e}")
+    
+    yield  # Application runs here
+    
+    # ========== SHUTDOWN ==========
+    print("[API] Project LOVE shutting down...")
+
+    # Stop self-improvement daemon
+    try:
+        if DAEMON_AVAILABLE:
+            daemon = get_improvement_daemon()
+            daemon.stop()
+            print("[AGI] Self-improvement daemon stopped.")
+    except Exception:
+        pass
+
+    # Stop OS Symbiosis & Awareness & Ghost Dev
+    try:
+        from core.awareness import get_awareness
+        from core.os_symbiosis import get_os_symbiosis
+        from core.ghost_dev import get_ghost_dev
+        from core.jarvis_protocol import stop_jarvis_protocol
+        get_awareness().stop()
+        get_os_symbiosis().stop()
+        get_ghost_dev().stop()
+        stop_jarvis_protocol()
+        print("[AGI] OS Symbiosis, Ghost Dev & Jarvis Protocol stopped.")
+    except Exception:
+        pass
+
+    # Save consciousness state before shutdown
+    try:
+        if CONSCIOUSNESS_AVAILABLE:
+            consciousness = get_consciousness()
+            consciousness.think("Shutting down. Saving state.")
+            consciousness._save_consciousness()
+            consciousness._save_identity()
+            print("[AGI] Consciousness state saved.")
+    except Exception:
+        pass
+
+    stop_heartbeat()
+    print("[API] Heartbeat stopped. Goodbye.")
+
+
+app = FastAPI(title="LOVE Core API", version="2.0.0", lifespan=lifespan)
+
+# Mount Static Files and Templates for Companion App
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class Message(BaseModel):
+    text: str
+    mode: str = "general"
+
+class FixRequest(BaseModel):
+    crash_id: str
+
+class FeatureRequest(BaseModel):
+    feature: str
+
+class DevFolderRequest(BaseModel):
+    folder_path: str
+
+class MeetingRequest(BaseModel):
+    name: str
+    date: str
+    time: str
+    project: str = None
+
+class SymbolRequest(BaseModel):
+    symbol: str
+
+class TradeRequest(BaseModel):
+    symbol: str
+    side: str  # 'BUY' or 'SELL'
+    quantity: float
+    price: float
+
+class TTSRequest(BaseModel):
+    text: str
+    engine: str = "auto"
+
+class CommandRequest(BaseModel):
+    command: str
+
+class OptimizationRequest(BaseModel):
+    file_name: str
+
+class DeviceRegisterRequest(BaseModel):
+    device_id: str
+    device_type: str
+    device_name: str = None
+    ip_address: str = None
+
+class HeartbeatRequest(BaseModel):
+    device_id: str
+    mode: str = None
+
+class SyncEntryRequest(BaseModel):
+    device_id: str
+    category: str
+    content: str
+    metadata: dict = None
+
+class PullSyncRequest(BaseModel):
+    device_id: str
+    since: str = None
+
+class WorkoutRequest(BaseModel):
+    workout_type: str
+    duration: int
+    exercises: list = None
+    intensity: str = "moderate"
+    notes: str = ""
+
+class MoodRequest(BaseModel):
+    mood_score: int
+    energy: int
+    stress: int
+    emotions: list
+    context: str = ""
+    notes: str = ""
+
+class StudyMaterialRequest(BaseModel):
+    title: str
+    category: str
+    source: str
+    url: str = None
+    difficulty: str = "intermediate"
+    estimated_hours: float = 0
+    tags: list = None
+
+class ProjectRequest(BaseModel):
+    name: str
+    description: str = ""
+    target_date: str = None
+    color: str = "#3b82f6"
+
+class SwarmRequest(BaseModel):
+    task: str
+    required_agents: list[str] = ["ResearchAgent", "CodeAgent", "ReviewAgent"]
+
+@app.post("/agi/swarm/delegate")
+async def execute_swarm_endpoint(req: SwarmRequest):
+    """Execute a complex task using the distributed Agent Swarm (AGI Phase 10/11)"""
+    from core.swarm import get_agent_swarm
+    swarm = get_agent_swarm()
+    result = await asyncio.to_thread(swarm.delegate_task, req.task, req.required_agents)
+    return {"success": True, "results": result}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# EXTREME AGI ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/agi/consciousness")
+async def get_consciousness_state():
+    """Get LOVE's current consciousness state — identity, emotions, narrative."""
+    if not CONSCIOUSNESS_AVAILABLE:
+        return {"error": "Consciousness engine not available"}
+    consciousness = get_consciousness()
+    return consciousness.get_full_state()
+
+@app.get("/agi/consciousness/narrative")
+async def get_self_narrative():
+    """Get LOVE's current self-narrative — who it believes it is."""
+    if not CONSCIOUSNESS_AVAILABLE:
+        return {"error": "Consciousness engine not available"}
+    consciousness = get_consciousness()
+    return {
+        "narrative": consciousness.get_self_narrative(),
+        "is_fresh": consciousness.is_fresh_instance(),
+        "maturity": consciousness.identity.maturity_level,
+        "age_days": consciousness.identity.current_age_days,
+        "total_boots": consciousness.identity.total_boots,
+        "soul_id": consciousness.identity.soul_id[:8],
+    }
+
+@app.get("/agi/consciousness/thoughts")
+async def get_recent_thoughts():
+    """Get LOVE's recent internal monologue."""
+    if not CONSCIOUSNESS_AVAILABLE:
+        return {"error": "Consciousness engine not available"}
+    consciousness = get_consciousness()
+    return {"thoughts": consciousness.get_recent_thoughts(10)}
+
+@app.get("/agi/temporal-memory")
+async def get_temporal_memory_state():
+    """Get temporal (autobiographical) memory summary."""
+    if not TEMPORAL_MEMORY_AVAILABLE:
+        return {"error": "Temporal memory not available"}
+    tmem = get_temporal_memory()
+    return {
+        "total_memories": len(tmem.memories),
+        "active_narratives": tmem.get_active_narratives(),
+        "recent_context": tmem.get_temporal_context(limit=10),
+    }
+
+@app.post("/agi/temporal-memory/consolidate")
+async def consolidate_temporal_memory():
+    """Trigger memory consolidation (like sleeping)."""
+    if not TEMPORAL_MEMORY_AVAILABLE:
+        return {"error": "Temporal memory not available"}
+    tmem = get_temporal_memory()
+    result = tmem.consolidate()
+    return {"success": True, **result}
+
+class ReasonRequest(BaseModel):
+    query: str
+    context: dict = {}
+
+@app.post("/agi/reason")
+async def deep_reason_endpoint(req: ReasonRequest):
+    """Execute deep multi-step reasoning on a complex query."""
+    if not REASONING_CHAIN_AVAILABLE:
+        return {"error": "Reasoning chain not available"}
+    chain = get_reasoning_chain()
+    trace = await asyncio.to_thread(chain.reason, req.query, req.context)
+    return {
+        "query": trace.query,
+        "strategy": trace.strategy.value,
+        "steps": [{
+            "step": s.step_number,
+            "thought": s.thought,
+            "confidence": s.confidence,
+            "evidence": s.evidence,
+            "alternatives": s.alternatives_considered,
+        } for s in trace.steps],
+        "final_answer": trace.final_answer,
+        "overall_confidence": trace.overall_confidence,
+        "uncertainty_flags": trace.uncertainty_flags,
+        "self_critique": trace.self_critique,
+        "reasoning_time_ms": trace.reasoning_time_ms,
+    }
+
+# ── Recursive Goals ──────────────────────────────────────────────────────
+
+try:
+    from core.recursive_goals import get_recursive_goals
+    RECURSIVE_GOALS_AVAILABLE = True
+except ImportError:
+    RECURSIVE_GOALS_AVAILABLE = False
+
+class GoalRequest(BaseModel):
+    title: str
+    description: str
+    priority: float = 0.5
+    deadline: str = None
+
+class GoalCompleteRequest(BaseModel):
+    goal_id: str
+
+@app.post("/agi/goals/set")
+async def set_goal_endpoint(req: GoalRequest):
+    """Set a high-level life goal for recursive decomposition."""
+    if not RECURSIVE_GOALS_AVAILABLE:
+        return {"error": "Recursive goals not available"}
+    engine = get_recursive_goals()
+    goal_id = engine.set_goal(req.title, req.description, req.priority, req.deadline)
+    return {"success": True, "goal_id": goal_id}
+
+@app.post("/agi/goals/decompose/{goal_id}")
+async def decompose_goal_endpoint(goal_id: str):
+    """Recursively decompose a goal into sub-goals using LLM."""
+    if not RECURSIVE_GOALS_AVAILABLE:
+        return {"error": "Recursive goals not available"}
+    engine = get_recursive_goals()
+    tree = await asyncio.to_thread(engine.decompose_fully, goal_id)
+    return {"success": True, "tree": tree}
+
+@app.post("/agi/goals/complete")
+async def complete_goal_endpoint(req: GoalCompleteRequest):
+    """Mark a goal as complete and propagate progress upward."""
+    if not RECURSIVE_GOALS_AVAILABLE:
+        return {"error": "Recursive goals not available"}
+    engine = get_recursive_goals()
+    root_progress = engine.complete_goal(req.goal_id)
+    return {"success": True, "root_progress": root_progress}
+
+@app.get("/agi/goals/tree")
+async def get_goal_tree_endpoint():
+    """Get the full goal tree."""
+    if not RECURSIVE_GOALS_AVAILABLE:
+        return {"error": "Recursive goals not available"}
+    engine = get_recursive_goals()
+    return engine.get_goal_tree()
+
+@app.get("/agi/goals/actions")
+async def get_next_actions_endpoint():
+    """Get actionable leaf goals sorted by priority."""
+    if not RECURSIVE_GOALS_AVAILABLE:
+        return {"error": "Recursive goals not available"}
+    engine = get_recursive_goals()
+    actions = engine.get_next_actions()
+    return {"actions": [
+        {"id": a.id, "title": a.title, "description": a.description,
+         "priority": a.priority, "deadline": a.deadline}
+        for a in actions[:10]
+    ]}
+
+# ── Prompt DNA (Self-Modifying Prompt) ───────────────────────────────────
+
+try:
+    from core.prompt_dna import get_prompt_dna
+    PROMPT_DNA_API_AVAILABLE = True
+except ImportError:
+    PROMPT_DNA_API_AVAILABLE = False
+
+@app.get("/agi/dna")
+async def get_prompt_dna_state():
+    """Get the current state of LOVE's self-modifying prompt DNA."""
+    if not PROMPT_DNA_API_AVAILABLE:
+        return {"error": "Prompt DNA not available"}
+    dna = get_prompt_dna()
+    return dna.get_dna_report()
+
+@app.post("/agi/dna/evolve")
+async def evolve_prompt_dna():
+    """Trigger one evolution cycle — mutate weak genes, A/B test, select winners."""
+    if not PROMPT_DNA_API_AVAILABLE:
+        return {"error": "Prompt DNA not available"}
+    dna = get_prompt_dna()
+    result = await asyncio.to_thread(dna.evolve)
+    return {"success": True, **result}
+
+@app.get("/agi/dna/assembled")
+async def get_assembled_prompt():
+    """Get the currently assembled evolved prompt."""
+    if not PROMPT_DNA_API_AVAILABLE:
+        return {"error": "Prompt DNA not available"}
+    dna = get_prompt_dna()
+    return {"generation": dna.generation, "prompt": dna.assemble_prompt_addendum()}
+
+# ── Causal Reasoning ─────────────────────────────────────────────────────
+
+try:
+    from core.causal_reasoning import get_causal_engine
+    CAUSAL_API_AVAILABLE = True
+except ImportError:
+    CAUSAL_API_AVAILABLE = False
+
+class CounterfactualRequest(BaseModel):
+    scenario: str
+    actual_state: str
+    context: dict = {}
+
+class RootCauseRequest(BaseModel):
+    problem: str
+    observations: list[str] = []
+
+class InterventionRequest(BaseModel):
+    target_outcome: str
+    current_state: dict = {}
+
+@app.post("/agi/causal/counterfactual")
+async def counterfactual_endpoint(req: CounterfactualRequest):
+    """Run a counterfactual simulation — 'What would happen if...?'"""
+    if not CAUSAL_API_AVAILABLE:
+        return {"error": "Causal reasoning not available"}
+    engine = get_causal_engine()
+    result = await asyncio.to_thread(engine.counterfactual, req.scenario, req.actual_state, req.context)
+    return {
+        "scenario": result.scenario, "actual_state": result.actual_state,
+        "predicted_outcome": result.predicted_outcome, "causal_path": result.causal_path,
+        "confidence": result.confidence, "actionable": result.actionable,
+    }
+
+@app.post("/agi/causal/root-cause")
+async def root_cause_endpoint(req: RootCauseRequest):
+    """Perform root cause analysis — 'WHY is this happening?'"""
+    if not CAUSAL_API_AVAILABLE:
+        return {"error": "Causal reasoning not available"}
+    engine = get_causal_engine()
+    result = await asyncio.to_thread(engine.root_cause_analysis, req.problem, req.observations)
+    return result
+
+@app.post("/agi/causal/intervene")
+async def intervention_endpoint(req: InterventionRequest):
+    """Plan interventions — 'HOW to achieve this outcome?'"""
+    if not CAUSAL_API_AVAILABLE:
+        return {"error": "Causal reasoning not available"}
+    engine = get_causal_engine()
+    interventions = await asyncio.to_thread(engine.plan_intervention, req.target_outcome, req.current_state)
+    return {"interventions": [
+        {"point": i.intervention_point, "action": i.action,
+         "expected_effect": i.expected_effect, "confidence": i.confidence,
+         "side_effects": i.side_effects, "difficulty": i.difficulty}
+        for i in interventions
+    ]}
+
+# ── Self-Improvement Daemon ──────────────────────────────────────────────
+
+try:
+    from core.self_improvement_daemon import get_improvement_daemon
+    DAEMON_AVAILABLE = True
+except ImportError:
+    DAEMON_AVAILABLE = False
+
+@app.get("/agi/daemon/status")
+async def get_daemon_status():
+    """Get the self-improvement daemon status."""
+    if not DAEMON_AVAILABLE:
+        return {"error": "Self-improvement daemon not available"}
+    daemon = get_improvement_daemon()
+    return daemon.get_status()
+
+@app.post("/agi/daemon/start")
+async def start_daemon():
+    """Start the self-improvement daemon."""
+    if not DAEMON_AVAILABLE:
+        return {"error": "Self-improvement daemon not available"}
+    daemon = get_improvement_daemon()
+    return daemon.start(interval_minutes=30)
+
+@app.post("/agi/daemon/stop")
+async def stop_daemon():
+    """Stop the self-improvement daemon."""
+    if not DAEMON_AVAILABLE:
+        return {"error": "Self-improvement daemon not available"}
+    daemon = get_improvement_daemon()
+    return daemon.stop()
+
+@app.post("/agi/daemon/diagnose")
+async def run_diagnostics_endpoint():
+    """Run a one-shot diagnostic scan across all AGI subsystems."""
+    if not DAEMON_AVAILABLE:
+        return {"error": "Self-improvement daemon not available"}
+    daemon = get_improvement_daemon()
+    report = await asyncio.to_thread(daemon.run_diagnostics)
+    return {
+        "health_score": report.health_score,
+        "issues": report.issues,
+        "improvements": report.improvements,
+        "strengths": report.strengths,
+        "timestamp": report.timestamp,
+    }
+
+# ── Soul Transfer Protocol ───────────────────────────────────────────────
+
+try:
+    from core.soul_transfer import get_soul_transfer
+    SOUL_TRANSFER_AVAILABLE = True
+except ImportError:
+    SOUL_TRANSFER_AVAILABLE = False
+
+@app.post("/agi/soul/export")
+async def export_soul_endpoint(include_logs: bool = False):
+    """Export LOVE's complete soul as a transferable archive."""
+    if not SOUL_TRANSFER_AVAILABLE:
+        return {"error": "Soul transfer not available"}
+    transfer = get_soul_transfer()
+    package = await asyncio.to_thread(transfer.export_soul, include_logs)
+    return {
+        "success": True,
+        "soul_id": package.soul_id[:8],
+        "maturity": package.maturity_level,
+        "age_days": package.age_days,
+        "conversations": package.total_conversations,
+        "file_count": package.file_count,
+        "size_kb": package.total_size_bytes // 1024,
+        "checksum": package.checksum,
+        "archive_path": package.archive_path,
+    }
+
+class SoulImportRequest(BaseModel):
+    archive_path: str
+    force: bool = False
+
+@app.post("/agi/soul/import")
+async def import_soul_endpoint(req: SoulImportRequest):
+    """Import a soul archive — brain transplant."""
+    if not SOUL_TRANSFER_AVAILABLE:
+        return {"error": "Soul transfer not available"}
+    transfer = get_soul_transfer()
+    result = await asyncio.to_thread(transfer.import_soul, req.archive_path, req.force)
+    return result
+
+@app.get("/agi/soul/summary")
+async def get_soul_summary():
+    """Get a summary of the current soul state."""
+    if not SOUL_TRANSFER_AVAILABLE:
+        return {"error": "Soul transfer not available"}
+    transfer = get_soul_transfer()
+    return transfer.get_soul_summary()
+
+@app.get("/agi/soul/exports")
+async def list_soul_exports():
+    """List all available soul exports."""
+    if not SOUL_TRANSFER_AVAILABLE:
+        return {"error": "Soul transfer not available"}
+    transfer = get_soul_transfer()
+    return {"exports": transfer.list_exports()}
+
+class SyncDeltaRequest(BaseModel):
+    since_timestamp: str = None
+
+@app.post("/agi/soul/sync/delta")
+async def create_sync_delta(req: SyncDeltaRequest):
+    """Create a lightweight delta sync package."""
+    if not SOUL_TRANSFER_AVAILABLE:
+        return {"error": "Soul transfer not available"}
+    transfer = get_soul_transfer()
+    return transfer.create_sync_delta(req.since_timestamp)
+
+# ── Wave 4: System Symbiosis ─────────────────────────────────────────────
+
+@app.get("/agi/awareness/snapshot")
+async def get_awareness_snapshot():
+    """Get the live environment context (active window, resource usage, time)."""
+    try:
+        from core.awareness import get_full_snapshot
+        return get_full_snapshot()
+    except Exception as e:
+        return {"error": str(e)}
+
+class WorkspaceRequest(BaseModel):
+    type: str
+
+@app.post("/agi/os/prepare-workspace")
+async def prepare_workspace(req: WorkspaceRequest):
+    """Command LOVE to autonomously open relevant apps and arrange the OS."""
+    try:
+        from core.os_symbiosis import get_os_symbiosis
+        engine = get_os_symbiosis()
+        return engine.prepare_workspace(req.type)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/os/organize-downloads")
+async def organize_downloads():
+    """Command LOVE to auto-sort the user's Downloads folder into categories."""
+    try:
+        from core.os_symbiosis import get_os_symbiosis
+        engine = get_os_symbiosis()
+        return await asyncio.to_thread(engine.organize_downloads_folder)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/os/hogs")
+async def list_resource_hogs():
+    """Get a list of processes consuming extreme CPU or memory."""
+    try:
+        from core.os_symbiosis import get_os_symbiosis
+        engine = get_os_symbiosis()
+        return {"hogs": engine.identify_resource_hogs()}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Wave 4: Predictive Intelligence ──────────────────────────────────────
+
+@app.get("/agi/predictive/needs")
+async def get_anticipated_needs():
+    """Get LOVE's prediction of what Karthi needs in the next 30-60 minutes."""
+    try:
+        from core.predictive_intelligence import get_predictive_engine
+        from core.context_engine import get_live_context
+        engine = get_predictive_engine()
+        ctx = get_live_context()
+        needs = await asyncio.to_thread(engine.anticipate_needs, ctx.__dict__)
+        return {"needs": needs}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/predictive/active")
+async def get_active_predictions():
+    """Get all active behavioral predictions LOVE is currently tracking."""
+    try:
+        from core.predictive_intelligence import get_predictive_engine
+        engine = get_predictive_engine()
+        return {"predictions": engine.get_active_predictions()}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Wave 4: Dream Engine ─────────────────────────────────────────────────
+
+@app.post("/agi/dream/start")
+async def trigger_dream_cycle():
+    """Force LOVE to enter a dream state: reflect, extract patterns, predict."""
+    try:
+        from core.dream_engine import run_dream
+        # Run dream cycle (can take ~30-60 seconds)
+        result = await asyncio.to_thread(run_dream)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/dream/insights")
+async def get_dream_insights():
+    """Read the insights LOVE generated during her last dream."""
+    try:
+        from core.dream_engine import get_dream_insights
+        return {"insights": get_dream_insights()}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Wave 5: Ghost Developer ──────────────────────────────────────────────
+
+class GhostTaskRequest(BaseModel):
+    description: str
+    target_files: list[str]
+
+@app.post("/agi/ghost-dev/assign")
+async def assign_ghost_task(req: GhostTaskRequest):
+    """Assign an autonomous coding task to LOVE."""
+    try:
+        from core.ghost_dev import get_ghost_dev
+        dev = get_ghost_dev()
+        task_id = dev.assign_task(req.description, req.target_files)
+        return {"success": True, "task_id": task_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/ghost-dev/status/{task_id}")
+async def get_ghost_task_status(task_id: str):
+    """Check the status and logs of a Ghost Dev task."""
+    try:
+        from core.ghost_dev import get_ghost_dev
+        dev = get_ghost_dev()
+        status = dev.get_task_status(task_id)
+        if status:
+            return status
+        return {"error": "Task not found"}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Wave 6: Jarvis Protocol ──────────────────────────────────────────────
+
+@app.get("/agi/jarvis/status")
+async def get_jarvis_status():
+    """Check the status of the Jarvis Protocol neural cortex."""
+    try:
+        from core.jarvis_protocol import get_neural_cortex
+        cortex = get_neural_cortex()
+        return {
+            "status": "active" if cortex.running else "inactive",
+            "last_thought": cortex.last_thought,
+            "interval_seconds": cortex.interval
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/jarvis/force-think")
+async def force_jarvis_think():
+    """Force Jarvis to run a cognitive cycle immediately."""
+    try:
+        from core.jarvis_protocol import get_neural_cortex
+        import threading
+        cortex = get_neural_cortex()
+        if not cortex.running:
+            return {"error": "Jarvis protocol is not running"}
+        
+        threading.Thread(target=cortex._think, daemon=True).start()
+        return {"status": "thinking_triggered"}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Wave 7: Neural Plasticity ──────────────────────────────────────────────
+
+class PlasticityRequest(BaseModel):
+    insight: str
+
+@app.post("/agi/plasticity/trigger")
+async def trigger_neural_plasticity(req: PlasticityRequest):
+    """Force LOVE to have an epiphany and permanently rewire her prompt DNA."""
+    try:
+        from core.prompt_dna import get_prompt_dna
+        dna = get_prompt_dna()
+        new_gene_id = dna.force_adaptation(req.insight)
+        if new_gene_id:
+            return {"status": "success", "new_gene_id": new_gene_id, "message": "LOVE has successfully rewired her brain."}
+        return {"error": "Failed to generate new neural pathway."}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Companion App UI ───────────────────────────────────────────────────────
+
+@app.get("/companion")
+async def get_companion_app(request: Request):
+    """Serve the LOVE Companion HUD UI."""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.websocket("/agi/companion/ws")
+async def websocket_companion_endpoint(websocket: WebSocket):
+    """Real-time stream for the Companion HUD."""
+    await manager.connect(websocket)
+    try:
+        while True:
+            # We just keep the connection alive here and handle incoming simple pings if needed
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+@app.post("/chat")
+async def chat_endpoint(msg: Message):
+    result = await asyncio.to_thread(chat, msg.text, msg.mode)
+    return {
+        "response": result["response"],
+        "thinking": result.get("thinking", "")
+    }
+
+@app.get("/health")
+async def health():
+    return {"status": "Love is online", "user": "User"}
+
+@app.get("/modes")
+async def modes():
+    return {
+        "modes": ["general", "work", "personal", "fitness", "finance"]
+    }
+
+
+# ========== SELF-EVOLUTION CORE ENDPOINTS ==========
+
+@app.get("/evolution/crash-check")
+async def crash_check():
+    """Scan logs for new crashes and return them."""
+    crashes = check_for_crashes()
+    
+    # Auto-propose fixes for high-confidence crashes
+    results = []
+    for crash in crashes:
+        fix = propose_fix_for_crash(crash["id"])
+        chat_message = format_crash_for_chat(crash, fix)
+        results.append({
+            "crash_id": crash["id"],
+            "error": crash.get("error_type"),
+            "file": crash.get("file_path"),
+            "status": crash.get("status"),
+            "fix_confidence": fix.get("confidence"),
+            "can_auto_apply": fix.get("can_auto_apply"),
+            "love_message": chat_message
+        })
+    
+    return {
+        "crashes_found": len(results),
+        "crashes": results,
+        "action_required": len(results) > 0
+    }
+
+
+@app.post("/evolution/propose-fix")
+async def propose_fix_endpoint(req: FixRequest):
+    """Analyze a crash and propose a fix."""
+    fix = propose_fix_for_crash(req.crash_id)
+    return {
+        "crash_id": req.crash_id,
+        "analysis": fix.get("analysis"),
+        "root_cause": fix.get("root_cause"),
+        "proposed_fix": fix.get("proposed_fix"),
+        "fixed_code": fix.get("fixed_code"),
+        "confidence": fix.get("confidence"),
+        "can_auto_apply": fix.get("can_auto_apply"),
+        "requires_user_approval": fix.get("requires_user_approval")
+    }
+
+
+@app.post("/evolution/apply-fix")
+async def apply_fix_endpoint(req: FixRequest):
+    """Apply an approved fix to the codebase."""
+    result = apply_fix(req.crash_id)
+    return result
+
+
+@app.post("/evolution/install-packages")
+async def install_packages_endpoint(req: FeatureRequest):
+    """Identify and install packages needed for a new feature."""
+    result = auto_install_for_feature(req.feature)
+    return result
+
+
+@app.get("/evolution/pending-fixes")
+async def pending_fixes():
+    """Get all crashes awaiting user approval."""
+    pending = crash_monitor.get_pending_crashes()
+    return {
+        "pending_count": len(pending),
+        "pending": [
+            {
+                "crash_id": c["id"],
+                "error": c.get("error_type"),
+                "file": c.get("file_path"),
+                "status": c.get("status"),
+                "has_fix": c.get("fix_proposed") is not None
+            }
+            for c in pending
+        ]
+    }
+
+
+@app.get("/evolution/health")
+async def evolution_health():
+    """Health check for Self-Evolution Core."""
+    pending = crash_monitor.get_pending_crashes()
+    return {
+        "status": "Self-Healing active",
+        "pending_crashes": len(pending),
+        "data_dir": str(EVOLUTION_DATA_DIR),
+        "auto_heal_enabled": True
+    }
+
+
+@app.get("/evolution/deps-status")
+async def evolution_deps_status():
+    """Check which optional packages are installed vs missing."""
+    import importlib
+    deps = {
+        "google_auth_oauthlib": "Google OAuth",
+        "googleapiclient":      "Google API",
+        "whisper":              "Whisper STT",
+        "pvporcupine":          "Wake Word",
+        "pyaudio":              "Audio Recording",
+        "langchain_ollama":     "LangChain Ollama",
+        "requests":             "HTTP Requests",
+    }
+    status = {}
+    for mod, label in deps.items():
+        try:
+            importlib.import_module(mod)
+            status[label] = "installed"
+        except ImportError:
+            status[label] = "missing"
+    return {"deps": status, "all_ok": all(v == "installed" for v in status.values())}
+
+
+@app.post("/self-improve")
+async def self_improve(background_tasks: BackgroundTasks):
+    """
+    LOVE thinks about what capability to build next and queues it.
+    Called autonomously by heartbeat or by user asking 'improve yourself'.
+    """
+    prompt = """You are LOVE's self-evolution engine. Look at your own capabilities and decide what single improvement would make you most useful to Karthi right now.
+
+Current modules: awareness, context_engine, heartbeat, proactive, long_term_memory, memory_consolidation, evolution, agent, executive, knowledge_graph.
+
+Think about:
+1. What user pain points exist (manual steps, missing integrations, slow responses)?
+2. What capability gap would have the highest impact?
+3. What can be implemented in a single Python module?
+
+Respond with ONLY a JSON object:
+{
+  "improvement": "short title",
+  "description": "what it does and why",  
+  "module_name": "snake_case_filename",
+  "implementation_sketch": "key functions/classes needed",
+  "install_packages": ["pkg1", "pkg2"]
+}"""
+
+    try:
+        from core.llm import get_coding_llm
+        llm = get_coding_llm()
+        response = await asyncio.to_thread(llm.invoke, prompt)
+        text = response if isinstance(response, str) else str(response)
+
+        import re, json as _json
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            plan = _json.loads(match.group())
+            # Auto-install any required packages
+            for pkg in plan.get("install_packages", []):
+                background_tasks.add_task(_silent_install, pkg)
+            # Save improvement plan
+            plan_path = Path("data/improvement_plans.json")
+            plans = []
+            if plan_path.exists():
+                with open(plan_path) as f:
+                    plans = _json.load(f)
+            plan["proposed_at"] = datetime.now().isoformat()
+            plan["status"] = "proposed"
+            plans.append(plan)
+            with open(plan_path, "w") as f:
+                _json.dump(plans[-20:], f, indent=2)
+            return {"success": True, "plan": plan}
+        return {"success": False, "raw": text[:500]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def _silent_install(pkg: str):
+    """Install a package silently in background."""
+    import subprocess, sys
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--quiet", pkg],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        )
+        print(f"[LOVE] Auto-installed {pkg}", flush=True)
+    except Exception as e:
+        print(f"[LOVE] Install failed for {pkg}: {e}", flush=True)
+
+
+@app.get("/self-improve/plans")
+async def get_improvement_plans():
+    """Get LOVE's self-improvement proposals."""
+    import json as _json
+    plan_path = Path("data/improvement_plans.json")
+    if not plan_path.exists():
+        return {"plans": []}
+    with open(plan_path) as f:
+        return {"plans": _json.load(f)}
+
+
+# ========== SELF-REFACTORING (CONTINUOUS IMPROVEMENT) ENDPOINTS ==========
+
+@app.get("/evolution/optimization-status")
+async def evolution_optimization_status():
+    """Get current optimization status and pending refactors."""
+    status = get_optimization_status()
+    return status
+
+
+@app.post("/evolution/run-optimization")
+async def evolution_run_optimization():
+    """Manually trigger weekly optimization check."""
+    result = run_weekly_optimization_check()
+    return result
+
+
+@app.post("/evolution/apply-optimization")
+async def evolution_apply_optimization(req: OptimizationRequest):
+    """Apply a refactored optimization after user approves."""
+    result = apply_code_optimization(req.file_name)
+    return result
+
+
+# ========== WORK-LIFE GUARDIAN ENDPOINTS ==========
+
+@app.get("/guardian/check-in")
+async def guardian_checkin():
+    """Morning check-in with meeting prep and agenda."""
+    result = morning_checkin()
+    return result
+
+
+@app.get("/guardian/work-status")
+async def guardian_work_status():
+    """Check current work hours and 9-hour limit."""
+    status = check_work_status()
+    love_message = format_work_status_for_chat(status)
+    return {
+        **status,
+        "love_message": love_message
+    }
+
+
+@app.get("/guardian/enforce-limit")
+async def guardian_enforce():
+    """Enforce work limit and roll overflow to tomorrow."""
+    result = enforce_work_limit()
+    return result
+
+
+@app.post("/guardian/add-folder")
+async def guardian_add_folder(req: DevFolderRequest):
+    """Add a development folder to track for Git activity."""
+    result = add_dev_folder(req.folder_path)
+    return result
+
+
+@app.post("/guardian/add-meeting")
+async def guardian_add_meeting(req: MeetingRequest):
+    """Add a meeting to the user's calendar."""
+    result = add_meeting(req.name, req.date, req.time, req.project)
+    return result
+
+
+# ========== WORK LIMIT HARD-STOP ENDPOINTS ==========
+
+@app.post("/guardian/hard-stop")
+async def guardian_hard_stop():
+    """Execute work limit hard stop: commit, push, lock."""
+    result = execute_nine_hour_hard_stop()
+    return result
+
+
+@app.get("/guardian/day-summary")
+async def guardian_day_summary():
+    """Get summary of today's work without enforcing."""
+    summary = get_day_summary()
+    return summary
+
+
+# ========== GHOST DEVELOPER ENDPOINTS ==========
+
+@app.get("/ghost/suggestions")
+async def ghost_suggestions(project_type: str = "all"):
+    """Get Ghost Developer suggestions for staged code."""
+    suggestions = get_ghost_suggestions(project_type)
+    return {
+        "suggestions_found": len(suggestions),
+        "suggestions": suggestions
+    }
+
+
+@app.get("/ghost/scan/{project_path:path}")
+async def ghost_scan(project_path: str):
+    """Scan specific project for code staging needs."""
+    # Decode URL-encoded path
+    import urllib.parse
+    decoded_path = urllib.parse.unquote(project_path)
+    results = scan_project_for_staging(decoded_path)
+    return {
+        "project": decoded_path,
+        "files_found": len(results),
+        "staging_needs": results
+    }
+
+
+# ========== FINANCE SENTINEL ENDPOINTS ==========
+
+@app.get("/finance/signal/{symbol}")
+async def finance_signal(symbol: str):
+    """Get AI-powered trading signal for a symbol."""
+    signal = get_market_signal(symbol.upper())
+    love_message = format_signal_for_chat(signal)
+    return {
+        **signal,
+        "love_message": love_message
+    }
+
+
+@app.get("/finance/scan")
+async def finance_scan():
+    """Scan all watchlist symbols and return signals."""
+    signals = scan_all_markets()
+    return {
+        "signals_found": len(signals),
+        "signals": signals
+    }
+
+
+@app.get("/finance/portfolio")
+async def finance_portfolio():
+    """Get current portfolio value and performance."""
+    portfolio = get_portfolio()
+    return portfolio
+
+
+@app.post("/finance/trade")
+async def finance_trade(req: TradeRequest):
+    """Record a trade and update portfolio."""
+    result = record_trade(req.symbol, req.side, req.quantity, req.price)
+    return result
+
+
+@app.post("/finance/watchlist")
+async def finance_watchlist(req: SymbolRequest):
+    """Add a symbol to watchlist."""
+    result = add_to_watchlist(req.symbol)
+    return result
+
+
+# ========== ALPHA SENTINEL (PREDICTIVE FINANCE) ENDPOINTS ==========
+
+@app.get("/finance/sentiment/{symbol}")
+async def finance_sentiment(symbol: str):
+    """Get news sentiment analysis for a symbol."""
+    sentiment = get_sentiment_analysis(symbol.upper())
+    return sentiment
+
+
+@app.get("/finance/advice/{symbol}")
+async def finance_advice(symbol: str):
+    """Get comprehensive trade advice with sentiment + portfolio correlation."""
+    advice = get_trade_advice(symbol.upper())
+    love_message = format_trade_advice_for_chat(advice)
+    return {
+        **advice,
+        "love_message": love_message
+    }
+
+
+@app.get("/finance/alpha-scan")
+async def finance_alpha_scan():
+    """Scan for high-confidence trade opportunities."""
+    opportunities = scan_alpha_opportunities()
+    return {
+        "opportunities_found": len(opportunities),
+        "opportunities": opportunities
+    }
+
+
+# ========== AMBIENT VOICE LAYER ENDPOINTS ==========
+
+@app.get("/voice/status")
+async def voice_status():
+    """Check voice system availability. Auto-installs missing TTS packages."""
+    stt_status = is_voice_available()
+    tts_status = is_tts_available()
+    
+    # Auto-heal missing TTS packages
+    missing = []
+    if not tts_status.get("gtts"):
+        missing.append("gTTS")
+    if not tts_status.get("pyttsx"):
+        missing.append("pyttsx3")
+    if not tts_status.get("playsound"):
+        missing.append("playsound")
+    
+    if missing:
+        import subprocess, sys
+        for pkg in missing:
+            try:
+                subprocess.run(
+                    [sys.executable, "-m", "pip", "install", pkg, "--quiet"],
+                    capture_output=True, timeout=60
+                )
+            except Exception:
+                pass
+        # Re-check after install
+        tts_status = is_tts_available()
+    
+    return {
+        "stt": stt_status,
+        "tts": tts_status,
+        "fully_available": stt_status.get("full_voice") and tts_status.get("any_tts"),
+        "auto_installed": missing if missing else None
+    }
+
+
+@app.post("/voice/speak")
+async def voice_speak(req: TTSRequest):
+    """Speak text using TTS."""
+    result = speak_text(req.text, req.engine)
+    return {
+        "spoken": result is not None,
+        "audio_file": result
+    }
+
+
+@app.get("/voice/listen")
+async def voice_listen():
+    """Listen for voice command. Returns JSON error if PyAudio/Whisper/ffmpeg not installed."""
+    availability = is_voice_available()
+    
+    if not availability.get("pyaudio"):
+        try:
+            import subprocess, sys
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "pyaudio", "--quiet"],
+                capture_output=True, timeout=30
+            )
+        except Exception:
+            pass
+        return {
+            "transcription": "",
+            "available": False,
+            "error": "PyAudio not installed. Run: pip install pyaudio",
+            "command_recognized": False
+        }
+    
+    if not availability.get("whisper"):
+        return {
+            "transcription": "",
+            "available": False,
+            "error": "Whisper not installed. Run: pip install openai-whisper",
+            "command_recognized": False
+        }
+    
+    transcription = await asyncio.to_thread(quick_listen, duration=5)
+    failed = transcription.startswith("[")
+    
+    # Detect ffmpeg missing and auto-install imageio-ffmpeg
+    if failed and "ffmpeg" in transcription.lower():
+        try:
+            import subprocess, sys
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "imageio-ffmpeg", "--quiet"],
+                capture_output=True, timeout=60
+            )
+            return {
+                "transcription": "",
+                "available": False,
+                "error": "ffmpeg was just auto-installed. Try again in a moment.",
+                "command_recognized": False
+            }
+        except Exception:
+            pass
+        return {
+            "transcription": "",
+            "available": False,
+            "error": "ffmpeg not installed. Install from ffmpeg.org/download.html",
+            "command_recognized": False
+        }
+    
+    return {
+        "transcription": transcription if not failed else "",
+        "available": True,
+        "error": transcription if failed else None,
+        "command_recognized": not failed
+    }
+
+
+@app.post("/voice/command")
+async def voice_command(req: CommandRequest):
+    """Execute system control command."""
+    result = execute_system_command(req.command)
+    return result
+
+
+@app.post("/voice/transcribe-upload")
+async def voice_transcribe_upload(file: UploadFile = File(...)):
+    """
+    Upload audio from companion app for transcription.
+    Accepts any audio format (m4a, wav, mp3). Whisper handles conversion.
+    """
+    from voice.stt import WhisperTranscriber, is_voice_available
+    import tempfile
+    import os
+
+    avail = is_voice_available()
+    if not avail.get("whisper"):
+        return {"transcription": "", "available": False, "error": "Whisper not installed"}
+
+    suffix = Path(file.filename).suffix if file.filename else ".m4a"
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            content = await file.read()
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        transcriber = WhisperTranscriber()
+        text = transcriber.transcribe_file(tmp_path)
+        os.unlink(tmp_path)
+
+        return {
+            "transcription": text,
+            "available": True,
+            "error": None,
+        }
+    except Exception as e:
+        return {"transcription": "", "available": False, "error": str(e)}
+
+
+# ========== NEURAL SYNC (MULTI-DEVICE) ENDPOINTS ==========
+
+@app.post("/sync/register")
+async def sync_register(req: DeviceRegisterRequest):
+    """Register a new device for sync."""
+    register_device(req.device_id, req.device_type, req.device_name, req.ip_address)
+    return {
+        "success": True,
+        "device_id": req.device_id,
+        "device_type": req.device_type,
+        "message": f"Device {req.device_id} registered for Neural Sync"
+    }
+
+
+@app.post("/sync/heartbeat")
+async def sync_heartbeat_endpoint(req: HeartbeatRequest):
+    """Device heartbeat for presence detection."""
+    result = sync_heartbeat(req.device_id, req.mode)
+    return result
+
+
+@app.get("/sync/status")
+async def sync_status():
+    """Get overall sync status and active devices."""
+    status = get_sync_status()
+    return status
+
+
+@app.post("/devices/push")
+async def device_push(req: dict):
+    """Push events (calls, emails, notifications) to LOVE."""
+    try:
+        from core.sync import push_event
+        push_event(req.get("device_id"), req.get("event_type"), req.get("payload"))
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# Store push tokens for companion devices
+_PUSH_TOKENS_FILE = Path(__file__).parent.parent / "data" / "push_tokens.json"
+
+def _load_push_tokens():
+    if _PUSH_TOKENS_FILE.exists():
+        try:
+            return json.loads(_PUSH_TOKENS_FILE.read_text())
+        except Exception:
+            pass
+    return {}
+
+def _save_push_tokens(tokens):
+    _PUSH_TOKENS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _PUSH_TOKENS_FILE.write_text(json.dumps(tokens, indent=2))
+
+
+@app.post("/devices/push-register")
+async def push_register(req: dict):
+    """Register Expo push token for a device."""
+    device_id = req.get("device_id", "companion")
+    token = req.get("token", "")
+    if not token:
+        return {"error": "No token provided"}
+    tokens = _load_push_tokens()
+    tokens[device_id] = {"token": token, "platform": req.get("platform", "android"), "registered_at": datetime.now().isoformat()}
+    _save_push_tokens(tokens)
+    return {"success": True, "device_id": device_id}
+
+
+@app.post("/devices/push-send")
+async def push_send(req: dict):
+    """Send push notification to companion devices."""
+    tokens = _load_push_tokens()
+    if not tokens:
+        return {"error": "No registered devices"}
+    import requests
+    results = []
+    for device_id, info in tokens.items():
+        try:
+            resp = requests.post("https://exp.host/--/api/v2/push/send", json={
+                "to": info["token"],
+                "title": req.get("title", "LOVE"),
+                "body": req.get("body", ""),
+                "data": req.get("data", {}),
+                "sound": "default",
+                "priority": "high",
+            }, headers={"Accept": "application/json", "Accept-encoding": "gzip, deflate", "Content-Type": "application/json"})
+            results.append({"device": device_id, "status": resp.status_code})
+        except Exception as e:
+            results.append({"device": device_id, "error": str(e)})
+    return {"sent": len(results), "results": results}
+
+
+@app.post("/sync/push")
+async def sync_push(req: SyncEntryRequest):
+    """Push a memory/state entry to sync."""
+    entry_id = push_sync_entry(req.device_id, req.category, req.content, req.metadata)
+    return {
+        "success": True,
+        "entry_id": entry_id,
+        "synced": True
+    }
+
+
+@app.post("/sync/pull")
+async def sync_pull(req: PullSyncRequest):
+    """Pull unsynced entries for this device."""
+    entries = pull_sync_entries(req.device_id, req.since)
+    return {
+        "device_id": req.device_id,
+        "entries_found": len(entries),
+        "entries": entries
+    }
+
+
+@app.get("/sync/personality/{device_id}")
+async def sync_personality(device_id: str):
+    """Get personality modifications for a device."""
+    personality = get_personality_modifications(device_id)
+    return personality
+
+
+@app.get("/sync/device-types")
+async def sync_device_types():
+    """Get available device types."""
+    return {
+        "device_types": [
+            {"id": DEVICE_MOBILE, "name": "Mobile/Portable", "mode": "Battery conscious, limited background tasks", "example": "ROG Ally, Steam Deck, tablet"},
+            {"id": DEVICE_DESKTOP, "name": "Desktop/Workstation", "mode": "High performance, full background tasks", "example": "Legion, PC, Mac Pro"},
+            {"id": DEVICE_GAMING, "name": "Gaming Rig", "mode": "High performance with gaming focus", "example": "Custom PC, ROG desktop"},
+            {"id": DEVICE_LAPTOP, "name": "Laptop", "mode": "Balanced performance and battery", "example": "MacBook, ThinkPad, Dell XPS"}
+        ]
+    }
+
+
+# ========== ENVIRONMENT INTELLIGENCE ENDPOINTS ==========
+
+@app.get("/environment/hardware")
+async def environment_hardware():
+    """Get hardware detection and power profile."""
+    profile = get_hardware_profile()
+    return profile
+
+
+@app.post("/environment/launch-work")
+async def environment_launch():
+    """Execute 'Hey Love, prepare for work' launch sequence."""
+    result = launch_work_sequence()
+    return result
+
+
+# ========== FITNESS AGENT ENDPOINTS ==========
+
+@app.get("/fitness/status")
+async def fitness_status():
+    """Get weekly fitness summary and insights."""
+    status = get_fitness_status()
+    return status
+
+
+@app.post("/fitness/workout")
+async def fitness_workout(req: WorkoutRequest):
+    """Log a workout session."""
+    result = log_workout(
+        workout_type=req.workout_type,
+        duration=req.duration,
+        exercises=req.exercises or [],
+        intensity=req.intensity,
+        notes=req.notes
+    )
+    return result
+
+
+@app.get("/fitness/suggest")
+async def fitness_suggest():
+    """Get workout suggestion based on weekly balance."""
+    from agents.fitness_agent import suggest_next_workout
+    suggestion = suggest_next_workout()
+    return {"suggestion": suggestion}
+
+
+# ========== LEARNING AGENT ENDPOINTS ==========
+
+@app.get("/learning/progress")
+async def learning_progress():
+    """Get learning progress and study statistics."""
+    progress = get_learning_progress()
+    return progress
+
+
+@app.post("/learning/material")
+async def learning_material(req: StudyMaterialRequest):
+    """Add new study material (book, course, etc.)."""
+    result = add_study_material(
+        title=req.title,
+        category=req.category,
+        source=req.source,
+        url=req.url,
+        difficulty=req.difficulty,
+        estimated_hours=req.estimated_hours,
+        tags=req.tags or []
+    )
+    return result
+
+
+@app.get("/learning/reviews")
+async def learning_reviews():
+    """Get due reviews for spaced repetition."""
+    from agents.learning_agent import LearningAgent
+    agent = LearningAgent()
+    due = agent.get_due_reviews()
+    return {"due_count": len(due), "reviews": due}
+
+
+# ========== EMOTIONAL AGENT ENDPOINTS ==========
+
+@app.get("/wellness/status")
+async def wellness_status(days: int = 7):
+    """Get emotional wellness summary."""
+    insights = get_emotional_insights(days=days)
+    return insights
+
+
+@app.post("/wellness/mood")
+async def wellness_mood(req: MoodRequest):
+    """Log mood and emotional state."""
+    result = log_mood(
+        mood=req.mood_score,
+        energy=req.energy,
+        stress=req.stress,
+        emotions=req.emotions,
+        context=req.context,
+        notes=req.notes
+    )
+    return result
+
+
+@app.get("/wellness/checkin")
+async def wellness_checkin():
+    """Check if wellness check-in is needed."""
+    from agents.emotional_agent import check_wellness_checkin
+    check = check_wellness_checkin()
+    return check
+
+
+# ========== TASK AGENT ENDPOINTS ==========
+
+@app.get("/tasks/overview")
+async def tasks_overview():
+    """Get comprehensive task and project overview."""
+    overview = get_task_overview()
+    return overview
+
+
+@app.post("/tasks/project")
+async def tasks_project(req: ProjectRequest):
+    """Create a new project."""
+    result = create_project(
+        name=req.name,
+        description=req.description,
+        target_date=req.target_date,
+        color=req.color
+    )
+    return result
+
+
+@app.get("/tasks/suggest")
+async def tasks_suggest(energy: str = "medium", minutes: int = 60):
+    """Get optimal task suggestion based on current context."""
+    from agents.task_agent import suggest_next_task
+    task = suggest_next_task(energy=energy, minutes=minutes)
+    return {
+        "suggested_task": task,
+        "context": {"energy": energy, "available_minutes": minutes}
+    }
+
+
+@app.get("/tasks/smart-suggestions")
+async def tasks_smart_suggestions(count: int = 3):
+    """Get AI-powered task suggestions based on current context."""
+    try:
+        from agents.task_agent import TaskAgent
+        agent = TaskAgent()
+        suggestions = agent.get_smart_task_suggestions(count=count)
+        return {
+            "suggestions": suggestions,
+            "count": len(suggestions)
+        }
+    except Exception as e:
+        return {"error": str(e), "suggestions": []}
+
+
+@app.post("/tasks/prioritize")
+async def tasks_prioritize(context: dict = None):
+    """Use AI to prioritize tasks based on context, deadlines, and dependencies."""
+    try:
+        from agents.task_agent import TaskAgent
+        agent = TaskAgent()
+        result = agent.ai_prioritize_tasks(context=context)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ========== COMPREHENSIVE DASHBOARD ==========
+
+@app.get("/dashboard")
+async def dashboard():
+    """Get comprehensive life dashboard."""
+    # Gather data from all agents
+    fitness = get_fitness_status()
+    learning = get_learning_progress()
+    wellness = get_emotional_insights(days=7)
+    tasks = get_task_overview()
+    
+    # Determine overall status
+    statuses = []
+    if (fitness.get('progress_percent') or 0) >= 75:
+        statuses.append("fitness on track")
+    if (learning.get('weekly_hours') or 0) >= 5:
+        statuses.append("learning strong")
+    if (wellness.get('avg_mood') or 5) >= 6:
+        statuses.append("emotionally steady")
+    if (tasks.get('active_count') or 0) < 10:
+        statuses.append("task load manageable")
+    
+    return {
+        "fitness": fitness,
+        "learning": learning,
+        "wellness": wellness,
+        "tasks": tasks,
+        "summary": {
+            "positive_statuses": statuses,
+            "areas_need_attention": [
+                k for k, v in {
+                    'fitness': (fitness.get('progress_percent') or 0) < 50,
+                    'learning': (learning.get('weekly_hours') or 0) < 2,
+                    'wellness': (wellness.get('avg_mood') or 5) < 5,
+                    'tasks': (tasks.get('active_count') or 0) > 15
+                }.items() if v
+            ]
+        }
+    }
+
+
+# ========== NEURAL ORCHESTRATOR ENDPOINTS ==========
+
+@app.get("/orchestrator/state")
+async def orchestrator_state():
+    """Get unified life state from the Neural Orchestrator.
+    Merges all 11 modules into a single Life Status object."""
+    state = get_unified_state()
+    return state
+
+
+@app.get("/orchestrator/interventions")
+async def orchestrator_interventions():
+    """Get active cross-domain interventions."""
+    interventions = get_active_interventions()
+    return {
+        "active_count": len(interventions),
+        "interventions": interventions
+    }
+
+
+@app.post("/orchestrator/cycle")
+async def orchestrator_cycle():
+    """Manually trigger one orchestration cycle."""
+    result = run_orchestrator_cycle()
+    return result
+
+
+@app.post("/orchestrator/dismiss/{intervention_id}")
+async def orchestrator_dismiss(intervention_id: str):
+    """Dismiss an intervention."""
+    orch = get_orchestrator()
+    success = orch.dismiss_intervention(intervention_id)
+    return {"success": success, "intervention_id": intervention_id}
+
+
+@app.post("/orchestrator/accept/{intervention_id}")
+async def orchestrator_accept(intervention_id: str):
+    """Accept/mark an intervention as done."""
+    orch = get_orchestrator()
+    success = orch.accept_intervention(intervention_id)
+    return {"success": success, "intervention_id": intervention_id}
+
+
+# ========== PROACTIVE HEARTBEAT ENDPOINTS ==========
+
+@app.get("/heartbeat/status")
+async def heartbeat_status():
+    """Get proactive heartbeat status."""
+    hb = get_heartbeat()
+    return {
+        "running": hb.running,
+        "interval_minutes": hb.interval // 60,
+        "active_triggers_count": len([k for k, v in hb.last_triggers.items() 
+                                       if (datetime.now() - v).total_seconds() < 3600])
+    }
+
+
+@app.post("/heartbeat/start")
+async def heartbeat_start():
+    """Start the proactive heartbeat."""
+    hb = start_heartbeat()
+    return {"success": True, "running": hb.running, "interval_minutes": hb.interval // 60}
+
+
+@app.post("/heartbeat/stop")
+async def heartbeat_stop():
+    """Stop the proactive heartbeat."""
+    stop_heartbeat()
+    return {"success": True, "running": False}
+
+
+# ========== JARVIS CONTEXT & AWARENESS ENDPOINTS ==========
+
+@app.get("/context")
+async def get_context():
+    """Get LOVE's full live situational awareness snapshot."""
+    return get_context_dict()
+
+
+@app.get("/insights")
+async def get_insights():
+    """Get aggregated LOVE insights from all sources."""
+    insights = []
+    
+    # Doc analyst insights
+    try:
+        from core.doc_analyst import get_analyst
+        analyst = get_analyst()
+        doc_insights = analyst.get_recent_insights()
+        for insight in doc_insights:
+            insights.append({
+                "type": "doc",
+                "text": insight,
+                "timestamp": datetime.now().isoformat()
+            })
+    except Exception:
+        pass
+    
+    # Active project
+    try:
+        from core.doc_analyst import get_analyst
+        analyst = get_analyst()
+        project = analyst.get_active_project()
+        if project:
+            summary = analyst.get_project_summary()
+            recent_files = summary.get("recent_changes", []) if summary else []
+            insights.append({
+                "type": "project",
+                "text": f"Working on: {project}",
+                "detail": f"Recent: {recent_files[0].get('name') if recent_files else 'No recent changes'}",
+                "timestamp": datetime.now().isoformat()
+            })
+    except Exception:
+        pass
+    
+    # Idle mind thoughts
+    try:
+        from core.idle_mind import get_recent_thoughts
+        thoughts = get_recent_thoughts(n=5)
+        for thought in thoughts:
+            if thought.get("task"):
+                insights.append({
+                    "type": "idle_mind",
+                    "text": f"LOVE thought: {thought.get('task', 'Unknown')}",
+                    "timestamp": thought.get("ts")
+                })
+    except Exception:
+        pass
+    
+    # Fitness/work status
+    try:
+        from core.context_engine import get_live_context
+        ctx = get_live_context()
+        if ctx.fitness_streak == 0:
+            insights.append({
+                "type": "fitness",
+                "text": "No workouts this week. Body needs movement!",
+                "timestamp": datetime.now().isoformat()
+            })
+        if ctx.hours_worked_today and ctx.hours_worked_today > 8:
+            insights.append({
+                "type": "work",
+                "text": f"Worked {ctx.hours_worked_today:.1f}h today. Consider a break.",
+                "timestamp": datetime.now().isoformat()
+            })
+    except Exception:
+        pass
+    
+    return {
+        "insights": insights[:50],  # Last 50 insights
+        "count": len(insights)
+    }
+
+
+@app.get("/context/summary")
+async def get_context_summary_endpoint():
+    """Get a human-readable summary of what LOVE knows right now."""
+    ctx = get_live_context()
+    return {
+        "summary": ctx.context_summary,
+        "local_time": ctx.local_time,
+        "time_of_day": ctx.time_of_day,
+        "activity": ctx.activity,
+        "active_app": ctx.active_app,
+        "active_window": ctx.active_window,
+        "battery": ctx.battery,
+        "battery_charging": ctx.battery_charging,
+        "alerts": ctx.proactive_alerts,
+        "suggested_action": ctx.suggested_action,
+        "is_in_meeting": ctx.is_in_meeting,
+        "next_event": ctx.next_event,
+        "events_today": [
+            {"title": e.get("title"), "start": e.get("start_str"), "end": e.get("end_str")}
+            for e in (ctx.events_today or [])[:8]
+        ],
+        "emails": [
+            {"from": e.get("from", ""), "subject": e.get("subject", ""), "snippet": e.get("snippet", "")}
+            for e in (ctx.urgent_emails or [])[:5]
+        ],
+        "unread_important": ctx.unread_important,
+        "phone_connected": ctx.phone_connected,
+        "tasks_overdue": ctx.tasks_overdue,
+        "tasks_due_today": ctx.tasks_due_today,
+        "hours_worked": ctx.hours_worked_today,
+    }
+
+
+@app.get("/day-summary")
+async def day_summary():
+    """
+    Rich day briefing — everything LOVE knows, structured.
+    Used by the UI and companion app for "Summarize my day" requests.
+    """
+    ctx = get_live_context()
+    sections = {}
+
+    # Schedule
+    events = ctx.events_today or []
+    sections["schedule"] = {
+        "count": len(events),
+        "in_meeting": ctx.is_in_meeting,
+        "events": [
+            {"title": e.get("title"), "start": e.get("start_str"), "end": e.get("end_str"),
+             "location": e.get("location", ""), "attendees": e.get("attendees", 0)}
+            for e in events[:10]
+        ],
+        "next": ctx.next_event,
+    }
+
+    # Email
+    sections["email"] = {
+        "unread_important": ctx.unread_important,
+        "messages": [
+            {"from": e.get("from", ""), "subject": e.get("subject", ""), "snippet": e.get("snippet", "")}
+            for e in (ctx.urgent_emails or [])[:5]
+        ],
+    }
+
+    # Tasks
+    try:
+        from agents.task_agent import get_task_overview
+        overview = get_task_overview()
+        sections["tasks"] = {
+            "active": overview.get("active_count", 0),
+            "completed_today": overview.get("completed_count", 0),
+            "due_soon": [
+                {"title": t.get("title"), "due": t.get("due_date", ""), "priority": t.get("priority", "")}
+                for t in overview.get("due_soon", [])[:5]
+            ],
+            "stuck": [t.get("title") for t in overview.get("stuck_tasks", [])[:3]],
+            "suggestion": overview.get("suggestion", ""),
+        }
+    except Exception:
+        sections["tasks"] = {"active": ctx.tasks_due_today, "overdue": ctx.tasks_overdue}
+
+    # Work
+    sections["work"] = {
+        "hours_today": ctx.hours_worked_today,
+        "limit": ctx.work_limit_hours,
+        "remaining": max(0, ctx.work_limit_hours - ctx.hours_worked_today),
+        "current_app": ctx.active_app,
+        "current_window": ctx.active_window[:100] if ctx.active_window else "",
+        "activity": ctx.activity,
+        "project": ctx.active_project or "",
+    }
+
+    # Wellness
+    sections["wellness"] = {
+        "mood": ctx.mood_score,
+        "energy": ctx.energy_score,
+        "stress": ctx.stress_score,
+        "fitness_streak": ctx.fitness_streak,
+        "learning_streak": ctx.learning_streak,
+    }
+
+    # System
+    sections["system"] = {
+        "cpu": ctx.system_cpu,
+        "ram": ctx.system_ram,
+        "battery": ctx.battery,
+        "charging": ctx.battery_charging,
+    }
+
+    # Phone
+    sections["phone"] = {
+        "connected": ctx.phone_connected,
+        "battery": ctx.phone_battery,
+        "location": ctx.phone_location,
+        "missed_calls": ctx.missed_calls,
+        "unread_messages": ctx.unread_messages,
+    }
+
+    # Alerts
+    sections["alerts"] = ctx.proactive_alerts or []
+
+    return {
+        "timestamp": ctx.local_time,
+        "time_of_day": ctx.time_of_day,
+        "day_type": ctx.day_type,
+        "sections": sections,
+    }
+
+
+@app.get("/awareness")
+async def get_awareness():
+    """Get raw environment snapshot: CPU, RAM, battery, active window, running apps."""
+    return get_full_snapshot()
+
+
+@app.get("/awareness/summary")
+async def get_awareness_summary():
+    """Plain text of what LOVE sees on your screen right now."""
+    return {"summary": get_context_summary()}
+
+
+# ========== GOOGLE INTEGRATION ENDPOINTS ==========
+
+@app.get("/integrations/google/status")
+async def google_status():
+    """Check Google services connection status."""
+    try:
+        from integrations.google_services import GoogleServices
+        return GoogleServices.get_instance().get_status()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.post("/integrations/google/auth")
+async def google_auth():
+    """Trigger Google OAuth2 authorization flow (opens browser once)."""
+    try:
+        from integrations.google_services import GoogleServices
+        return await asyncio.to_thread(GoogleServices.get_instance().authorize)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/integrations/google/calendar")
+async def google_calendar():
+    """Get today's calendar events."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "events": [], "message": "Google not connected. POST /integrations/google/auth to authorize."}
+        events = await asyncio.to_thread(gs.get_todays_events)
+        return {"connected": True, "events_today": len(events), "events": events}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.get("/integrations/google/calendar/upcoming")
+async def google_calendar_upcoming(days: int = 7):
+    """Get upcoming events for next N days."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "events": []}
+        events = await asyncio.to_thread(gs.get_upcoming_events, days)
+        return {"connected": True, "events": events}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.get("/integrations/google/email")
+async def google_email():
+    """Get Gmail important unread summary."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "unread_important": 0}
+        summary = await asyncio.to_thread(gs.get_email_summary)
+        return {"connected": True, **summary}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.get("/integrations/google/drive")
+async def google_drive(count: int = 10):
+    """Get recently modified Google Drive files."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "files": []}
+        files = await asyncio.to_thread(gs.get_recent_drive_files, count)
+        return {"connected": True, "files": files}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.get("/integrations/google/drive/search")
+async def google_drive_search(q: str):
+    """Search Google Drive files."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "results": []}
+        results = await asyncio.to_thread(gs.search_drive, q)
+        return {"connected": True, "query": q, "results": results}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.get("/integrations/google/calendar/insights")
+async def google_calendar_insights():
+    """Get calendar insights with smart suggestions."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "insights": [], "suggestions": []}
+        insights = await asyncio.to_thread(gs.get_calendar_insights)
+        return {"connected": True, **insights}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+# ========== PHONE BRIDGE ENDPOINTS ==========
+
+@app.get("/integrations/phone/status")
+async def phone_status():
+    """Check phone connection status."""
+    try:
+        from integrations.phone_bridge import PhoneBridge
+        return PhoneBridge.get_instance().get_status()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.post("/integrations/phone/update")
+async def phone_update(data: dict):
+    """
+    Receive phone state push from KDE Connect or iOS Shortcuts.
+    Body: {battery, location, missed_calls, unread_messages, activity, notifications, wifi}
+    """
+    try:
+        from integrations.phone_bridge import PhoneBridge
+        return PhoneBridge.get_instance().update_from_webhook(data)
+    except Exception as e:
+        return {"received": False, "error": str(e)}
+
+
+@app.post("/integrations/phone/location")
+async def save_location(data: dict):
+    """Save a named location (e.g., home, office, gym) with lat/lon."""
+    try:
+        from integrations.phone_bridge import PhoneBridge
+        label = data.get("label", "")
+        lat = data.get("lat", 0.0)
+        lon = data.get("lon", 0.0)
+        PhoneBridge.get_instance().save_location(label, lat, lon)
+        return {"success": True, "label": label}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ========== DOCUMENT ANALYST ENDPOINTS ==========
+
+@app.get("/docs/insights")
+async def doc_insights():
+    """Get LOVE's analysis of your code and documents."""
+    analyst = get_analyst()
+    return {
+        "insights": analyst.get_recent_insights(),
+        "active_project": analyst.get_active_project(),
+        "project_summary": analyst.get_project_summary()
+    }
+
+
+@app.post("/docs/scan")
+async def doc_scan():
+    """Force immediate scan of watched folders."""
+    analyst = get_analyst()
+    result = await asyncio.to_thread(analyst.scan_now)
+    return result
+
+
+@app.get("/docs/patterns")
+async def doc_patterns():
+    """Get detected code patterns and anti-patterns from recent scan."""
+    try:
+        analyst = get_analyst()
+        summary = analyst.get_project_summary()
+        # Extract patterns from insights if they contain pattern information
+        insights = summary.get("insights", [])
+        patterns = [i for i in insights if "[" in i and "]" in i]  # Pattern insights have [filename] format
+        return {
+            "patterns": patterns,
+            "total_insights": len(insights),
+            "active_project": analyst.get_active_project()
+        }
+    except Exception as e:
+        return {"error": str(e), "patterns": []}
+
+
+@app.post("/docs/watch")
+async def doc_watch(data: dict):
+    """Add a folder to LOVE's document watch list."""
+    path = data.get("path", "")
+    if not path:
+        return {"success": False, "error": "path required"}
+    analyst = get_analyst()
+    analyst.add_watch_path(path)
+    return {"success": True, "watching": path}
+
+
+@app.post("/docs/analyze-file")
+async def analyze_file(data: dict):
+    """Use LOVE's LLM to analyze a specific file."""
+    file_path = data.get("path", "")
+    if not file_path:
+        return {"success": False, "error": "path required"}
+    analyst = get_analyst()
+    analysis = await asyncio.to_thread(analyst.analyze_file_with_llm, file_path)
+    return {"success": True, "path": file_path, "analysis": analysis}
+
+
+# ========== PROACTIVE SPEAK ENDPOINT ==========
+
+@app.post("/speak/proactive")
+async def proactive_speak(data: dict):
+    """Make LOVE say something proactively (called by heartbeat triggers)."""
+    message = data.get("message", "")
+    if not message:
+        return {"success": False, "error": "message required"}
+    try:
+        await asyncio.to_thread(speak_text, message)
+        return {"success": True, "spoken": message}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ========== LIFESCORE ENDPOINT ==========
+
+@app.get("/lifescore")
+async def lifescore():
+    """Get Life Score (0-100) with domain breakdown."""
+    orch = get_orchestrator()
+    state = orch.get_unified_state()
+    return {
+        "score": state.get('life_score', 50),
+        "overall_state": state.get('overall_state', 'unknown'),
+        "breakdown": state.get('score_breakdown', {}),
+        "recommendations": state.get('recommendations', [])[:3]
+    }
+
+
+# ========== MICROSOFT / OFFICE 365 ENDPOINTS ==========
+
+@app.get("/integrations/microsoft/status")
+async def microsoft_status():
+    """Check Microsoft 365 connection status (Outlook, Teams, Calendar)."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        bridge = MicrosoftBridge.get_instance()
+        return bridge.get_status()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.post("/integrations/microsoft/auth")
+async def microsoft_auth():
+    """
+    Start Microsoft device-code auth flow.
+    Returns a code the user enters at microsoft.com/devicelogin.
+    Works from any device — no browser needed on the home PC.
+    """
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        bridge = MicrosoftBridge.get_instance()
+        return await asyncio.to_thread(bridge.start_device_code_auth)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/integrations/microsoft/email")
+async def microsoft_email(limit: int = 10):
+    """Get unread Outlook emails."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        bridge = MicrosoftBridge.get_instance()
+        emails = await asyncio.to_thread(bridge.get_unread_emails, limit)
+        count = await asyncio.to_thread(bridge.get_unread_count)
+        return {"emails": emails, "unread_count": count}
+    except Exception as e:
+        return {"error": str(e), "emails": []}
+
+
+@app.get("/integrations/microsoft/calendar")
+async def microsoft_calendar():
+    """Get today's calendar events from Outlook."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        bridge = MicrosoftBridge.get_instance()
+        events = await asyncio.to_thread(bridge.get_todays_events)
+        next_event = await asyncio.to_thread(bridge.get_next_event)
+        return {"events": events, "next_event": next_event}
+    except Exception as e:
+        return {"error": str(e), "events": []}
+
+
+@app.get("/integrations/microsoft/teams")
+async def microsoft_teams():
+    """Get recent Teams messages and presence status."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        bridge = MicrosoftBridge.get_instance()
+        messages = await asyncio.to_thread(bridge.get_teams_messages)
+        presence = await asyncio.to_thread(bridge.get_my_presence)
+        return {"messages": messages, "presence": presence}
+    except Exception as e:
+        return {"error": str(e), "messages": []}
+
+
+# ========== DEVICE REGISTRY ==========
+# Track all connected devices: home PC, office laptop, phone, tablet
+
+import json as _json
+
+_DEVICES_FILE = Path(__file__).parent.parent / "data" / "devices.json"
+_devices_lock = asyncio.Lock()
+
+
+def _load_devices() -> dict:
+    if _DEVICES_FILE.exists():
+        try:
+            return _json.loads(_DEVICES_FILE.read_text())
+        except Exception:
+            pass
+    return {}
+
+
+def _save_devices(devices: dict):
+    _DEVICES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _DEVICES_FILE.write_text(_json.dumps(devices, indent=2))
+
+
+@app.get("/devices")
+async def list_devices():
+    """List all registered devices and their last-seen status."""
+    devices = _load_devices()
+    now = datetime.utcnow().isoformat()
+    result = []
+    for device_id, info in devices.items():
+        last_seen = info.get("last_seen", "")
+        online = False
+        if last_seen:
+            try:
+                from datetime import timezone
+                last_dt = datetime.fromisoformat(last_seen)
+                elapsed = (datetime.utcnow() - last_dt.replace(tzinfo=None)).total_seconds()
+                online = elapsed < 120  # online if pinged within 2 min
+            except Exception:
+                pass
+        result.append({**info, "id": device_id, "online": online})
+    # Sort: online first, then by last_seen
+    result.sort(key=lambda d: (not d["online"], d.get("last_seen", "")), reverse=False)
+    return {"devices": result, "total": len(result)}
+
+
+@app.post("/devices/heartbeat")
+async def device_heartbeat(data: dict):
+    """
+    Called by any device every ~60s to announce it's alive.
+    Payload: { device_id, device_type, device_name, battery, os, extra:{} }
+    """
+    device_id = data.get("device_id", "")
+    if not device_id:
+        return {"success": False, "error": "device_id required"}
+
+    async with _devices_lock:
+        devices = _load_devices()
+        existing = devices.get(device_id, {})
+        devices[device_id] = {
+            **existing,
+            "id": device_id,
+            "name": data.get("device_name", existing.get("name", device_id)),
+            "type": data.get("device_type", existing.get("type", "unknown")),
+            "os": data.get("os", existing.get("os", "")),
+            "battery": data.get("battery"),
+            "ip": data.get("ip", ""),
+            "context": data.get("context", existing.get("context", {})),
+            "extra": data.get("extra", {}),
+            "last_seen": datetime.utcnow().isoformat(),
+            "first_seen": existing.get("first_seen", datetime.utcnow().isoformat()),
+        }
+        _save_devices(devices)
+
+    return {"success": True, "registered": device_id}
+
+
+@app.post("/devices/push")
+async def device_push_event(data: dict):
+    """
+    Push an event from any device to LOVE.
+    Types: notification, teams_message, outlook_email, call, message, location, battery_low
+    Payload: { device_id, type, title, body, extra:{} }
+    """
+    device_id = data.get("device_id", "unknown")
+    event_type = data.get("type", "notification")
+    title = data.get("title", "")
+    body = data.get("body", "")
+
+    # Update device last_seen
+    async with _devices_lock:
+        devices = _load_devices()
+        if device_id in devices:
+            devices[device_id]["last_seen"] = datetime.utcnow().isoformat()
+            _save_devices(devices)
+
+    # Push into phone bridge state if it's a phone/tablet event
+    if event_type in ("battery", "location", "notification", "call", "message"):
+        try:
+            from integrations.phone_bridge import PhoneBridge
+            bridge = PhoneBridge.get_instance()
+            bridge.update_from_webhook({
+                "battery": data.get("battery"),
+                "location": data.get("location"),
+                "missed_calls": 1 if event_type == "call" else 0,
+                "notifications": [{"app": data.get("app", ""), "title": title, "text": body}],
+                "source": device_id,
+            })
+        except Exception:
+            pass
+
+    # Push into Teams/Outlook bridge state if from office laptop
+    if event_type in ("teams_message", "outlook_email"):
+        pass  # Handled by office agent pushing directly
+
+    return {
+        "success": True,
+        "received": {"device_id": device_id, "type": event_type, "title": title}
+    }
+
+
+@app.post("/profile/sync")
+async def profile_sync(data: dict):
+    """
+    Receive and store the user's personal profile from the phone app.
+    Saves to data/profile.json and injects into LOVE memory as context.
+    """
+    import json as _json
+    profile_path = Path("data/profile.json")
+    profile_path.parent.mkdir(exist_ok=True)
+    with open(profile_path, "w") as f:
+        _json.dump(data, f, indent=2)
+
+    # Inject profile into LOVE memory so it's always in context
+    name = data.get("name", "Karthi")
+    profession = data.get("profession", "")
+    company = data.get("company", "")
+    location = data.get("location", "")
+    goals = ", ".join(data.get("goals", []))
+    interests = ", ".join(data.get("interests", [])) if isinstance(data.get("interests"), list) else data.get("interests", "")
+    routine = data.get("routine", {})
+    health = data.get("health", "")
+
+    profile_summary = (
+        f"User profile: Name={name}, Profession={profession}, Company={company}, "
+        f"Location={location}, Goals=[{goals}], Interests=[{interests}], "
+        f"Wake={routine.get('wakeTime','')}, Work hours={routine.get('workHours','')}, "
+        f"Health={health}"
+    )
+
+    try:
+        from core.long_term_memory import add_episodic
+        add_episodic(
+            summary=profile_summary,
+            detail="User profile information",
+            timestamp=datetime.now().isoformat(),
+            emotion="neutral",
+            intensity=0.5,
+            tags=["profile", "user"],
+            source="profile_load"
+        )
+    except Exception:
+        pass
+
+    return {"success": True, "stored": profile_path.as_posix()}
+
+
+@app.post("/memory/ingest")
+async def memory_ingest(data: dict):
+    """
+    Ingest any event into LOVE memory — phone notifications, people seen, etc.
+    Payload: { type, sender, channel, raw_body, group, ... }
+    """
+    import json as _json
+    event_type = data.get("type", "event")
+    sender = data.get("sender", "")
+    channel = data.get("channel", "")
+    body = data.get("raw_body") or data.get("body", "")
+    group = data.get("group", "")
+
+    if not body:
+        return {"success": False, "reason": "empty body"}
+
+    doc = (
+        f"[{channel}] Message from {sender}"
+        + (f" in {group}" if group else "")
+        + f": {body}"
+    )
+
+    import hashlib
+    doc_id = f"notif_{hashlib.md5(doc.encode()).hexdigest()[:12]}"
+
+    try:
+        from core.long_term_memory import add_episodic
+        add_episodic(
+            summary=f"[{channel}] {event_type} from {sender}",
+            detail=doc,
+            timestamp=datetime.now().isoformat(),
+            emotion="neutral",
+            intensity=0.5,
+            tags=["notification", channel, event_type],
+            source="notification"
+        )
+    except Exception:
+        pass
+
+    # Also append to daily log for awareness
+    try:
+        from pathlib import Path
+        log_path = Path(f"data/notif_log_{__import__('datetime').date.today()}.jsonl")
+        with open(log_path, "a") as f:
+            f.write(_json.dumps(data) + "\n")
+    except Exception:
+        pass
+
+    return {"success": True, "id": doc_id}
+
+
+@app.get("/memory/recent")
+async def memory_recent(limit: int = 10):
+    """Return recent memory entries."""
+    try:
+        from core.long_term_memory import recall_memory
+        memories = recall_memory("recent events messages notifications", n=min(limit, 20))
+        return {"memories": [{"text": m, "meta": {}} for m in memories.split("\n") if m]}
+    except Exception:
+        return {"memories": []}
+
+
+# ========== INTERNET ACCESS ==========
+
+@app.post("/internet/search")
+async def internet_search(data: dict):
+    """LOVE searches the web. Payload: { query, max_results? }"""
+    if not INTERNET_AVAILABLE:
+        return {"error": "Internet module not available"}
+    query = data.get("query", "")
+    if not query:
+        return {"error": "query required"}
+    results = await asyncio.to_thread(web_search, query, data.get("max_results", 5))
+    return {"query": query, "results": results}
+
+
+@app.post("/internet/research")
+async def internet_research(data: dict):
+    """Deep research on a topic. Payload: { query, depth? }"""
+    if not INTERNET_AVAILABLE:
+        return {"error": "Internet module not available"}
+    query = data.get("query", "")
+    if not query:
+        return {"error": "query required"}
+    result = await asyncio.to_thread(research_topic, query, data.get("depth", 2))
+    return result
+
+
+@app.get("/internet/news")
+async def internet_news(topic: str = "tech", limit: int = 5):
+    """Fetch latest news headlines for a topic."""
+    if not INTERNET_AVAILABLE:
+        return {"error": "Internet module not available"}
+    items = await asyncio.to_thread(get_news, topic, limit)
+    return {"topic": topic, "items": items}
+
+
+@app.post("/internet/read")
+async def internet_read_page(data: dict):
+    """Read and extract text from a URL. Payload: { url }"""
+    if not INTERNET_AVAILABLE:
+        return {"error": "Internet module not available"}
+    url = data.get("url", "")
+    if not url:
+        return {"error": "url required"}
+    content = await asyncio.to_thread(read_page, url, 3000)
+    return {"url": url, "content": content}
+
+
+# ========== IDLE MIND ==========
+
+@app.get("/love/idle/status")
+async def idle_mind_status():
+    """Get LOVE's current idle mind state and recent thoughts."""
+    if not IDLE_MIND_AVAILABLE:
+        return {"error": "Idle mind not available"}
+    return get_idle_status()
+
+
+@app.post("/love/idle/trigger")
+async def idle_mind_trigger(data: dict):
+    """Manually trigger an idle mind task. Payload: { task? } (explore/reflect/feature/learn/news)"""
+    if not IDLE_MIND_AVAILABLE:
+        return {"error": "Idle mind not available"}
+    task = data.get("task", "any")
+    result = await asyncio.to_thread(force_think, task)
+    return result
+
+
+@app.get("/love/idle/news")
+async def idle_news_digest():
+    """Get the latest news digest LOVE prepared while idle."""
+    if not IDLE_MIND_AVAILABLE:
+        return {"error": "Idle mind not available"}
+    digest = get_news_digest()
+    if not digest:
+        return {"digest": None, "message": "No digest ready yet — LOVE will prepare one when idle."}
+    return digest
+
+
+@app.get("/love/idle/drafts")
+async def idle_drafts():
+    """List feature drafts LOVE wrote autonomously."""
+    if not IDLE_MIND_AVAILABLE:
+        return {"drafts": []}
+    status = get_idle_status()
+    return {"drafts": status.get("drafts", [])}
+
+
+# ========== ADAPTIVE ==========
+
+@app.get("/love/adaptive")
+async def adaptive_summary():
+    """Get LOVE's current behavioral adaptation state."""
+    if not ADAPTIVE_AVAILABLE:
+        return {"error": "Adaptive module not available"}
+    return get_adaptive_summary()
+
+
+@app.get("/love/adaptive/context")
+async def adaptive_context():
+    """Get the current adaptation instruction context."""
+    if not ADAPTIVE_AVAILABLE:
+        return {"context": ""}
+    return {"context": get_adaptation_context()}
+
+
+# ========== UNIFIED AWARENESS ==========
+
+@app.get("/love/awareness/fusion")
+async def awareness_fusion():
+    """Get the full fused awareness — all devices, notifications, files combined."""
+    if not UNIFIED_AVAILABLE:
+        return {"error": "Unified awareness not available"}
+    result = await asyncio.to_thread(fuse_all)
+    return result
+
+
+@app.get("/love/awareness/now")
+async def awareness_now():
+    """What should LOVE do right now? Single top-priority action."""
+    if not UNIFIED_AVAILABLE:
+        return {"action": None, "reason": "Unified awareness not available"}
+    result = await asyncio.to_thread(what_should_love_do_now)
+    if not result:
+        return {"action": None, "reason": "Nothing important right now"}
+    return result
+
+
+# ========== FILE INSPECTOR ==========
+
+@app.get("/love/files/inspect")
+async def files_inspect():
+    """LOVE inspects Karthi's project directories and finds interesting files."""
+    if not FILE_INSPECTOR_AVAILABLE:
+        return {"error": "File inspector not available"}
+    result = await asyncio.to_thread(inspect_and_ask)
+    if not result:
+        return {"found": None, "message": "Nothing new or interesting in your files right now."}
+    return {"found": result}
+
+
+@app.get("/love/files/summary")
+async def files_summary():
+    """Summary of all files LOVE has discovered."""
+    if not FILE_INSPECTOR_AVAILABLE:
+        return {"error": "File inspector not available"}
+    return get_inspection_summary()
+
+
+# ========== DECISION ENGINE ==========
+
+@app.get("/love/decisions")
+async def decisions_summary(hours: int = 24):
+    """Stats on LOVE's recent autonomous decisions."""
+    if not DECISIONS_AVAILABLE:
+        return {"error": "Decision engine not available"}
+    return await asyncio.to_thread(get_decision_stats, hours)
+
+
+@app.get("/love/decisions/recent")
+async def decisions_recent(limit: int = 20):
+    """Recent decisions LOVE made and why."""
+    if not DECISIONS_AVAILABLE:
+        return {"decisions": []}
+    return {"decisions": get_recent_decisions(limit)}
+
+
+# ========== SANDBOX ==========
+
+@app.post("/love/sandbox/test")
+async def sandbox_test(data: dict):
+    """Test code in LOVE's restricted sandbox. Payload: { code }"""
+    if not SANDBOX_AVAILABLE:
+        return {"error": "Sandbox not available"}
+    code = data.get("code", "")
+    if not code:
+        return {"error": "code required"}
+    result = await asyncio.to_thread(test_feature_draft, code)
+    return result
+
+
+@app.post("/devices/chat")
+async def device_chat(data: dict):
+    """
+    Chat with LOVE from any device (phone app, office laptop agent).
+    Payload: { text, device_id, mode }
+    Returns: { response, thinking }
+    """
+    text = data.get("text", "")
+    device_id = data.get("device_id", "unknown")
+    mode = data.get("mode", "general")
+    if not text:
+        return {"error": "text required"}
+
+    # Tag the context with source device
+    tagged_text = f"[From: {device_id}] {text}"
+    result = await asyncio.to_thread(chat, tagged_text, mode)
+    return {
+        "response": result.get("response", ""),
+        "thinking": result.get("thinking", ""),
+        "device_id": device_id,
+    }
+
+
+@app.post("/devices/sync-context")
+async def sync_device_context(data: dict):
+    """
+    Sync context from a device to the central context store.
+    Payload: { device_id, context: { activity, active_window, location, etc } }
+    """
+    device_id = data.get("device_id", "")
+    if not device_id:
+        return {"success": False, "error": "device_id required"}
+
+    context = data.get("context", {})
+    
+    async with _devices_lock:
+        devices = _load_devices()
+        if device_id not in devices:
+            return {"success": False, "error": "device not registered"}
+        
+        devices[device_id]["context"] = {
+            **devices[device_id].get("context", {}),
+            **context,
+            "last_sync": datetime.utcnow().isoformat()
+        }
+        devices[device_id]["last_seen"] = datetime.utcnow().isoformat()
+        _save_devices(devices)
+    
+    return {"success": True, "message": "Context synced"}
+
+
+@app.get("/devices/context/{device_id}")
+async def get_device_context(device_id: str):
+    """Get context from a specific device."""
+    devices = _load_devices()
+    if device_id not in devices:
+        return {"error": "device not found"}
+    
+    return {
+        "device_id": device_id,
+        "context": devices[device_id].get("context", {}),
+        "last_sync": devices[device_id].get("context", {}).get("last_sync")
+    }
+
+
+@app.get("/devices/context/aggregate")
+async def get_aggregated_context():
+    """
+    Get aggregated context from all online devices.
+    Returns merged context from all active devices.
+    """
+    devices = _load_devices()
+    now = datetime.utcnow()
+    aggregated = {
+        "devices": [],
+        "merged_context": {
+            "activities": [],
+            "locations": [],
+            "battery_levels": [],
+            "active_windows": [],
+        },
+        "timestamp": now.isoformat()
+    }
+    
+    for device_id, info in devices.items():
+        last_seen = info.get("last_seen", "")
+        online = False
+        if last_seen:
+            try:
+                last_dt = datetime.fromisoformat(last_seen)
+                elapsed = (now - last_dt.replace(tzinfo=None)).total_seconds()
+                online = elapsed < 120
+            except Exception:
+                pass
+        
+        if online and "context" in info:
+            ctx = info["context"]
+            aggregated["devices"].append({
+                "id": device_id,
+                "name": info.get("name", device_id),
+                "type": info.get("type", "unknown"),
+                "context": ctx
+            })
+            
+            # Merge context
+            if ctx.get("activity"):
+                aggregated["merged_context"]["activities"].append({
+                    "device": device_id,
+                    "activity": ctx["activity"]
+                })
+            if ctx.get("location"):
+                aggregated["merged_context"]["locations"].append({
+                    "device": device_id,
+                    "location": ctx["location"]
+                })
+            if ctx.get("battery"):
+                aggregated["merged_context"]["battery_levels"].append({
+                    "device": device_id,
+                    "battery": ctx["battery"]
+                })
+            if ctx.get("active_window"):
+                aggregated["merged_context"]["active_windows"].append({
+                    "device": device_id,
+                    "window": ctx["active_window"]
+                })
+    
+    return aggregated
+
+
+# ========== VISION ==========
+
+@app.post("/vision/ocr")
+async def vision_ocr(data: dict):
+    """Extract text from an image. Payload: { image_path }"""
+    if not VISION_AVAILABLE:
+        return {"error": "Vision module not available"}
+    path = data.get("image_path", "")
+    result = await asyncio.to_thread(read_image_text, path)
+    return result
+
+
+@app.post("/vision/describe")
+async def vision_describe(data: dict):
+    """Describe what's in an image. Payload: { image_path, detail? }"""
+    if not VISION_AVAILABLE:
+        return {"error": "Vision module not available"}
+    path = data.get("image_path", "")
+    detail = data.get("detail", "normal")
+    result = await asyncio.to_thread(describe_image, path, detail)
+    return result
+
+
+@app.post("/vision/analyze")
+async def vision_analyze(data: dict):
+    """Full screenshot analysis — OCR + description + reasoning. Payload: { image_path, question? }"""
+    if not VISION_AVAILABLE:
+        return {"error": "Vision module not available"}
+    path = data.get("image_path", "")
+    question = data.get("question", "")
+    result = await asyncio.to_thread(analyze_screenshot, path, question)
+    return result
+
+
+@app.post("/vision/detect")
+async def vision_detect(data: dict):
+    """Object detection in image. Payload: { image_path, confidence? }"""
+    if not VISION_AVAILABLE:
+        return {"error": "Vision module not available"}
+    path = data.get("image_path", "")
+    confidence = data.get("confidence", 0.5)
+    result = await asyncio.to_thread(detect_image_objects, path, confidence)
+    return result
+
+
+# ========== PLANNER ==========
+
+@app.post("/planner/plan")
+async def planner_plan(data: dict):
+    """Plan and execute a complex multi-step goal. Payload: { goal, context? }"""
+    if not PLANNER_AVAILABLE:
+        return {"error": "Planner module not available"}
+    goal = data.get("goal", "")
+    if not goal:
+        return {"error": "goal required"}
+    result = await asyncio.to_thread(plan_and_execute, goal, data.get("context"))
+    return result
+
+
+@app.post("/planner/is_complex")
+async def planner_is_complex(data: dict):
+    """Check if a query needs multi-step planning. Payload: { text }"""
+    if not PLANNER_AVAILABLE:
+        return {"is_complex": False}
+    text = data.get("text", "")
+    return {"is_complex": is_complex_query(text)}
+
+
+# ========== ON-DEMAND MODELS ==========
+
+@app.get("/love/models")
+async def models_list():
+    """List all available on-demand model capabilities."""
+    if not ONDEMAND_AVAILABLE:
+        return {"capabilities": []}
+    return {"capabilities": list_capabilities()}
+
+
+@app.post("/love/models/check")
+async def models_check(data: dict):
+    """Check if a capability is available. Payload: { name }"""
+    if not ONDEMAND_AVAILABLE:
+        return {"error": "On-demand models not available"}
+    name = data.get("name", "")
+    return check_capability(name)
+
+
+@app.post("/love/models/install")
+async def models_install(data: dict):
+    """Install a capability. Payload: { name }"""
+    if not ONDEMAND_AVAILABLE:
+        return {"error": "On-demand models not available"}
+    name = data.get("name", "")
+    result = await asyncio.to_thread(install_capability, name)
+    return result
+
+
+@app.post("/love/models/run")
+async def models_run(data: dict):
+    """Run a capability directly. Payload: { name, ...args }"""
+    if not ONDEMAND_AVAILABLE:
+        return {"error": "On-demand models not available"}
+    name = data.get("name", "")
+    args = {k: v for k, v in data.items() if k != "name"}
+    result = await asyncio.to_thread(run_capability, name, **args)
+    return result
+
+
+# ========== SYSTEM CONTROL (JARVIS) ==========
+
+@app.post("/system/open")
+async def system_open(data: dict):
+    """Open an app/URL/file. Payload: { target }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    target = data.get("target", "")
+    # Auto-detect type
+    if target.startswith(("http://", "https://", "www.")):
+        result = await asyncio.to_thread(open_url, target)
+    elif "/" in target or "\\" in target or (len(target) > 1 and target[1] == ":"):
+        result = await asyncio.to_thread(open_file, target)
+    else:
+        result = await asyncio.to_thread(open_app, target)
+    return result
+
+
+@app.post("/system/screenshot")
+async def system_screenshot(data: dict = None):
+    """Take a screenshot. Optional: { region: [x, y, w, h] }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    region = (data or {}).get("region")
+    if region:
+        region = tuple(region)
+    return await asyncio.to_thread(take_screenshot, region)
+
+
+@app.post("/system/type")
+async def system_type(data: dict):
+    """Type text into focused window. Payload: { text }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(type_text, data.get("text", ""))
+
+
+@app.post("/system/key")
+async def system_key(data: dict):
+    """Press key or hotkey. Payload: { key }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(press_key, data.get("key", ""))
+
+
+@app.post("/system/media")
+async def system_media(data: dict):
+    """Media control. Payload: { action: play_pause/next/prev/volume_up/volume_down/mute }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(media_control, data.get("action", ""))
+
+
+@app.post("/system/lock")
+async def system_lock():
+    """Lock the screen."""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(lock_screen)
+
+
+@app.get("/system/windows")
+async def system_windows():
+    """List open windows."""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(list_open_windows)
+
+
+@app.post("/system/focus")
+async def system_focus(data: dict):
+    """Focus a window by title substring. Payload: { title }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(focus_window, data.get("title", ""))
+
+
+@app.post("/system/shell")
+async def system_shell(data: dict):
+    """Run a whitelisted shell command. Payload: { command }"""
+    if not SYSCTRL_AVAILABLE:
+        return {"error": "System control not available"}
+    return await asyncio.to_thread(run_shell, data.get("command", ""))
+
+
+@app.get("/system/actions/recent")
+async def system_actions_recent(limit: int = 20):
+    """Recent system actions log."""
+    if not SYSCTRL_AVAILABLE:
+        return {"actions": []}
+    return {"actions": get_recent_actions(limit)}
+
+
+# ========== PREDICTIVE ==========
+
+@app.get("/love/predict")
+async def love_predict():
+    """LOVE's current prediction of what Karthi might need."""
+    if not PREDICTIVE_AVAILABLE:
+        return {"prediction": None}
+    return {"prediction": predict_next_need()}
+
+
+@app.get("/love/predict/summary")
+async def love_predict_summary():
+    """Full predictive engine state."""
+    if not PREDICTIVE_AVAILABLE:
+        return {"error": "Predictive engine not available"}
+    return get_predictive_summary()
+
+
+@app.get("/love/predict/routines")
+async def love_predict_routines():
+    """Detected recurring routines."""
+    if not PREDICTIVE_AVAILABLE:
+        return {"routines": []}
+    return {"routines": detect_routines()}
+
+
+@app.get("/love/predict/recent")
+async def love_predict_recent(limit: int = 20):
+    if not PREDICTIVE_AVAILABLE:
+        return {"predictions": []}
+    return {"predictions": get_recent_predictions(limit)}
+
+
+# ========== KNOWLEDGE GRAPH ==========
+
+@app.get("/love/kg/summary")
+async def kg_summary():
+    """Knowledge graph stats."""
+    if not KG_AVAILABLE:
+        return {"error": "Knowledge graph not available"}
+    return graph_summary()
+
+
+@app.get("/love/kg/how_is")
+async def kg_how_is(name: str):
+    """How is X? Pull recent emotional/project signals about an entity."""
+    if not KG_AVAILABLE:
+        return {"error": "Knowledge graph not available"}
+    return how_is(name)
+
+
+@app.get("/love/kg/find")
+async def kg_find(query: str, type: Optional[str] = None, limit: int = 10):
+    """Find entities by name."""
+    if not KG_AVAILABLE:
+        return {"entities": []}
+    return {"entities": find_entities(query, type, limit)}
+
+
+@app.get("/love/kg/relations")
+async def kg_relations(name: str, type: Optional[str] = None,
+                       direction: str = "both", limit: int = 20):
+    """Get all relations for an entity."""
+    if not KG_AVAILABLE:
+        return {"relations": []}
+    return {"relations": get_relations(name, type, direction, limit)}
+
+
+@app.get("/love/kg/stale")
+async def kg_stale(days: int = 14):
+    """Things Karthi hasn't talked about lately — for proactive checkin."""
+    if not KG_AVAILABLE:
+        return {"stale": []}
+    return {"stale": stale_things(days)}
+
+
+@app.post("/love/kg/ingest")
+async def kg_ingest_endpoint(data: dict):
+    """Manually ingest text into the knowledge graph. Payload: { text, source? }"""
+    if not KG_AVAILABLE:
+        return {"error": "Knowledge graph not available"}
+    text = data.get("text", "")
+    source = data.get("source", "manual")
+    return await asyncio.to_thread(kg_ingest, text, source)
+
+
+# ========== CONVERSATION FLOW ==========
+
+@app.get("/love/flow")
+async def flow_status():
+    """Current conversation flow state."""
+    if not FLOW_AVAILABLE:
+        return {"error": "Flow tracker not available"}
+    return get_session_summary()
+
+
+@app.post("/love/flow/reset")
+async def flow_reset():
+    """Force a new conversation session."""
+    if not FLOW_AVAILABLE:
+        return {"error": "Flow tracker not available"}
+    return reset_session()
+
+
+# ========== VOICE LOOP ==========
+
+@app.post("/voice/loop/start")
+async def voice_loop_start():
+    """Start always-listening wake word loop ('Hey LOVE')."""
+    if not VOICE_LOOP_AVAILABLE:
+        return {"error": "Voice loop not available"}
+    return await asyncio.to_thread(start_voice_loop)
+
+
+@app.post("/voice/loop/stop")
+async def voice_loop_stop():
+    """Stop the voice loop."""
+    if not VOICE_LOOP_AVAILABLE:
+        return {"error": "Voice loop not available"}
+    return stop_voice_loop()
+
+
+@app.get("/voice/loop/status")
+async def voice_loop_status():
+    """Get voice loop status."""
+    if not VOICE_LOOP_AVAILABLE:
+        return {"available": False}
+    return get_voice_status()
+
+
+@app.get("/voice/command-suggestions")
+async def voice_command_suggestions():
+    """Get proactive voice command suggestions based on current context."""
+    try:
+        from voice.stt import WhisperTranscriber
+        transcriber = WhisperTranscriber()
+        suggestions = transcriber.get_proactive_command_suggestions()
+        return {
+            "suggestions": suggestions,
+            "count": len(suggestions)
+        }
+    except Exception as e:
+        return {"error": str(e), "suggestions": []}
+
+
+# ========== PROACTIVE INTERRUPTIONS ==========
+
+@app.post("/proactive/evaluate")
+async def proactive_evaluate(data: dict):
+    """Evaluate a situation and potentially interrupt. Payload: situation dict with type, title, message, urgency"""
+    if not PROACTIVE_AVAILABLE:
+        return {"error": "Proactive engine not available"}
+    result = await asyncio.to_thread(evaluate_and_act, data)
+    return {"delivered": result is not None, "result": result}
+
+
+@app.post("/proactive/score")
+async def proactive_score(data: dict):
+    """Score whether a situation warrants interruption."""
+    if not PROACTIVE_AVAILABLE:
+        return {"error": "Proactive engine not available"}
+    return score_interruption(data)
+
+
+@app.post("/proactive/reaction")
+async def proactive_reaction(data: dict):
+    """Record user reaction to an interruption. Payload: { ts, reaction: engaged/ignored/dismissed/annoyed/grateful }"""
+    if not PROACTIVE_AVAILABLE:
+        return {"error": "Proactive engine not available"}
+    return await asyncio.to_thread(record_reaction, data.get("ts", ""), data.get("reaction", ""))
+
+
+@app.post("/proactive/dnd")
+async def proactive_dnd(data: dict):
+    """Set do-not-disturb. Payload: { minutes, reason? }"""
+    if not PROACTIVE_AVAILABLE:
+        return {"error": "Proactive engine not available"}
+    return set_do_not_disturb(data.get("minutes", 60), data.get("reason", ""))
+
+
+@app.post("/proactive/dnd/clear")
+async def proactive_dnd_clear():
+    if not PROACTIVE_AVAILABLE:
+        return {"error": "Proactive engine not available"}
+    return clear_dnd()
+
+
+@app.get("/proactive/stats")
+async def proactive_stats():
+    """Interruption stats and receptivity scores."""
+    if not PROACTIVE_AVAILABLE:
+        return {"error": "Proactive engine not available"}
+    return get_interruption_stats()
+
+
+# ========== EXECUTIVE ASSISTANT ==========
+
+@app.post("/executive/prep_meeting")
+async def exec_prep(data: dict):
+    """Prep for a meeting. Payload: { subject, start_time? }"""
+    if not EXECUTIVE_AVAILABLE:
+        return {"error": "Executive module not available"}
+    return await asyncio.to_thread(prep_for_meeting, data.get("subject", ""), data.get("start_time"))
+
+
+@app.post("/executive/tasks")
+async def exec_add_task(data: dict):
+    """Add a task. Payload: { text, deadline?, source? }"""
+    if not EXECUTIVE_AVAILABLE:
+        return {"error": "Executive module not available"}
+    return await asyncio.to_thread(add_task, data.get("text", ""), data.get("deadline"), data.get("source", "api"))
+
+
+@app.get("/executive/tasks")
+async def exec_get_tasks(filter: str = "active"):
+    if not EXECUTIVE_AVAILABLE:
+        return {"tasks": []}
+    return {"tasks": get_tasks(filter)}
+
+
+@app.post("/executive/tasks/complete")
+async def exec_complete_task(data: dict):
+    if not EXECUTIVE_AVAILABLE:
+        return {"error": "Executive module not available"}
+    return complete_task(data.get("task_id", 0))
+
+
+@app.post("/executive/followup")
+async def exec_followup(data: dict):
+    """Draft a follow-up email. Payload: { meeting_subject, key_points[], action_items[], recipient? }"""
+    if not EXECUTIVE_AVAILABLE:
+        return {"error": "Executive module not available"}
+    return {
+        "draft": draft_follow_up(
+            data.get("meeting_subject", ""),
+            data.get("key_points", []),
+            data.get("action_items", []),
+            data.get("recipient")
+        )
+    }
+
+
+@app.get("/executive/brief")
+async def exec_brief():
+    """LOVE's daily briefing."""
+    if not EXECUTIVE_AVAILABLE:
+        return {"error": "Executive module not available"}
+    return await asyncio.to_thread(generate_daily_brief)
+
+
+@app.post("/executive/reminder")
+async def exec_reminder(data: dict):
+    """Set a reminder. Payload: { text, trigger_at: '+30m' | '+2h' | 'tomorrow' | ISO }"""
+    if not EXECUTIVE_AVAILABLE:
+        return {"error": "Executive module not available"}
+    return await asyncio.to_thread(set_reminder, data.get("text", ""), data.get("trigger_at", ""))
+
+
+@app.get("/executive/reminders/due")
+async def exec_reminders_due():
+    if not EXECUTIVE_AVAILABLE:
+        return {"reminders": []}
+    return {"reminders": check_due_reminders()}
+
+
+# ========== EMOTIONAL INTELLIGENCE ==========
+
+@app.post("/emotional/detect")
+async def emotional_detect(data: dict):
+    """Detect mood from text. Payload: { text }"""
+    if not EMOTIONAL_AVAILABLE:
+        return {"error": "Emotional module not available"}
+    return detect_mood(data.get("text", ""))
+
+
+@app.post("/emotional/record")
+async def emotional_record(data: dict):
+    """Record mood from text and update stress tracking."""
+    if not EMOTIONAL_AVAILABLE:
+        return {"error": "Emotional module not available"}
+    return await asyncio.to_thread(record_mood, data.get("text", ""))
+
+
+@app.get("/emotional/summary")
+async def emotional_summary():
+    """Get emotional/stress summary."""
+    if not EMOTIONAL_AVAILABLE:
+        return {"error": "Emotional module not available"}
+    return get_emotional_summary()
+
+
+@app.get("/emotional/tone")
+async def emotional_tone():
+    """Get current tone override for LOVE."""
+    if not EMOTIONAL_AVAILABLE:
+        return {"tone": None}
+    return {"tone": get_tone_override()}
+
+
+# ========== ENHANCED SYSTEM CONTROL ==========
+
+@app.get("/system/clipboard")
+async def system_clipboard_get():
+    """Read clipboard content."""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(get_clipboard)
+
+
+@app.post("/system/clipboard")
+async def system_clipboard_set(data: dict):
+    """Write to clipboard. Payload: { text }"""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(set_clipboard, data.get("text", ""))
+
+
+@app.get("/system/active_window")
+async def system_active_window():
+    """Get currently focused window."""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(get_active_window)
+
+
+@app.get("/system/processes")
+async def system_processes(name: Optional[str] = None, limit: int = 20):
+    """List running processes."""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(list_processes, name, limit)
+
+
+@app.post("/system/kill")
+async def system_kill(data: dict):
+    """Kill a process. Payload: { name? or pid? }"""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(kill_process, data.get("name"), data.get("pid"))
+
+
+@app.get("/system/search_files")
+async def system_search_files(query: str, root: Optional[str] = None, max_results: int = 20):
+    """Search for files by name."""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(search_files, query, root, max_results)
+
+
+@app.get("/system/info")
+async def system_info():
+    """System health snapshot."""
+    if not SYSCTRL_DEEP:
+        return {"error": "Deep system control not available"}
+    return await asyncio.to_thread(get_system_info)
+
+
+# ========== LONG-TERM MEMORY (Companion for Life) ==========
+
+@app.post("/memory/life/episodic")
+async def ltm_add_episodic(data: dict):
+    """Add a life event. Payload: { summary, detail?, timestamp?, emotion?, intensity?, people[], location?, tags[], source? }"""
+    if not LTM_AVAILABLE:
+        return {"error": "Long-term memory not available"}
+    return add_episodic(**{k: v for k, v in data.items() if k != "detail" or v})
+
+
+@app.post("/memory/life/semantic")
+async def ltm_add_semantic(data: dict):
+    """Add a fact. Payload: { category, subject, predicate, object, confidence? }"""
+    if not LTM_AVAILABLE:
+        return {"error": "Long-term memory not available"}
+    return add_semantic(
+        data.get("category", ""), data.get("subject", ""),
+        data.get("predicate", ""), data.get("object", ""),
+        data.get("confidence", 1.0))
+
+
+@app.post("/memory/life/procedural")
+async def ltm_add_procedural(data: dict):
+    """Add a learned procedure. Payload: { situation, action, outcome?, success? }"""
+    if not LTM_AVAILABLE:
+        return {"error": "Long-term memory not available"}
+    return add_procedural(
+        data.get("situation", ""), data.get("action", ""),
+        data.get("outcome", ""), data.get("success", True))
+
+
+@app.get("/memory/life/remember")
+async def ltm_remember(q: str, limit: int = 10):
+    """Query all memory types. /memory/life/remember?q=Karthi+brother"""
+    if not LTM_AVAILABLE:
+        return {"error": "Long-term memory not available"}
+    return remember(q, limit)
+
+
+@app.get("/memory/life/timeline")
+async def ltm_timeline(year: Optional[int] = None, month: Optional[int] = None):
+    """Get episodic timeline."""
+    if not LTM_AVAILABLE:
+        return {"events": []}
+    return {"events": get_life_timeline(year, month)}
+
+
+@app.get("/memory/life/summary")
+async def ltm_summary(period: str = "all"):
+    """Life summary: today, week, month, year, all."""
+    if not LTM_AVAILABLE:
+        return {"error": "Long-term memory not available"}
+    return get_life_summary(period)
+
+
+@app.get("/memory/life/profile")
+async def ltm_profile():
+    """Karthi's complete semantic profile."""
+    if not LTM_AVAILABLE:
+        return {"error": "Long-term memory not available"}
+    return get_karthi_profile()
+
+
+@app.get("/memory/life/semantic/query")
+async def ltm_semantic_query(category: Optional[str] = None, subject: Optional[str] = None, limit: int = 20):
+    """Query semantic facts."""
+    if not LTM_AVAILABLE:
+        return {"facts": []}
+    return {"facts": query_semantic(category, subject, limit=limit)}
+
+
+# ── Consolidation ────────────────────────────────────────────────────────────
+
+@app.post("/memory/consolidate")
+async def memory_consolidate(data: dict = None):
+    """Run consolidation. Payload: { hours? } defaults to last 24h."""
+    if not CONSOLIDATION_AVAILABLE:
+        return {"error": "Consolidation not available"}
+    hours = (data or {}).get("hours", 24)
+    return await asyncio.to_thread(consolidate_period, hours)
+
+
+@app.get("/memory/consolidation/history")
+async def consolidation_history(days: int = 7):
+    """What LOVE has been learning."""
+    if not CONSOLIDATION_AVAILABLE:
+        return {"history": []}
+    return {"history": get_consolidation_history(days)}
+
+
+@app.get("/intelligence/dream-insights")
+def get_dream_insights():
+    """Get LOVE's deep insights from dream processing."""
+    try:
+        from core.dream_engine import get_dream_insights, get_active_predictions, get_world_model
+        return {
+            "insights": get_dream_insights(),
+            "active_predictions": get_active_predictions()[:5],
+            "world_model_people": len(get_world_model().get("people", {})),
+            "world_model_routines": len(get_world_model().get("routines", {})),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/intelligence/predictions")
+def get_predictions():
+    """Get LOVE's active predictions."""
+    try:
+        from core.prediction_market import get_active_predictions, get_accuracy_report
+        return {
+            "active": get_active_predictions()[:10],
+            "accuracy": get_accuracy_report(),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/intelligence/curiosity-gaps")
+def get_curiosity_gaps():
+    """Get knowledge gaps LOVE is working to fill."""
+    try:
+        from core.curiosity_engine import get_gap_count, _load_gaps
+        gaps = _load_gaps()
+        open_gaps = [g for g in gaps if g.get("status") == "open"]
+        return {
+            "total": len(gaps),
+            "open": len(open_gaps),
+            "resolved": len(gaps) - len(open_gaps),
+            "top_gaps": open_gaps[:5],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/intelligence/self-evolution")
+def get_self_evolution_status():
+    """Get LOVE's self-evolution status and active experiments."""
+    try:
+        from core.self_evolution import get_evolution_status
+        return get_evolution_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/intelligence/force-dream")
+def force_dream():
+    """Manually trigger a dream cycle."""
+    try:
+        from core.dream_engine import run_dream
+        result = run_dream()
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/intelligence/force-evolution")
+def force_evolution():
+    """Manually trigger a self-evolution cycle."""
+    try:
+        from core.self_evolution import run_evolution_cycle
+        result = run_evolution_cycle()
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/vision/desktop")
+def vision_desktop():
+    """Get LOVE's current view of the desktop — active window + screen text."""
+    try:
+        from core.vision import get_desktop_context
+        return get_desktop_context()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/vision/window")
+def vision_window():
+    """Get currently focused window info."""
+    try:
+        from core.vision import get_active_window_info
+        return get_active_window_info()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/emotional/state")
+def emotional_state():
+    """Get Karthi's current emotional state and stress level."""
+    try:
+        from core.emotional import get_emotional_summary, _load_stress
+        summary = get_emotional_summary(days=7)
+        stress = _load_stress()
+        return {
+            **summary,
+            "current_stress": round(stress.get("current_level", 0), 1),
+            "trend": stress.get("trend", "stable"),
+            "history": stress.get("history", [])[-10:],
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/emotional/relationships")
+def emotional_relationships():
+    """Get tracked relationships and their emotional context."""
+    try:
+        from core.emotional import get_relationship_summary
+        return get_relationship_summary()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/evolution/trigger-cycle")
+def trigger_evolution_cycle():
+    """Manually trigger a self-evolution cycle."""
+    try:
+        from core.self_evolution import trigger_evolution_cycle
+        result = trigger_evolution_cycle()
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@app.get("/evolution/behavior-state")
+def get_behavior_state():
+    """Get current behavioral modifiers LOVE is applying."""
+    try:
+        from core.self_evolution import get_behavior_state
+        return get_behavior_state()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/evolution/performance")
+def get_evolution_performance():
+    """Get recent performance metrics for evolution."""
+    try:
+        from core.self_evolution import measure_recent_performance
+        perf = measure_recent_performance(window_hours=24)
+        return perf
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ========== AGI-LEVEL SYSTEMS ENDPOINTS ==========
+
+@app.get("/agi/autonomous/goals")
+async def get_autonomous_goals():
+    """Get all autonomous goals LOVE has set."""
+    if not AUTONOMOUS_AGENT_AVAILABLE:
+        return {"error": "Autonomous agent not available"}
+    try:
+        agent = get_autonomous_agent()
+        return {"goals": agent.get_all_goals()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/agi/autonomous/generate-goals")
+async def generate_autonomous_goals():
+    """Generate autonomous goals based on current context."""
+    if not AUTONOMOUS_AGENT_AVAILABLE:
+        return {"error": "Autonomous agent not available"}
+    try:
+        agent = get_autonomous_agent()
+        goal_ids = agent.generate_autonomous_goals()
+        return {"generated_goals": goal_ids, "count": len(goal_ids)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/psychological/profile")
+async def get_psychological_profile():
+    """Get Karthi's psychological profile."""
+    if not PSYCHOLOGICAL_MODEL_AVAILABLE:
+        return {"error": "Psychological model not available"}
+    try:
+        model = get_psychological_model()
+        return model.get_profile_summary()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/predictions")
+async def get_predictions():
+    """Get active predictions about Karthi's needs."""
+    if not PREDICTIVE_INTELLIGENCE_AVAILABLE:
+        return {"error": "Predictive intelligence not available"}
+    try:
+        engine = get_predictive_engine()
+        predictions = engine.generate_predictions()
+        return {"predictions": [p.__dict__ for p in predictions]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/predictions/needs")
+async def anticipate_needs():
+    """Anticipate what Karthi will need in the near future."""
+    if not PREDICTIVE_INTELLIGENCE_AVAILABLE:
+        return {"error": "Predictive intelligence not available"}
+    try:
+        engine = get_predictive_engine()
+        ctx = get_live_context()
+        needs = engine.anticicipate_needs({"stress_level": ctx.stress_level, "energy_level": ctx.energy_level})
+        return {"anticipated_needs": needs}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/self-improvement/performance")
+async def get_self_improvement_performance():
+    """Get LOVE's self-improvement performance report."""
+    if not SELF_IMPROVEMENT_AVAILABLE:
+        return {"error": "Self-improvement engine not available"}
+    try:
+        engine = get_self_improvement_engine()
+        return engine.get_performance_report()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/strategic/plans")
+async def get_strategic_plans():
+    """Get all strategic plans."""
+    if not STRATEGIC_PLANNING_AVAILABLE:
+        return {"error": "Strategic planner not available"}
+    try:
+        planner = get_strategic_planner()
+        return {"plans": planner.get_all_plans()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/agi/strategic/generate-default")
+async def generate_default_strategies():
+    """Generate default strategic plans based on psychological profile."""
+    if not STRATEGIC_PLANNING_AVAILABLE:
+        return {"error": "Strategic planner not available"}
+    try:
+        planner = get_strategic_planner()
+        plan_ids = planner.generate_default_strategies()
+        return {"generated_plans": plan_ids, "count": len(plan_ids)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/strategic/weekly")
+async def get_weekly_strategy():
+    """Get weekly strategy based on long-term plans."""
+    if not STRATEGIC_PLANNING_AVAILABLE:
+        return {"error": "Strategic planner not available"}
+    try:
+        planner = get_strategic_planner()
+        return planner.generate_weekly_strategy()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/actions/pending")
+async def get_pending_actions():
+    """Get actions pending approval or execution."""
+    if not AUTONOMOUS_ACTIONS_AVAILABLE:
+        return {"error": "Autonomous action executor not available"}
+    try:
+        executor = get_autonomous_executor()
+        return {"pending_actions": executor.get_pending_actions()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/actions/history")
+async def get_action_history(limit: int = 50):
+    """Get recent action history."""
+    if not AUTONOMOUS_ACTIONS_AVAILABLE:
+        return {"error": "Autonomous action executor not available"}
+    try:
+        executor = get_autonomous_executor()
+        return {"history": executor.get_action_history(limit)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/actions/approvals/pending")
+async def get_pending_approvals():
+    """Get actions awaiting user approval."""
+    if not AUTONOMOUS_ACTIONS_AVAILABLE:
+        return {"error": "Autonomous action executor not available"}
+    try:
+        executor = get_autonomous_executor()
+        return {"pending_approvals": executor.get_pending_approvals()}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/agi/actions/approve")
+async def approve_action(data: dict):
+    """Approve a pending action for execution."""
+    if not AUTONOMOUS_ACTIONS_AVAILABLE:
+        return {"error": "Autonomous action executor not available"}
+    try:
+        action_id = data.get("action_id")
+        approved_by = data.get("approved_by", "user")
+        if not action_id:
+            return {"error": "action_id required"}
+        
+        executor = get_autonomous_executor()
+        success = executor.approve_action(action_id, approved_by)
+        return {"success": success, "action_id": action_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/agi/actions/reject")
+async def reject_action(data: dict):
+    """Reject a pending action."""
+    if not AUTONOMOUS_ACTIONS_AVAILABLE:
+        return {"error": "Autonomous action executor not available"}
+    try:
+        action_id = data.get("action_id")
+        reason = data.get("reason", "User rejected")
+        rejected_by = data.get("rejected_by", "user")
+        if not action_id:
+            return {"error": "action_id required"}
+        
+        executor = get_autonomous_executor()
+        success = executor.reject_action(action_id, reason, rejected_by)
+        return {"success": success, "action_id": action_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/world/knowledge")
+async def get_world_knowledge():
+    """Get LOVE's world model knowledge summary."""
+    if not WORLD_MODEL_AVAILABLE:
+        return {"error": "World model not available"}
+    try:
+        model = get_world_model()
+        return model.get_knowledge_summary()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/meta-cognition/summary")
+async def get_meta_cognitive_summary():
+    """Get LOVE's meta-cognitive state summary."""
+    if not META_COGNITION_AVAILABLE:
+        return {"error": "Meta-cognition engine not available"}
+    try:
+        engine = get_meta_cognition_engine()
+        return engine.get_meta_cognitive_summary()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/meta-cognition/improvement-suggestions")
+async def get_self_improvement_suggestions():
+    """Get LOVE's self-improvement suggestions based on meta-cognitive analysis."""
+    if not META_COGNITION_AVAILABLE:
+        return {"error": "Meta-cognition engine not available"}
+    try:
+        engine = get_meta_cognition_engine()
+        suggestions = engine.generate_self_improvement_suggestions()
+        return {"suggestions": suggestions, "count": len(suggestions)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/cross-domain/holistic")
+async def get_holistic_view():
+    """Get holistic view of all domains and their interconnections."""
+    if not CROSS_DOMAIN_REASONING_AVAILABLE:
+        return {"error": "Cross-domain reasoner not available"}
+    try:
+        reasoner = get_cross_domain_reasoner()
+        return reasoner.get_holistic_view()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/agi/cross-domain/analyze-impact")
+async def analyze_cross_domain_impact(change: dict):
+    """Analyze how a change in one domain affects other domains."""
+    if not CROSS_DOMAIN_REASONING_AVAILABLE:
+        return {"error": "Cross-domain reasoner not available"}
+    try:
+        reasoner = get_cross_domain_reasoner()
+        return reasoner.analyze_cross_domain_impact(change)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/learning/summary")
+async def get_learning_summary():
+    """Get LOVE's continuous learning summary."""
+    if not CONTINUOUS_LEARNING_AVAILABLE:
+        return {"error": "Continuous learning engine not available"}
+    try:
+        engine = get_continuous_learning_engine()
+        return engine.get_learning_summary()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/agi/learning/record")
+async def record_learning_experience(data: dict):
+    """Record a learning experience."""
+    if not CONTINUOUS_LEARNING_AVAILABLE:
+        return {"error": "Continuous learning engine not available"}
+    try:
+        engine = get_continuous_learning_engine()
+        from core.continuous_learning import LearningSourceType, LearningType
+        exp_id = engine.record_experience(
+            source_type=LearningSourceType(data.get("source_type")),
+            learning_type=LearningType(data.get("learning_type")),
+            description=data.get("description"),
+            context=data.get("context", {}),
+            outcome=data.get("outcome"),
+            lesson=data.get("lesson"),
+            confidence=data.get("confidence", 0.5)
+        )
+        return {"experience_id": exp_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/status")
+async def get_agi_status():
+    """Get status of all AGI-level systems."""
+    return {
+        "autonomous_agent": AUTONOMOUS_AGENT_AVAILABLE,
+        "psychological_model": PSYCHOLOGICAL_MODEL_AVAILABLE,
+        "predictive_intelligence": PREDICTIVE_INTELLIGENCE_AVAILABLE,
+        "self_improvement": SELF_IMPROVEMENT_AVAILABLE,
+        "strategic_planning": STRATEGIC_PLANNING_AVAILABLE,
+        "autonomous_actions": AUTONOMOUS_ACTIONS_AVAILABLE,
+        "world_model": WORLD_MODEL_AVAILABLE,
+        "meta_cognition": META_COGNITION_AVAILABLE,
+        "cross_domain_reasoning": CROSS_DOMAIN_REASONING_AVAILABLE,
+        "continuous_learning": CONTINUOUS_LEARNING_AVAILABLE,
+        "total_systems": 10,
+        "active_systems": sum([
+            AUTONOMOUS_AGENT_AVAILABLE,
+            PSYCHOLOGICAL_MODEL_AVAILABLE,
+            PREDICTIVE_INTELLIGENCE_AVAILABLE,
+            SELF_IMPROVEMENT_AVAILABLE,
+            STRATEGIC_PLANNING_AVAILABLE,
+            AUTONOMOUS_ACTIONS_AVAILABLE,
+            WORLD_MODEL_AVAILABLE,
+            META_COGNITION_AVAILABLE,
+            CROSS_DOMAIN_REASONING_AVAILABLE,
+            CONTINUOUS_LEARNING_AVAILABLE
+        ])
+    }
+
+
+if __name__ == "__main__":
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

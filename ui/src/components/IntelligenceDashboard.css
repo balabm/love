@@ -1,0 +1,245 @@
+.intel-dashboard {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.intel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.intel-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.intel-refresh {
+  font-size: 0.8rem;
+  color: #888;
+  cursor: pointer;
+  user-select: none;
+}
+
+.intel-refresh:hover {
+  color: #aaa;
+}
+
+.intel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.intel-card {
+  background: #1a1a2e;
+  border-radius: 12px;
+  border: 1px solid #2a2a40;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.intel-card:hover {
+  border-color: #3a3a55;
+}
+
+.intel-blue { border-left: 3px solid #4a9eff; }
+.intel-purple { border-left: 3px solid #b084ff; }
+.intel-orange { border-left: 3px solid #ff9f4a; }
+.intel-pink { border-left: 3px solid #ff6b9d; }
+.intel-green { border-left: 3px solid #4ade80; }
+.intel-cyan { border-left: 3px solid #22d3ee; }
+
+.intel-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 0;
+}
+
+.intel-card-icon {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+.intel-card-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.intel-card-body {
+  padding: 12px 16px 16px;
+}
+
+.intel-stat {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2a2a40;
+}
+
+.intel-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #222;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.intel-item:last-child {
+  border-bottom: none;
+}
+
+.intel-bullet {
+  color: #888;
+  font-size: 0.8rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.intel-item-text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.intel-item-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.intel-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  background: #2a2a40;
+  color: #aaa;
+}
+
+.intel-badge-high {
+  background: #225533;
+  color: #4ade80;
+}
+
+.intel-badge-med {
+  background: #554422;
+  color: #fbbf24;
+}
+
+.intel-badge-low {
+  background: #552233;
+  color: #fb7185;
+}
+
+.intel-basis {
+  font-size: 0.75rem;
+  color: #777;
+  font-style: italic;
+}
+
+.intel-empty {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  margin: 8px 0;
+}
+
+.intel-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a40;
+  font-size: 0.8rem;
+  color: #777;
+}
+
+/* Stress bar */
+.intel-stress-bar {
+  position: relative;
+  height: 24px;
+  background: #2a2a40;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.intel-stress-fill {
+  height: 100%;
+  border-radius: 12px;
+  transition: width 0.5s ease, background 0.3s;
+}
+
+.intel-stress-low .intel-stress-fill {
+  background: linear-gradient(90deg, #225533, #4ade80);
+}
+
+.intel-stress-med .intel-stress-fill {
+  background: linear-gradient(90deg, #554422, #fbbf24);
+}
+
+.intel-stress-high .intel-stress-fill {
+  background: linear-gradient(90deg, #552233, #fb7185);
+}
+
+.intel-stress-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.intel-emotion-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* World model stats */
+.intel-world-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 0;
+}
+
+.intel-world-stat {
+  text-align: center;
+}
+
+.intel-world-num {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.intel-world-label {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .intel-grid {
+    grid-template-columns: 1fr;
+  }
+  .intel-dashboard {
+    padding: 10px;
+  }
+}
