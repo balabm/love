@@ -207,6 +207,97 @@ def _get_current_context() -> str:
         return f"Context error: {e}"
 
 
+
+
+def _google_calendar_today() -> str:
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return 'Google not connected. Run: python setup_credentials.py'
+        import json
+        events = gs.get_todays_events()
+        if not events:
+            return 'No events today.'
+        lines = []
+        for ev in events:
+            mins = ev.get('minutes_away')
+            when = ''
+            if mins is not None:
+                if mins < 0:
+                    when = f' [ended {-mins}min ago]'
+                elif mins == 0:
+                    when = ' [NOW]'
+                else:
+                    when = f' [in {mins}min]'
+            meet = ' | Meet: ' + ev['meet_link'] if ev.get('meet_link') else ''
+            lines.append(f"{ev['start_str']} - {ev['title']}{when}{meet}")
+        return chr(10).join(lines)
+    except Exception as e:
+        return f'Calendar error: {e}'
+
+
+def _google_upcoming_events(days: int = 7) -> str:
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return 'Google not connected.'
+        events = gs.get_upcoming_events(days=days)
+        if not events:
+            return f'No events in the next {days} days.'
+        return chr(10).join(f"{ev.get('start', '')[:16]} - {ev.get('title', '')}{(' @ '+ev['location']) if ev.get('location') else ''}" for ev in events[:20])
+    except Exception as e:
+        return f'Calendar error: {e}'
+
+
+def _google_email_summary() -> str:
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return 'Google not connected.'
+        import json
+        data = gs.get_email_summary()
+        unread = data.get('unread_important', 0)
+        urgent = data.get('urgent', [])
+        lines = [f'{unread} unread important emails']
+        for msg in urgent[:5]:
+            lines.append(f"From: {msg.get('from','')[:40]} | Subject: {msg.get('subject','')[:60]}")
+            if msg.get('snippet'):
+                lines.append(f"  {msg['snippet'][:100]}")
+        return chr(10).join(lines)
+    except Exception as e:
+        return f'Gmail error: {e}'
+
+
+def _google_drive_recent(count: int = 10) -> str:
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return 'Google not connected.'
+        files = gs.get_recent_drive_files(count=count)
+        if not files:
+            return 'No recent Drive files.'
+        return chr(10).join(f"{f['name']} [{f.get('type','?')}] - modified {f.get('modified','')[:10]}" for f in files)
+    except Exception as e:
+        return f'Drive error: {e}'
+
+
+def _google_drive_search(query: str) -> str:
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return 'Google not connected.'
+        files = gs.search_drive(query)
+        if not files:
+            return f'No Drive files matching: {query}'
+        return chr(10).join(f"{f['name']} [{f.get('type','?')}] - {f.get('link','')}" for f in files[:10])
+    except Exception as e:
+        return f'Drive search error: {e}'
+
 def _calculate(expression: str) -> str:
     """Safely evaluate a Python math expression."""
     allowed = set("0123456789+-*/().% ,eE")
@@ -349,6 +440,36 @@ class ToolRegistry:
             _calculate,
             "Safely evaluate a math expression, e.g. '2 ** 32' or 'sqrt(144)'.",
             {"expression": "Python math expression string."},
+        )
+        self.register_tool(
+            "google_calendar_today",
+            _google_calendar_today,
+            "Get today's Google Calendar events with times and meet links.",
+            {},
+        )
+        self.register_tool(
+            "google_upcoming_events",
+            _google_upcoming_events,
+            "Get Google Calendar events for the next N days.",
+            {"days": "(optional) Number of days ahead, default 7."},
+        )
+        self.register_tool(
+            "google_email_summary",
+            _google_email_summary,
+            "Get unread important Gmail emails with subjects and snippets.",
+            {},
+        )
+        self.register_tool(
+            "google_drive_recent",
+            _google_drive_recent,
+            "Get recently modified Google Drive files.",
+            {"count": "(optional) Number of files, default 10."},
+        )
+        self.register_tool(
+            "google_drive_search",
+            _google_drive_search,
+            "Search Google Drive files by name.",
+            {"query": "Search term for file names."},
         )
 
 

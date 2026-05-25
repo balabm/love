@@ -1111,6 +1111,117 @@ async def trigger_goal_cycle():
         return {"success": False, "error": str(e)}
 
 
+# ── Google Integration Routes ────────────────────────────────────────────────
+
+@router.get("/google/status")
+async def google_status():
+    """Get Google integration connection status."""
+    try:
+        from integrations.google_services import GoogleServices
+        return GoogleServices.get_instance().get_status()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@router.post("/google/auth")
+async def google_authorize():
+    """Trigger OAuth2 flow to authorize Google access."""
+    try:
+        from integrations.google_services import GoogleServices
+        return GoogleServices.get_instance().authorize()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/google/calendar/today")
+async def google_calendar_today():
+    """Get today's calendar events."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "events": []}
+        return {"connected": True, "events": gs.get_todays_events()}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "events": []}
+
+
+@router.get("/google/calendar/upcoming")
+async def google_calendar_upcoming(days: int = 7):
+    """Get upcoming calendar events."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "events": []}
+        return {"connected": True, "events": gs.get_upcoming_events(days=days)}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "events": []}
+
+
+@router.get("/google/calendar/insights")
+async def google_calendar_insights():
+    """Get smart calendar insights and suggestions."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False}
+        return {"connected": True, **gs.get_calendar_insights()}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@router.get("/google/gmail/summary")
+async def google_gmail_summary():
+    """Get Gmail important/unread summary."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False}
+        return {"connected": True, **gs.get_email_summary()}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@router.get("/google/drive/recent")
+async def google_drive_recent(count: int = 10):
+    """Get recently modified Drive files."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "files": []}
+        return {"connected": True, "files": gs.get_recent_drive_files(count=count)}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "files": []}
+
+
+@router.get("/google/drive/search")
+async def google_drive_search(q: str):
+    """Search Drive files by name."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "files": []}
+        return {"connected": True, "files": gs.search_drive(q)}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "files": []}
+
+
+@router.get("/google/snapshot")
+async def google_full_snapshot():
+    """Full Google data snapshot."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        return gs.get_full_snapshot()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
 # ── Agent Loop Routes ────────────────────────────────────────────────────────
 
 class AgentLoopRequest(BaseModel):

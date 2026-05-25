@@ -413,3 +413,66 @@ class GoogleServices:
             ]
         except Exception as e:
             return []
+
+
+    # Proactive + Context
+
+    def get_context_summary(self) -> str:
+        if not self._connected:
+            return ''
+        parts = []
+        try:
+            events = self.get_todays_events()
+            n = len(events)
+            if n:
+                parts.append('[CALENDAR] ' + str(n) + ' events today')
+                for ev in events[:2]:
+                    mins = ev.get('minutes_away')
+                    if mins is not None and -5 <= mins <= 60:
+                        when = 'NOW' if mins <= 0 else 'in ' + str(mins) + 'min'
+                        meet = ' (Meet)' if ev.get('meet_link') else ''
+                        parts.append('[CALENDAR] ' + ev['title'] + ' ' + when + meet)
+        except Exception:
+            pass
+        try:
+            email = self.get_email_summary()
+            unread = email.get('unread_important', 0)
+            if unread:
+                parts.append('[GMAIL] ' + str(unread) + ' important unread emails')
+        except Exception:
+            pass
+        return chr(10).join(parts)
+
+    def get_proactive_alerts(self) -> list:
+        if not self._connected:
+            return []
+        alerts = []
+        try:
+            events = self.get_todays_events()
+            for ev in events:
+                mins = ev.get('minutes_away')
+                if mins is not None and 0 < mins <= 10:
+                    meet = ' - Meet link ready' if ev.get('meet_link') else ''
+                    alerts.append("Meeting '" + ev['title'] + "' starts in " + str(mins) + 'min' + meet)
+        except Exception:
+            pass
+        try:
+            email = self.get_email_summary()
+            for msg in email.get('urgent', [])[:2]:
+                subj = msg.get('subject', '')
+                sender = msg.get('from', '')[:30]
+                triggers = ['urgent', 'asap', 'immediately', 'action required']
+                if any(kw in subj.lower() for kw in triggers):
+                    alerts.append('Urgent email from ' + sender + ': ' + subj[:50])
+        except Exception:
+            pass
+        return alerts
+
+    def get_full_snapshot(self) -> dict:
+        return {
+            'connected': self._connected,
+            'events_today': self.get_todays_events() if self._connected else [],
+            'email_summary': self.get_email_summary() if self._connected else {},
+            'recent_drive': self.get_recent_drive_files(5) if self._connected else [],
+            'calendar_insights': self.get_calendar_insights() if self._connected else {},
+        }
