@@ -1222,6 +1222,114 @@ async def google_full_snapshot():
         return {"connected": False, "error": str(e)}
 
 
+# ── Microsoft Integration Routes ─────────────────────────────────────────────
+
+@router.get("/microsoft/status")
+async def microsoft_status():
+    """Get Microsoft integration connection status."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        return MicrosoftBridge.get_instance().get_status()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@router.post("/microsoft/auth/start")
+async def microsoft_auth_start():
+    """Start device-code auth flow for Microsoft 365."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        return MicrosoftBridge.get_instance().start_device_code_auth()
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/microsoft/outlook/emails")
+async def ms_outlook_emails(limit: int = 10):
+    """Get unread Outlook emails."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return {"connected": False, "emails": []}
+        return {"connected": True, "emails": ms.get_unread_emails(limit=limit)}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "emails": []}
+
+
+@router.get("/microsoft/outlook/unread-count")
+async def ms_unread_count():
+    """Get Outlook unread email count."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        return {"connected": ms.is_connected(), "count": ms.get_unread_count()}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "count": 0}
+
+
+@router.get("/microsoft/calendar/today")
+async def ms_calendar_today():
+    """Get today's Outlook calendar events."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return {"connected": False, "events": []}
+        return {"connected": True, "events": ms.get_todays_events(), "next": ms.get_next_event()}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "events": []}
+
+
+@router.get("/microsoft/teams/messages")
+async def ms_teams_messages(limit: int = 5):
+    """Get recent Teams messages."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return {"connected": False, "messages": []}
+        return {"connected": True, "messages": ms.get_teams_messages(limit=limit)}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "messages": []}
+
+
+@router.get("/microsoft/teams/presence")
+async def ms_teams_presence():
+    """Get Teams presence/status."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return {"connected": False}
+        return {"connected": True, **ms.get_my_presence()}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@router.get("/microsoft/onedrive/recent")
+async def ms_onedrive_recent(limit: int = 10):
+    """Get recently modified OneDrive files."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return {"connected": False, "files": []}
+        return {"connected": True, "files": ms.get_recent_files(limit=limit)}
+    except Exception as e:
+        return {"connected": False, "error": str(e), "files": []}
+
+
+@router.get("/microsoft/snapshot")
+async def ms_full_snapshot():
+    """Full Microsoft 365 data snapshot."""
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        return MicrosoftBridge.get_instance().get_full_snapshot()
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
 # ── Agent Loop Routes ────────────────────────────────────────────────────────
 
 class AgentLoopRequest(BaseModel):

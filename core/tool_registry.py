@@ -209,6 +209,77 @@ def _get_current_context() -> str:
 
 
 
+
+
+def _ms_outlook_emails(limit: int = 5) -> str:
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return 'Microsoft not connected. Set MICROSOFT_CLIENT_ID in .env and run auth.'
+        emails = ms.get_unread_emails(limit=limit)
+        if not emails:
+            return 'No unread Outlook emails.'
+        lines = []
+        for em in emails:
+            imp = '[IMPORTANT] ' if em.get('important') else ''
+            lines.append(imp + 'From: ' + em.get('from','') + ' | ' + em.get('subject','')[:60])
+            if em.get('preview'):
+                lines.append('  ' + em['preview'][:100])
+        return chr(10).join(lines)
+    except Exception as e:
+        return f'Outlook error: {e}'
+
+
+def _ms_calendar_today() -> str:
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return 'Microsoft not connected.'
+        events = ms.get_todays_events()
+        if not events:
+            return 'No events today in Outlook calendar.'
+        lines = []
+        for ev in events:
+            start = ev.get('start','')[:16].replace('T',' ')
+            join = ' [Teams link]' if ev.get('join_url') else ''
+            lines.append(start + ' - ' + ev.get('title','') + join)
+        return chr(10).join(lines)
+    except Exception as e:
+        return f'Calendar error: {e}'
+
+
+def _ms_teams_messages(limit: int = 5) -> str:
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return 'Microsoft not connected.'
+        msgs = ms.get_teams_messages(limit=limit)
+        if not msgs:
+            return 'No recent Teams messages.'
+        lines = []
+        for m in msgs:
+            lines.append('[' + m.get('chat','') + '] ' + m.get('from','') + ': ' + m.get('text','')[:120])
+        return chr(10).join(lines)
+    except Exception as e:
+        return f'Teams error: {e}'
+
+
+def _ms_onedrive_recent(limit: int = 5) -> str:
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        if not ms.is_connected():
+            return 'Microsoft not connected.'
+        files = ms.get_recent_files(limit=limit)
+        if not files:
+            return 'No recent OneDrive files.'
+        return chr(10).join(f.get('name','') + ' - ' + f.get('modified','')[:10] for f in files)
+    except Exception as e:
+        return f'OneDrive error: {e}'
+
 def _google_calendar_today() -> str:
     try:
         from integrations.google_services import GoogleServices
@@ -470,6 +541,30 @@ class ToolRegistry:
             _google_drive_search,
             "Search Google Drive files by name.",
             {"query": "Search term for file names."},
+        )
+        self.register_tool(
+            "ms_outlook_emails",
+            _ms_outlook_emails,
+            "Get unread Outlook emails with subjects and previews.",
+            {"limit": "(optional) Max emails, default 5."},
+        )
+        self.register_tool(
+            "ms_calendar_today",
+            _ms_calendar_today,
+            "Get today's Outlook/Teams calendar events.",
+            {},
+        )
+        self.register_tool(
+            "ms_teams_messages",
+            _ms_teams_messages,
+            "Get recent Microsoft Teams chat messages.",
+            {"limit": "(optional) Number of messages, default 5."},
+        )
+        self.register_tool(
+            "ms_onedrive_recent",
+            _ms_onedrive_recent,
+            "Get recently modified OneDrive files.",
+            {"limit": "(optional) Number of files, default 5."},
         )
 
 

@@ -442,3 +442,40 @@ class MicrosoftBridge:
         except Exception:
             pass
         return "\n".join(parts)
+
+    def is_connected(self) -> bool:
+        return self._connected
+
+    def get_proactive_alerts(self) -> list:
+        if not self._connected:
+            return []
+        alerts = []
+        try:
+            nxt = self.get_next_event()
+            if nxt:
+                mins = nxt.get('minutes_away', 999)
+                if 0 < mins <= 10:
+                    join = ' - Join link ready' if nxt.get('join_url') else ''
+                    alerts.append('Teams meeting in ' + str(mins) + 'min: ' + nxt.get('title','') + join)
+        except Exception:
+            pass
+        try:
+            emails = self.get_unread_emails(limit=5)
+            for em in emails[:3]:
+                if em.get('important'):
+                    subj = em.get('subject','')
+                    sender = em.get('from','')[:30]
+                    alerts.append('High importance email from ' + sender + ': ' + subj[:50])
+        except Exception:
+            pass
+        return alerts
+
+    def get_full_snapshot(self) -> dict:
+        return {
+            'connected': self._connected,
+            'unread_emails': self.get_unread_emails(10) if self._connected else [],
+            'todays_events': self.get_todays_events() if self._connected else [],
+            'teams_messages': self.get_teams_messages(5) if self._connected else [],
+            'onedrive_recent': self.get_recent_files(5) if self._connected else [],
+            'presence': self.get_my_presence() if self._connected else {},
+        }
