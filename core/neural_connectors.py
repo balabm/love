@@ -1,5 +1,5 @@
 """
-LOVE Neural Connectors - Wave 16
+LOVE Neural Connectors - Wave 16 + 18
 Wires existing modules into the Neural Bus so events flow through the system.
 This is the glue that makes all modules talk to each other.
 """
@@ -32,8 +32,8 @@ def connect_all_modules():
                         about="learning",
                         evidence="Detected through continuous learning",
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] learning handler error: {e}")
 
     bus.subscribe(
         subscriber_id="learning_to_teaching",
@@ -68,8 +68,8 @@ def connect_all_modules():
                     findings=findings.get("synthesis", "")[:200],
                     action=f"Apply knowledge about {topic} when relevant in conversations",
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] research→teaching handler error: {e}")
 
     bus.subscribe(
         subscriber_id="research_to_teaching_builder",
@@ -92,8 +92,8 @@ def connect_all_modules():
                 why=details.get("reason", "Continuous improvement"),
                 impact=details.get("change", "Behavioral adjustment")[:200],
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] self-update handler error: {e}")
 
     bus.subscribe(
         subscriber_id="evolution_to_teaching",
@@ -114,8 +114,8 @@ def connect_all_modules():
                 pass  # Already handled
             elif event.event_type == "heartbeat":
                 controller.heartbeat(device_id, event.payload)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] device handler error: {e}")
 
     bus.subscribe(
         subscriber_id="device_to_ecosystem",
@@ -143,8 +143,8 @@ def connect_all_modules():
                     lesson=event.payload.get("lesson", "User preference noted"),
                     confidence=0.8,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] user→learning handler error: {e}")
 
     bus.subscribe(
         subscriber_id="user_to_learning",
@@ -166,8 +166,8 @@ def connect_all_modules():
                     f"I learned something about {topic} that might interest you.",
                     priority=2,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] teaching→notification handler error: {e}")
 
     bus.subscribe(
         subscriber_id="teaching_to_notification",
@@ -185,8 +185,8 @@ def connect_all_modules():
                 from core.self_healing import detect_and_fix_error
                 error_msg = event.payload.get("error", "Unknown error")
                 detect_and_fix_error(error_msg)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] health→healing handler error: {e}")
 
     bus.subscribe(
         subscriber_id="health_to_healing",
@@ -211,8 +211,8 @@ def connect_all_modules():
                     "length": event.payload.get("length", 0),
                 },
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] conversation→evolution handler error: {e}")
 
     bus.subscribe(
         subscriber_id="conversation_to_evolution",
@@ -222,7 +222,7 @@ def connect_all_modules():
     )
 
     # Connect evolution events to teaching (transparency about self-improvement)
-    def on_evolution_event(event):
+    def on_evolution_teaching_event(event):
         """When LOVE evolves, tell the user about it."""
         try:
             from core.teaching_engine import get_teaching_engine
@@ -239,13 +239,13 @@ def connect_all_modules():
                     why=event.payload.get("reason", "Statistically validated"),
                     impact=event.payload.get("description", "")[:200],
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] evolution→teaching handler error: {e}")
 
     bus.subscribe(
         subscriber_id="evolution_to_teaching_w17",
         domains=[EventDomain.SELF_EVOLUTION.value],
-        callback=on_evolution_event,
+        callback=on_evolution_teaching_event,
     )
 
     # Connect metacognition anomalies to self-healing
@@ -257,8 +257,8 @@ def connect_all_modules():
                 detect_and_fix_error(
                     f"Behavioral anomaly detected: {event.payload.get('description', 'unknown')}"
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] metacognition→healing handler error: {e}")
 
     bus.subscribe(
         subscriber_id="metacog_to_healing",
@@ -280,8 +280,8 @@ def connect_all_modules():
                         about="pattern recognition",
                         evidence="Extracted from memory consolidation",
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] memory→teaching handler error: {e}")
 
     bus.subscribe(
         subscriber_id="memory_to_teaching",
@@ -302,8 +302,8 @@ def connect_all_modules():
                 response=event.payload.get("description", ""),
                 signals={"drift_score": event.payload.get("drift_score", 0), "is_system": True},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[NeuralBus] constitution→evolution handler error: {e}")
 
     bus.subscribe(
         subscriber_id="constitution_to_evolution",
@@ -312,7 +312,103 @@ def connect_all_modules():
         event_types=["constitution.drift"],
     )
 
-    print("[NeuralConnectors] All modules connected to Neural Bus (Wave 16 + 17)")
+    # ═══ WAVE 18: PROACTIVE PIPELINE CONNECTIONS ═══
+
+    # New subscription 1: Conversation events → proactive push
+    def on_conversation_event(event):
+        """When LOVE responds, potentially push insights."""
+        try:
+            from core.proactive_push import get_push_engine
+            push_engine = get_push_engine()
+            # Check if there's something worth pushing
+            if event.event_type == "conversation_end":
+                payload = event.payload or {}
+                if payload.get("had_cognitive_trace"):
+                    # LOVE thought deeply — potentially share insight
+                    pass  # Push engine will scan on its schedule
+        except Exception as e:
+            print(f"[NeuralBus] conversation handler error: {e}")
+
+    bus.subscribe(
+        subscriber_id="conversation_to_push",
+        domains=["conversation"],
+        callback=on_conversation_event,
+        event_types=["conversation_end"],
+    )
+
+    # New subscription 2: Evolution events → agent notification
+    def on_evolution_push_event(event):
+        """When LOVE evolves, notify the push engine."""
+        try:
+            from core.proactive_push import get_push_engine
+            engine = get_push_engine()
+            what = event.payload.get("what", "behavioral improvement")
+            gen = event.payload.get("generation", "?")
+            engine.push(
+                "EVOLUTION",
+                f"I just evolved (gen {gen}): {what[:150]}",
+                priority="low",
+                metadata=event.payload,
+            )
+        except Exception as e:
+            print(f"[NeuralBus] evolution handler error: {e}")
+
+    bus.subscribe(
+        subscriber_id="evolution_to_push",
+        domains=["self_evolution"],
+        callback=on_evolution_push_event,
+        event_types=["mutation_applied", "generation_advanced"],
+    )
+
+    # New subscription 3: Research findings → memory storage
+    def on_research_finding(event):
+        """Store research findings directly in Memory Architect."""
+        try:
+            findings = event.payload.get("findings", {})
+            topic = event.payload.get("topic", "")
+            synthesis = findings.get("synthesis", "")
+            if topic and synthesis:
+                from core.memory_architect import get_memory_architect
+                ma = get_memory_architect()
+                ma.store_episode(
+                    event=f"Researched '{topic}': {synthesis[:300]}",
+                    importance=0.7,
+                    emotional_weight=0.1,
+                )
+        except Exception as e:
+            print(f"[NeuralBus] research→memory handler error: {e}")
+
+    bus.subscribe(
+        subscriber_id="research_to_memory",
+        domains=["research"],
+        callback=on_research_finding,
+        event_types=["research_complete"],
+    )
+
+    # New subscription 4: Metacognition → evolution targeting
+    def on_metacognition_event(event):
+        """When metacognition detects a plateau, feed it to evolution engine."""
+        try:
+            if event.event_type in ("plateau_detected", "anomaly_detected"):
+                from core.evolution_engine import get_evolution_engine
+                evo = get_evolution_engine()
+                area = event.payload.get("area", "general")
+                description = event.payload.get("description", "Performance plateau detected")
+                # Force hypothesis generation targeting this area
+                hypotheses = evo.generate_hypotheses(max_hypotheses=2)
+                if hypotheses:
+                    print(f"[NeuralBus] Metacognition triggered {len(hypotheses)} hypotheses for area: {area}")
+        except Exception as e:
+            print(f"[NeuralBus] metacognition handler error: {e}")
+
+    bus.subscribe(
+        subscriber_id="metacognition_to_evolution",
+        domains=["metacognition"],
+        callback=on_metacognition_event,
+        event_types=["plateau_detected", "anomaly_detected"],
+    )
+
+    print("[NeuralConnectors] All modules connected to Neural Bus (Wave 16 + 17 + 18)")
 
 
 def emit_conversation_events(user_input: str, love_response: str, mode: str = "general"):
@@ -421,45 +517,23 @@ def get_neural_context_for_prompt() -> str:
     except Exception:
         pass
 
-    # Memory wisdom
+    # Memory architect context
     try:
         from core.memory_architect import get_memory_architect
         ma = get_memory_architect()
-        stats = ma.get_memory_stats()
-        if stats.total > 0:
-            sections.append(f"[Memory: {stats.total} memories across {stats.per_tier} tiers, consolidation health: {stats.consolidation_health:.0%}]")
+        memory_context = ma.get_context_for_prompt()
+        if memory_context:
+            sections.append(memory_context)
     except Exception:
         pass
 
-    # Evolution genome
+    # Evolution engine status
     try:
         from core.evolution_engine import get_evolution_engine
         evo = get_evolution_engine()
-        genome = evo.get_current_genome()
-        if genome.get("system_prefix"):
-            sections.append(f"[Evolved behaviors active: {genome['system_prefix'][:200]}]")
-        gen = evo.get_generation()
-        if gen > 0:
-            sections.append(f"[Evolution generation: {gen}]")
-    except Exception:
-        pass
-
-    # Metacognitive state
-    try:
-        from core.metacognitive_monitor import get_metacognitive_monitor
-        meta = get_metacognitive_monitor()
-        load = meta.get_current_load()
-        weakness = meta.identify_weakness()
-        strength = meta.identify_strength()
-        meta_parts = []
-        if load:
-            meta_parts.append(f"cognitive load: {load.level}")
-        if weakness:
-            meta_parts.append(f"improving: {weakness}")
-        if strength:
-            meta_parts.append(f"strong at: {strength}")
-        if meta_parts:
-            sections.append(f"[Self-awareness: {', '.join(meta_parts)}]")
+        evo_context = evo.get_context_for_prompt()
+        if evo_context:
+            sections.append(evo_context)
     except Exception:
         pass
 

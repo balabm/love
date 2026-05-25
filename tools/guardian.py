@@ -195,7 +195,7 @@ class GitActivityTracker:
         """Get summary of today's work activity."""
         return {
             'total_commits': len(self.today_commits),
-            'work_sessions': len(self.work_sessions),
+            'work_sessions': self.work_sessions,
             'total_hours': self.get_total_work_hours(),
             'repositories': list(set(c['repo'] for c in self.today_commits)),
             'first_commit': self.today_commits[0]['timestamp'].strftime('%H:%M') if self.today_commits else None,

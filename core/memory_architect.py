@@ -691,24 +691,61 @@ class MemoryArchitect:
         return wisdom_units
 
     def apply_wisdom(self, query: str, context: Dict = None) -> List[WisdomUnit]:
-        """Retrieve wisdom relevant to the current situation."""
+        """Retrieve wisdom relevant to the current situation.
+        Falls back to synthesising proto-wisdom from episodic memory when the
+        wisdom store is still empty (before consolidation has run).
+        """
         with self._tier_lock:
             query_lower = query.lower()
             query_words = set(query_lower.split())
-            scored = []
+            scored: List[tuple] = []
 
             for w in self._wisdom:
                 principle_words = set(w.principle.lower().split())
                 topic_words = set(w.topic.lower().split())
                 all_words = principle_words | topic_words
-
                 overlap = len(query_words & all_words)
                 if overlap > 0:
                     score = (overlap / max(len(query_words), 1)) * w.confidence
                     scored.append((score, w))
 
             scored.sort(key=lambda x: x[0], reverse=True)
-            return [w for _, w in scored[:5]]
+            results = [w for _, w in scored[:5]]
+
+            # Fallback: synthesise proto-wisdom units from episodic memory
+            # so the method is immediately useful even before consolidation
+            if len(results) < 2 and self._episodic_memory:
+                ep_results = []
+                for ep in self._episodic_memory:
+                    content = f"{ep.event} {getattr(ep, 'outcome', '')} {' '.join(getattr(ep, 'lessons', []))}"
+                    ep_words = set(content.lower().split())
+                    overlap = len(query_words & ep_words)
+                    if overlap > 0:
+                        score = (overlap / max(len(query_words), 1)) * ep.importance
+                        ep_results.append((score, ep))
+                ep_results.sort(key=lambda x: x[0], reverse=True)
+                for score, ep in ep_results[:3]:
+                    if ep.lessons:
+                        for lesson in ep.lessons[:2]:
+                            proto = WisdomUnit(
+                                id=f"proto_{ep.id}",
+                                topic=query[:50],
+                                principle=lesson[:200],
+                                confidence=min(0.6, score),
+                                source_episodes=[ep.id],
+                            )
+                            results.append(proto)
+                    elif ep.outcome:
+                        proto = WisdomUnit(
+                            id=f"proto_{ep.id}",
+                            topic=query[:50],
+                            principle=ep.outcome[:200],
+                            confidence=min(0.5, score),
+                            source_episodes=[ep.id],
+                        )
+                        results.append(proto)
+
+            return results[:5]
 
     # ─── Unified Memory Search ────────────────────────────────────────────────
 

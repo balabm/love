@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import "./NeuralMesh.css";
 
@@ -158,6 +158,12 @@ export default function NeuralMesh() {
   const [metacognition, setMetacognition] = useState(null);
   const [constitution, setConstitution] = useState(null);
   const [memory, setMemory] = useState(null);
+  // Live Feed + Goals state
+  const [liveFeed, setLiveFeed] = useState([]);
+  const [toastNotification, setToastNotification] = useState({ message: '', visible: false, priority: 'normal' });
+  const [goals, setGoals] = useState([]);
+  const wsRef = useRef(null);
+  const feedEndRef = useRef(null);
 
   const fetchAll = async () => {
     try {
@@ -202,6 +208,112 @@ export default function NeuralMesh() {
     return () => clearInterval(id);
   }, []);
 
+  // WebSocket for proactive pushes
+  useEffect(() => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//localhost:8000/agi/companion/ws`;
+    let ws = null;
+    let reconnectTimer = null;
+
+    const connect = () => {
+      try {
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log('[NeuralMesh] WebSocket connected');
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'proactive_push') {
+              // Add to live feed
+              setLiveFeed(prev => [{
+                id: Date.now(),
+                category: data.category || 'THOUGHT',
+                message: data.message || data.content || '',
+                priority: data.priority || 'normal',
+                timestamp: new Date().toISOString()
+              }, ...prev].slice(0, 50));
+
+              // Show toast notification
+              setToastNotification({
+                message: `[${data.category || 'LOVE'}] ${data.message || data.content || ''}`,
+                priority: data.priority || 'normal',
+                visible: true
+              });
+              setTimeout(() => setToastNotification(n => ({...n, visible: false})), 5000);
+            }
+          } catch (e) {
+            // Non-JSON message (like "pong"), ignore
+          }
+        };
+
+        ws.onclose = () => {
+          console.log('[NeuralMesh] WebSocket disconnected, reconnecting...');
+          reconnectTimer = setTimeout(connect, 5000);
+        };
+
+        ws.onerror = () => {
+          ws.close();
+        };
+      } catch (e) {
+        reconnectTimer = setTimeout(connect, 5000);
+      }
+    };
+
+    connect();
+
+    return () => {
+      if (ws) ws.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+    };
+  }, []);
+
+  // Fetch goals
+  useEffect(() => {
+    const fetchGoals = async () => {
+      try {
+        const res = await axios.get(`${API}/agi/goals/tree`);
+        if (res.data && !res.data.error) {
+          // Parse goal tree into flat list with progress
+          const goalList = [];
+          const parseTree = (node, depth = 0) => {
+            if (!node) return;
+            if (node.title) {
+              goalList.push({
+                id: node.id || node.title,
+                title: node.title,
+                description: node.description || '',
+                priority: node.priority || 0.5,
+                progress: node.progress || 0,
+                status: node.status || 'active',
+                depth
+              });
+            }
+            if (node.children) {
+              node.children.forEach(c => parseTree(c, depth + 1));
+            }
+            if (node.goals) {
+              node.goals.forEach(g => parseTree(g, depth));
+            }
+          };
+          parseTree(res.data);
+          if (goalList.length === 0 && Array.isArray(res.data)) {
+            res.data.forEach(g => parseTree(g, 0));
+          }
+          setGoals(goalList);
+        }
+      } catch (e) {
+        // Goals endpoint may not be available
+      }
+    };
+    fetchGoals();
+    const id = setInterval(fetchGoals, 15000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="neural-mesh">
       <div className="neural-header">
@@ -239,6 +351,8 @@ export default function NeuralMesh() {
       <nav className="neural-tabs">
         {[
           { id: "intelligence", label: "Intelligence" },
+          { id: "live", label: "Live" },
+          { id: "goals", label: "Goals" },
           { id: "evolution", label: "Evolution" },
           { id: "memory", label: "Memory" },
           { id: "constitution", label: "Constitution" },
@@ -301,6 +415,81 @@ export default function NeuralMesh() {
             ) : (
               <p className="neural-empty">Intelligence dashboard loading...</p>
             )}
+          </div>
+        )}
+
+        {/* === LIVE FEED — Real-time proactive pushes === */}
+        {activeTab === "live" && (
+          <div className="neural-live-feed">
+            <div className="live-feed-header">
+              <h4>Live Stream</h4>
+              <span className="live-feed-count">{liveFeed.length} messages</span>
+              {liveFeed.length > 0 && (
+                <button className="live-feed-clear" onClick={() => setLiveFeed([])}>Clear</button>
+              )}
+            </div>
+            <div className="live-feed-container">
+              {liveFeed.length === 0 ? (
+                <div className="neural-empty">
+                  <p>Waiting for proactive pushes...</p>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
+                    LOVE will push thoughts, alerts, insights, and nudges here in real-time via WebSocket.
+                  </span>
+                </div>
+              ) : (
+                liveFeed.map(item => (
+                  <div key={item.id} className={`live-feed-item ${item.category}`}>
+                    <div className="feed-category">{item.category}</div>
+                    <div className="feed-message">{item.message}</div>
+                    <div className="feed-time">
+                      {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={feedEndRef} />
+            </div>
+          </div>
+        )}
+
+        {/* === GOALS — Active life goals with progress === */}
+        {activeTab === "goals" && (
+          <div className="neural-goals">
+            <div className="goals-header-bar">
+              <h4>Active Goals</h4>
+              <span className="goals-count">{goals.length} goals tracked</span>
+            </div>
+            <div className="goals-list">
+              {goals.length === 0 ? (
+                <div className="neural-empty">
+                  <p>No goals set yet.</p>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>
+                    Set goals via chat: "LOVE, my goal is to..." or use the /agi/goals/set API.
+                  </span>
+                </div>
+              ) : (
+                goals.map(goal => (
+                  <div key={goal.id} className="goal-item">
+                    <div className="goal-header">
+                      <span className="goal-title">{goal.title}</span>
+                      <span className={`goal-priority ${goal.priority >= 0.8 ? 'critical' : goal.priority >= 0.6 ? 'high' : goal.priority >= 0.4 ? 'medium' : 'low'}`}>
+                        {goal.priority >= 0.8 ? 'Critical' : goal.priority >= 0.6 ? 'High' : goal.priority >= 0.4 ? 'Medium' : 'Low'}
+                      </span>
+                    </div>
+                    {goal.description && (
+                      <div className="goal-description">{goal.description}</div>
+                    )}
+                    <div className="goal-progress-bar">
+                      <div className="goal-progress-fill" style={{ width: `${Math.round(goal.progress * 100)}%` }} />
+                    </div>
+                    <div className="goal-meta">
+                      {Math.round(goal.progress * 100)}% complete
+                      {goal.status && goal.status !== 'active' && ` · ${goal.status}`}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
 
@@ -462,6 +651,12 @@ export default function NeuralMesh() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Toast Notification for Proactive Pushes */}
+      <div className={`love-toast ${toastNotification.visible ? 'visible' : ''} ${toastNotification.priority}`}>
+        <div className="love-toast-label">LOVE Push</div>
+        <div className="love-toast-message">{toastNotification.message}</div>
       </div>
     </div>
   );

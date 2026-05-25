@@ -692,7 +692,50 @@ async def lifespan(app: FastAPI):
         print(f"[API] Metacognitive Monitor error: {e}")
 
     print("[API] ═══ WAVE 17 COGNITIVE EVOLUTION ONLINE ═══")
-    
+
+    # ═══ AGENT REGISTRY: Load all specialist agents ═══
+    try:
+        from core.agent_registry import get_agent_registry
+        registry = get_agent_registry()
+        print(f"[API] * Agent Registry loaded — {len(registry.loaded_agents)} agents: {registry.loaded_agents}")
+    except Exception as e:
+        print(f"[API] Agent Registry error: {e}")
+
+    # ═══ SELF-MODIFICATION PIPELINE ═══
+    try:
+        from core.self_modification_pipeline import start_pipeline_daemon
+        start_pipeline_daemon(interval_seconds=1800)
+        print("[API] * Self-Modification Pipeline started — idle_mind → constitution → evolution")
+    except Exception as e:
+        print(f"[API] Self-Modification Pipeline error: {e}")
+
+    # ═══ AUTONOMOUS GOAL ENGINE ═══
+    try:
+        from core.autonomous_goal_engine import start_goal_engine
+        start_goal_engine(interval_seconds=7200)
+        print("[API] * Autonomous Goal Engine started — LOVE pursues your goals in background")
+    except Exception as e:
+        print(f"[API] Goal Engine error: {e}")
+
+    # ═══ PROACTIVE PUSH ENGINE ═══
+    try:
+        from core.proactive_push import get_push_engine
+        push_engine = get_push_engine()
+        push_engine.set_async_loop(asyncio.get_event_loop())
+        push_engine.start()
+        print("[API] * Proactive Push Engine started — LOVE will reach out proactively")
+    except Exception as e:
+        print(f"[API] Proactive Push error: {e}")
+
+    # ═══ INTELLIGENCE HUB: Start all device/account monitors ═══
+    try:
+        from core.intelligence_hub import get_intelligence_hub
+        hub = get_intelligence_hub()
+        hub.start(interval=60)
+        print("[API] * Intelligence Hub started — all sources monitoring")
+    except Exception as e:
+        print(f"[API] Intelligence Hub error: {e}")
+
     yield  # Application runs here
     
     # ========== SHUTDOWN ==========
@@ -1565,6 +1608,20 @@ async def get_companion_app(request: Request):
 async def websocket_companion_endpoint(websocket: WebSocket):
     """Real-time stream for the Companion HUD."""
     await manager.connect(websocket)
+
+    # Register this websocket for proactive pushes
+    async def _push_to_ws(msg: dict):
+        try:
+            await websocket.send_json(msg)
+        except Exception:
+            pass
+    try:
+        from core.proactive_push import get_push_engine
+        push_engine = get_push_engine()
+        push_engine.register_callback(_push_to_ws)
+    except Exception:
+        pass
+
     try:
         while True:
             # We just keep the connection alive here and handle incoming simple pings if needed

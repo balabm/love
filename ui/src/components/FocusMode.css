@@ -1,0 +1,169 @@
+.fm {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 32px 32px;
+  overflow-y: auto;
+  max-width: 500px;
+  margin: 0 auto;
+  width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.06) transparent;
+}
+
+.fm-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+.fm-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(226,224,238,0.3);
+}
+.fm-presets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.fm-preset {
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: transparent;
+  color: rgba(226,224,238,0.4);
+  font-family: inherit; font-size: 11px;
+  cursor: pointer; transition: all 0.15s;
+}
+.fm-preset:hover:not(:disabled) {
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+.fm-preset.active { font-weight: 600; }
+.fm-preset:disabled { opacity: 0.4; cursor: default; }
+
+/* Timer ring */
+.fm-ring-wrap {
+  position: relative;
+  width: 120px; height: 120px;
+}
+.fm-ring { overflow: visible; }
+.fm-ring-bg {
+  fill: none;
+  stroke: rgba(255,255,255,0.05);
+  stroke-width: 5;
+}
+.fm-ring-fg {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.3s;
+}
+.fm-ring-inner {
+  position: absolute;
+  inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+}
+.fm-time {
+  font-size: 22px; font-weight: 700;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.fm-done-icon {
+  font-size: 28px; line-height: 1;
+}
+.fm-preset-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(226,224,238,0.3);
+}
+
+/* Task input */
+.fm-task-input {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-family: inherit; font-size: 13px;
+  outline: none; transition: border-color 0.2s;
+}
+.fm-task-input:focus { border-color: rgba(192,132,252,0.35); }
+.fm-task-input::placeholder { color: rgba(226,224,238,0.25); }
+
+.fm-active-task {
+  font-size: 12px;
+  color: rgba(226,224,238,0.5);
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  width: 100%; text-align: center;
+}
+
+/* Controls */
+.fm-controls {
+  display: flex; gap: 8px;
+}
+.fm-btn {
+  padding: 9px 22px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.fm-btn:hover { background: rgba(255,255,255,0.08); }
+.fm-btn.primary { border: none; color: #07070f; font-weight: 600; }
+.fm-btn.primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.fm-btn.danger {
+  background: rgba(248,113,113,0.08);
+  border-color: rgba(248,113,113,0.2);
+  color: #f87171;
+}
+.fm-btn.danger:hover { background: rgba(248,113,113,0.14); }
+
+/* LOVE's post-session note */
+.fm-love-note {
+  width: 100%;
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(192,132,252,0.06);
+  border: 1px solid rgba(192,132,252,0.15);
+  font-size: 13px; line-height: 1.55;
+  color: rgba(226,224,238,0.7);
+  animation: fadeUp 0.3s ease;
+}
+.fm-note-heart { color: var(--love); flex-shrink: 0; }
+.fm-note-loading { color: rgba(192,132,252,0.45); font-style: italic; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+/* Session log */
+.fm-log {
+  width: 100%;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.fm-log-title {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+  color: rgba(226,224,238,0.25); margin-bottom: 3px;
+}
+.fm-log-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px;
+  padding: 5px 8px; border-radius: 7px;
+  background: rgba(255,255,255,0.02);
+}
+.fm-log-time  { color: var(--love); min-width: 40px; font-size: 10px; }
+.fm-log-label { color: var(--text); font-weight: 500; }
+.fm-log-task  { color: rgba(226,224,238,0.35); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

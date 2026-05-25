@@ -3,7 +3,7 @@ LOVE Neural Mesh API Routes - Wave 16
 All endpoints for the self-evolving intelligence ecosystem.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -1031,3 +1031,81 @@ async def get_intelligence_dashboard():
     result["systems_total"] = 10
 
     return result
+
+
+# ── Proactive Push Routes ────────────────────────────────────────────────────
+
+@router.get("/push/pending")
+async def get_pending_pushes(limit: int = 10):
+    """Get pending proactive messages LOVE wants to send."""
+    try:
+        from core.proactive_push import get_push_engine
+        engine = get_push_engine()
+        return {"pending": engine.get_pending(limit), "count": len(engine.get_pending(limit))}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("/push/history")
+async def get_push_history(limit: int = 50):
+    """Get history of proactive messages LOVE has sent."""
+    try:
+        from core.proactive_push import get_push_engine
+        engine = get_push_engine()
+        return {"history": engine.get_history(limit)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/push/trigger")
+async def trigger_push_scan():
+    """Manually trigger a proactive push scan."""
+    try:
+        from core.proactive_push import get_push_engine
+        engine = get_push_engine()
+        engine._run_scan()
+        return {"status": "scan triggered", "pending": len(engine.get_pending())}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ── Autonomous Goal Engine Routes ────────────────────────────────────────────
+
+@router.get("/goals")
+async def get_goals_status():
+    """Get all active goals and their autonomous execution status."""
+    try:
+        from core.autonomous_goal_engine import get_goal_status
+        return get_goal_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.post("/goals/add")
+async def add_goal_endpoint(request: Request):
+    """Add a new goal for LOVE to autonomously pursue."""
+    try:
+        body = await request.json()
+        from core.autonomous_goal_engine import add_goal
+        goal = add_goal(
+            title=body.get("title", ""),
+            description=body.get("description", ""),
+            category=body.get("category", "personal"),
+            priority=body.get("priority", "medium"),
+            target_date=body.get("target_date"),
+        )
+        from dataclasses import asdict
+        return {"success": True, "goal": asdict(goal)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/goals/run_cycle")
+async def trigger_goal_cycle():
+    """Manually trigger one goal execution cycle."""
+    try:
+        from core.autonomous_goal_engine import run_goal_cycle
+        result = run_goal_cycle()
+        return {"success": True, **result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

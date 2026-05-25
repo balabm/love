@@ -922,7 +922,7 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
         except Exception:
             pass
 
-    # ═══ PROMPT DNA — Self-evolved behavioral instructions ═══
+    # ═══ PROMPT DNA + EVOLUTION GENOME — Self-evolved behavioral instructions ═══
     dna_block = ""
     if PROMPT_DNA_AVAILABLE:
         try:
@@ -933,6 +933,20 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
         except Exception:
             pass
 
+    # Also inject active evolution engine mutations
+    try:
+        from core.evolution_engine import get_evolution_engine
+        evo_eng = get_evolution_engine()
+        # Get prefix mutations (pre-response behavioral guides)
+        prefix_muts = evo_eng._assemble_genome_prompt("prefix")
+        suffix_muts = evo_eng._assemble_genome_prompt("system")
+        if prefix_muts:
+            dna_block += f"\n\n=== EVOLUTION MUTATIONS (gen {evo_eng.get_generation()}) ===\n{prefix_muts}"
+        if suffix_muts:
+            dna_block += f"\n{suffix_muts}"
+    except Exception:
+        pass
+
     # ═══ WAVE 16: NEURAL MESH CONTEXT ═══
     neural_block = ""
     try:
@@ -940,6 +954,39 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
         neural_ctx = get_neural_context_for_prompt()
         if neural_ctx:
             neural_block = "\n\n=== NEURAL MESH (my living brain state) ===\n" + neural_ctx
+    except Exception:
+        pass
+
+    # ═══ INTELLIGENCE HUB: All device + account signals ═══
+    intel_block = ""
+    try:
+        from core.intelligence_hub import get_intelligence_hub
+        hub = get_intelligence_hub()
+        intel_ctx = hub.get_context_for_prompt()
+        if intel_ctx:
+            intel_block = "\n\n=== LIVE INTELLIGENCE (devices + accounts) ===\n" + intel_ctx
+    except Exception:
+        pass
+
+    # ═══ AGENT REGISTRY: Live state from all specialist agents ═══
+    agent_context_block = ""
+    try:
+        from core.agent_registry import get_agent_registry
+        registry = get_agent_registry()
+        agent_ctx = registry.get_all_context(user_input)
+        if agent_ctx:
+            agent_context_block = "\n\n=== LIVE LIFE CONTEXT ===\n" + agent_ctx
+    except Exception:
+        pass
+
+    # Also add active goal context
+    try:
+        from core.autonomous_goal_engine import get_goal_status
+        goal_status = get_goal_status()
+        active_goals = goal_status.get("goals", [])
+        if active_goals:
+            goal_lines = [f"  • {g['title']} [{g['priority']}] {g['progress']:.0f}% done" for g in active_goals[:3]]
+            agent_context_block += "\n\n=== ACTIVE GOALS ===\n" + "\n".join(goal_lines)
     except Exception:
         pass
 
@@ -954,32 +1001,69 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
-    # ═══ WAVE 17: COGNITIVE ARCHITECTURE — Think before speaking ═══
+    # ═══ WAVE 17: COGNITIVE ARCHITECTURE — Actually think before speaking ═══
     cognitive_block = ""
+    _cog_trace = None
+    _cog_routing = None
     try:
         from core.cognitive_architecture import get_cognitive_architecture
         cog = get_cognitive_architecture()
-        # Classify and route to determine thinking budget
-        routing = cog.classify_and_route(user_input)
-        # Apply wisdom from memory
+        # Step 1: Classify the query and determine thinking budget
+        _cog_routing = cog.classify_and_route(user_input)
+        budget = getattr(_cog_routing, 'budget', 'moderate') if _cog_routing else 'moderate'
+        strategy = getattr(_cog_routing, 'strategy', None) if _cog_routing else None
+        category = getattr(_cog_routing, 'category', 'casual') if _cog_routing else 'casual'
+
+        # Step 2: Actually think — call think_deeply() for all non-trivial queries
+        # Only skip for truly trivial casual queries with minimal budget
+        if budget != 'minimal' or category not in ('casual',):
+            try:
+                _cog_trace = cog.think_deeply(
+                    query=user_input,
+                    budget=budget,
+                    strategy=strategy,
+                    context={"mode": mode, "category": category},
+                )
+                if _cog_trace and hasattr(_cog_trace, 'steps') and _cog_trace.steps:
+                    thinking_summary = "\n".join(
+                        f"[Step {s.step_number}] {s.thought[:200]}"
+                        for s in _cog_trace.steps[:4]
+                    )
+                    cognitive_block += f"\n\n=== INTERNAL DELIBERATION (budget={budget}, strategy={_cog_trace.strategy if hasattr(_cog_trace, 'strategy') else strategy}) ===\n{thinking_summary}"
+                    if hasattr(_cog_trace, 'conclusion') and _cog_trace.conclusion:
+                        cognitive_block += f"\n[Conclusion] {_cog_trace.conclusion[:300]}"
+            except Exception as _e:
+                pass  # Thinking failed — proceed without, log silently
+
+        # Step 3: Retrieve relevant memories
         try:
             from core.memory_architect import get_memory_architect
             ma = get_memory_architect()
-            wisdom = ma.apply_wisdom(user_input, "")
-            if wisdom:
-                cognitive_block += "\n\n=== WISDOM FROM EXPERIENCE ===\n" + "\n".join(w.principle if hasattr(w, 'principle') else str(w) for w in wisdom[:3])
-        except Exception:
-            pass
-        # Buffer this input in memory architect
-        try:
+            # Buffer current input
             ma.buffer_input(user_input, source="user_chat")
             ma.hold_in_working_memory(user_input, priority=0.8)
+            # Recall similar past episodes
+            episodes = ma.recall_similar(user_input, limit=3)
+            if episodes:
+                ep_text = "\n".join(
+                    f"- {ep.event[:120]}" + (f" → {ep.outcome[:80]}" if getattr(ep, 'outcome', '') else "")
+                    for ep in episodes
+                )
+                cognitive_block += f"\n\n=== RELEVANT MEMORIES ===\n{ep_text}"
+            # Apply crystallised wisdom
+            wisdom = ma.apply_wisdom(user_input, {})
+            if wisdom:
+                cognitive_block += "\n\n=== WISDOM FROM EXPERIENCE ===\n" + "\n".join(
+                    w.principle if hasattr(w, 'principle') else str(w)
+                    for w in wisdom[:3]
+                )
         except Exception:
             pass
+
     except Exception:
         pass
 
-    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{teaching_block}{cognitive_block}{final_instructions}
+    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{intel_block}{agent_context_block}{teaching_block}{cognitive_block}{final_instructions}
 
 {USER_NAME}: {user_input}
 {LOVE_NAME}:"""
@@ -995,11 +1079,14 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
         from core.constitution import get_constitution
         constitution = get_constitution()
         critique = constitution.critique_response(response, user_input, "")
-        if critique and critique.score < 0.5 and len(critique.suggestions) > 0:
-            # Response violates principles — attempt revision
-            revised = constitution.revise_response(response, critique, user_input, "")
-            if revised and revised != response:
-                response = revised
+        if critique:
+            # critique_response() already appends to _recent_critiques for drift tracking
+            # Revise if score < 0.75 (not just 0.5) and there are suggestions
+            if critique.score < 0.75 and getattr(critique, 'suggestions', []):
+                revised = constitution.revise_response(response, critique, user_input, "")
+                if revised and revised != response and len(revised) > 20:
+                    response = revised
+                    thinking = (thinking or "") + f" [Constitutional revision applied, score was {critique.score:.2f}]"
     except Exception:
         pass
 
@@ -1150,13 +1237,41 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
-    # Feed metacognitive monitor
+    # Feed metacognitive monitor + act on quality
     try:
         from core.metacognitive_monitor import get_metacognitive_monitor
         meta = get_metacognitive_monitor()
         quality = meta.assess_response_quality(user_input, response)
         if quality:
-            meta.record_strategy_outcome("general", mode, quality.overall_score)
+            overall = getattr(quality, 'overall_score', getattr(quality, 'score', 0.5))
+            meta.record_strategy_outcome("general", mode, overall)
+            # If quality is very low, attempt improvement via LLM
+            if overall < 0.4 and len(response) > 20:
+                try:
+                    from core.llm import get_reasoning_llm
+                    improve_llm = get_reasoning_llm(temperature=0.3, max_tokens=600)
+                    issues = getattr(quality, 'issues', getattr(quality, 'weaknesses', []))
+                    issues_str = ", ".join(str(i) for i in (issues or [])[:3]) or "unclear or incomplete"
+                    improve_prompt = f"""The following response to the user had quality issues ({issues_str}):
+
+USER: {user_input[:200]}
+RESPONSE: {response[:400]}
+
+Rewrite the response to address the issues. Be direct, warm, and genuinely helpful.
+Keep the same intent but make it better. Output only the improved response."""
+                    improved = str(improve_llm.invoke(improve_prompt)).strip()
+                    if improved and len(improved) > 20 and improved != response:
+                        response = improved
+                        thinking = (thinking or "") + f" [Metacognitive improvement: score was {overall:.2f}]"
+                except Exception:
+                    pass
+            # Log cognitive load state
+            try:
+                load_state = meta.get_current_load()
+                if load_state and getattr(load_state, 'needs_intervention', False):
+                    print(f"[Metacognition] Cognitive overload detected — load level: {getattr(load_state, 'level', 'unknown')}")
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -1180,4 +1295,31 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
-    return {"response": response, "thinking": thinking}
+    # Build final return value with metacognitive confidence
+    _meta_confidence = None
+    try:
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        meta = get_metacognitive_monitor()
+        if hasattr(meta, 'get_overall_confidence'):
+            _meta_confidence = meta.get_overall_confidence()
+        elif hasattr(meta, 'get_confidence'):
+            _meta_confidence = meta.get_confidence("general")
+        else:
+            # Derive confidence from recent performance history
+            try:
+                recent = list(meta._performance_history)[-5:] if hasattr(meta, '_performance_history') else []
+                if recent:
+                    _meta_confidence = round(
+                        sum(h.get('overall', 0.5) for h in recent) / len(recent), 3
+                    )
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return {
+        "response": response,
+        "thinking": thinking,
+        "confidence": _meta_confidence,
+        "mode": mode,
+    }
