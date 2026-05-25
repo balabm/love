@@ -1109,3 +1109,154 @@ async def trigger_goal_cycle():
         return {"success": True, **result}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+# ── Integrations Status Routes ───────────────────────────────────────────────
+
+# What env key is required for each integration to be considered "configured"
+_INTEGRATION_CONFIG = {
+    "system":    {"label": "System",    "icon": "▣",  "always_on": True,  "env_keys": [], "description": "CPU, battery, active window"},
+    "browser":   {"label": "Browser",   "icon": "◉",  "always_on": True,  "env_keys": [], "description": "Active tabs via Chrome DevTools Protocol"},
+    "clipboard": {"label": "Clipboard", "icon": "◻",  "always_on": True,  "env_keys": [], "description": "Clipboard pattern detection"},
+    "finance":   {"label": "Finance",   "icon": "◈",  "always_on": True,  "env_keys": [], "description": "Live crypto + stock prices (public APIs)"},
+    "google":    {"label": "Google",    "icon": "G",  "always_on": False, "env_keys": ["GOOGLE_CREDENTIALS_PATH"], "description": "Calendar, Gmail, Drive"},
+    "microsoft": {"label": "Microsoft", "icon": "M",  "always_on": False, "env_keys": ["MICROSOFT_CLIENT_ID"], "description": "Outlook, Teams, OneDrive"},
+    "github":    {"label": "GitHub",    "icon": "⌥",  "always_on": False, "env_keys": ["GITHUB_TOKEN", "GITHUB_USERNAME"], "description": "Repos, PRs, notifications"},
+    "phone":     {"label": "Phone",     "icon": "◷",  "always_on": False, "env_keys": ["PHONE_DEVICE_ID"], "description": "KDE Connect / iOS bridge"},
+    "telegram":  {"label": "Telegram",  "icon": "▶",  "always_on": False, "env_keys": ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"], "description": "Push alert delivery"},
+}
+
+
+@router.get("/integrations/status")
+async def get_integrations_status():
+    """Return per-source connection status, config state, and snapshot data."""
+    import os
+
+    # Hub source map
+    hub_sources: dict = {}
+    hub_snapshot: dict = {}
+    hub_alerts: list = []
+    hub_last_poll: str = ""
+    try:
+        from core.intelligence_hub import get_intelligence_hub
+        hub = get_intelligence_hub()
+        status = hub.get_status()
+        hub_sources = status.get("sources", {})
+        hub_alerts = status.get("active_alerts", [])
+        hub_last_poll = status.get("last_snapshot", "")
+        snap = hub._snapshot
+        hub_snapshot = {
+            "system":    snap.system,
+            "google":    snap.google,
+            "microsoft": snap.microsoft,
+            "phone":     snap.phone,
+            "github":    snap.github,
+            "finance":   snap.finance,
+            "browser":   snap.browser,
+            "clipboard": snap.clipboard,
+        }
+    except Exception:
+        pass
+
+    integrations = []
+    for key, cfg in _INTEGRATION_CONFIG.items():
+        # Is it configured? (all required env keys present and non-empty)
+        configured = all(bool(os.getenv(k, "").strip()) for k in cfg["env_keys"]) if cfg["env_keys"] else True
+        connected = hub_sources.get(key, False)
+        data = hub_snapshot.get(key, {})
+
+        # Build a one-line status summary from snapshot data
+        summary = _build_summary(key, data)
+
+        integrations.append({
+            "id": key,
+            "label": cfg["label"],
+            "icon": cfg["icon"],
+            "description": cfg["description"],
+            "always_on": cfg["always_on"],
+            "env_keys": cfg["env_keys"],
+            "configured": configured,
+            "connected": connected,
+            "summary": summary,
+            "data": data,
+        })
+
+    return {
+        "integrations": integrations,
+        "hub_last_poll": hub_last_poll,
+        "hub_alerts": hub_alerts,
+        "connected_count": sum(1 for i in integrations if i["connected"]),
+        "total": len(integrations),
+    }
+
+
+@router.post("/integrations/poll")
+async def trigger_hub_poll():
+    """Force an immediate full poll of all intelligence sources."""
+    try:
+        from core.intelligence_hub import get_intelligence_hub
+        hub = get_intelligence_hub()
+        hub.poll_all()
+        return {"success": True, "last_poll": hub._snapshot.timestamp}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def _build_summary(key: str, data: dict) -> str:
+    if not data:
+        return ""
+    try:
+        if key == "system":
+            app = data.get("active_context", {})
+            if isinstance(app, dict):
+                app = app.get("active_app", "")
+            cpu = data.get("cpu_percent", data.get("cpu", ""))
+            parts = []
+            if app:
+                parts.append(str(app)[:30])
+            if cpu:
+                parts.append(f"CPU {cpu}%")
+            return " · ".join(parts)
+        if key == "browser":
+            tab = data.get("active_tab", {})
+            title = tab.get("title", "") if isinstance(tab, dict) else ""
+            count = data.get("tab_count", 0)
+            return f"{count} tabs" + (f" · {title[:35]}" if title else "")
+        if key == "clipboard":
+            t = data.get("type", "")
+            sig = data.get("signal", "")
+            return f"{t}: {sig[:40]}" if t else ""
+        if key == "finance":
+            prices = data.get("prices", {})
+            parts = [f"{k} ${v.get('price', '?')}" for k, v in list(prices.items())[:3]]
+            return " · ".join(parts)
+        if key == "google":
+            n = data.get("events_today", 0)
+            mins = data.get("next_event_mins")
+            nxt = (data.get("next_event") or {}).get("title", "")
+            base = f"{n} events today"
+            if nxt and mins is not None:
+                base += f" · next: {nxt[:25]} in {mins}min"
+            return base
+        if key == "microsoft":
+            unread = data.get("unread_emails", 0)
+            nxt = (data.get("next_meeting") or {}).get("subject", "")
+            return f"{unread} unread" + (f" · {nxt[:30]}" if nxt else "")
+        if key == "github":
+            notifs = data.get("unread_notifications", 0)
+            ev = data.get("recent_event", "")
+            return f"{notifs} notifications" + (f" · {ev[:40]}" if ev else "")
+        if key == "phone":
+            bat = data.get("battery", data.get("battery_level", ""))
+            loc = data.get("location_label", data.get("location", ""))
+            parts = []
+            if bat:
+                parts.append(f"Battery {bat}%")
+            if loc:
+                parts.append(str(loc)[:25])
+            return " · ".join(parts)
+        if key == "telegram":
+            return "delivery channel"
+    except Exception:
+        pass
+    return ""
