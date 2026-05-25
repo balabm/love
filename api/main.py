@@ -605,6 +605,93 @@ async def lifespan(app: FastAPI):
         print("[AGI] * OS Symbiosis, Awareness, Ghost Developer & Jarvis Protocol started.")
     except Exception as e:
         print(f"[AGI] Daemon start error: {e}")
+
+    # ═══ WAVE 16: NEURAL MESH ECOSYSTEM ═══
+    try:
+        from core.neural_bus import get_neural_bus
+        bus = get_neural_bus()
+        bus.set_async_loop(asyncio.get_event_loop())
+        print("[API] * Neural Bus started — central nervous system online")
+    except Exception as e:
+        print(f"[API] Neural Bus error: {e}")
+
+    try:
+        from core.research_engine import get_research_engine
+        research = get_research_engine()
+        research.start_background(interval_minutes=30)
+        print("[API] * Research Engine started — autonomous learning active")
+    except Exception as e:
+        print(f"[API] Research Engine error: {e}")
+
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ecosystem = get_ecosystem_controller()
+        print(f"[API] * Ecosystem Controller started — {len(ecosystem._devices)} devices registered")
+    except Exception as e:
+        print(f"[API] Ecosystem Controller error: {e}")
+
+    try:
+        from core.teaching_engine import get_teaching_engine
+        teaching = get_teaching_engine()
+        print(f"[API] * Teaching Engine started — {teaching.get_status()['total_lessons']} lessons ready")
+    except Exception as e:
+        print(f"[API] Teaching Engine error: {e}")
+
+    try:
+        from core.self_builder import get_self_builder
+        builder = get_self_builder()
+        print(f"[API] * Self-Builder started — {builder.get_status()['active_rules']} learned rules")
+    except Exception as e:
+        print(f"[API] Self-Builder error: {e}")
+
+    try:
+        from core.neural_connectors import connect_all_modules
+        connect_all_modules()
+        print("[API] * Neural Connectors wired — all modules talking")
+    except Exception as e:
+        print(f"[API] Neural Connectors error: {e}")
+    print("[API] ═══ WAVE 16 NEURAL MESH ONLINE ═══")
+
+    # ═══ WAVE 17: COGNITIVE EVOLUTION ARCHITECTURE ═══
+    try:
+        from core.cognitive_architecture import get_cognitive_architecture
+        cog = get_cognitive_architecture()
+        print(f"[API] * Cognitive Architecture started — {len(cog.get_reasoning_stats())} strategies tracked")
+    except Exception as e:
+        print(f"[API] Cognitive Architecture error: {e}")
+
+    try:
+        from core.constitution import get_constitution
+        constitution = get_constitution()
+        stats = constitution.get_stats()
+        print(f"[API] * Constitution Engine started — {stats.get('total_principles', 0)} principles active")
+    except Exception as e:
+        print(f"[API] Constitution error: {e}")
+
+    try:
+        from core.evolution_engine import get_evolution_engine
+        evo = get_evolution_engine()
+        evo.start_evolution_loop(interval_seconds=3600)
+        print(f"[API] * Evolution Engine started — generation {evo.get_generation()}, evolving every 60min")
+    except Exception as e:
+        print(f"[API] Evolution Engine error: {e}")
+
+    try:
+        from core.memory_architect import get_memory_architect
+        mem_arch = get_memory_architect()
+        stats = mem_arch.get_memory_stats()
+        print(f"[API] * Memory Architect started — {stats.total} memories, consolidation running")
+    except Exception as e:
+        print(f"[API] Memory Architect error: {e}")
+
+    try:
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        meta = get_metacognitive_monitor()
+        print(f"[API] * Metacognitive Monitor started — self-awareness online")
+    except Exception as e:
+        print(f"[API] Metacognitive Monitor error: {e}")
+
+    print("[API] ═══ WAVE 17 COGNITIVE EVOLUTION ONLINE ═══")
     
     yield  # Application runs here
     
@@ -645,6 +732,39 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
 
+    # Wave 17 shutdown
+    try:
+        from core.evolution_engine import get_evolution_engine
+        get_evolution_engine().stop_evolution_loop()
+        print("[API] Evolution Engine stopped.")
+    except Exception:
+        pass
+    try:
+        from core.memory_architect import get_memory_architect
+        ma = get_memory_architect()
+        ma.consolidate(force=True)
+        ma.shutdown()
+        print("[API] Memory Architect consolidated and stopped.")
+    except Exception:
+        pass
+    try:
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        get_metacognitive_monitor().save_all()
+        print("[API] Metacognitive Monitor state saved.")
+    except Exception:
+        pass
+
+    # Wave 16 shutdown
+    try:
+        from core.neural_bus import get_neural_bus
+        get_neural_bus().shutdown()
+    except Exception:
+        pass
+    try:
+        from core.research_engine import get_research_engine
+        get_research_engine().stop_background()
+    except Exception:
+        pass
     stop_heartbeat()
     print("[API] Heartbeat stopped. Goodbye.")
 
@@ -657,6 +777,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
+# Wave 16: Neural Mesh Routes
+try:
+    from api.neural_routes import router as neural_router
+    app.include_router(neural_router)
+    print("[API] Wave 16 Neural Mesh routes loaded")
+except Exception as e:
+    print(f"[API] Neural routes error: {e}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

@@ -933,7 +933,53 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
         except Exception:
             pass
 
-    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{final_instructions}
+    # ═══ WAVE 16: NEURAL MESH CONTEXT ═══
+    neural_block = ""
+    try:
+        from core.neural_connectors import get_neural_context_for_prompt
+        neural_ctx = get_neural_context_for_prompt()
+        if neural_ctx:
+            neural_block = "\n\n=== NEURAL MESH (my living brain state) ===\n" + neural_ctx
+    except Exception:
+        pass
+
+    # Teaching opportunity — share knowledge at the right moment
+    teaching_block = ""
+    try:
+        from core.teaching_engine import get_teaching_engine
+        t_engine = get_teaching_engine()
+        teaching_ctx = t_engine.get_teaching_prompt(user_input)
+        if teaching_ctx:
+            teaching_block = "\n\n=== TEACHING OPPORTUNITY ===\n" + teaching_ctx
+    except Exception:
+        pass
+
+    # ═══ WAVE 17: COGNITIVE ARCHITECTURE — Think before speaking ═══
+    cognitive_block = ""
+    try:
+        from core.cognitive_architecture import get_cognitive_architecture
+        cog = get_cognitive_architecture()
+        # Classify and route to determine thinking budget
+        routing = cog.classify_and_route(user_input)
+        # Apply wisdom from memory
+        try:
+            from core.memory_architect import get_memory_architect
+            ma = get_memory_architect()
+            wisdom = ma.apply_wisdom(user_input, "")
+            if wisdom:
+                cognitive_block += "\n\n=== WISDOM FROM EXPERIENCE ===\n" + "\n".join(w.principle if hasattr(w, 'principle') else str(w) for w in wisdom[:3])
+        except Exception:
+            pass
+        # Buffer this input in memory architect
+        try:
+            ma.buffer_input(user_input, source="user_chat")
+            ma.hold_in_working_memory(user_input, priority=0.8)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{teaching_block}{cognitive_block}{final_instructions}
 
 {USER_NAME}: {user_input}
 {LOVE_NAME}:"""
@@ -943,6 +989,19 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
 
     thinking, response = extract_thinking(raw)
     response = clean_response(response)
+
+    # ═══ WAVE 17: POST-RESPONSE — Constitutional review & quality assessment ═══
+    try:
+        from core.constitution import get_constitution
+        constitution = get_constitution()
+        critique = constitution.critique_response(response, user_input, "")
+        if critique and critique.score < 0.5 and len(critique.suggestions) > 0:
+            # Response violates principles — attempt revision
+            revised = constitution.revise_response(response, critique, user_input, "")
+            if revised and revised != response:
+                response = revised
+    except Exception:
+        pass
 
     # Record interaction for adaptive learning
     elapsed_ms = int((time.time() - t_start) * 1000)
@@ -1066,4 +1125,59 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             pass
 
     save_memory(user_input, response, mode=mode)
+    # ═══ WAVE 16: NEURAL BUS EVENTS ═══
+    try:
+        from core.neural_connectors import emit_conversation_events
+        emit_conversation_events(user_input, response, mode)
+    except Exception:
+        pass
+
+    # ═══ WAVE 17: COGNITIVE EVOLUTION POST-PROCESSING ═══
+    # Feed evolution engine with interaction data
+    try:
+        from core.evolution_engine import get_evolution_engine
+        evo = get_evolution_engine()
+        evo.record_interaction(
+            query=user_input,
+            response=response,
+            signals={
+                "response_time": elapsed_ms,
+                "mode": mode,
+                "response_length": len(response),
+                "thinking_length": len(thinking) if thinking else 0,
+            },
+        )
+    except Exception:
+        pass
+
+    # Feed metacognitive monitor
+    try:
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        meta = get_metacognitive_monitor()
+        quality = meta.assess_response_quality(user_input, response)
+        if quality:
+            meta.record_strategy_outcome("general", mode, quality.overall_score)
+    except Exception:
+        pass
+
+    # Store as episodic memory in memory architect
+    try:
+        from core.memory_architect import get_memory_architect
+        ma = get_memory_architect()
+        ma.store_episode(
+            event=f"User asked: {user_input[:100]} | LOVE responded: {response[:100]}",
+            emotional_weight=0.5,
+            importance=0.4,
+        )
+    except Exception:
+        pass
+
+    # Reflect on interaction (cognitive architecture learning)
+    try:
+        from core.cognitive_architecture import get_cognitive_architecture
+        cog = get_cognitive_architecture()
+        cog.reflect_on_interaction(user_input, response, user_feedback=None)
+    except Exception:
+        pass
+
     return {"response": response, "thinking": thinking}

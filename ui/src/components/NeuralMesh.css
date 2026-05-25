@@ -1,0 +1,690 @@
+/* Neural Mesh - Living Brain Visualization */
+
+.neural-mesh {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  gap: 0;
+}
+
+.neural-header {
+  padding: 1.5rem 2rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.neural-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.neural-title h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.neural-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.neural-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  animation: neural-pulse 2s ease-in-out infinite;
+}
+
+@keyframes neural-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+.neural-stats-bar {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.neural-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-num {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Tabs */
+.neural-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.neural-tab {
+  padding: 0.75rem 1.25rem;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.neural-tab:hover {
+  color: #94a3b8;
+}
+
+.neural-tab.active {
+  color: #a78bfa;
+  border-bottom-color: #a78bfa;
+}
+
+/* Content */
+.neural-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 2rem;
+}
+
+/* Event Stream */
+.neural-events-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.neural-event-pulse {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 3px solid #64748b;
+  border-radius: 0 8px 8px 0;
+  transition: all 0.3s;
+  animation: event-fade-in 0.3s ease-out;
+}
+
+@keyframes event-fade-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.neural-event-pulse:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.neural-event-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.neural-event-domain {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.neural-event-type {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+.neural-event-time {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: #475569;
+  font-variant-numeric: tabular-nums;
+}
+
+.neural-event-payload {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.neural-event-kv {
+  font-size: 0.75rem;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.neural-kv-key {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Research */
+.research-stats {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: rgba(96, 165, 250, 0.05);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.neural-research-card {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(96, 165, 250, 0.1);
+  margin-bottom: 0.75rem;
+}
+
+.neural-research-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.neural-research-icon {
+  color: #60a5fa;
+  font-size: 1.1rem;
+}
+
+.neural-research-topic {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.neural-research-status {
+  margin-left: auto;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.status-complete { background: rgba(52, 211, 153, 0.1); color: #34d399; }
+.status-in_progress { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+.status-queued { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+
+.neural-research-synthesis {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.neural-research-confidence {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.confidence-bar {
+  height: 3px;
+  background: linear-gradient(90deg, #60a5fa, #34d399);
+  border-radius: 2px;
+  max-width: 100px;
+}
+
+/* Growth Journal */
+.neural-growth-journal, .neural-rules, .neural-teaching, .neural-patterns {
+  margin-top: 1.5rem;
+}
+
+.neural-growth-journal h4, .neural-rules h4, .neural-teaching h4, .neural-patterns h4,
+.eco-presence h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin: 0 0 0.75rem;
+}
+
+.neural-growth-entry {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem;
+  background: rgba(52, 211, 153, 0.03);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  border-left: 3px solid rgba(52, 211, 153, 0.3);
+}
+
+.growth-category {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #34d399;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.growth-what {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  margin: 0.25rem 0;
+}
+
+.growth-why {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Ecosystem Map */
+.ecosystem-devices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.ecosystem-device {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.ecosystem-device.online {
+  border-color: rgba(52, 211, 153, 0.2);
+}
+
+.ecosystem-device.active {
+  border-color: rgba(167, 139, 250, 0.4);
+  background: rgba(167, 139, 250, 0.03);
+}
+
+.ecosystem-device.offline {
+  opacity: 0.5;
+}
+
+.device-indicator {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #475569;
+}
+
+.ecosystem-device.online .device-indicator {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
+}
+
+.ecosystem-device.active .device-indicator {
+  background: #a78bfa;
+  animation: neural-pulse 2s ease-in-out infinite;
+}
+
+.device-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.device-role {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.03em;
+}
+
+.device-battery {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.device-battery.low {
+  color: #f87171;
+}
+
+.device-activity {
+  font-size: 0.7rem;
+  color: #a78bfa;
+  font-style: italic;
+}
+
+/* Teaching */
+.teaching-stats {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: rgba(251, 146, 60, 0.05);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.neural-teaching-item {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.teaching-type {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #fb923c;
+  font-weight: 700;
+}
+
+.teaching-title {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+/* Rules */
+.neural-rule-item {
+  padding: 0.5rem 0.75rem;
+  background: rgba(167, 139, 250, 0.03);
+  border-radius: 8px;
+  margin-bottom: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rule-condition {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.rule-action {
+  font-size: 0.8rem;
+  color: #a78bfa;
+}
+
+/* Patterns */
+.neural-pattern {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  margin-bottom: 0.3rem;
+}
+
+.pattern-seq {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.pattern-count {
+  font-size: 0.7rem;
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+/* Presence */
+.eco-presence {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+}
+
+.presence-status {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.presence-status.present { color: #34d399; }
+.presence-status.away { color: #64748b; }
+
+.presence-activity {
+  display: block;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+/* Empty state */
+.neural-empty {
+  color: #475569;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Growth stats */
+.growth-stats {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: rgba(52, 211, 153, 0.05);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+/* ═══ WAVE 17: Intelligence Dashboard ═══ */
+
+.intel-health-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+
+.intel-health-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.intel-health-badge.excellent { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+.intel-health-badge.good { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
+.intel-health-badge.degraded { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+.intel-health-badge.critical { background: rgba(248, 113, 113, 0.2); color: #f87171; }
+
+.intel-systems { color: #64748b; font-size: 0.85rem; }
+
+.intel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.intel-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  font-size: 0.8rem;
+  transition: all 0.3s;
+}
+.intel-card.w17 { border-color: rgba(167, 139, 250, 0.3); }
+.intel-card.offline { opacity: 0.4; }
+
+.intel-card-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #f87171;
+}
+.intel-card.online .intel-card-dot { background: #34d399; animation: pulse 2s infinite; }
+
+.intel-card-name { color: #e2e8f0; text-transform: capitalize; flex: 1; }
+.intel-card-wave { color: #475569; font-size: 0.7rem; }
+
+.intel-metacog {
+  padding: 0.75rem 1rem;
+  background: rgba(167, 139, 250, 0.08);
+  border-radius: 12px;
+  border-left: 3px solid #a78bfa;
+}
+.intel-metacog h4 { color: #a78bfa; margin: 0 0 0.5rem; font-size: 0.85rem; }
+.metacog-load { color: #94a3b8; font-size: 0.8rem; display: block; margin-bottom: 0.25rem; }
+.metacog-item { font-size: 0.8rem; display: block; margin-bottom: 0.15rem; }
+.metacog-item.weakness { color: #fbbf24; }
+.metacog-item.strength { color: #34d399; }
+
+/* ═══ WAVE 17: Evolution ═══ */
+
+.evo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(52, 211, 153, 0.08);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+}
+.evo-gen { color: #34d399; font-weight: 700; font-size: 1.1rem; }
+.evo-status { color: #64748b; font-size: 0.85rem; }
+.evo-status.active { color: #34d399; }
+.evo-status.active::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #34d399; margin-right: 6px; animation: pulse 2s infinite; }
+
+.evo-genome { margin-bottom: 1rem; }
+.evo-genome h4 { color: #34d399; font-size: 0.85rem; margin: 0 0 0.5rem; }
+.evo-gene {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+.gene-point { color: #34d399; font-weight: 600; min-width: 100px; }
+.gene-value { color: #94a3b8; }
+
+.evo-mutations h4 { color: #a78bfa; font-size: 0.85rem; margin: 0 0 0.5rem; }
+.evo-mutation {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(167, 139, 250, 0.08);
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+.mutation-type { color: #a78bfa; font-weight: 600; }
+.mutation-desc { color: #94a3b8; }
+
+/* ═══ WAVE 17: Memory ═══ */
+
+.mem-stats {
+  display: flex;
+  gap: 2rem;
+  padding: 0.75rem 1rem;
+  background: rgba(96, 165, 250, 0.08);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+.mem-stat .stat-num { color: #60a5fa; font-weight: 700; margin-right: 0.3rem; }
+
+.mem-tiers h4 { color: #60a5fa; font-size: 0.85rem; margin: 0 0 0.5rem; }
+.mem-tier {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  font-size: 0.8rem;
+}
+.tier-name { color: #94a3b8; min-width: 80px; text-transform: capitalize; }
+.tier-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.tier-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #60a5fa, #a78bfa);
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+.tier-count { color: #64748b; font-size: 0.75rem; min-width: 30px; text-align: right; }
+
+/* ═══ WAVE 17: Constitution ═══ */
+
+.const-stats {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(251, 191, 36, 0.08);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.const-categories h4 { color: #fbbf24; font-size: 0.85rem; margin: 0 0 0.5rem; }
+.const-category {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0.75rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+  font-size: 0.8rem;
+}
+.const-cat-name { color: #e2e8f0; text-transform: capitalize; }
+.const-cat-count { color: #fbbf24; font-weight: 600; }
+
+.const-character {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(251, 191, 36, 0.05);
+  border-radius: 12px;
+  border-left: 3px solid #fbbf24;
+}
+.const-character h4 { color: #fbbf24; font-size: 0.85rem; margin: 0 0 0.5rem; }
+.const-character p { color: #94a3b8; font-size: 0.8rem; line-height: 1.5; margin: 0; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

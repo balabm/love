@@ -3,6 +3,11 @@ import axios from "axios";
 import Dashboard from "./components/Dashboard";
 import ContextPanel from "./components/ContextPanel";
 import IntelligenceDashboard from "./components/IntelligenceDashboard";
+import GuardianWidget from "./components/GuardianWidget";
+import EmotionalPanel from "./components/EmotionalPanel";
+import RitualView from "./components/RitualView";
+import FocusMode from "./components/FocusMode";
+import NeuralMesh from "./components/NeuralMesh";
 
 const API = "http://localhost:8000";
 
@@ -42,7 +47,7 @@ const QUICK = [
 ];
 
 export default function App() {
-  const [view, setView] = useState("chat"); // chat | dashboard
+  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural
   const [messages, setMessages] = useState([{
     role: "love",
     text: "Hey Karthi. I'm watching everything — your PC, your schedule, your patterns. Just talk to me.",
@@ -167,8 +172,17 @@ export default function App() {
           <button className={`nav-btn${view === "chat" ? " active" : ""}`} onClick={() => setView("chat")}>
             <span>◈</span> Chat
           </button>
+          <button className={`nav-btn${view === "ritual" ? " active" : ""}`} onClick={() => setView("ritual")}>
+            <span>◎</span> Ritual
+          </button>
+          <button className={`nav-btn${view === "focus" ? " active" : ""}`} onClick={() => setView("focus")}>
+            <span>▶</span> Focus
+          </button>
           <button className={`nav-btn${view === "mind" ? " active" : ""}`} onClick={() => setView("mind")}>
             <span>◉</span> Mind
+          </button>
+          <button className={`nav-btn${view === "neural" ? " active" : ""}`} onClick={() => setView("neural")}>
+            <span>⬡</span> Neural
           </button>
           <button className={`nav-btn${view === "dashboard" ? " active" : ""}`} onClick={() => setView("dashboard")}>
             <span>⊞</span> Dashboard
@@ -183,6 +197,12 @@ export default function App() {
             {ctx.activity && <span className="ctx-chip">◉ {ctx.activity}</span>}
           </div>
         )}
+
+        {/* Work Guardian widget */}
+        <GuardianWidget />
+
+        {/* Emotional state */}
+        <EmotionalPanel />
       </aside>
 
       {/* ── MAIN ── */}
@@ -243,9 +263,20 @@ export default function App() {
         {view === "mind" && (
           <div className="view-scroll"><IntelligenceDashboard /></div>
         )}
+        {view === "neural" && (
+          <div className="view-scroll"><NeuralMesh /></div>
+        )}
 
         {view === "dashboard" && (
           <div className="view-scroll"><Dashboard /></div>
+        )}
+
+        {view === "ritual" && (
+          <div className="view-scroll view-ritual"><RitualView /></div>
+        )}
+
+        {view === "focus" && (
+          <div className="view-scroll view-focus"><FocusMode /></div>
         )}
       </main>
     </div>
