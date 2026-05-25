@@ -1,0 +1,312 @@
+/* ── Setup Wizard ── */
+
+.swz-panel {
+  padding: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+  font-family: inherit;
+}
+
+.swz-loading,
+.swz-offline {
+  padding: 64px;
+  text-align: center;
+  opacity: 0.5;
+  font-size: 16px;
+}
+
+/* Header */
+.swz-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 24px;
+}
+.swz-header h2 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 700;
+}
+.swz-subtitle {
+  font-size: 13px;
+  opacity: 0.5;
+}
+
+/* Progress */
+.swz-progress-wrap {
+  text-align: right;
+  min-width: 140px;
+}
+.swz-progress-label {
+  font-size: 12px;
+  opacity: 0.5;
+  margin-bottom: 6px;
+}
+.swz-progress-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.swz-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6c63ff, #f59e0b);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Note banner */
+.swz-note {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  opacity: 0.6;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.swz-note code {
+  font-family: monospace;
+  background: rgba(255,255,255,0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* Cards list */
+.swz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Card */
+.swz-card {
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.swz-card-header {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  gap: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.swz-card-header:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+/* Accent left border per integration */
+.swz-card-red    { border-left: 3px solid #ef4444; }
+.swz-card-blue   { border-left: 3px solid #3b82f6; }
+.swz-card-orange { border-left: 3px solid #f59e0b; }
+.swz-card-green  { border-left: 3px solid #22c55e; }
+.swz-card-purple { border-left: 3px solid #a855f7; }
+.swz-card-pink   { border-left: 3px solid #ec4899; }
+.swz-card-cyan   { border-left: 3px solid #06b6d4; }
+.swz-card-teal   { border-left: 3px solid #14b8a6; }
+
+.swz-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.swz-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.swz-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.swz-card-desc {
+  font-size: 12px;
+  opacity: 0.45;
+  margin-top: 2px;
+}
+
+/* Status badges */
+.swz-status {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.swz-status-done    { background: rgba(34,197,94,0.18);  color: #22c55e; }
+.swz-status-partial { background: rgba(245,158,11,0.18); color: #f59e0b; }
+.swz-status-none    { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.35); }
+
+.swz-chevron {
+  font-size: 10px;
+  opacity: 0.4;
+  flex-shrink: 0;
+}
+
+/* Card body */
+.swz-card-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Field */
+.swz-field {
+  margin-top: 14px;
+}
+.swz-field-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.5;
+  margin-bottom: 6px;
+}
+.swz-hint {
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  opacity: 0.6;
+  margin-left: 8px;
+}
+
+.swz-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+.swz-input {
+  flex: 1;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: inherit;
+  outline: none;
+  font-family: monospace;
+  transition: border-color 0.2s;
+}
+.swz-input:focus {
+  border-color: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.08);
+}
+.swz-show-btn {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px;
+  padding: 0 12px;
+  font-size: 11px;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+}
+.swz-show-btn:hover { opacity: 1; }
+
+/* Docs link */
+.swz-docs {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.45;
+}
+.swz-docs a {
+  color: #6c63ff;
+  text-decoration: none;
+}
+.swz-docs a:hover { text-decoration: underline; }
+
+/* Buttons */
+.swz-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.swz-save-btn,
+.swz-auth-btn {
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+}
+.swz-save-btn {
+  background: rgba(108,99,255,0.7);
+  color: #fff;
+}
+.swz-save-btn:hover { background: rgba(108,99,255,0.9); }
+.swz-save-btn:disabled { opacity: 0.5; cursor: default; }
+.swz-save-btn.swz-saved { background: rgba(34,197,94,0.6); }
+
+.swz-auth-btn {
+  background: rgba(255,255,255,0.08);
+  color: inherit;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.swz-auth-btn:hover { background: rgba(255,255,255,0.13); }
+.swz-auth-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Auth result panel */
+.swz-auth-result {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.swz-auth-ok  { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.25); }
+.swz-auth-err { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.25); }
+
+/* Device code block */
+.swz-device-code {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.swz-device-code-title {
+  font-weight: 700;
+  font-size: 13px;
+}
+.swz-device-code a {
+  color: #6c63ff;
+  text-decoration: none;
+}
+.swz-device-code a:hover { text-decoration: underline; }
+.swz-code-value {
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: rgba(255,255,255,0.08);
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 6px;
+  margin: 4px 0;
+}
+.swz-code-hint {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.swz-code-msg {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.5;
+}

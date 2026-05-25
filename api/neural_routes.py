@@ -1111,6 +1111,236 @@ async def trigger_goal_cycle():
         return {"success": False, "error": str(e)}
 
 
+# ── Credential Setup Wizard Routes ───────────────────────────────────────────
+
+# Keys that are treated as secrets — returned masked, never in plaintext
+_SECRET_KEYS = {
+    "GITHUB_TOKEN", "TELEGRAM_BOT_TOKEN", "BINANCE_API_KEY", "BINANCE_API_SECRET",
+    "MICROSOFT_CLIENT_SECRET",
+}
+
+# Integration config: id → { label, icon, description, fields, docs_url, auth_endpoint }
+_INTEGRATIONS = [
+    {
+        "id": "google",
+        "label": "Google",
+        "icon": "G",
+        "description": "Calendar events, Gmail summaries, Drive files",
+        "docs_url": "https://console.cloud.google.com",
+        "fields": [
+            {"key": "GOOGLE_CREDENTIALS_PATH", "label": "credentials.json path",
+             "placeholder": "./credentials.json", "hint": "Download from GCP OAuth2 Desktop credentials"},
+        ],
+        "auth_endpoint": "/neural/google/auth",
+        "auth_label": "Authorize Google (opens browser)",
+    },
+    {
+        "id": "microsoft",
+        "label": "Microsoft 365",
+        "icon": "M",
+        "description": "Outlook emails, Teams messages, calendar, OneDrive",
+        "docs_url": "https://portal.azure.com",
+        "fields": [
+            {"key": "MICROSOFT_CLIENT_ID", "label": "App Client ID",
+             "placeholder": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+             "hint": "From Azure App Registration"},
+            {"key": "MICROSOFT_TENANT_ID", "label": "Tenant ID",
+             "placeholder": "common",
+             "hint": "Use 'common' for personal Microsoft accounts"},
+        ],
+        "auth_endpoint": "/neural/microsoft/auth/start",
+        "auth_label": "Start Device Code Auth",
+    },
+    {
+        "id": "github",
+        "label": "GitHub",
+        "icon": "G",
+        "description": "Repo activity, PRs, notifications, @mentions",
+        "docs_url": "https://github.com/settings/tokens",
+        "fields": [
+            {"key": "GITHUB_TOKEN", "label": "Personal Access Token", "secret": True,
+             "placeholder": "ghp_...", "hint": "Scopes: repo, notifications"},
+            {"key": "GITHUB_USERNAME", "label": "GitHub Username", "placeholder": "yourusername"},
+        ],
+    },
+    {
+        "id": "finance",
+        "label": "Finance",
+        "icon": "$",
+        "description": "Crypto prices (Binance) + stock prices (Yahoo Finance) — no key needed",
+        "docs_url": "",
+        "fields": [
+            {"key": "FINANCE_WATCHLIST", "label": "Crypto watchlist",
+             "placeholder": "BTCUSDT,ETHUSDT,SOLUSDT"},
+            {"key": "STOCK_WATCHLIST", "label": "Stock watchlist",
+             "placeholder": "AAPL,NVDA,TSLA"},
+            {"key": "PRICE_ALERT_THRESHOLD", "label": "Alert threshold",
+             "placeholder": "0.05", "hint": "0.05 = 5% price move triggers alert"},
+        ],
+    },
+    {
+        "id": "telegram",
+        "label": "Telegram",
+        "icon": "T",
+        "description": "Receive proactive alerts via Telegram bot",
+        "docs_url": "https://t.me/botfather",
+        "fields": [
+            {"key": "TELEGRAM_BOT_TOKEN", "label": "Bot Token", "secret": True,
+             "placeholder": "123456:ABC...", "hint": "From @BotFather"},
+            {"key": "TELEGRAM_CHAT_ID", "label": "Chat ID",
+             "placeholder": "123456789", "hint": "Message @userinfobot to find yours"},
+        ],
+    },
+    {
+        "id": "phone",
+        "label": "Phone",
+        "icon": "P",
+        "description": "Android battery, location, missed calls via KDE Connect",
+        "docs_url": "https://kdeconnect.kde.org/",
+        "fields": [
+            {"key": "PHONE_DEVICE_ID", "label": "KDE Connect device name",
+             "placeholder": "MyPhone", "hint": "Run 'kdeconnect-cli -l' to find device name"},
+        ],
+    },
+    {
+        "id": "browser",
+        "label": "Browser",
+        "icon": "B",
+        "description": "Active tab context via Chrome DevTools Protocol",
+        "docs_url": "",
+        "fields": [
+            {"key": "CHROME_DEBUG_PORT", "label": "Debug port",
+             "placeholder": "9222", "hint": "Launch Chrome with --remote-debugging-port=9222"},
+        ],
+    },
+    {
+        "id": "briefing",
+        "label": "Daily Brief",
+        "icon": "D",
+        "description": "Schedule morning brief delivery time",
+        "docs_url": "",
+        "fields": [
+            {"key": "DAILY_BRIEF_TIME", "label": "Brief time (HH:MM)",
+             "placeholder": "08:00", "hint": "24h format, local time"},
+        ],
+    },
+]
+
+
+def _read_env_file() -> dict:
+    import os
+    from pathlib import Path
+    env_file = Path(os.path.dirname(os.path.dirname(__file__))) / ".env"
+    env = {}
+    if env_file.exists():
+        for line in env_file.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip()
+    return env
+
+
+def _write_env_file(env: dict):
+    import os
+    from pathlib import Path
+    env_file = Path(os.path.dirname(os.path.dirname(__file__))) / ".env"
+    lines = ["# Project LOVE — Environment Variables", ""]
+    # Write in a fixed readable order
+    order = [
+        ("# LLM", ["OLLAMA_BASE_URL", "REASONING_MODEL", "CODING_MODEL", "EMBED_MODEL"]),
+        ("# Device", ["LOVE_DEVICE_ID", "LOVE_DEVICE_TYPE"]),
+        ("# Google", ["GOOGLE_CREDENTIALS_PATH", "GOOGLE_TOKEN_PATH"]),
+        ("# Microsoft", ["MICROSOFT_CLIENT_ID", "MICROSOFT_TENANT_ID"]),
+        ("# GitHub", ["GITHUB_TOKEN", "GITHUB_USERNAME"]),
+        ("# Finance", ["FINANCE_WATCHLIST", "STOCK_WATCHLIST", "PRICE_ALERT_THRESHOLD"]),
+        ("# Telegram", ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"]),
+        ("# Phone", ["PHONE_DEVICE_ID"]),
+        ("# Browser", ["CHROME_DEBUG_PORT"]),
+        ("# Briefing", ["DAILY_BRIEF_TIME"]),
+    ]
+    written = set()
+    for comment, keys in order:
+        section_lines = []
+        for k in keys:
+            if k in env:
+                section_lines.append(f"{k}={env[k]}")
+                written.add(k)
+        if section_lines:
+            lines.append("")
+            lines.append(comment)
+            lines.extend(section_lines)
+    # Write remaining keys
+    remaining = {k: v for k, v in env.items() if k not in written}
+    if remaining:
+        lines.append("")
+        lines.append("# Other")
+        for k, v in remaining.items():
+            lines.append(f"{k}={v}")
+    env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+@router.get("/setup/integrations")
+async def setup_get_integrations():
+    """Get all integration configs with current values (secrets masked)."""
+    import os
+    env = _read_env_file()
+    result = []
+    for integ in _INTEGRATIONS:
+        fields_with_values = []
+        for field in integ.get("fields", []):
+            k = field["key"]
+            current = env.get(k, "")
+            is_secret = field.get("secret", False) or k in _SECRET_KEYS
+            display = (current[:4] + "****") if (is_secret and current) else current
+            fields_with_values.append({
+                **field,
+                "current_value": display,
+                "is_set": bool(current),
+                "is_secret": is_secret,
+            })
+        result.append({**integ, "fields": fields_with_values})
+    return {"integrations": result}
+
+
+@router.post("/setup/save")
+async def setup_save_credentials(request: Request):
+    """Save credential fields to .env file."""
+    try:
+        body = await request.json()
+        updates: dict = body.get("updates", {})
+        env = _read_env_file()
+        changed = []
+        for k, v in updates.items():
+            if v and v != env.get(k):
+                env[k] = v.strip()
+                changed.append(k)
+        if changed:
+            _write_env_file(env)
+            # Reload env vars in current process
+            import os
+            for k in changed:
+                os.environ[k] = env.get(k, "")
+        return {"success": True, "changed": changed}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/setup/env-check")
+async def setup_env_check():
+    """Check which environment variables are currently set."""
+    import os
+    important_keys = [
+        "GOOGLE_CREDENTIALS_PATH", "MICROSOFT_CLIENT_ID", "GITHUB_TOKEN",
+        "TELEGRAM_BOT_TOKEN", "PHONE_DEVICE_ID", "FINANCE_WATCHLIST",
+        "DAILY_BRIEF_TIME",
+    ]
+    return {
+        k: bool(os.getenv(k, "").strip())
+        for k in important_keys
+    }
+
+
 # ── Daily Briefing Routes ────────────────────────────────────────────────────
 
 @router.get("/briefing/status")

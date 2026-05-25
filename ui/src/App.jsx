@@ -11,6 +11,7 @@ import NeuralMesh from "./components/NeuralMesh";
 import IntegrationsPanel from "./components/IntegrationsPanel";
 import AgentLoopPanel from "./components/AgentLoopPanel";
 import BriefingPanel from "./components/BriefingPanel";
+import SetupWizard from "./components/SetupWizard";
 
 const API = "http://localhost:8000";
 
@@ -199,6 +200,9 @@ export default function App() {
           <button className={`nav-btn${view === "briefing" ? " active" : ""}`} onClick={() => setView("briefing")}>
             <span>◷</span> Brief
           </button>
+          <button className={`nav-btn${view === "setup" ? " active" : ""}`} onClick={() => setView("setup")}>
+            <span>⚙</span> Setup
+          </button>
         </nav>
 
         {/* Live context digest */}
@@ -301,6 +305,10 @@ export default function App() {
 
         {view === "briefing" && (
           <div className="view-scroll"><BriefingPanel /></div>
+        )}
+
+        {view === "setup" && (
+          <div className="view-scroll"><SetupWizard /></div>
         )}
       </main>
     </div>
