@@ -10,6 +10,7 @@ import FocusMode from "./components/FocusMode";
 import NeuralMesh from "./components/NeuralMesh";
 import IntegrationsPanel from "./components/IntegrationsPanel";
 import AgentLoopPanel from "./components/AgentLoopPanel";
+import BriefingPanel from "./components/BriefingPanel";
 
 const API = "http://localhost:8000";
 
@@ -49,7 +50,7 @@ const QUICK = [
 ];
 
 export default function App() {
-  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations | agent
+  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations | agent | briefing
   const [messages, setMessages] = useState([{
     role: "love",
     text: "Hey Karthi. I'm watching everything — your PC, your schedule, your patterns. Just talk to me.",
@@ -195,6 +196,9 @@ export default function App() {
           <button className={`nav-btn${view === "agent" ? " active" : ""}`} onClick={() => setView("agent")}>
             <span>◈</span> Agent
           </button>
+          <button className={`nav-btn${view === "briefing" ? " active" : ""}`} onClick={() => setView("briefing")}>
+            <span>◷</span> Brief
+          </button>
         </nav>
 
         {/* Live context digest */}
@@ -293,6 +297,10 @@ export default function App() {
 
         {view === "agent" && (
           <div className="view-scroll"><AgentLoopPanel /></div>
+        )}
+
+        {view === "briefing" && (
+          <div className="view-scroll"><BriefingPanel /></div>
         )}
       </main>
     </div>

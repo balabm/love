@@ -736,6 +736,17 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[API] Intelligence Hub error: {e}")
 
+    # ═══ DAILY BRIEFING: Schedule morning brief ═══
+    try:
+        from core.daily_briefing import get_briefing_system
+        import os
+        brief_time = os.getenv("DAILY_BRIEF_TIME", "08:00")
+        briefing = get_briefing_system()
+        briefing.start(brief_time=brief_time)
+        print(f"[API] * Daily Briefing System started — brief at {brief_time}")
+    except Exception as e:
+        print(f"[API] Daily Briefing error: {e}")
+
     yield  # Application runs here
     
     # ========== SHUTDOWN ==========

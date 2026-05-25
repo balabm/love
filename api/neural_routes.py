@@ -1111,6 +1111,56 @@ async def trigger_goal_cycle():
         return {"success": False, "error": str(e)}
 
 
+# ── Daily Briefing Routes ────────────────────────────────────────────────────
+
+@router.get("/briefing/status")
+async def briefing_status():
+    """Get daily briefing system status."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        return get_briefing_system().get_status()
+    except Exception as e:
+        return {"running": False, "error": str(e)}
+
+
+@router.get("/briefing/latest")
+async def briefing_latest():
+    """Get the most recent generated brief."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        brief = get_briefing_system().get_last_brief()
+        if not brief:
+            return {"available": False, "message": "No brief generated yet. Call /briefing/generate to create one."}
+        return {"available": True, **brief}
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
+
+@router.post("/briefing/generate")
+async def briefing_generate(force: bool = True):
+    """Generate a fresh daily brief right now."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        import asyncio
+        brief = await asyncio.to_thread(get_briefing_system().generate_brief, force)
+        return {"success": True, **brief}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/briefing/set-time")
+async def briefing_set_time(request: Request):
+    """Set the daily brief time (HH:MM 24h format)."""
+    try:
+        body = await request.json()
+        time_str = body.get("time", "08:00")
+        from core.daily_briefing import get_briefing_system
+        get_briefing_system().set_brief_time(time_str)
+        return {"success": True, "brief_time": time_str}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ── Google Integration Routes ────────────────────────────────────────────────
 
 @router.get("/google/status")
