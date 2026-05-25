@@ -1,0 +1,442 @@
+/* ── AgentLoopPanel ──────────────────────────────────────────────────────── */
+
+.agl-panel {
+  padding: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* Header */
+.agl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #333;
+}
+
+.agl-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #e0e0e0;
+  font-weight: 500;
+}
+
+.agl-tabs {
+  display: flex;
+  gap: 4px;
+  background: #111;
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.agl-tab {
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.82rem;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.agl-tab.active {
+  background: #1e2a40;
+  color: #9cc4f0;
+}
+
+.agl-tab:hover:not(.active) {
+  color: #999;
+}
+
+/* Query input */
+.agl-input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.agl-query-input {
+  flex: 1;
+  background: #111;
+  border: 1px solid #2a2a40;
+  border-radius: 10px;
+  color: #d0d0e0;
+  font-size: 0.9rem;
+  padding: 10px 14px;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+
+.agl-query-input:focus {
+  outline: none;
+  border-color: #4a7ab5;
+}
+
+.agl-query-input::placeholder {
+  color: #444;
+}
+
+.agl-input-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.agl-steps-label {
+  font-size: 0.78rem;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.agl-steps-input {
+  background: #111;
+  border: 1px solid #2a2a40;
+  border-radius: 6px;
+  color: #d0d0e0;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  width: 60px;
+  text-align: center;
+}
+
+.agl-go-btn {
+  background: #1a3055;
+  border: 1px solid #2a4a70;
+  border-radius: 8px;
+  color: #7ab8e8;
+  font-size: 0.88rem;
+  padding: 9px 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.agl-go-btn:hover:not(:disabled) {
+  background: #1f3a65;
+  color: #a0ccf0;
+}
+
+.agl-go-btn:disabled,
+.agl-go-btn.agl-running {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Working indicator */
+.agl-working {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: #6090b0;
+  padding: 10px 0;
+}
+
+.agl-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4a9eff;
+  animation: aglPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes aglPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* Result container */
+.agl-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Result summary bar */
+.agl-result-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.agl-result-bar.agl-ok  { background: #0e2018; border: 1px solid #1e4a28; color: #4ade80; }
+.agl-result-bar.agl-err { background: #200e0e; border: 1px solid #4a1e1e; color: #f87171; }
+
+.agl-reason {
+  color: #888;
+  font-weight: 400;
+  font-size: 0.78rem;
+}
+
+.agl-err-msg {
+  color: #f87171;
+  font-size: 0.78rem;
+}
+
+/* Step trace */
+.agl-section-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #444;
+  margin-bottom: 6px;
+}
+
+.agl-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.agl-step {
+  border-left: 2px solid #222;
+  margin-left: 8px;
+  padding-left: 12px;
+  padding-bottom: 4px;
+}
+
+.agl-step-last {
+  border-left-color: #4a9eff44;
+}
+
+.agl-step-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin-left: -12px;
+  transition: background 0.1s;
+}
+
+.agl-step-header:hover {
+  background: #1a1a2a;
+}
+
+.agl-step-num {
+  font-size: 0.75rem;
+  color: #555;
+  white-space: nowrap;
+  min-width: 44px;
+}
+
+.agl-step-dur {
+  font-size: 0.72rem;
+  color: #444;
+  margin-left: auto;
+}
+
+.agl-step-chevron {
+  font-size: 0.65rem;
+  color: #444;
+}
+
+/* Tool badge */
+.agl-tool-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.agl-tool-blue   { background: #0a1e30; color: #4a9eff; border: 1px solid #1a3050; }
+.agl-tool-purple { background: #1a0e30; color: #b084ff; border: 1px solid #2a1850; }
+.agl-tool-cyan   { background: #0a2028; color: #22d3ee; border: 1px solid #1a3540; }
+.agl-tool-orange { background: #2a1800; color: #ff9f4a; border: 1px solid #4a2800; }
+.agl-tool-green  { background: #0a2018; color: #4ade80; border: 1px solid #1a3828; }
+.agl-tool-red    { background: #2a0e0e; color: #f87171; border: 1px solid #4a1e1e; }
+.agl-tool-pink   { background: #2a0e20; color: #ff6b9d; border: 1px solid #4a1835; }
+.agl-tool-teal   { background: #0a2220; color: #2dd4bf; border: 1px solid #1a3a38; }
+.agl-tool-gray   { background: #1a1a1a; color: #888;    border: 1px solid #2a2a2a; }
+
+/* Step body */
+.agl-step-body {
+  padding: 6px 0 10px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agl-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.agl-thought-text {
+  font-size: 0.85rem;
+  color: #8090a8;
+  line-height: 1.5;
+}
+
+.agl-params {
+  background: #0e0e18;
+  border: 1px solid #1e1e2e;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: #8080c0;
+  margin: 0;
+  overflow-x: auto;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.agl-obs-text {
+  background: #0e1a10;
+  border: 1px solid #1e3020;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  color: #70a080;
+  margin: 0;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Final answer */
+.agl-final {
+  background: #0e1a1e;
+  border: 1px solid #1e3040;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.agl-final-text {
+  font-size: 0.92rem;
+  color: #c0d8f0;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+/* Tool Belt tab */
+.agl-tool-search {
+  width: 100%;
+  background: #111;
+  border: 1px solid #2a2a40;
+  border-radius: 8px;
+  color: #d0d0e0;
+  font-size: 0.88rem;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  box-sizing: border-box;
+}
+
+.agl-tool-search:focus {
+  outline: none;
+  border-color: #4a7ab5;
+}
+
+.agl-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+
+.agl-tool-card {
+  background: #111;
+  border: 1px solid #2a2a40;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.agl-tool-card:hover {
+  border-color: #3a3a55;
+}
+
+.agl-tool-name {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #b0b8d0;
+  font-family: monospace;
+}
+
+.agl-tool-desc {
+  font-size: 0.78rem;
+  color: #555;
+  line-height: 1.4;
+}
+
+.agl-tool-params-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agl-param-input {
+  background: #0e0e18;
+  border: 1px solid #2a2a40;
+  border-radius: 6px;
+  color: #b0b8d0;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  font-family: monospace;
+}
+
+.agl-param-input:focus {
+  outline: none;
+  border-color: #4a6a90;
+}
+
+.agl-run-btn {
+  align-self: flex-start;
+  background: #0e1e30;
+  border: 1px solid #1e3050;
+  border-radius: 6px;
+  color: #4a8ab8;
+  font-size: 0.78rem;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.agl-run-btn:hover:not(:disabled) {
+  background: #142840;
+}
+
+.agl-run-btn.agl-running,
+.agl-run-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.agl-tool-result {
+  background: #0a0a14;
+  border: 1px solid #1e1e2e;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.76rem;
+  color: #7080a0;
+  margin: 0;
+  overflow-x: auto;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

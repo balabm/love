@@ -653,6 +653,37 @@ def chat(user_input: str, mode: str = "general") -> dict:
             record_interaction(user_input, response, mode=mode, response_time_ms=int((time.time()-t_start)*1000))
             return {"response": response, "thinking": thinking}
 
+    # ── AGENT LOOP: ReAct tool belt for queries needing real data ──
+    try:
+        from core.agent_loop import needs_agent_loop, run_agent_loop
+        if needs_agent_loop(user_input):
+            context_for_loop = get_prompt_context() if CONTEXT_ENGINE_AVAILABLE else ""
+            loop_result = run_agent_loop(user_input, context=context_for_loop)
+            if loop_result.success and loop_result.final_answer:
+                step_summary = f"Used {loop_result.total_steps} tool steps in {loop_result.total_ms}ms"
+                tools_used = [s.tool_name for s in loop_result.steps if s.tool_name]
+                thinking = f"{step_summary}. Tools: {tools_used}"
+                response = loop_result.final_answer
+                save_memory(user_input, response, mode=mode)
+                if FLOW_AVAILABLE:
+                    record_turn(user_input, response, mode=mode)
+                record_interaction(user_input, response, mode=mode, response_time_ms=int((time.time()-t_start)*1000))
+                return {
+                    "response": response,
+                    "thinking": thinking,
+                    "agent_loop": {
+                        "steps": [
+                            {"step": s.step, "thought": s.thought, "tool": s.tool_name,
+                             "params": s.tool_params, "observation": s.observation[:200]}
+                            for s in loop_result.steps
+                        ],
+                        "total_steps": loop_result.total_steps,
+                        "total_ms": loop_result.total_ms,
+                    },
+                }
+    except Exception as _loop_err:
+        print(f"[AgentLoop] Error: {_loop_err}")
+
     # ── SWARM: Distributed Intelligence ──
     if "research" in user_input.lower() or "deep dive" in user_input.lower() or "code review" in user_input.lower() or "analyze" in user_input.lower():
         try:

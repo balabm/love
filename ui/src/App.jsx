@@ -9,6 +9,7 @@ import RitualView from "./components/RitualView";
 import FocusMode from "./components/FocusMode";
 import NeuralMesh from "./components/NeuralMesh";
 import IntegrationsPanel from "./components/IntegrationsPanel";
+import AgentLoopPanel from "./components/AgentLoopPanel";
 
 const API = "http://localhost:8000";
 
@@ -48,7 +49,7 @@ const QUICK = [
 ];
 
 export default function App() {
-  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations
+  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations | agent
   const [messages, setMessages] = useState([{
     role: "love",
     text: "Hey Karthi. I'm watching everything — your PC, your schedule, your patterns. Just talk to me.",
@@ -191,6 +192,9 @@ export default function App() {
           <button className={`nav-btn${view === "integrations" ? " active" : ""}`} onClick={() => setView("integrations")}>
             <span>⬡</span> Integrations
           </button>
+          <button className={`nav-btn${view === "agent" ? " active" : ""}`} onClick={() => setView("agent")}>
+            <span>◈</span> Agent
+          </button>
         </nav>
 
         {/* Live context digest */}
@@ -285,6 +289,10 @@ export default function App() {
 
         {view === "integrations" && (
           <div className="view-scroll"><IntegrationsPanel /></div>
+        )}
+
+        {view === "agent" && (
+          <div className="view-scroll"><AgentLoopPanel /></div>
         )}
       </main>
     </div>

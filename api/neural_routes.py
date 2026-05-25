@@ -1111,7 +1111,82 @@ async def trigger_goal_cycle():
         return {"success": False, "error": str(e)}
 
 
-# ── Integrations Status Routes ───────────────────────────────────────────────
+# ── Agent Loop Routes ────────────────────────────────────────────────────────
+
+class AgentLoopRequest(BaseModel):
+    query: str
+    context: str = ""
+    max_steps: int = 8
+    allowed_tools: Optional[List[str]] = None
+
+
+@router.post("/agent/run")
+async def run_agent_loop_endpoint(req: AgentLoopRequest):
+    """Run a full ReAct agent loop for a query and return the trace + final answer."""
+    try:
+        from core.agent_loop import run_agent_loop
+        from dataclasses import asdict
+        result = run_agent_loop(
+            req.query,
+            context=req.context,
+            max_steps=req.max_steps,
+            allowed_tools=req.allowed_tools,
+        )
+        return {
+            "success": result.success,
+            "final_answer": result.final_answer,
+            "total_steps": result.total_steps,
+            "total_ms": result.total_ms,
+            "stopped_reason": result.stopped_reason,
+            "error": result.error,
+            "steps": [
+                {
+                    "step": s.step,
+                    "thought": s.thought,
+                    "tool_name": s.tool_name,
+                    "tool_params": s.tool_params,
+                    "observation": s.observation,
+                    "duration_ms": s.duration_ms,
+                    "timestamp": s.timestamp,
+                }
+                for s in result.steps
+            ],
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e), "final_answer": "", "steps": []}
+
+
+@router.get("/agent/tools")
+async def get_available_tools():
+    """List all tools available to the agent loop."""
+    try:
+        from core.tool_registry import get_tool_registry
+        reg = get_tool_registry()
+        tools = [
+            {"name": n, "description": d["description"], "parameters": d["parameters"]}
+            for n, d in reg.tools.items()
+        ]
+        return {"tools": tools, "total": len(tools)}
+    except Exception as e:
+        return {"tools": [], "error": str(e)}
+
+
+@router.post("/agent/tool/run")
+async def run_single_tool(request: Request):
+    """Execute a single tool directly (for testing)."""
+    try:
+        body = await request.json()
+        tool_name = body.get("tool_name", "")
+        params = body.get("params", {})
+        from core.tool_registry import get_tool_registry
+        reg = get_tool_registry()
+        result = reg.execute_tool(tool_name, params)
+        return {"success": True, "result": str(result)[:3000]}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ── Integrations Status Routes ────────────────────────────────────────────────
 
 # What env key is required for each integration to be considered "configured"
 _INTEGRATION_CONFIG = {
