@@ -306,7 +306,7 @@ export default function NeuralMesh() {
           setGoals(goalList);
         }
       } catch (e) {
-        // Goals endpoint may not be available
+        console.error("[NeuralMesh] goals fetch failed:", e);
       }
     };
     fetchGoals();

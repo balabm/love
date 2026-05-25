@@ -18,7 +18,7 @@ export default function GuardianWidget() {
     try {
       const res = await axios.get(`${API}/guardian/work-status`);
       setStatus(res.data);
-    } catch { /* silent */ }
+    } catch (e) { console.error("[Guardian] fetch failed:", e); }
   };
 
   const hardStop = async () => {
@@ -26,7 +26,7 @@ export default function GuardianWidget() {
     try {
       await axios.post(`${API}/guardian/hard-stop`);
       setStatus(s => s ? { ...s, message: "Hard stop triggered. Good call." } : s);
-    } catch { /* silent */ }
+    } catch (e) { console.error("[Guardian] hard-stop failed:", e); }
   };
 
   if (!status) return null;

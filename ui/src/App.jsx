@@ -12,6 +12,7 @@ import IntegrationsPanel from "./components/IntegrationsPanel";
 import AgentLoopPanel from "./components/AgentLoopPanel";
 import BriefingPanel from "./components/BriefingPanel";
 import SetupWizard from "./components/SetupWizard";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const API = "http://localhost:8000";
 
@@ -102,7 +103,7 @@ export default function App() {
       if (scoreRes.status === "fulfilled") setLifeScore(scoreRes.value.data.score);
       if (intRes.status === "fulfilled") setAlerts(intRes.value.data.interventions || []);
       if (ctxRes.status === "fulfilled") setCtx(ctxRes.value.data);
-    } catch {}
+    } catch (e) { /* best-effort poll */ }
   };
 
   const send = useCallback(async (text) => {
@@ -142,7 +143,7 @@ export default function App() {
     try {
       await axios.post(`${API}/evolution/install-packages`, { feature: "google calendar gmail drive" });
       setMessages(p => [...p, { role: "love", text: "Installing Google packages now. I'll let you know when done.", time: ts() }]);
-    } catch {}
+    } catch (e) { console.error("[LOVE] auto-heal failed:", e); }
   };
 
   return (
@@ -277,38 +278,38 @@ export default function App() {
         )}
 
         {view === "mind" && (
-          <div className="view-scroll"><IntelligenceDashboard /></div>
+          <ErrorBoundary name="Mind"><div className="view-scroll"><IntelligenceDashboard /></div></ErrorBoundary>
         )}
         {view === "neural" && (
-          <div className="view-scroll"><NeuralMesh /></div>
+          <ErrorBoundary name="Neural"><div className="view-scroll"><NeuralMesh /></div></ErrorBoundary>
         )}
 
         {view === "dashboard" && (
-          <div className="view-scroll"><Dashboard /></div>
+          <ErrorBoundary name="Dashboard"><div className="view-scroll"><Dashboard /></div></ErrorBoundary>
         )}
 
         {view === "ritual" && (
-          <div className="view-scroll view-ritual"><RitualView /></div>
+          <ErrorBoundary name="Ritual"><div className="view-scroll view-ritual"><RitualView /></div></ErrorBoundary>
         )}
 
         {view === "focus" && (
-          <div className="view-scroll view-focus"><FocusMode /></div>
+          <ErrorBoundary name="Focus"><div className="view-scroll view-focus"><FocusMode /></div></ErrorBoundary>
         )}
 
         {view === "integrations" && (
-          <div className="view-scroll"><IntegrationsPanel /></div>
+          <ErrorBoundary name="Integrations"><div className="view-scroll"><IntegrationsPanel /></div></ErrorBoundary>
         )}
 
         {view === "agent" && (
-          <div className="view-scroll"><AgentLoopPanel /></div>
+          <ErrorBoundary name="Agent"><div className="view-scroll"><AgentLoopPanel /></div></ErrorBoundary>
         )}
 
         {view === "briefing" && (
-          <div className="view-scroll"><BriefingPanel /></div>
+          <ErrorBoundary name="Briefing"><div className="view-scroll"><BriefingPanel /></div></ErrorBoundary>
         )}
 
         {view === "setup" && (
-          <div className="view-scroll"><SetupWizard /></div>
+          <ErrorBoundary name="Setup"><div className="view-scroll"><SetupWizard /></div></ErrorBoundary>
         )}
       </main>
     </div>

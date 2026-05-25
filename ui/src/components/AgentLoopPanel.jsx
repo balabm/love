@@ -80,8 +80,9 @@ function ToolCard({ tool }) {
         params,
       });
       setResult(res.data.result || res.data.error || "no output");
-    } catch {
-      setResult("Request failed");
+    } catch (e) {
+      console.error("[Agent] tool run failed:", e);
+      setResult("Request failed: " + (e?.message || "unknown error"));
     } finally {
       setRunning(false);
     }
@@ -132,7 +133,7 @@ export default function AgentLoopPanel() {
     if (tab === "tools" && tools.length === 0) {
       axios.get(`${API}/neural/agent/tools`)
         .then(r => setTools(r.data.tools || []))
-        .catch(() => {});
+        .catch(e => { console.error("[Agent] tools load failed:", e); });
     }
   }, [tab]);
 

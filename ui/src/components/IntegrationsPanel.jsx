@@ -100,6 +100,7 @@ export default function IntegrationsPanel() {
       setLastFetch(new Date());
       setError(null);
     } catch (e) {
+      console.error("[Integrations] status fetch failed:", e);
       setError("Backend offline — is LOVE running?");
     }
   }, []);
@@ -115,6 +116,8 @@ export default function IntegrationsPanel() {
     try {
       await axios.post(`${API}/neural/integrations/poll`);
       await fetchStatus();
+    } catch (e) {
+      console.error("[Integrations] poll failed:", e);
     } finally {
       setPolling(false);
     }
@@ -205,7 +208,7 @@ export default function IntegrationsPanel() {
       {/* Setup hint */}
       {optional.some(i => !i.configured) && (
         <div className="int-setup-hint">
-          Run <code>python setup_credentials.py</code> in the project root to connect missing accounts.
+          Some integrations need credentials. Open the <strong>Setup</strong> tab in the sidebar to connect them.
         </div>
       )}
     </div>

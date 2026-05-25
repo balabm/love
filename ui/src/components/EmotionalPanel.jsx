@@ -36,7 +36,7 @@ export default function EmotionalPanel() {
       ]);
       if (stateRes.status === "fulfilled") setState(stateRes.value.data);
       if (sumRes.status === "fulfilled") setSummary(sumRes.value.data);
-    } catch { /* silent */ }
+    } catch (e) { console.error("[Emotional] load failed:", e); }
   };
 
   const logMood = async (mood) => {
@@ -46,7 +46,7 @@ export default function EmotionalPanel() {
       await axios.post(`${API}/emotional/record`, { emotion: mood, intensity: 0.7 });
       setMoodInput("");
       await load();
-    } catch { /* silent */ }
+    } catch (e) { console.error("[Emotional] log mood failed:", e); }
     setLogging(false);
   };
 

@@ -38,7 +38,9 @@ export default function BriefingPanel() {
         const b = briefRes.value.data;
         if (b.available) setBrief(b);
       }
-    } catch {}
+    } catch (e) {
+      console.error("[Briefing] status load failed:", e);
+    }
   };
 
   useEffect(() => {
@@ -67,7 +69,9 @@ export default function BriefingPanel() {
     try {
       await axios.post(`${API}/neural/briefing/set-time`, { time: briefTime });
       await loadStatus();
-    } catch {}
+    } catch (e) {
+      console.error("[Briefing] save time failed:", e);
+    }
     setSaving(false);
   };
 

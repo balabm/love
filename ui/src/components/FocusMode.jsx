@@ -83,7 +83,7 @@ export default function FocusMode() {
         mode: "general",
       });
       setLoveNote(res.data?.response || "");
-    } catch { /* silent */ }
+    } catch (e) { console.error("[Focus] completion chat failed:", e); }
     setNoteLoading(false);
   }, [preset, task]);
 

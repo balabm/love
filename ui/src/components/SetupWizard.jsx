@@ -72,7 +72,7 @@ function IntegrationCard({ integration, onSave }) {
       setValues({});
       onSave();
       setTimeout(() => setSaved(false), 3000);
-    } catch {}
+    } catch (e) { console.error("[Setup] save failed:", e); }
     setSaving(false);
   };
 
@@ -84,6 +84,7 @@ function IntegrationCard({ integration, onSave }) {
       const res = await axios.post(`${API}${integration.auth_endpoint}`);
       setAuthResult(res.data);
     } catch (e) {
+      console.error("[Setup] auth trigger failed:", e);
       setAuthResult({ success: false, error: "Request failed" });
     }
     setAuthing(false);
@@ -187,7 +188,8 @@ export default function SetupWizard() {
       const res = await axios.get(`${API}/neural/setup/integrations`);
       setIntegrations(res.data.integrations || []);
       setError(null);
-    } catch {
+    } catch (e) {
+      console.error("[Setup] load integrations failed:", e);
       setError("Backend offline — is LOVE running?");
     } finally {
       setLoading(false);

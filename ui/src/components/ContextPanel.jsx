@@ -80,8 +80,8 @@ export default function ContextPanel({ collapsed: externalCollapsed }) {
       };
       logRef.current = [entry, ...logRef.current.slice(0, 29)];
       setActivityLog([...logRef.current]);
-    } catch {
-      // silent
+    } catch (e) {
+      console.error("[Context] fetch failed:", e);
     }
   };
 
