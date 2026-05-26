@@ -1834,3 +1834,71 @@ def _build_summary(key: str, data: dict) -> str:
     except Exception:
         pass
     return ""
+
+
+# ── Sentinel Self-Monitoring Protocol Routes ─────────────────────────────────
+
+@router.get("/sentinel/status")
+async def sentinel_status():
+    """Get full Sentinel status: presence, deep work, subsystem health, recent events."""
+    try:
+        from core.sentinel import get_sentinel
+        return get_sentinel().get_status()
+    except Exception as e:
+        return {"running": False, "error": str(e)}
+
+
+@router.get("/sentinel/presence")
+async def sentinel_presence():
+    """Get current user presence state (active/idle/away/sleeping) + activity."""
+    try:
+        from core.sentinel import get_sentinel
+        return get_sentinel().get_presence()
+    except Exception as e:
+        return {"state": "unknown", "error": str(e)}
+
+
+@router.get("/sentinel/events")
+async def sentinel_events(limit: int = 50):
+    """Get recent Sentinel events (decisions, nudges, alerts, actions taken)."""
+    try:
+        from core.sentinel import get_sentinel
+        return {"events": get_sentinel().get_events(limit)}
+    except Exception as e:
+        return {"events": [], "error": str(e)}
+
+
+@router.post("/sentinel/scan")
+async def sentinel_force_scan():
+    """Force an immediate full Sentinel scan cycle (fast + slow tick)."""
+    try:
+        from core.sentinel import get_sentinel
+        import asyncio
+        result = await asyncio.to_thread(get_sentinel().force_scan)
+        return {"success": True, **result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/sentinel/away")
+async def sentinel_mark_away(request: Request):
+    """Manually mark user as away (e.g. from phone). Sentinel enters guardian mode."""
+    try:
+        body = await request.json()
+        reason = body.get("reason", "manual")
+        from core.sentinel import get_sentinel
+        get_sentinel().set_user_away(reason)
+        return {"success": True, "state": "away"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/sentinel/back")
+async def sentinel_mark_back():
+    """Mark user as returned. Delivers 'while you were away' summary."""
+    try:
+        from core.sentinel import get_sentinel
+        get_sentinel().set_user_back()
+        return {"success": True, "state": "active"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

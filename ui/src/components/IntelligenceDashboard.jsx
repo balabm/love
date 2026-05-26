@@ -80,11 +80,11 @@ export default function IntelligenceDashboard() {
         axios.get(`${API}/emotional/state`).catch(() => ({ data: {} })),
         axios.get(`${API}/intelligence/self-evolution`).catch(() => ({ data: {} })),
       ]);
-      setPredictions(predRes.data);
-      setDreamInsights(dreamRes.data);
-      setCuriosity(curiousRes.data);
-      setEmotional(emoRes.data);
-      setEvolution(evoRes.data);
+      if (predRes.data?.active) setPredictions(p => ({ ...p, ...predRes.data }));
+      if (dreamRes.data?.insights) setDreamInsights(p => ({ ...p, ...dreamRes.data }));
+      if (curiousRes.data?.top_gaps !== undefined) setCuriosity(p => ({ ...p, ...curiousRes.data }));
+      if (emoRes.data?.dominant_mood) setEmotional(p => ({ ...p, ...emoRes.data }));
+      if (evoRes.data?.behavior_state) setEvolution(p => ({ ...p, ...evoRes.data }));
       setLastRefresh(new Date());
     } catch (e) {
       console.error("Intelligence fetch error:", e);
@@ -116,19 +116,19 @@ export default function IntelligenceDashboard() {
               Accuracy: {Math.round(predictions.accuracy.overall_accuracy * 100)}%
             </div>
           )}
-          {predictions.active?.length === 0 ? (
+          {!predictions.active || predictions.active.length === 0 ? (
             <p className="intel-empty">No active predictions yet. LOVE is still learning your patterns.</p>
           ) : (
-            predictions.active.map((p, i) => <PredictionItem key={i} pred={p} />)
+            (predictions.active || []).map((p, i) => <PredictionItem key={i} pred={p} />)
           )}
         </Card>
 
         {/* Dream Insights */}
         <Card title="Deep Insights" icon={ICON.insight} accent="purple">
-          {dreamInsights.insights?.length === 0 ? (
+          {!dreamInsights.insights || dreamInsights.insights.length === 0 ? (
             <p className="intel-empty">No insights yet. LOVE reflects during idle time.</p>
           ) : (
-            dreamInsights.insights.map((ins, i) => <InsightItem key={i} text={ins} />)
+            (dreamInsights.insights || []).map((ins, i) => <InsightItem key={i} text={ins} />)
           )}
           {dreamInsights.world_model_people > 0 && (
             <div className="intel-footer">
@@ -145,7 +145,7 @@ export default function IntelligenceDashboard() {
           {!curiosity.top_gaps || curiosity.top_gaps.length === 0 ? (
             <p className="intel-empty">No knowledge gaps. LOVE knows everything... or does it?</p>
           ) : (
-            curiosity.top_gaps.map((g, i) => <GapItem key={i} gap={g} />)
+            (curiosity.top_gaps || []).map((g, i) => <GapItem key={i} gap={g} />)
           )}
         </Card>
 

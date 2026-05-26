@@ -1,0 +1,192 @@
+import { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import "./SentinelPanel.css";
+
+const API = "http://localhost:8000";
+
+const STATE_EMOJI = { active: "●", idle: "◐", away: "○", sleeping: "☾", unknown: "?" };
+const STATE_COLOR = { active: "#4ade80", idle: "#fbbf24", away: "#f87171", sleeping: "#818cf8", unknown: "#6b7280" };
+const ACTIVITY_EMOJI = { work: "⌨", meeting: "◉", creative: "✦", browsing: "◎", gaming: "▶", idle: "◻", other: "·" };
+
+function PresenceCard({ presence }) {
+  if (!presence) return null;
+  const color = STATE_COLOR[presence.state] || STATE_COLOR.unknown;
+  return (
+    <div className="snt-presence" style={{ borderColor: color + "40" }}>
+      <div className="snt-presence-top">
+        <span className="snt-state-dot" style={{ background: color }} />
+        <span className="snt-state-label" style={{ color }}>{presence.state}</span>
+        <span className="snt-activity-icon">{ACTIVITY_EMOJI[presence.activity] || "·"}</span>
+        <span className="snt-activity-label">{presence.activity}</span>
+      </div>
+      <div className="snt-presence-meta">
+        {presence.active_app && <span className="snt-chip">▣ {presence.active_app.slice(0, 40)}</span>}
+        {presence.focus_depth > 0 && (
+          <span className="snt-chip snt-chip-focus">
+            Focus: {Math.round(presence.focus_depth * 100)}%
+          </span>
+        )}
+        {presence.idle_seconds > 60 && (
+          <span className="snt-chip snt-chip-idle">
+            Idle: {Math.round(presence.idle_seconds / 60)}m
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EventItem({ event }) {
+  const priorityColor = {
+    critical: "#ef4444", high: "#f59e0b", normal: "#6b7280", low: "#374151"
+  };
+  const catIcon = {
+    alert: "!!", nudge: "→", action: "⚡", summary: "◷", health: "♡", presence: "●"
+  };
+
+  return (
+    <div className={`snt-event snt-event-${event.priority}`}>
+      <span className="snt-event-icon">{catIcon[event.category] || "·"}</span>
+      <div className="snt-event-content">
+        <div className="snt-event-title">{event.title}</div>
+        <div className="snt-event-detail">{event.detail}</div>
+        {event.acted && <span className="snt-event-acted">autonomous action taken</span>}
+      </div>
+      <span className="snt-event-time">
+        {event.timestamp ? new Date(event.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+      </span>
+    </div>
+  );
+}
+
+export default function SentinelPanel() {
+  const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API}/neural/sentinel/status`);
+      setStatus(res.data);
+      setError(null);
+    } catch (e) {
+      console.error("[Sentinel] load failed:", e);
+      setError("Backend offline or Sentinel not started");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  const forceScan = async () => {
+    setScanning(true);
+    try {
+      const res = await axios.post(`${API}/neural/sentinel/scan`);
+      setStatus(res.data);
+    } catch (e) {
+      console.error("[Sentinel] scan failed:", e);
+    }
+    setScanning(false);
+  };
+
+  const markAway = async () => {
+    try {
+      await axios.post(`${API}/neural/sentinel/away`, { reason: "manual" });
+      load();
+    } catch (e) { console.error("[Sentinel] mark away failed:", e); }
+  };
+
+  const markBack = async () => {
+    try {
+      await axios.post(`${API}/neural/sentinel/back`);
+      load();
+    } catch (e) { console.error("[Sentinel] mark back failed:", e); }
+  };
+
+  if (loading) return <div className="snt-panel"><div className="snt-loading">Connecting to Sentinel...</div></div>;
+  if (error) return <div className="snt-panel"><div className="snt-offline">{error}</div></div>;
+
+  const events = status?.recent_events || [];
+  const deepWork = status?.deep_work;
+  const health = status?.subsystem_health || {};
+  const decisions = status?.decisions_today || 0;
+
+  return (
+    <div className="snt-panel">
+      <div className="snt-header">
+        <div>
+          <h2>Sentinel</h2>
+          <div className="snt-subtitle">Self-Monitoring Protocol — always watching over you</div>
+        </div>
+        <div className="snt-header-right">
+          <span className={`snt-running ${status?.running ? "snt-on" : "snt-off"}`}>
+            {status?.running ? "ACTIVE" : "OFFLINE"}
+          </span>
+          <span className="snt-decisions">{decisions} decision{decisions !== 1 ? "s" : ""} today</span>
+        </div>
+      </div>
+
+      {/* Presence */}
+      <PresenceCard presence={status?.presence} />
+
+      {/* Status bar */}
+      <div className="snt-bar">
+        {deepWork && <span className="snt-badge snt-badge-deep">Deep Work Mode</span>}
+        {status?.state?.overnight_mode && <span className="snt-badge snt-badge-night">Overnight Mode</span>}
+        {status?.state?.away_since && <span className="snt-badge snt-badge-away">Away since {new Date(status.state.away_since).toLocaleTimeString()}</span>}
+      </div>
+
+      {/* Controls */}
+      <div className="snt-controls">
+        <button className={`snt-btn snt-btn-scan${scanning ? " snt-scanning" : ""}`} onClick={forceScan} disabled={scanning}>
+          {scanning ? "Scanning..." : "Force Scan"}
+        </button>
+        <button className="snt-btn snt-btn-away" onClick={markAway}>Mark Away</button>
+        <button className="snt-btn snt-btn-back" onClick={markBack}>I'm Back</button>
+      </div>
+
+      {/* Subsystem Health */}
+      {Object.keys(health).length > 0 && (
+        <div className="snt-health">
+          <div className="snt-section-label">Subsystem Health</div>
+          <div className="snt-health-grid">
+            {Object.entries(health).map(([name, info]) => (
+              <div key={name} className={`snt-health-item snt-health-${info.status}`}>
+                <span className="snt-health-name">{name}</span>
+                <span className="snt-health-status">{info.status}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Hour summary */}
+      {status?.state?.last_hour_summary && (
+        <div className="snt-hour-summary">
+          <div className="snt-section-label">This Hour</div>
+          <div className="snt-hour-text">{status.state.last_hour_summary.summary}</div>
+        </div>
+      )}
+
+      {/* Event log */}
+      <div className="snt-events">
+        <div className="snt-section-label">Recent Events ({events.length})</div>
+        {events.length === 0 ? (
+          <div className="snt-empty">Sentinel is watching. No events yet.</div>
+        ) : (
+          <div className="snt-event-list">
+            {events.slice().reverse().map((e, i) => (
+              <EventItem key={e.id || i} event={e} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,57 @@
 # ── LOVE Self-Bootstrap: silently installs anything missing ──
 # LOVE never tells the user to run pip manually. It does it itself.
-import sys, subprocess
+import sys, subprocess, os as _os
+import builtins
+
+_original_print = builtins.print
+
+def safe_print(*args, **kwargs):
+    sep = kwargs.get("sep", " ")
+    end = kwargs.get("end", "\n")
+    file = kwargs.get("file", None)
+    flush = kwargs.get("flush", False)
+    
+    msg = sep.join(str(arg) for arg in args)
+    try:
+        _original_print(msg, end=end, file=file, flush=flush)
+    except UnicodeEncodeError:
+        replacements = {
+            "❌": "[X]",
+            "⚠️": "[!]",
+            "✅": "[OK]",
+            "🛑": "[STOP]",
+            "🧠": "[BRAIN]",
+            "🧬": "[EVO]",
+            "🤖": "[BOT]",
+            "⚡": "[POWER]",
+            "🔮": "[INSIGHT]",
+            "💼": "[WORK]",
+            "📅": "[CALENDAR]",
+            "🔊": "[AUDIO]",
+            "🎙️": "[MIC]",
+            "💬": "[CHAT]",
+            "╔": "+",
+            "╗": "+",
+            "╠": "+",
+            "╣": "+",
+            "╚": "+",
+            "╝": "+",
+            "═": "-",
+            "║": "|",
+        }
+        for char, repl in replacements.items():
+            msg = msg.replace(char, repl)
+        try:
+            _original_print(msg, end=end, file=file, flush=flush)
+        except Exception:
+            try:
+                ascii_msg = msg.encode("ascii", errors="replace").decode("ascii")
+                _original_print(ascii_msg, end=end, file=file, flush=flush)
+            except Exception:
+                pass
+
+builtins.print = safe_print
+
 
 _REQUIRED = {
     # Core API
@@ -15,19 +66,21 @@ _REQUIRED = {
     "whisper":           "openai-whisper",
 }
 
-for _mod, _pkg in _REQUIRED.items():
-    try:
-        __import__(_mod)
-    except (ImportError, ModuleNotFoundError):
-        print(f"[LOVE] Auto-installing {_pkg}...", flush=True)
+if not _os.environ.get("_LOVE_DEPS_INSTALLED"):
+    for _mod, _pkg in _REQUIRED.items():
         try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "--quiet", _pkg],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
-            print(f"[LOVE] [OK] {_pkg} installed", flush=True)
-        except Exception as _e:
-            print(f"[LOVE] Could not install {_pkg}: {_e}", flush=True)
+            __import__(_mod)
+        except (ImportError, ModuleNotFoundError):
+            print(f"[LOVE] Auto-installing {_pkg}...", flush=True)
+            try:
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "--quiet", _pkg],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+                print(f"[LOVE] [OK] {_pkg} installed", flush=True)
+            except Exception as _e:
+                print(f"[LOVE] Could not install {_pkg}: {_e}", flush=True)
+    _os.environ["_LOVE_DEPS_INSTALLED"] = "1"
 # ── End Bootstrap ──
 
 import asyncio
@@ -376,128 +429,365 @@ try:
     TEMPORAL_MEMORY_AVAILABLE = True
 except ImportError:
     TEMPORAL_MEMORY_AVAILABLE = False
-
-try:
-    from core.reasoning_chain import get_reasoning_chain
-    REASONING_CHAIN_AVAILABLE = True
-except ImportError:
     REASONING_CHAIN_AVAILABLE = False
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Lifespan context manager for startup and shutdown events."""
-    # ========== STARTUP ==========
-    print("[API] Project LOVE starting up...")
-    
-    # Register TTS notification callback for heartbeat
-    def tts_notification(trigger):
-        # Use unified awareness + decision engine before speaking
-        should_speak = True
+# Register TTS notification callback for heartbeat
+def tts_notification(trigger):
+    # Use unified awareness + decision engine before speaking
+    should_speak = True
+    try:
+        if UNIFIED_AVAILABLE and DECISIONS_AVAILABLE:
+            action = what_should_love_do_now()
+            if not action or action.get("action") != "notify_user":
+                should_speak = False
+            elif action.get("situation", {}).get("title") != getattr(trigger, 'title', ''):
+                # Heartbeat trigger might be stale compared to unified awareness
+                should_speak = action.get("situation", {}).get("score", 0) > 0.5
+    except Exception:
+        pass
+
+    if should_speak and is_tts_available():
         try:
-            if UNIFIED_AVAILABLE and DECISIONS_AVAILABLE:
-                action = what_should_love_do_now()
-                if not action or action.get("action") != "notify_user":
-                    should_speak = False
-                elif action.get("situation", {}).get("title") != getattr(trigger, 'title', ''):
-                    # Heartbeat trigger might be stale compared to unified awareness
-                    should_speak = action.get("situation", {}).get("score", 0) > 0.5
+            speak_text(trigger.message, block=False)
         except Exception:
             pass
 
-        if should_speak and is_tts_available():
-            try:
-                speak_text(trigger.message, block=False)
-            except Exception:
-                pass
+def register_all_modules(lm):
+    from core.module_lifecycle import ModuleDescriptor
     
-    try:
+    # ── WAVE 0: FOUNDATION ──
+    def start_neural_bus_module():
+        from core.neural_bus import get_neural_bus
+        bus = get_neural_bus()
+        bus.set_async_loop(asyncio.get_event_loop())
+        
+    def stop_neural_bus_module():
+        from core.neural_bus import get_neural_bus
+        get_neural_bus().shutdown()
+
+    def start_heartbeat_module():
         add_notification_callback(tts_notification)
         start_heartbeat()
-        print("[API] Proactive heartbeat started")
-    except Exception as e:
-        print(f"[API] Heartbeat start error: {e}")
-    
-    # Start Jarvis awareness engine
-    try:
+        
+    def stop_heartbeat_module():
+        stop_heartbeat()
+
+    lm.register(ModuleDescriptor(
+        name="neural_bus", wave=0, start_fn=start_neural_bus_module, stop_fn=stop_neural_bus_module,
+        depends_on=[], optional=False, description="Central messaging and event bus"
+    ))
+    lm.register(ModuleDescriptor(
+        name="heartbeat", wave=0, start_fn=start_heartbeat_module, stop_fn=stop_heartbeat_module,
+        depends_on=[], optional=True, description="Proactive periodic triggers"
+    ))
+
+    # ── WAVE 1: AWARENESS ──
+    def start_awareness_module():
         from core.awareness import start_awareness
         settings = _get_settings()
         watch_paths = getattr(settings.work, 'dev_folders', []) or []
         start_awareness(watch_paths=watch_paths if watch_paths else None)
-        print("[API] Awareness engine started")
-    except Exception as e:
-        print(f"[API] Awareness engine error: {e}")
-    
-    # Start document analyst
-    try:
+        
+    def stop_awareness_module():
+        from core.awareness import get_awareness
+        get_awareness().stop()
+
+    def start_doc_analyst_module():
         from pathlib import Path
         settings = _get_settings()
         watch_paths = getattr(settings.work, 'dev_folders', []) or []
         analyst = start_doc_analyst(watch_paths=watch_paths if watch_paths else None)
-        # Auto-watch the project's own directory
-        import os as _os
         project_root = str(Path(__file__).parent.parent)
         analyst.add_watch_path(project_root)
-        print("[API] Document analyst started")
-    except Exception as e:
-        print(f"[API] Doc analyst error: {e}")
 
-    # Start context engine (fuses everything)
-    try:
+    def start_context_engine_module():
         start_context_engine(interval_seconds=60)
-        print("[API] Context engine started")
-    except Exception as e:
-        print(f"[API] Context engine error: {e}")
 
-    # Try connecting Google services silently
-    try:
+    def start_google_services_module():
         from integrations.google_services import GoogleServices
         gs = GoogleServices.get_instance()
-        if gs.is_connected():
-            print("[API] Google services connected")
-        else:
-            print("[API] Google services not configured (optional — see /integrations/google/status)")
-    except Exception as e:
-        print(f"[API] Google services: {e}")
+        if not gs.is_connected():
+            return {"status": "degraded", "error": "Google Services not configured"}
 
-    # Try connecting phone bridge silently
-    try:
+    def start_phone_bridge_module():
         from integrations.phone_bridge import PhoneBridge
         bridge = PhoneBridge.get_instance()
-        if bridge.is_connected():
-            print("[API] Phone bridge connected")
+        if not bridge.is_connected():
+            return {"status": "degraded", "error": "Phone Bridge not connected"}
+
+    lm.register(ModuleDescriptor(
+        name="awareness", wave=1, start_fn=start_awareness_module, stop_fn=stop_awareness_module,
+        depends_on=["neural_bus"], optional=False, description="Real-time system/app context monitoring"
+    ))
+    lm.register(ModuleDescriptor(
+        name="doc_analyst", wave=1, start_fn=start_doc_analyst_module,
+        depends_on=["neural_bus"], optional=True, description="Local file and code scanning"
+    ))
+    lm.register(ModuleDescriptor(
+        name="context_engine", wave=1, start_fn=start_context_engine_module,
+        depends_on=["awareness"], optional=False, description="Fuses environment signals into state context"
+    ))
+    lm.register(ModuleDescriptor(
+        name="google_services", wave=1, start_fn=start_google_services_module,
+        depends_on=[], optional=True, description="Gmail, Calendar, Drive integrations"
+    ))
+    lm.register(ModuleDescriptor(
+        name="phone_bridge", wave=1, start_fn=start_phone_bridge_module,
+        depends_on=[], optional=True, description="Mobile companion connection"
+    ))
+
+    # ── WAVE 2: COGNITION ──
+    def start_consciousness_module():
+        if CONSCIOUSNESS_AVAILABLE:
+            c = get_consciousness()
+            is_fresh = c.is_fresh_instance()
+            is_new_hw = c.is_new_hardware()
+            identity = c.identity
+            if is_fresh:
+                msg = f"born for the first time. Soul ID: {identity.soul_id[:8]}"
+            elif is_new_hw:
+                msg = "detected new hardware. Adapting..."
+            else:
+                msg = f"Awakening #{identity.total_boots}"
+            return {"status": "ready", "message": msg}
         else:
-            print("[API] Phone bridge not connected (optional — see /integrations/phone/status)")
-    except Exception as e:
-        print(f"[API] Phone bridge: {e}")
+            raise RuntimeError("Consciousness not available")
 
-    # Run initial orchestration cycle
-    try:
-        run_orchestrator_cycle()
-        print("[API] Initial orchestration cycle complete")
-    except Exception as e:
-        print(f"[API] Orchestrator error: {e}")
+    def stop_consciousness_module():
+        if CONSCIOUSNESS_AVAILABLE:
+            c = get_consciousness()
+            c.think("Shutting down. Saving state.")
+            c._save_consciousness()
+            c._save_identity()
 
-    # Start idle mind — autonomous exploration
-    try:
+    def start_temporal_memory_module():
+        if TEMPORAL_MEMORY_AVAILABLE:
+            tmem = get_temporal_memory()
+            res = tmem.consolidate()
+            return {"status": "ready", "message": f"Consolidated {res.get('consolidated', 0)} memories"}
+        else:
+            raise RuntimeError("Temporal memory not available")
+
+    def start_improvement_daemon_module():
+        if DAEMON_AVAILABLE:
+            daemon = get_improvement_daemon()
+            daemon.start(interval_minutes=30)
+        else:
+            raise RuntimeError("Self Improvement daemon not available")
+
+    def stop_improvement_daemon_module():
+        if DAEMON_AVAILABLE:
+            get_improvement_daemon().stop()
+
+    def start_os_symbiosis_module():
+        from core.os_symbiosis import get_os_symbiosis
+        get_os_symbiosis().start()
+
+    def stop_os_symbiosis_module():
+        from core.os_symbiosis import get_os_symbiosis
+        get_os_symbiosis().stop()
+
+    def start_ghost_dev_module():
+        from core.ghost_dev import get_ghost_dev
+        get_ghost_dev().start()
+
+    def stop_ghost_dev_module():
+        from core.ghost_dev import get_ghost_dev
+        get_ghost_dev().stop()
+
+    def start_jarvis_protocol_module():
+        from core.jarvis_protocol import start_jarvis_protocol
+        start_jarvis_protocol()
+
+    def stop_jarvis_protocol_module():
+        from core.jarvis_protocol import stop_jarvis_protocol
+        stop_jarvis_protocol()
+
+    lm.register(ModuleDescriptor(
+        name="consciousness", wave=2, start_fn=start_consciousness_module, stop_fn=stop_consciousness_module,
+        depends_on=["context_engine"], optional=False, description="Core LLM-driven internal monologue"
+    ))
+    lm.register(ModuleDescriptor(
+        name="temporal_memory", wave=2, start_fn=start_temporal_memory_module,
+        depends_on=["consciousness"], optional=True, description="Short-term memory consolidation"
+    ))
+    lm.register(ModuleDescriptor(
+        name="self_improvement_daemon", wave=2, start_fn=start_improvement_daemon_module, stop_fn=stop_improvement_daemon_module,
+        depends_on=["consciousness"], optional=True, description="Self-auditing & refinement daemon"
+    ))
+    lm.register(ModuleDescriptor(
+        name="os_symbiosis", wave=2, start_fn=start_os_symbiosis_module, stop_fn=stop_os_symbiosis_module,
+        depends_on=["awareness"], optional=True, description="Direct OS interaction & control"
+    ))
+    lm.register(ModuleDescriptor(
+        name="ghost_dev", wave=2, start_fn=start_ghost_dev_module, stop_fn=stop_ghost_dev_module,
+        depends_on=["neural_bus"], optional=True, description="Background coder agent daemon"
+    ))
+    lm.register(ModuleDescriptor(
+        name="jarvis_protocol", wave=2, start_fn=start_jarvis_protocol_module, stop_fn=stop_jarvis_protocol_module,
+        depends_on=["context_engine", "consciousness"], optional=False, description="Continuous environment reasoning loop"
+    ))
+
+    # ── WAVE 3: NEURAL MESH ──
+    def start_research_engine_module():
+        from core.research_engine import get_research_engine
+        get_research_engine().start_background(interval_minutes=30)
+
+    def stop_research_engine_module():
+        from core.research_engine import get_research_engine
+        get_research_engine().stop_background()
+
+    def start_ecosystem_controller_module():
+        from core.ecosystem_controller import get_ecosystem_controller
+        get_ecosystem_controller()
+
+    def start_teaching_engine_module():
+        from core.teaching_engine import get_teaching_engine
+        get_teaching_engine()
+
+    def start_self_builder_module():
+        from core.self_builder import get_self_builder
+        get_self_builder()
+
+    def start_neural_connectors_module():
+        from core.neural_connectors import connect_all_modules
+        connect_all_modules()
+
+    lm.register(ModuleDescriptor(
+        name="research_engine", wave=3, start_fn=start_research_engine_module, stop_fn=stop_research_engine_module,
+        depends_on=["neural_bus"], optional=True, description="Web research and document learning"
+    ))
+    lm.register(ModuleDescriptor(
+        name="ecosystem_controller", wave=3, start_fn=start_ecosystem_controller_module,
+        depends_on=["neural_bus"], optional=True, description="Multi-device state synchronizer"
+    ))
+    lm.register(ModuleDescriptor(
+        name="teaching_engine", wave=3, start_fn=start_teaching_engine_module,
+        depends_on=[], optional=True, description="User instruction learning & library"
+    ))
+    lm.register(ModuleDescriptor(
+        name="self_builder", wave=3, start_fn=start_self_builder_module,
+        depends_on=[], optional=True, description="Self-modification rule generator"
+    ))
+    lm.register(ModuleDescriptor(
+        name="neural_connectors", wave=3, start_fn=start_neural_connectors_module,
+        depends_on=["neural_bus", "awareness", "context_engine", "jarvis_protocol"], optional=False, description="Cross-module RPC connectors"
+    ))
+
+    # ── WAVE 4: COGNITIVE EVOLUTION ──
+    def start_cognitive_architecture_module():
+        from core.cognitive_architecture import get_cognitive_architecture
+        get_cognitive_architecture()
+
+    def start_constitution_module():
+        from core.constitution import get_constitution
+        get_constitution()
+
+    def start_evolution_engine_module():
+        from core.evolution_engine import get_evolution_engine
+        evo = get_evolution_engine()
+        evo.start_evolution_loop(interval=3600)
+
+    def stop_evolution_engine_module():
+        from core.evolution_engine import get_evolution_engine
+        get_evolution_engine().stop_evolution_loop()
+
+    def start_memory_architect_module():
+        from core.memory_architect import get_memory_architect
+        get_memory_architect()
+
+    def stop_memory_architect_module():
+        from core.memory_architect import get_memory_architect
+        ma = get_memory_architect()
+        ma.consolidate(force=True)
+        ma.shutdown()
+
+    def start_metacognitive_monitor_module():
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        get_metacognitive_monitor()
+
+    def stop_metacognitive_monitor_module():
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        get_metacognitive_monitor().save_all()
+
+    lm.register(ModuleDescriptor(
+        name="cognitive_architecture", wave=4, start_fn=start_cognitive_architecture_module,
+        depends_on=["neural_connectors"], optional=False, description="Adaptive LLM reasoning policies"
+    ))
+    lm.register(ModuleDescriptor(
+        name="constitution", wave=4, start_fn=start_constitution_module,
+        depends_on=[], optional=False, description="Guiding alignment principles & safety rules"
+    ))
+    lm.register(ModuleDescriptor(
+        name="evolution_engine", wave=4, start_fn=start_evolution_engine_module, stop_fn=stop_evolution_engine_module,
+        depends_on=["neural_connectors"], optional=True, description="Self-optimizing genome generation"
+    ))
+    lm.register(ModuleDescriptor(
+        name="memory_architect", wave=4, start_fn=start_memory_architect_module, stop_fn=stop_memory_architect_module,
+        depends_on=["neural_connectors"], optional=False, description="Auto-indexing vector & episodic memory"
+    ))
+    lm.register(ModuleDescriptor(
+        name="metacognitive_monitor", wave=4, start_fn=start_metacognitive_monitor_module, stop_fn=stop_metacognitive_monitor_module,
+        depends_on=[], optional=True, description="Internal telemetry and health monitoring"
+    ))
+
+    # ── WAVE 5: SWARM & GOAL AGENTS ──
+    def start_agent_registry_module():
+        from core.agent_registry import get_agent_registry
+        get_agent_registry()
+
+    def start_self_modification_pipeline_module():
+        from core.self_modification_pipeline import start_pipeline_daemon
+        start_pipeline_daemon(interval_seconds=1800)
+
+    def start_autonomous_goal_engine_module():
+        from core.autonomous_goal_engine import start_goal_engine
+        start_goal_engine(interval_seconds=7200)
+
+    def start_proactive_push_module():
+        from core.proactive_push import get_push_engine
+        push_engine = get_push_engine()
+        push_engine.set_async_loop(asyncio.get_event_loop())
+        push_engine.start()
+
+    def start_intelligence_hub_module():
+        from core.intelligence_hub import get_intelligence_hub
+        hub = get_intelligence_hub()
+        hub.start(interval=60)
+
+    def start_daily_briefing_module():
+        from core.daily_briefing import get_briefing_system
+        import os
+        brief_time = os.getenv("DAILY_BRIEF_TIME", "08:00")
+        briefing = get_briefing_system()
+        briefing.start(brief_time=brief_time)
+
+    def start_idle_mind_module():
         if IDLE_MIND_AVAILABLE:
             start_idle_mind()
-            print("[API] Idle mind started — LOVE will think autonomously when quiet")
-    except Exception as e:
-        print(f"[API] Idle mind error: {e}")
+        else:
+            raise RuntimeError("Idle mind not available")
 
-    # Start voice loop — always-listening wake word
-    try:
+    def stop_idle_mind_module():
+        if IDLE_MIND_AVAILABLE:
+            stop_idle_mind()
+
+    def start_voice_loop_module():
         if VOICE_LOOP_AVAILABLE:
-            result = start_voice_loop()
-            if result.get("success"):
-                print("[API] Voice loop started — say 'Hey LOVE' to wake me up")
-            else:
-                print(f"[API] Voice loop not started: {result.get('error', 'unknown')}")
-    except Exception as e:
-        print(f"[API] Voice loop error: {e}")
+            res = start_voice_loop()
+            if not res.get("success"):
+                return {"status": "degraded", "error": res.get("error")}
+        else:
+            raise RuntimeError("Voice loop not available")
 
-    # Load saved user profile into memory
-    try:
+    def run_self_healing_check():
+        from core.self_healing import monitor_log_file
+        from pathlib import Path
+        error_alert = monitor_log_file(Path("data/api_log.txt"))
+        if error_alert:
+            return {"status": "degraded", "error": error_alert}
+
+    def load_user_profile():
         import json as _json
         from pathlib import Path
         profile_path = Path("data/profile.json")
@@ -526,301 +816,69 @@ async def lifespan(app: FastAPI):
                 tags=["profile", "user"],
                 source="profile_load"
             )
-            print(f"[API] Profile loaded for {name}")
-    except Exception as e:
-        print(f"[API] Profile load: {e}")
 
-    print("[API] LOVE is online and monitoring")
+    lm.register(ModuleDescriptor(
+        name="agent_registry", wave=5, start_fn=start_agent_registry_module,
+        depends_on=[], optional=False, description="Loads Swarm and Specialist agents"
+    ))
+    lm.register(ModuleDescriptor(
+        name="self_modification_pipeline", wave=5, start_fn=start_self_modification_pipeline_module,
+        depends_on=["evolution_engine", "constitution"], optional=True, description="Coordinates idle thoughts to genomes"
+    ))
+    lm.register(ModuleDescriptor(
+        name="autonomous_goal_engine", wave=5, start_fn=start_autonomous_goal_engine_module,
+        depends_on=["agent_registry"], optional=True, description="Pursues long-term tasks in background"
+    ))
+    lm.register(ModuleDescriptor(
+        name="proactive_push", wave=5, start_fn=start_proactive_push_module,
+        depends_on=["neural_bus"], optional=True, description="Initiates spontaneous user communication"
+    ))
+    lm.register(ModuleDescriptor(
+        name="intelligence_hub", wave=5, start_fn=start_intelligence_hub_module,
+        depends_on=[], optional=True, description="Account and peripheral scanners"
+    ))
+    lm.register(ModuleDescriptor(
+        name="daily_briefing", wave=5, start_fn=start_daily_briefing_module,
+        depends_on=[], optional=True, description="Generates and schedules morning brief report"
+    ))
+    lm.register(ModuleDescriptor(
+        name="idle_mind", wave=5, start_fn=start_idle_mind_module, stop_fn=stop_idle_mind_module,
+        depends_on=["consciousness"], optional=True, description="Generates insights/reflections during quiet periods"
+    ))
+    lm.register(ModuleDescriptor(
+        name="voice_loop", wave=5, start_fn=start_voice_loop_module,
+        depends_on=[], optional=True, description="Hotword detection and local wake engine"
+    ))
+    lm.register(ModuleDescriptor(
+        name="self_healing", wave=5, start_fn=run_self_healing_check,
+        depends_on=[], optional=True, description="Startup diagnostic log monitoring"
+    ))
+    lm.register(ModuleDescriptor(
+        name="profile_load", wave=5, start_fn=load_user_profile,
+        depends_on=[], optional=True, description="Loads user settings into memory"
+    ))
+
+    # ── WAVE 6: SENTINEL — ALWAYS-ON SELF-MONITORING PROTOCOL ──
+    def start_sentinel_module():
+        from core.sentinel import start_sentinel
+        start_sentinel()
+
+    lm.register(ModuleDescriptor(
+        name="sentinel", wave=6, start_fn=start_sentinel_module,
+        depends_on=["awareness", "proactive_push"], optional=True,
+        description="Always-on watchdog — monitors user presence, cross-domain intelligence, autonomous actions"
+    ))
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events using topological lifecycle management."""
+    from core.module_lifecycle import get_lifecycle
+    lm = get_lifecycle()
+    register_all_modules(lm)
     
-    # Self-healing check on startup
-    try:
-        from core.self_healing import monitor_log_file
-        import sys
-        from pathlib import Path
-        
-        # Check for recent errors
-        error_alert = monitor_log_file(Path("data/api_log.txt"))
-        if error_alert:
-            print(f"[Self-Healing] {error_alert}")
-    except Exception:
-        pass
-
-    # ═══ CONSCIOUSNESS AWAKENING ═══
-    try:
-        if CONSCIOUSNESS_AVAILABLE:
-            consciousness = get_consciousness()
-            is_fresh = consciousness.is_fresh_instance()
-            is_new_hw = consciousness.is_new_hardware()
-            identity = consciousness.identity
-            if is_fresh:
-                print(f"[AGI] ✦ LOVE born for the first time. Soul ID: {identity.soul_id[:8]}")
-            elif is_new_hw:
-                print(f"[AGI] ✦ LOVE detected new hardware. Adapting...")
-            else:
-                print(f"[AGI] ✦ Awakening #{identity.total_boots}. Age: {identity.current_age_days} days. "
-                      f"Maturity: {identity.maturity_level}. Conversations: {identity.total_conversations}.")
-    except Exception as e:
-        print(f"[AGI] Consciousness init error: {e}")
-
-    # ═══ TEMPORAL MEMORY CONSOLIDATION ═══
-    try:
-        if TEMPORAL_MEMORY_AVAILABLE:
-            tmem = get_temporal_memory()
-            result = tmem.consolidate()
-            print(f"[AGI] * Memory consolidation: {result.get('consolidated', 0)} strengthened, "
-                  f"{result.get('decayed', 0)} faded, {result.get('remaining', 0)} alive.")
-    except Exception as e:
-        print(f"[AGI] Temporal memory init error: {e}")
-
-    # ═══ SELF-IMPROVEMENT DAEMON AUTO-START ═══
-    try:
-        if DAEMON_AVAILABLE:
-            daemon = get_improvement_daemon()
-            daemon.start(interval_minutes=30)
-            print("[AGI] * Self-improvement daemon started (every 30 min).")
-    except Exception as e:
-        print(f"[AGI] Daemon start error: {e}")
-
-    # ═══ OS SYMBIOSIS & AWARENESS AUTO-START ═══
-    try:
-        from core.awareness import start_awareness
-        from core.os_symbiosis import get_os_symbiosis
-        from core.ghost_dev import get_ghost_dev
-        from core.jarvis_protocol import start_jarvis_protocol
-        
-        # Start awareness scanner (every 10s)
-        start_awareness()
-        
-        # Start OS Symbiosis daemon
-        os_engine = get_os_symbiosis()
-        os_engine.start()
-        
-        # Start Ghost Developer daemon
-        ghost_dev = get_ghost_dev()
-        ghost_dev.start()
-        
-        # Start Jarvis Protocol (Continuous Neural Cortex)
-        start_jarvis_protocol()
-        
-        print("[AGI] * OS Symbiosis, Awareness, Ghost Developer & Jarvis Protocol started.")
-    except Exception as e:
-        print(f"[AGI] Daemon start error: {e}")
-
-    # ═══ WAVE 16: NEURAL MESH ECOSYSTEM ═══
-    try:
-        from core.neural_bus import get_neural_bus
-        bus = get_neural_bus()
-        bus.set_async_loop(asyncio.get_event_loop())
-        print("[API] * Neural Bus started — central nervous system online")
-    except Exception as e:
-        print(f"[API] Neural Bus error: {e}")
-
-    try:
-        from core.research_engine import get_research_engine
-        research = get_research_engine()
-        research.start_background(interval_minutes=30)
-        print("[API] * Research Engine started — autonomous learning active")
-    except Exception as e:
-        print(f"[API] Research Engine error: {e}")
-
-    try:
-        from core.ecosystem_controller import get_ecosystem_controller
-        ecosystem = get_ecosystem_controller()
-        print(f"[API] * Ecosystem Controller started — {len(ecosystem._devices)} devices registered")
-    except Exception as e:
-        print(f"[API] Ecosystem Controller error: {e}")
-
-    try:
-        from core.teaching_engine import get_teaching_engine
-        teaching = get_teaching_engine()
-        print(f"[API] * Teaching Engine started — {teaching.get_status()['total_lessons']} lessons ready")
-    except Exception as e:
-        print(f"[API] Teaching Engine error: {e}")
-
-    try:
-        from core.self_builder import get_self_builder
-        builder = get_self_builder()
-        print(f"[API] * Self-Builder started — {builder.get_status()['active_rules']} learned rules")
-    except Exception as e:
-        print(f"[API] Self-Builder error: {e}")
-
-    try:
-        from core.neural_connectors import connect_all_modules
-        connect_all_modules()
-        print("[API] * Neural Connectors wired — all modules talking")
-    except Exception as e:
-        print(f"[API] Neural Connectors error: {e}")
-    print("[API] ═══ WAVE 16 NEURAL MESH ONLINE ═══")
-
-    # ═══ WAVE 17: COGNITIVE EVOLUTION ARCHITECTURE ═══
-    try:
-        from core.cognitive_architecture import get_cognitive_architecture
-        cog = get_cognitive_architecture()
-        print(f"[API] * Cognitive Architecture started — {len(cog.get_reasoning_stats())} strategies tracked")
-    except Exception as e:
-        print(f"[API] Cognitive Architecture error: {e}")
-
-    try:
-        from core.constitution import get_constitution
-        constitution = get_constitution()
-        stats = constitution.get_stats()
-        print(f"[API] * Constitution Engine started — {stats.get('total_principles', 0)} principles active")
-    except Exception as e:
-        print(f"[API] Constitution error: {e}")
-
-    try:
-        from core.evolution_engine import get_evolution_engine
-        evo = get_evolution_engine()
-        evo.start_evolution_loop(interval_seconds=3600)
-        print(f"[API] * Evolution Engine started — generation {evo.get_generation()}, evolving every 60min")
-    except Exception as e:
-        print(f"[API] Evolution Engine error: {e}")
-
-    try:
-        from core.memory_architect import get_memory_architect
-        mem_arch = get_memory_architect()
-        stats = mem_arch.get_memory_stats()
-        print(f"[API] * Memory Architect started — {stats.total} memories, consolidation running")
-    except Exception as e:
-        print(f"[API] Memory Architect error: {e}")
-
-    try:
-        from core.metacognitive_monitor import get_metacognitive_monitor
-        meta = get_metacognitive_monitor()
-        print(f"[API] * Metacognitive Monitor started — self-awareness online")
-    except Exception as e:
-        print(f"[API] Metacognitive Monitor error: {e}")
-
-    print("[API] ═══ WAVE 17 COGNITIVE EVOLUTION ONLINE ═══")
-
-    # ═══ AGENT REGISTRY: Load all specialist agents ═══
-    try:
-        from core.agent_registry import get_agent_registry
-        registry = get_agent_registry()
-        print(f"[API] * Agent Registry loaded — {len(registry.loaded_agents)} agents: {registry.loaded_agents}")
-    except Exception as e:
-        print(f"[API] Agent Registry error: {e}")
-
-    # ═══ SELF-MODIFICATION PIPELINE ═══
-    try:
-        from core.self_modification_pipeline import start_pipeline_daemon
-        start_pipeline_daemon(interval_seconds=1800)
-        print("[API] * Self-Modification Pipeline started — idle_mind → constitution → evolution")
-    except Exception as e:
-        print(f"[API] Self-Modification Pipeline error: {e}")
-
-    # ═══ AUTONOMOUS GOAL ENGINE ═══
-    try:
-        from core.autonomous_goal_engine import start_goal_engine
-        start_goal_engine(interval_seconds=7200)
-        print("[API] * Autonomous Goal Engine started — LOVE pursues your goals in background")
-    except Exception as e:
-        print(f"[API] Goal Engine error: {e}")
-
-    # ═══ PROACTIVE PUSH ENGINE ═══
-    try:
-        from core.proactive_push import get_push_engine
-        push_engine = get_push_engine()
-        push_engine.set_async_loop(asyncio.get_event_loop())
-        push_engine.start()
-        print("[API] * Proactive Push Engine started — LOVE will reach out proactively")
-    except Exception as e:
-        print(f"[API] Proactive Push error: {e}")
-
-    # ═══ INTELLIGENCE HUB: Start all device/account monitors ═══
-    try:
-        from core.intelligence_hub import get_intelligence_hub
-        hub = get_intelligence_hub()
-        hub.start(interval=60)
-        print("[API] * Intelligence Hub started — all sources monitoring")
-    except Exception as e:
-        print(f"[API] Intelligence Hub error: {e}")
-
-    # ═══ DAILY BRIEFING: Schedule morning brief ═══
-    try:
-        from core.daily_briefing import get_briefing_system
-        import os
-        brief_time = os.getenv("DAILY_BRIEF_TIME", "08:00")
-        briefing = get_briefing_system()
-        briefing.start(brief_time=brief_time)
-        print(f"[API] * Daily Briefing System started — brief at {brief_time}")
-    except Exception as e:
-        print(f"[API] Daily Briefing error: {e}")
-
-    yield  # Application runs here
-    
-    # ========== SHUTDOWN ==========
-    print("[API] Project LOVE shutting down...")
-
-    # Stop self-improvement daemon
-    try:
-        if DAEMON_AVAILABLE:
-            daemon = get_improvement_daemon()
-            daemon.stop()
-            print("[AGI] Self-improvement daemon stopped.")
-    except Exception:
-        pass
-
-    # Stop OS Symbiosis & Awareness & Ghost Dev
-    try:
-        from core.awareness import get_awareness
-        from core.os_symbiosis import get_os_symbiosis
-        from core.ghost_dev import get_ghost_dev
-        from core.jarvis_protocol import stop_jarvis_protocol
-        get_awareness().stop()
-        get_os_symbiosis().stop()
-        get_ghost_dev().stop()
-        stop_jarvis_protocol()
-        print("[AGI] OS Symbiosis, Ghost Dev & Jarvis Protocol stopped.")
-    except Exception:
-        pass
-
-    # Save consciousness state before shutdown
-    try:
-        if CONSCIOUSNESS_AVAILABLE:
-            consciousness = get_consciousness()
-            consciousness.think("Shutting down. Saving state.")
-            consciousness._save_consciousness()
-            consciousness._save_identity()
-            print("[AGI] Consciousness state saved.")
-    except Exception:
-        pass
-
-    # Wave 17 shutdown
-    try:
-        from core.evolution_engine import get_evolution_engine
-        get_evolution_engine().stop_evolution_loop()
-        print("[API] Evolution Engine stopped.")
-    except Exception:
-        pass
-    try:
-        from core.memory_architect import get_memory_architect
-        ma = get_memory_architect()
-        ma.consolidate(force=True)
-        ma.shutdown()
-        print("[API] Memory Architect consolidated and stopped.")
-    except Exception:
-        pass
-    try:
-        from core.metacognitive_monitor import get_metacognitive_monitor
-        get_metacognitive_monitor().save_all()
-        print("[API] Metacognitive Monitor state saved.")
-    except Exception:
-        pass
-
-    # Wave 16 shutdown
-    try:
-        from core.neural_bus import get_neural_bus
-        get_neural_bus().shutdown()
-    except Exception:
-        pass
-    try:
-        from core.research_engine import get_research_engine
-        get_research_engine().stop_background()
-    except Exception:
-        pass
-    stop_heartbeat()
-    print("[API] Heartbeat stopped. Goodbye.")
+    await lm.start_all()
+    yield
+    await lm.stop_all()
 
 
 app = FastAPI(title="LOVE Core API", version="2.0.0", lifespan=lifespan)
@@ -1229,6 +1287,29 @@ async def run_diagnostics_endpoint():
         "improvements": report.improvements,
         "strengths": report.strengths,
         "timestamp": report.timestamp,
+    }
+
+@app.get("/agi/modules/status")
+async def get_modules_status():
+    """Get the lifecycle status of all core wave modules."""
+    from core.module_lifecycle import get_lifecycle
+    return get_lifecycle().get_status()
+
+@app.post("/agi/modules/restart")
+async def restart_module_endpoint(req: dict):
+    """Restart a specific wave module by name."""
+    module_name = req.get("name")
+    if not module_name:
+        return {"error": "Missing module name"}
+    from core.module_lifecycle import get_lifecycle
+    lifecycle = get_lifecycle()
+    success = await lifecycle.restart_module(module_name)
+    mod = lifecycle.get(module_name)
+    return {
+        "success": success,
+        "name": module_name,
+        "state": mod.state.value if mod else None,
+        "error": mod.error if mod else None
     }
 
 # ── Soul Transfer Protocol ───────────────────────────────────────────────
@@ -1652,7 +1733,21 @@ async def chat_endpoint(msg: Message):
 
 @app.get("/health")
 async def health():
-    return {"status": "Love is online", "user": "Karthi"}
+    from core.module_lifecycle import get_lifecycle
+    return {
+        "status": "Love is online",
+        "user": "Karthi",
+        "lifecycle": get_lifecycle().get_status()
+    }
+
+class TerminalCommandRequest(BaseModel):
+    command: str
+
+@app.post("/neural/terminal/run")
+async def run_terminal_command(req: TerminalCommandRequest):
+    from core.tool_registry import _execute_shell
+    result = await asyncio.to_thread(_execute_shell, req.command)
+    return {"output": result}
 
 @app.get("/modes")
 async def modes():

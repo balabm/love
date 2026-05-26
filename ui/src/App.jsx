@@ -13,6 +13,9 @@ import AgentLoopPanel from "./components/AgentLoopPanel";
 import BriefingPanel from "./components/BriefingPanel";
 import SetupWizard from "./components/SetupWizard";
 import ErrorBoundary from "./components/ErrorBoundary";
+import SentinelPanel from "./components/SentinelPanel";
+import TerminalPanel from "./components/TerminalPanel";
+import EvolutionPanel from "./components/EvolutionPanel";
 
 const API = "http://localhost:8000";
 
@@ -201,6 +204,15 @@ export default function App() {
           <button className={`nav-btn${view === "briefing" ? " active" : ""}`} onClick={() => setView("briefing")}>
             <span>◷</span> Brief
           </button>
+          <button className={`nav-btn${view === "evolution" ? " active" : ""}`} onClick={() => setView("evolution")}>
+            <span>🧬</span> Evolution
+          </button>
+          <button className={`nav-btn${view === "terminal" ? " active" : ""}`} onClick={() => setView("terminal")}>
+            <span>📟</span> Terminal
+          </button>
+          <button className={`nav-btn${view === "sentinel" ? " active" : ""}`} onClick={() => setView("sentinel")}>
+            <span>◉</span> Sentinel
+          </button>
           <button className={`nav-btn${view === "setup" ? " active" : ""}`} onClick={() => setView("setup")}>
             <span>⚙</span> Setup
           </button>
@@ -308,8 +320,20 @@ export default function App() {
           <ErrorBoundary name="Briefing"><div className="view-scroll"><BriefingPanel /></div></ErrorBoundary>
         )}
 
+        {view === "sentinel" && (
+          <ErrorBoundary name="Sentinel"><div className="view-scroll"><SentinelPanel /></div></ErrorBoundary>
+        )}
+
         {view === "setup" && (
           <ErrorBoundary name="Setup"><div className="view-scroll"><SetupWizard /></div></ErrorBoundary>
+        )}
+
+        {view === "terminal" && (
+          <ErrorBoundary name="Terminal"><div className="view-scroll"><TerminalPanel /></div></ErrorBoundary>
+        )}
+
+        {view === "evolution" && (
+          <ErrorBoundary name="Evolution"><div className="view-scroll"><EvolutionPanel /></div></ErrorBoundary>
         )}
       </main>
     </div>
