@@ -60,6 +60,10 @@ MLP_LR = 0.01      # SGD learning rate for MLP weights
 GRAD_CLIP = 0.05   # gradient clip bound
 WEIGHT_DECAY = 0.9999  # L2 weight decay factor per step
 
+ROLLOUT_STEPS = 4        # multi-step prediction horizon
+ROLLOUT_LR = 0.005       # slightly lower than single-step lr (MLP_LR = 0.01)
+ROLLOUT_WINDOW = 16      # keep last 16 embeddings for rollout training
+
 
 # ── Embedding access ─────────────────────────────────────────────────────────
 
@@ -224,6 +228,8 @@ class LatentWorldModel:
         self._channel_surprise: Dict[str, float] = {}  # per-source EMA error
         self._W1, self._b1, self._W2, self._b2 = self._load_mlp_params()
         self._state = self._load_state()
+        self._rollout_buffer: Deque[np.ndarray] = deque(maxlen=ROLLOUT_WINDOW)
+        self._rollout_loss_ema: float = 0.0
 
     # ── persistence ──────────────────────────────────────────────────────────
 
@@ -366,6 +372,7 @@ class LatentWorldModel:
             # 6) push into history — also fire SSM train_step on the transition
             prev_state_for_ssm = self._history[-1].copy() if self._history else None
             self._history.append(state)
+            self._rollout_buffer.append(state)
             if prev_state_for_ssm is not None:
                 try:
                     from core.state_space_memory import get_ssm_memory
@@ -387,7 +394,17 @@ class LatentWorldModel:
                 self._save_state()
                 self._append_trajectory(obs)
 
-            return obs
+            # Flag for rollout training (executed outside lock to avoid deadlock)
+            _do_rollout = (
+                self._state.total_observations % 8 == 0
+                and len(self._rollout_buffer) >= ROLLOUT_STEPS + 1
+            )
+
+        # 8) multi-step rollout BPTT (every 8 observations, outside lock)
+        if _do_rollout:
+            self.train_rollout()
+
+        return obs
 
     def _append_trajectory(self, obs: Observation):
         try:
@@ -400,6 +417,120 @@ class LatentWorldModel:
                 }) + "\n")
         except Exception:
             pass
+
+    # ── multi-step rollout BPTT ──────────────────────────────────────────────
+
+    def train_rollout(self) -> float:
+        """
+        Multi-step rollout BPTT through the MLP.
+
+        For each anchor in the buffer (all except last 4):
+          - Roll out MLP for ROLLOUT_STEPS steps autoregressively
+          - Compare each predicted step to the actual next embedding
+          - Accumulate gradients backward through all steps (chain rule through MLP)
+
+        Returns average rollout loss.
+        """
+        with self._mu:
+            buf = list(self._rollout_buffer)
+            if len(buf) < ROLLOUT_STEPS + 1:
+                return 0.0
+
+            total_loss = 0.0
+            n_anchors = 0
+
+            # Accumulate gradients across all anchors
+            dW1_acc = np.zeros_like(self._W1)
+            db1_acc = np.zeros_like(self._b1)
+            dW2_acc = np.zeros_like(self._W2)
+            db2_acc = np.zeros_like(self._b2)
+
+            for anchor_idx in range(len(buf) - ROLLOUT_STEPS):
+                x0 = buf[anchor_idx]
+                targets = buf[anchor_idx + 1 : anchor_idx + ROLLOUT_STEPS + 1]
+
+                # Forward rollout: x0 -> x1_pred -> x2_pred -> ... xK_pred
+                rollout_states = [x0]
+                rollout_h = []       # hidden activations h = relu(W1@x + b1)
+                rollout_pre_h = []   # pre-activation (for gradient)
+                rollout_preds = []   # MLP output at each step
+
+                x = x0
+                for step in range(ROLLOUT_STEPS):
+                    pred, h, pre_h = _mlp_forward(x, self._W1, self._b1, self._W2, self._b2)
+                    # normalize prediction (as actual embeddings are L2-normalized)
+                    pn = np.linalg.norm(pred)
+                    pred_norm = pred / pn if pn > 0 else pred
+                    rollout_preds.append(pred)        # unnormalized (for gradient)
+                    rollout_h.append(h)
+                    rollout_pre_h.append(pre_h)
+                    rollout_states.append(pred_norm)  # use normalized as next input
+                    x = pred_norm
+
+                # Backward through rollout (BPTT)
+                # Loss at each step: 0.5 * ||pred - target||^2, weighted by recency
+                dx_next = np.zeros_like(x0)  # gradient flowing back from future steps
+
+                for step in reversed(range(ROLLOUT_STEPS)):
+                    # Error at this step
+                    diff = rollout_preds[step] - targets[step]
+                    step_loss = float(np.mean(diff ** 2))
+                    # Weight later steps less (they're harder to predict)
+                    weight = 0.9 ** (ROLLOUT_STEPS - 1 - step)
+                    total_loss += step_loss * weight
+
+                    # Gradient of loss w.r.t pred (+ incoming gradient from next step)
+                    dL_dpred = diff * weight  # (EMBED_DIM,)
+                    dL_dpred += dx_next
+
+                    # Backprop through MLP: accumulate grads instead of applying
+                    x_in = rollout_states[step]
+                    h = rollout_h[step]
+                    pre_h = rollout_pre_h[step]
+
+                    # d/dW2: outer(dL_dpred, h)  (residual: pred = x + W2@h + b2)
+                    dW2_acc += np.outer(dL_dpred, h)
+                    db2_acc += dL_dpred
+
+                    # d/dh: W2^T @ dL_dpred
+                    dh = self._W2.T @ dL_dpred
+
+                    # d/dpre_h: dh * relu'(pre_h)
+                    dpre_h = dh * (pre_h > 0).astype(np.float32)
+
+                    # d/dW1, d/db1
+                    dW1_acc += np.outer(dpre_h, x_in)
+                    db1_acc += dpre_h
+
+                    # Gradient of x_in (to pass back for chain rule through rollout)
+                    dx_next = self._W1.T @ dpre_h   # approximate: only direct path
+
+                n_anchors += 1
+
+            if n_anchors == 0:
+                return 0.0
+
+            # Average gradients and apply
+            scale = 1.0 / n_anchors
+            lr = ROLLOUT_LR
+            clip = 0.05
+
+            for d_arr in [dW1_acc, db1_acc, dW2_acc, db2_acc]:
+                d_arr *= scale
+
+            np.clip(dW1_acc, -clip, clip, out=dW1_acc)
+            np.clip(db1_acc, -clip, clip, out=db1_acc)
+            np.clip(dW2_acc, -clip, clip, out=dW2_acc)
+            np.clip(db2_acc, -clip, clip, out=db2_acc)
+
+            self._W1 = self._W1 * WEIGHT_DECAY - lr * dW1_acc
+            self._b1 = self._b1 - lr * db1_acc
+            self._W2 = self._W2 * WEIGHT_DECAY - lr * dW2_acc
+            self._b2 = self._b2 - lr * db2_acc
+
+            avg_loss = total_loss / (n_anchors * ROLLOUT_STEPS)
+            self._rollout_loss_ema = 0.95 * self._rollout_loss_ema + 0.05 * avg_loss
+            return avg_loss
 
     # ── consumer APIs for other modules ──────────────────────────────────────
 
@@ -465,6 +596,8 @@ class LatentWorldModel:
             "history_depth": len(self._history),
             "last_surprise": round(self.surprise(), 4),
             "last_consolidation": self._state.last_consolidation,
+            "rollout_loss_ema": round(self._rollout_loss_ema, 6),
+            "rollout_horizon": ROLLOUT_STEPS,
         }
 
 

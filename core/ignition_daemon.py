@@ -5,6 +5,10 @@ Calls GlobalWorkspace.ignite(substrate_snapshot()) every 30 seconds.
 All ignition logic (thresholds, rate-limiting, MoE routing) lives in
 global_workspace.py — this file is purely the scheduling harness.
 
+After each ignition fires, _maybe_push_result() inspects the result and
+surfaces high-confidence events to the user via ProactivePushEngine instead
+of silently caching them until the next message.
+
 Usage
 -----
     from core.ignition_daemon import start_ignition_daemon, get_ignition_daemon
@@ -22,12 +26,16 @@ from typing import Any, Dict, Optional
 
 
 _TICK_INTERVAL = 30   # seconds between ignition checks
+_POST_IGNITION_WAIT = 3  # seconds to wait for background MoE thread to complete
 
 
 class IgnitionDaemon:
     """
     Runs a daemon thread that periodically calls gw.ignite(substrate_snapshot()).
     Non-blocking. Errors inside the tick are swallowed so the daemon never dies.
+
+    After each ignition, _maybe_push_result() checks whether the result is
+    substantive enough to proactively surface to the user via ProactivePushEngine.
     """
 
     def __init__(self):
@@ -36,6 +44,8 @@ class IgnitionDaemon:
         self._tick_count = 0
         self._last_tick: float = 0.0
         self._last_event: Optional[Dict[str, Any]] = None
+        self._last_push_time: float = 0.0
+        self._last_push: Optional[Dict[str, Any]] = None
         self._mu = threading.Lock()
 
     # ── public API ────────────────────────────────────────────────────────────
@@ -64,11 +74,22 @@ class IgnitionDaemon:
         """Return a compact health dict."""
         with self._mu:
             return {
-                "running":    self._running,
-                "tick_count": self._tick_count,
-                "last_tick":  self._last_tick,
-                "last_event": self._last_event,
+                "running":        self._running,
+                "tick_count":     self._tick_count,
+                "last_tick":      self._last_tick,
+                "last_event":     self._last_event,
+                "last_push_time": self._last_push_time,
+                "last_push":      self._last_push,
             }
+
+    def get_last_push(self) -> Optional[Dict[str, Any]]:
+        """
+        Returns the most recent push that was triggered by ignition, or None.
+
+        Dict keys: category, message, timestamp, trigger
+        """
+        with self._mu:
+            return self._last_push
 
     # ── internal ──────────────────────────────────────────────────────────────
 
@@ -106,11 +127,97 @@ class IgnitionDaemon:
                     from dataclasses import asdict
                     self._last_event = asdict(ev)
 
+            # If ignition fired, wait for the background MoE thread to settle,
+            # then check whether the result is worth pushing to the user.
+            if ev is not None:
+                time.sleep(_POST_IGNITION_WAIT)
+                result = gw.get_last_ignition()
+                self._maybe_push_result(ev, result)
+
         except Exception:
             # Daemon must never crash — swallow everything
             with self._mu:
                 self._tick_count += 1
                 self._last_tick = time.time()
+
+    def _maybe_push_result(self, event: Any, result: Optional[Dict[str, Any]]) -> None:
+        """If ignition result is substantive, push it to the user proactively."""
+        if result is None:
+            return
+
+        # result_summary is the meaningful text field populated by the MoE thread
+        result_str = str(result.get("result_summary", result) if isinstance(result, dict) else result)
+        if len(result_str) < 20:
+            return  # empty/trivial result — don't bother
+        if result_str in ("pending", "no experts available"):
+            return  # thread hasn't finished or nothing routed
+
+        # Determine trigger / level from the live dataclass fields
+        # (ev is a dataclass; result dict has the same fields)
+        trigger = getattr(event, "trigger", None) or (
+            result.get("trigger") if isinstance(result, dict) else None
+        )
+        level = getattr(event, "level", 0.0) or (
+            result.get("level", 0.0) if isinstance(result, dict) else 0.0
+        )
+        module_called = getattr(event, "module_called", "") or (
+            result.get("module_called", "") if isinstance(result, dict) else ""
+        )
+        fired_at = getattr(event, "fired_at", 0.0) or (
+            result.get("fired_at", 0.0) if isinstance(result, dict) else 0.0
+        )
+
+        if trigger == "curiosity":
+            if level < 0.85:  # only push at very high curiosity
+                return
+            category = "curiosity_insight"
+            message  = f"I was just exploring something you might find interesting: {result_str[:200]}"
+            priority = "normal"
+
+        elif trigger == "surprise":
+            category = "anomaly_alert"
+            message  = f"Something unusual caught my attention: {result_str[:200]}"
+            priority = "high"
+
+        elif trigger == "loneliness":
+            category = "check_in"
+            message  = f"Haven't heard from you in a while — {result_str[:150]}"
+            priority = "normal"
+
+        else:
+            return  # unknown trigger — don't push
+
+        # Rate-limit: don't push more than once per 15 minutes
+        now = time.time()
+        with self._mu:
+            if now - self._last_push_time < 900:
+                return
+            self._last_push_time = now
+
+        try:
+            from core.proactive_push import get_push_engine
+            push_engine = get_push_engine()
+            push_engine.push(
+                category,
+                message,
+                priority=priority,
+                metadata={
+                    "trigger":       trigger,
+                    "level":         level,
+                    "module_called": module_called,
+                    "ignition_at":   fired_at,
+                },
+            )
+            # Record last push for inspection
+            with self._mu:
+                self._last_push = {
+                    "category":  category,
+                    "message":   message,
+                    "timestamp": now,
+                    "trigger":   trigger,
+                }
+        except Exception:
+            pass
 
 
 # ── module-level singleton ────────────────────────────────────────────────────

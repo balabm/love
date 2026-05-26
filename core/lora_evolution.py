@@ -540,6 +540,45 @@ class LoRAEvolution:
             return None
         return max(pop, key=lambda a: a.fitness)
 
+    def receive_feedback(self, satisfaction: float, confidence: float = 0.8) -> None:
+        """
+        Update the best adapter's fitness based on real user satisfaction signal.
+
+        Replaces the prediction-error proxy with a direct human signal when available.
+        Uses a weighted EMA so that high-confidence signals dominate but never
+        overwrite accumulated fitness entirely in one shot.
+
+        Args:
+            satisfaction: Float in [-1.0, 1.0] from FeedbackCollector.
+            confidence:   Float in [0.0, 1.0] — how reliable this signal is.
+                          Explicit ratings arrive at 0.95; implicit at 0.4–0.8.
+        """
+        best = self.get_best_adapter()
+        if best is None:
+            return
+
+        # Weighted EMA: alpha scales with confidence, max 30% weight per signal
+        alpha = float(np.clip(confidence * 0.3, 0.0, 0.3))
+        best.fitness = (1.0 - alpha) * best.fitness + alpha * float(satisfaction)
+
+        # Reward positive signals with a win_count increment
+        if satisfaction > 0.3:
+            best.win_count += 1
+
+        best.applied_count += 1
+
+        with self._mu:
+            _save_adapter(best)
+
+        _log_event({
+            "event": "feedback_received",
+            "adapter_id": best.id,
+            "satisfaction": round(satisfaction, 4),
+            "confidence": round(confidence, 4),
+            "new_fitness": round(best.fitness, 6),
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+
     def apply_best_to_substrate(self) -> None:
         """
         Apply the best adapter to the SSM memory context vector.

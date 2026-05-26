@@ -143,6 +143,87 @@ class AutonomousSelfImprovement:
         except Exception as exc:
             print(f"[ASI] Persist error: {exc}")
 
+    # ── A/B Quality Measurement ───────────────────────────────────────────────
+
+    def _snapshot_quality(self) -> dict:
+        """Capture baseline quality metrics before (or after) a modification."""
+        metrics: Dict[str, Any] = {}
+
+        # 1. Evolution engine recent performance
+        try:
+            from core.evolution_engine import get_evolution_engine
+            eng = get_evolution_engine()
+            report = eng.generate_performance_report(window_hours=24)
+            metrics["avg_quality"] = report.avg_quality
+            metrics["error_rate"] = report.error_rate
+            metrics["satisfaction_avg"] = report.satisfaction_avg or 0.0
+        except Exception:
+            metrics["avg_quality"] = 0.5
+            metrics["error_rate"] = 0.0
+            metrics["satisfaction_avg"] = 0.0
+
+        # 2. World model free energy (lower = better predictive model)
+        try:
+            from core.world_model_latent import get_world_model_latent
+            wm_snap = get_world_model_latent().snapshot()
+            metrics["world_model_fe"] = wm_snap.get("ema_free_energy", 0.5)
+        except Exception:
+            metrics["world_model_fe"] = 0.5
+
+        # 3. SSM BPTT loss
+        try:
+            from core.state_space_memory import get_ssm_memory
+            ssm_snap = get_ssm_memory().snapshot()
+            metrics["bptt_loss"] = ssm_snap.get("bptt_loss_ema", 0.5)
+        except Exception:
+            metrics["bptt_loss"] = 0.5
+
+        # 4. MoE recent reward
+        try:
+            from core.moe_router import get_moe_router
+            moe_snap = get_moe_router().snapshot()
+            experts = moe_snap.get("top_experts", [])
+            rewards = [e.get("reward_ema", 0.0) for e in experts if isinstance(e, dict)]
+            metrics["moe_avg_reward"] = sum(rewards) / len(rewards) if rewards else 0.0
+        except Exception:
+            metrics["moe_avg_reward"] = 0.0
+
+        metrics["captured_at"] = time.time()
+        return metrics
+
+    def _compare_quality(self, before: dict, after: dict) -> dict:
+        """Compare two quality snapshots. Returns delta dict + overall verdict."""
+        delta: Dict[str, Any] = {}
+        score = 0.0
+        weight_sum = 0.0
+
+        comparisons = [
+            # (key, higher_is_better, weight)
+            ("avg_quality",        True,  0.35),
+            ("satisfaction_avg",   True,  0.30),
+            ("world_model_fe",     False, 0.15),  # lower FE = better
+            ("bptt_loss",          False, 0.10),
+            ("moe_avg_reward",     True,  0.10),
+        ]
+
+        for key, higher_better, w in comparisons:
+            b = before.get(key, 0.0)
+            a = after.get(key, 0.0)
+            d = a - b
+            delta[key + "_delta"] = round(d, 4)
+            direction = d if higher_better else -d
+            score += direction * w
+            weight_sum += w
+
+        delta["composite_score"] = round(score / weight_sum if weight_sum else 0.0, 4)
+        delta["verdict"] = (
+            "improved" if score > 0.01
+            else "degraded" if score < -0.01
+            else "neutral"
+        )
+        delta["should_revert"] = score < -0.05   # revert only on meaningful degradation
+        return delta
+
     # ── Step helpers ──────────────────────────────────────────────────────────
 
     def _get_target_module(self) -> Optional[str]:
@@ -427,6 +508,9 @@ class AutonomousSelfImprovement:
         print(f"[ASI] Hypothesis: {hypothesis[:120]}{'...' if len(hypothesis) > 120 else ''}")
 
         # ── Step 4: Modification attempt ──────────────────────────────────
+        # Capture quality baseline BEFORE any change is applied
+        quality_before = self._snapshot_quality()
+
         try:
             mod_result = self._attempt_modification(target, hypothesis, dry_run=dry_run)
         except Exception as exc:
@@ -443,6 +527,39 @@ class AutonomousSelfImprovement:
             "hot_reload_detail": mod_result.get("hot_reload_detail") or mod_result.get("detail", ""),
             "module_reloaded": mod_result.get("module_reloaded", ""),
         })
+
+        # ── Step 4b: Immediate A/B quality comparison ──────────────────────
+        mod_status = base.get("status", "unknown")
+        modification_id = base.get("modification_id")
+        if mod_status not in _FAILURE_STATUSES and mod_status not in ("generation_failed", "no_target", "cautious_mode"):
+            quality_after = self._snapshot_quality()
+            ab_result = self._compare_quality(quality_before, quality_after)
+            base["quality_before"] = quality_before
+            base["quality_after"] = quality_after
+            base["ab_result"] = ab_result
+            print(
+                f"[ASI] A/B verdict={ab_result['verdict']} "
+                f"composite={ab_result['composite_score']} "
+                f"revert={ab_result['should_revert']}"
+            )
+
+            # Immediate revert on severe quality degradation
+            if ab_result["should_revert"] and modification_id and not dry_run:
+                try:
+                    from core.self_coder import SelfCoder
+                    sc = SelfCoder()
+                    reverted = sc.rollback_modification(modification_id)
+                    base["reverted"] = reverted
+                    base["revert_reason"] = "immediate_quality_degradation"
+                    self._consecutive_failures += 1
+                    print(f"[ASI] Auto-reverted {modification_id} — immediate quality degradation")
+                except Exception as e:
+                    base["revert_error"] = str(e)
+                    print(f"[ASI] Auto-revert failed for {modification_id}: {e}")
+        else:
+            # Still store the pre-mod snapshot for deferred checks
+            base["quality_before"] = quality_before
+
         base["duration_seconds"] = round(time.monotonic() - t_start, 2)
 
         # ── Step 5: Record outcome ─────────────────────────────────────────
@@ -454,6 +571,76 @@ class AutonomousSelfImprovement:
             f"target={target} | {base['duration_seconds']}s"
         )
         return base
+
+    # ── Deferred A/B check ────────────────────────────────────────────────────
+
+    def check_deferred_ab(
+        self,
+        modification_id: str,
+        n_turns_ago: int = 5,
+    ) -> Optional[dict]:
+        """
+        Perform a deferred A/B quality check for a previously applied modification.
+
+        Called externally (e.g. from memory.py or agent.py after N turns) to
+        compare current quality against the baseline captured at apply-time.
+
+        Steps:
+          1. Find the cycle record that applied *modification_id*
+          2. Re-snapshot quality right now
+          3. Compare with stored quality_before
+          4. If degraded AND modification still applied: attempt rollback
+          5. Return the ab_result dict (or None if the cycle record is not found)
+        """
+        # 1. Locate the historical cycle for this modification
+        with self._lock:
+            history = list(self._cycle_history)
+
+        cycle_record: Optional[Dict[str, Any]] = None
+        for rec in reversed(history):
+            if rec.get("modification_id") == modification_id:
+                cycle_record = rec
+                break
+
+        if cycle_record is None:
+            print(f"[ASI] check_deferred_ab: modification_id {modification_id!r} not found in history")
+            return None
+
+        quality_before = cycle_record.get("quality_before")
+        if not quality_before:
+            print(f"[ASI] check_deferred_ab: no quality_before stored for {modification_id!r}")
+            return None
+
+        # 2. Re-snapshot current quality
+        quality_now = self._snapshot_quality()
+
+        # 3. Compare
+        ab_result = self._compare_quality(quality_before, quality_now)
+        ab_result["modification_id"] = modification_id
+        ab_result["n_turns_ago"] = n_turns_ago
+        ab_result["checked_at"] = time.time()
+
+        print(
+            f"[ASI] Deferred A/B for {modification_id}: "
+            f"verdict={ab_result['verdict']} score={ab_result['composite_score']}"
+        )
+
+        # 4. Rollback if meaningfully degraded
+        if ab_result.get("should_revert") and not cycle_record.get("reverted"):
+            try:
+                from core.self_coder import SelfCoder
+                sc = SelfCoder()
+                reverted = sc.rollback_modification(modification_id)
+                ab_result["reverted"] = reverted
+                ab_result["revert_reason"] = "deferred_quality_degradation"
+                with self._lock:
+                    self._consecutive_failures += 1
+                print(f"[ASI] Deferred rollback applied for {modification_id} (score={ab_result['composite_score']})")
+            except Exception as exc:
+                ab_result["revert_error"] = str(exc)
+                print(f"[ASI] Deferred rollback failed for {modification_id}: {exc}")
+
+        return ab_result
 
     # ── Daemon ────────────────────────────────────────────────────────────────
 
@@ -533,6 +720,57 @@ class AutonomousSelfImprovement:
         with self._lock:
             self._running = False
         print("[ASI] Daemon stop requested.")
+
+    # ── User-satisfaction feedback ────────────────────────────────────────────
+
+    def receive_feedback(self, signal: Any) -> None:
+        """
+        Incorporate a FeedbackSignal into the most recent cycle's outcome record.
+
+        If the last cycle completed within the past 2 hours, we tag it with
+        post-hoc satisfaction so future self-evaluation can distinguish "the code
+        changed and the user liked it" from "the code changed and the user hated it".
+
+        Negative satisfaction (< -0.3) on an apparently-successful cycle is
+        treated as a soft failure signal — consecutive_failures is nudged up so
+        that the cautious-mode guard triggers before three hard crashes occur.
+
+        Args:
+            signal: A FeedbackSignal (or any object with .satisfaction,
+                    .confidence, and .source attributes). Import-free duck-typing
+                    so this method works even before feedback_collector is loaded.
+        """
+        try:
+            satisfaction = float(signal.satisfaction)
+            confidence = float(signal.confidence)
+        except Exception:
+            return
+
+        with self._lock:
+            if not self._cycle_history:
+                return
+            last = self._cycle_history[-1]
+
+            # Only annotate recent cycles (within 2 hours)
+            ts = last.get("timestamp_epoch") or (
+                # Fallback: try to parse ISO timestamp field used by _run_cycle
+                __import__("datetime").datetime.fromisoformat(
+                    last["timestamp"]
+                ).timestamp()
+                if last.get("timestamp") else 0.0
+            )
+            if time.time() - ts >= 7200:
+                return
+
+            last["post_hoc_satisfaction"] = round(satisfaction, 4)
+            last["post_hoc_confidence"] = round(confidence, 4)
+
+            # Treat strong negative user feedback on an "ok" cycle as a soft failure
+            if satisfaction < -0.3 and last.get("status") == "ok":
+                self._consecutive_failures = min(self._consecutive_failures + 1, 3)
+
+        # Persist the updated record (outside the lock — _persist_cycle has its own fh)
+        self._persist_cycle(last)
 
     # ── Status / Introspection ────────────────────────────────────────────────
 
