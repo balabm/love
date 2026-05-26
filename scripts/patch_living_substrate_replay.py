@@ -1,0 +1,77 @@
+"""
+Patch core/living_substrate.py to boot ReplayConsolidation daemon
+and surface it in substrate_snapshot().
+
+Safe to re-run: checks for the sentinel comment before inserting.
+Works with both LF and CRLF line endings.
+"""
+from pathlib import Path
+
+SUBSTRATE = Path(__file__).parent.parent / "core" / "living_substrate.py"
+
+SENTINEL_START = "# 7. Replay consolidation daemon"
+
+START_BLOCK = """\
+
+    # 7. Replay consolidation daemon
+    try:
+        from core.replay_consolidation import get_replay_consolidation
+        get_replay_consolidation().start_daemon(interval_hours=4)
+        status["replay_consolidation"] = "ok"
+    except Exception as e:
+        status["replay_consolidation"] = f"err:{e}"
+"""
+
+SNAPSHOT_SENTINEL = "# replay_consolidation snapshot"
+
+SNAPSHOT_BLOCK = """\
+    try:
+        from core.replay_consolidation import get_replay_consolidation
+        snap["replay_consolidation"] = get_replay_consolidation().snapshot()
+    except Exception as e:
+        snap["replay_consolidation"] = {"err": str(e)}
+"""
+
+# ── read ──────────────────────────────────────────────────────────────────────
+raw = SUBSTRATE.read_bytes()
+# Normalise to LF for manipulation; we'll restore the original ending style.
+uses_crlf = b"\r\n" in raw
+text = raw.replace(b"\r\n", b"\n").decode("utf-8")
+
+changed = False
+
+# ── inject into start_living_substrate() ─────────────────────────────────────
+if SENTINEL_START not in text:
+    # Insert just before the final print(...startup status...) line
+    anchor = '    print(f"[LivingSubstrate] startup status: {status}")\n    return status'
+    if anchor in text:
+        text = text.replace(anchor, START_BLOCK + anchor)
+        changed = True
+        print("[patch] Inserted replay_consolidation start block into start_living_substrate()")
+    else:
+        print("[patch] WARNING: could not find insertion anchor in start_living_substrate()")
+else:
+    print("[patch] start block already present — skipping")
+
+# ── inject into substrate_snapshot() ─────────────────────────────────────────
+if SNAPSHOT_SENTINEL not in text:
+    # Insert just before `return snap`
+    snap_anchor = "    return snap\n"
+    if snap_anchor in text:
+        text = text.replace(snap_anchor, "    " + SNAPSHOT_SENTINEL + "\n" + SNAPSHOT_BLOCK + snap_anchor, 1)
+        changed = True
+        print("[patch] Inserted replay_consolidation snapshot block into substrate_snapshot()")
+    else:
+        print("[patch] WARNING: could not find 'return snap' anchor in substrate_snapshot()")
+else:
+    print("[patch] snapshot block already present — skipping")
+
+# ── write back ────────────────────────────────────────────────────────────────
+if changed:
+    out = text.encode("utf-8")
+    if uses_crlf:
+        out = out.replace(b"\n", b"\r\n")
+    SUBSTRATE.write_bytes(out)
+    print(f"[patch] Written: {SUBSTRATE}")
+else:
+    print("[patch] No changes needed.")

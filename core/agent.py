@@ -7,6 +7,7 @@ import os
 import re
 import socket
 import json
+from datetime import datetime
 
 # Live context — Jarvis situational awareness
 try:
@@ -145,11 +146,12 @@ except ImportError:
 
 # Long-term memory — companion for life
 try:
-    from core.long_term_memory import recall_memory, add_episodic, add_semantic, add_procedural
+    from core.long_term_memory import remember, format_memory_for_chat, add_episodic, add_semantic, add_procedural
     LTM_AVAILABLE = True
 except ImportError:
     LTM_AVAILABLE = False
-    def recall_memory(q, mode="general", n=5): return []
+    def remember(query, limit=10): return {}
+    def format_memory_for_chat(memory_result): return ""
     def add_episodic(**kwargs): pass
     def add_semantic(**kwargs): pass
     def add_procedural(**kwargs): pass
@@ -478,19 +480,19 @@ def clean_response(text: str) -> str:
 
     # 2. Strip generic intro phrases — match at start of ANY line
     intros = [
-        r"^Here's (a breakdown|an overview|a summary|what I found|what's going on|the situation|a quick overview|what I know).*",
-        r"^Based on (the data|the information|what I can see|the current data).*",
-        r"^Looking at (your|the|Karthi's) (current |)situation.*",
-        r"^Let me (break this down|give you an overview|summarize).*",
-        r"^So (here's|this is|you have|it looks like).*",
-        r"^I (can see|notice|see that|have access to).*",
-        r"^According to (the data|your calendar|your email).*",
-        r"^This (captures|gives|shows|is).*",
-        r"^Here's a breakdown of .*",
-        r"^This is (what I found|the current situation|a summary).*",
-        r"^You have \d+ (important )?unread emails?.*",
-        r"^You have \d+ (events?|tasks?|messages?).*",
-        r"^Here (is|are) (a list of|your|the).*",
+        r"^Here's (a breakdown|an overview|a summary|what I found|what's going on|the situation|a quick overview|what I know)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^Based on (the data|the information|what I can see|the current data)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^Looking at (your|the|Karthi's) (current |)situation(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^Let me (break this down|give you an overview|summarize)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^So (here's|this is|you have|it looks like)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^I (can see|notice|see that|have access to)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^According to (the data|your calendar|your email)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^This (captures|gives|shows|is)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^Here's a breakdown of(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^This is (what I found|the current situation|a summary)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^You have \d+ (important )?unread emails?(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^You have \d+ (events?|tasks?|messages?)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
+        r"^Here (is|are) (a list of|your|the)(?:[^.!?]*?[:,-])?[\.!?]?\s*",
     ]
     for pattern in intros:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE | re.MULTILINE).strip()
@@ -596,6 +598,21 @@ def chat(user_input: str, mode: str = "general") -> dict:
 
     # Ping idle mind — user is active
     ping_active()
+
+    # ── LIVING SUBSTRATE: feed every turn into the predictive hierarchy ──
+    try:
+        from core.hierarchical_predictive_coding import get_hpc
+        get_hpc().feed(user_input, source="user")
+    except Exception:
+        pass
+    try:
+        from core.world_model_latent import get_world_model_latent
+        from core.state_space_memory import get_ssm_memory
+        _wm = get_world_model_latent()
+        if _wm._recent_obs:
+            get_ssm_memory().step(_wm._recent_obs[-1].state)
+    except Exception:
+        pass
 
     # Check if this is a fix command
     fix_response = handle_fix_command(user_input)
@@ -978,6 +995,30 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
+    # [GW-PATCH] GLOBAL WORKSPACE THEORY -- GWT-gated substrate context
+    # Replaces raw substrate dump with attention-filtered broadcast signals.
+    # Only the highest-surprise / most-attention-worthy substrate signals
+    # enter the LLM prompt.  Everything else stays pre-conscious.
+    _substrate_context_block = ""
+    try:
+        from core.living_substrate import substrate_snapshot as _sub_snap
+        from core.hierarchical_predictive_coding import get_hpc as _get_hpc
+        from core.global_workspace import get_global_workspace as _get_gw
+        _substrate_snap = _sub_snap()
+        _hpc_snap = _get_hpc().snapshot()
+        _hpc_attn = _hpc_snap.get("attention", {})
+        _moe_winner = (
+            _substrate_snap.get("moe_router", {}).get("last_winner", "")
+            if isinstance(_substrate_snap, dict) else ""
+        )
+        _gw = _get_gw()
+        _gated = _gw.gate_substrate_for_prompt(_substrate_snap, _hpc_attn, _moe_winner)
+        if _gw.should_inject(_gated):
+            _substrate_context_block = ("\n\n=== SUBSTRATE (global workspace broadcast) ===\n"
+                                        + _gw.format_for_prompt(_gated))
+    except Exception:
+        pass
+
     # ═══ WAVE 16: NEURAL MESH CONTEXT ═══
     neural_block = ""
     try:
@@ -1094,7 +1135,7 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
-    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{intel_block}{agent_context_block}{teaching_block}{cognitive_block}{final_instructions}
+    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{_substrate_context_block}{intel_block}{agent_context_block}{teaching_block}{cognitive_block}{final_instructions}
 
 {USER_NAME}: {user_input}
 {LOVE_NAME}:"""
