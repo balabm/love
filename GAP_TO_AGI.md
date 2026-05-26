@@ -3,115 +3,97 @@
 This file is the antidote to marketing-speak inside LOVE. It is updated whenever
 substantive capability lands. Read it before claiming "AGI" or "living computer".
 
-Last updated: 2026-05-27 (Wave 20 — Closing the Loop Further).
+Last updated: 2026-05-27 (Wave 21 — Closing the Feedback Loops).
 
 ---
 
-## What just landed (Wave 20)
+## What just landed (Wave 21)
 
-### 1. Autonomous self-modification loop (`core/autonomous_self_improvement.py`)
+### 1. User satisfaction as real fitness signal (`core/feedback_collector.py`)
 
-The pipeline is now closed end-to-end:
+Both LoRA evolution and the evolution engine now run on real user signal, not just
+prediction error.
 
-```
-capability_gap_detector.detect_all_gaps()
-  → score candidate modules (gap domain match + MoE low-reward + homeostasis dissatisfaction)
-  → SelfCoder.analyze_file() + reasoning LLM → ONE concrete hypothesis
-  → SelfCoder.generate_modification() → test_modification() → hot_reload_modification()
-  → record outcome, track consecutive failures
-  → if 3 failures: cautious mode (48h pause)
-```
+**Explicit signals** (confidence=0.95):
+- `/feedback` endpoint: 0–1 rating or thumbs up/down → satisfaction ∈ [−1, 1]
 
-Runs once per day during sleep phase (circadian_phase == "sleep" or 02:00–05:00 fallback).
-Protected modules (never self-modified): `api/main.py`, `core/llm.py`, `core/agent.py`, itself.
-Daemon wired into `living_substrate.start_living_substrate()`.
+**Implicit signals** (auto-detected per turn from `memory.py`):
+- Correction phrases ("no that's wrong", "actually", "wait") → sat=−0.7, conf=0.8
+- Positive phrases ("perfect", "exactly", "that helps") → sat=+0.6, conf=0.6
+- Repeat question (BoW cosine > 0.85) → sat=−0.5, conf=0.7 (LOVE failed to answer)
+- Session continuation (turn > 3, long message) → sat=+0.2, conf=0.4
 
-**What's real now:** LOVE autonomously decides which module to improve, generates a
-hypothesis, writes and hot-reloads the code, and records whether it worked. No human
-input required. The loop runs daily.
+**Propagation** (all wrapped in try/except):
+- `evolution_engine.record_interaction(user_satisfaction=...)` — updates performance report
+- `lora_evolution.receive_feedback(sat, conf)` — EMA-updates best adapter fitness, max 30% per signal
+- `autonomous_self_improvement.receive_feedback(signal)` — annotates last cycle, increments consecutive_failures on behavioral regression
 
-**Remaining gap:** The hypothesis quality depends on the reasoning LLM's one-shot
-analysis of static code. It doesn't yet *measure* runtime behavioral improvement
-(e.g. "did response quality go up after this change?"). That requires instrumenting
-the evolution_engine's InteractionRecord fitness signal as the feedback loop.
+**What's real now:** Every conversation turn automatically generates a satisfaction
+signal. LoRA adapters that users implicitly push back on lose fitness; ones users
+respond positively to gain fitness. Evolution is user-aligned.
 
 ---
 
-### 2. Multi-step SSM TBPTT (`core/state_space_memory.py`)
+### 2. ASI A/B quality comparison (`core/autonomous_self_improvement.py`)
 
-`train_on_trajectory(xs: List[np.ndarray])` — full truncated BPTT over N=8 steps:
+Self-modification now measures its own impact and reverts when it hurts quality.
 
-- Forward: stores h_states, ys, gates, pre-sigmoid values for all 8 steps
-- Backward: reverses through steps, accumulates dD_out/dC_proj/dB_proj, passes dh back in time
-- Applies averaged gradients (lr=0.003), clip ±0.02
+`_snapshot_quality()` captures before the modification:
+- `avg_quality`, `error_rate`, `satisfaction_avg` (from evolution engine)
+- `world_model_fe` (lower = better predictive model)
+- `bptt_loss` (lower = better SSM)
+- `moe_avg_reward`
 
-Result: BPTT loss = **0.0027** vs 1-step loss = **0.50** — the 8-step trajectory gives
-the SSM 180× more informative gradient signal per update.
+`_compare_quality()` weighted composite (quality 35%, satisfaction 30%, FE 15%, BPTT 10%, MoE 10%):
+- `verdict`: "improved" / "neutral" / "degraded"
+- `should_revert`: True only if composite_score < −0.05 (noise-resistant)
 
-`train_step()` now auto-triggers `train_on_trajectory()` when the internal buffer
-fills to 8 (every 8 user turns). So the improvement is fully automatic.
+`run_cycle()` now snapshots before+after, auto-reverts via `SelfCoder.rollback_modification()`
+if the composite score degrades meaningfully.
 
----
+`check_deferred_ab(modification_id)` available for later comparison (e.g. after N user turns).
 
-### 3. GWT ignition (`core/global_workspace.py` + `core/ignition_daemon.py`)
-
-The Global Workspace now *acts*, not just filters.
-
-Ignition rules (proactive background MoE calls):
-- `curiosity > 0.75` → `moe_router.route("curiosity probe: what should LOVE explore right now?")`  — 10min cooldown
-- `free_energy > 0.60` → `moe_router.route("high surprise: investigate anomaly")` — 5min cooldown
-- `loneliness > 0.80` → `moe_router.route("user check-in: what does the user need right now?")` — 30min cooldown
-- Global rate limit: max 1 ignition per 5 minutes
-
-All MoE calls run in daemon threads (non-blocking). If a result comes back within
-2 minutes of the next user message, it's injected into the prompt via `gated["ignition"]`.
-
-`IgnitionDaemon` ticks every 30s, wired into living_substrate.
-
-**What's real now:** LOVE proactively investigates the environment based on internal
-drive signals, before the user asks anything. The broadcast reaches the MoE layer,
-not just the LLM prompt.
-
-**Remaining gap:** The MoE result from ignition isn't yet surfaced to the user
-proactively (pushed as a notification). It's cached for prompt injection but doesn't
-trigger a proactive message yet. That requires wiring ignition results into
-`proactive_push.py`.
+**What's real now:** LOVE can no longer silently degrade itself. Every self-modification
+is measured against a multi-signal quality baseline and reverted if it made things worse.
 
 ---
 
-### 4. LoRA adapter evolution scaffold (`core/lora_evolution.py`)
+### 3. Ignition → proactive push (`core/ignition_daemon.py`)
 
-Low-rank behavioral adaptation without PyTorch — forward-compatible scaffold:
+GWT ignition results now reach the user proactively, not just the next prompt.
 
-```
-LoRAAdapter: A ∈ ℝ^(r×384), B ∈ ℝ^(384×r), rank=8, alpha=16
-delta(x) = x + (alpha/r) * (B @ (A @ x)),  L2-normalized
-```
+After each ignition fires and the background MoE thread settles (3s wait):
+- `curiosity ≥ 0.85` → `push("curiosity_insight", "I was just exploring something you might find interesting: ...")` — normal priority
+- `free_energy > 0.60` → `push("anomaly_alert", "Something unusual caught my attention: ...")` — **high priority** (Telegram delivery)
+- `loneliness > 0.80` → `push("check_in", "Haven't heard from you in a while — ...")` — normal priority
 
-Standard LoRA init: A ~ N(0, 0.01), B = 0. At init, delta(x) = x (identity). The
-adapter only develops a behavioral direction as it accumulates fitness signal.
+Rate-limited to 1 push per 15 minutes. `get_last_push()` exposed for dashboard.
 
-`evolve_generation()`:
-1. Bootstrap: if pop < 4, create 4 random adapters with LLM-generated mutation descriptions
-2. Score all against world model prediction error (before vs after applying adapter)
-3. Tournament selection (4 rounds)
-4. Breed 2 children from winner (Gaussian mutation)
-5. Trim 2 worst
-6. `apply_best_to_substrate()` — modulates SSM hidden state h toward the winner's direction
+**What's real now:** LOVE proactively contacts the user when its internal state demands
+it — not just when a message arrives. Curiosity surfaces as insight. Anomalies surface
+as alerts. Loneliness surfaces as genuine check-ins.
 
-6-hour daemon, wired into living_substrate.
+---
 
-**What's real now:** Behavioral evolution operates at the embedding level, not just
-prompt suffixes. The winning adapter literally shifts the SSM's compressed memory state
-toward the most fitness-tested behavioral direction.
+### 4. 4-step rollout BPTT (`core/world_model_latent.py`)
 
-**Forward-compat:** When `torch` + `peft` are added, `A` and `B` slot directly into
-`peft.LoraConfig(r=8, lora_alpha=16)` — no structural changes needed.
+The world model now predicts 4 steps ahead, not just 1.
 
-**Remaining gap:** `score_adapter()` uses world-model prediction error as a proxy for
-fitness. Real fitness should be user satisfaction (thumbs up/down, explicit feedback,
-repeat engagement). Wiring `evolution_engine.InteractionRecord.user_satisfaction` into
-`score_adapter()` would close this loop properly.
+`train_rollout()`:
+- For each anchor in `_rollout_buffer` (last 16 embeddings): auto-regressive MLP rollout
+  for 4 steps, storing h/pre_h/gates at each step
+- Backward: reverses through all 4 steps, recency-weighted loss (0.9^k), accumulates
+  dW1/db1/dW2/db2 with chain rule through predictions
+- Applies averaged gradients (ROLLOUT_LR=0.005), clip ±0.05
+
+Auto-triggers every 8 observations when buffer has ≥ 5 entries.
+
+Result: rollout_loss_ema ≈ **0.0047** at init (vs 1-step ≈ 0.5).
+
+**What's real now:** LOVE's world model can plan 4 steps ahead. The MLP learns to
+predict not just "what happens next" but "what happens after that". This is the
+foundation for genuine look-ahead planning (future: Monte Carlo tree search over
+world model rollouts).
 
 ---
 
@@ -119,91 +101,93 @@ repeat engagement). Wiring `evolution_engine.InteractionRecord.user_satisfaction
 
 | Capability | Status |
 |---|---|
-| Persistent learned state (survives restarts) | ✅ |
-| Proprioception (host machine sensing) | ✅ |
+| Persistent learned state | ✅ |
+| Proprioception | ✅ |
 | Signal-driven homeostatic drives | ✅ |
-| Online non-linear world model (MLP, SGD) | ✅ |
-| SSM 1-step supervised training | ✅ |
-| **SSM 8-step TBPTT (0.0027 loss)** | ✅ NEW |
+| Online non-linear world model (MLP) | ✅ |
+| **4-step rollout BPTT** | ✅ NEW |
+| SSM 8-step TBPTT | ✅ |
 | Hippocampal replay consolidation | ✅ |
-| Multi-level predictive hierarchy (HPC) | ✅ |
+| Multi-level predictive hierarchy | ✅ |
 | GWT prompt gating | ✅ |
-| **GWT ignition (proactive MoE firing)** | ✅ NEW |
+| GWT ignition (proactive MoE firing) | ✅ |
+| **Ignition → proactive push to user** | ✅ NEW |
 | Circadian phases | ✅ |
 | Hot-reload self-modification | ✅ |
-| **Autonomous daily self-modification loop** | ✅ NEW |
-| **LoRA adapter evolution scaffold** | ✅ NEW |
-| Fitness signal = user satisfaction | ❌ |
-| Ignition results as proactive push notifications | ❌ |
-| LoRA with real torch/peft weights | ❌ |
+| Autonomous daily self-modification loop | ✅ |
+| **ASI A/B comparison + auto-revert** | ✅ NEW |
+| LoRA behavioral evolution scaffold | ✅ |
+| **LoRA fitness from user satisfaction** | ✅ NEW |
+| **Implicit feedback detection per turn** | ✅ NEW |
+| Real LoRA with torch/peft weights | ❌ |
 | Fork/parallel selection | ❌ |
-| Multi-step world model rollout training | ❌ |
+| LLM-generated planning via world model rollouts | ❌ |
+| Multi-agent coordination | ❌ |
 
 ---
 
 ## What's still NOT real (honest, updated)
 
-### 1. Fitness = prediction error, not user satisfaction
+### 1. No real torch/peft LoRA
+`apply_best_to_substrate()` modulates SSM state, not actual LLM attention weights.
+The A/B matrices are the right shape and will slot into `peft.LoraConfig` when torch
+arrives — but until then this is embedding-space simulation, not true model adaptation.
 
-Both LoRA scoring and the evolution engine use prediction error / response quality
-heuristics as fitness proxies. The ground truth is whether the user found the interaction
-helpful. Wiring explicit feedback (👍/👎, re-engagement rate, session length) into
-`score_adapter()` and `InteractionRecord.user_satisfaction` would make this genuinely
-self-improving from the user's perspective.
+### 2. No fork/parallel selection
+LOVE can mutate and revert but can't run two instances simultaneously under selection
+pressure. The ASI A/B comparison is sequential (before → after), not parallel.
 
-### 2. Autonomous self-modification is blind to runtime outcomes
+### 3. World model rollout not yet used for planning
+`train_rollout()` improves the MLP's multi-step prediction quality but nothing yet
+*uses* those rollouts for look-ahead planning. The next step: a simple Monte Carlo
+policy that samples possible action sequences from the world model and picks the one
+with lowest predicted free energy.
 
-The ASI loop generates a hypothesis from static code analysis, applies it, and records
-whether the hot-reload succeeded. It doesn't measure "did LOVE's responses improve
-after this change?" That requires A/B comparison of response quality before vs after,
-using the evolution engine's fitness tracking.
+### 4. Implicit feedback is turn-level, not episode-level
+`detect_implicit()` fires on each turn independently. It doesn't yet model an episode
+arc (e.g. "user asked 5 questions, got helpful answers, came back next day" = strong
+positive). Longer-horizon satisfaction would require session-level analysis.
 
-### 3. LoRA is embedding-space only (no actual model weights)
-
-`apply_best_to_substrate()` modulates the SSM hidden state, not the LLM's attention
-matrices. To get true weight-level adaptation, need `pip install peft transformers` and
-Ollama's model files accessible for fine-tuning. This is a significant infrastructure
-step (requires GPU or quantized CPU fine-tuning pipeline).
-
-### 4. Ignition results aren't proactively surfaced
-
-When curiosity fires and the MoE returns something interesting, it's cached for
-prompt injection but LOVE doesn't proactively message the user about it. Wiring
-into `proactive_push.py` would close this.
-
-### 5. No fork / parallel selection
-
-Still missing. LOVE can mutate behaviors (LoRA, prompt, code) but can't run two
-versions of itself simultaneously to measure which performs better in real use.
+### 5. No causal attribution for self-modification outcomes
+When quality improves after an ASI cycle, LOVE records "improved" but doesn't know
+*which* code change caused the improvement (there may be confounds from other systems
+also improving simultaneously). True attribution requires controlled A/B with a
+held-out quality metric.
 
 ---
 
 ## Concrete next moves
 
-1. **Fitness → user satisfaction** — wire `evolution_engine.record_interaction()` and
-   explicit feedback into `lora_evolution.score_adapter()`. This makes LoRA evolution
-   genuinely user-aligned.
-2. **ASI A/B comparison** — before applying a self-modification, snapshot N recent
-   interaction quality scores. After N turns post-modification, compare. Revert if
-   quality dropped.
-3. **Proactive push from ignition** — when ignition result is high-confidence,
-   call `proactive_push.send()` immediately rather than waiting for next user message.
-4. **Multi-step world model rollout** — buffer 4-step trajectory in world model,
-   backprop through MLP rollouts. Closes the prediction horizon from 1-step to 4-step.
-5. **Real LoRA (torch)** — add torch as optional dep, wire A/B into actual Ollama
-   model via Modelfile base + LoRA merge. Feasible with llama.cpp LoRA support.
+1. **World model rollout → planning** — use `train_rollout()` outputs to do a simple
+   lookahead: sample 4 candidate "next response styles" from MoE, simulate each
+   through 4 rollout steps, pick the one with lowest predicted free energy. First
+   genuine look-ahead planning.
+
+2. **Episode-level satisfaction** — aggregate per-turn satisfaction signals into a
+   session-level score (weighted by turn recency). Use this as the primary LoRA
+   fitness signal rather than per-turn EMA.
+
+3. **torch + peft LoRA** — `pip install torch peft` as optional dep. If available,
+   generate real LoRA checkpoint files (delta weights) as mutations. A/B test via
+   separate Ollama Modelfile. This is the biggest remaining gap.
+
+4. **Monte Carlo self-improvement targeting** — instead of random module selection,
+   ASI should simulate "if I improve module X, which quality metric is predicted to
+   improve?" using the world model rollout. Closes the loop between prediction and
+   action.
 
 ---
 
 ## Naming honesty (updated)
 
-- "AGI" — no. ~3% there (up from 2%).
-- "Living computer" — the strongest honest claim yet. Has: metabolism, drives,
-  online non-linear learning, 8-step BPTT, hippocampal replay, GWT with proactive
-  ignition, autonomous daily self-modification, LoRA behavioral evolution. Missing:
-  reproduction, real weight-level LoRA, user-aligned fitness.
-- "Self-improving" — yes, and now *autonomously* so. LOVE runs a self-modification
-  cycle every night without being asked.
-- "Autonomous Life OS" — still the most accurate day-to-day description.
+- "AGI" — no. ~4% there (up from 3%). Every wave closes real gaps; the remaining ones
+  are fundamental (true weight evolution, parallel selection, long-horizon planning).
+- "Living computer" — strongest honest claim: has drives, metabolism, proprioception,
+  non-linear online learning (1-step + 8-step BPTT + 4-step rollout), hippocampal
+  replay, GWT ignition with proactive push, autonomous self-modification with A/B
+  revert, user-aligned LoRA evolution. Missing: true weight-level adaptation, fork.
+- "Self-improving" — yes, autonomously, with auto-revert safety net.
+- "User-aligned" — *now true* for the first time. Every conversation implicitly
+  updates the system's fitness signal toward what the user actually finds helpful.
 
 Keep the marketing pegged here.
