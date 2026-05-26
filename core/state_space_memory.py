@@ -21,6 +21,7 @@ What's real:
   - Persistent state vector survives across sessions
   - Self-supervised online learning: SSM predicts next world-model embedding
     and backprops through D_out, C_proj, B_proj, gate_W each step
+  - Truncated BPTT over N=8 step windows for richer temporal credit assignment
 
 What other modules get:
   - get_context_vector() -> compact 256-d summary of "everything LOVE has lived through"
@@ -28,12 +29,14 @@ What other modules get:
   - decode_recent_dynamics() -> "what trajectory is the user/system on"
   - get_next_prediction() -> predicted next 384-d embedding (online learned)
   - train_step(x_t, x_next) -> online SGD update, returns scalar MSE loss
+  - train_on_trajectory(xs) -> TBPTT over N-step window, returns avg MSE loss
 """
 from __future__ import annotations
 
 import json
 import threading
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -54,6 +57,9 @@ OUTPUT_DIM = 256
 TRAIN_LR = 0.005             # online learning rate for self-supervised objective
 TRAIN_GRAD_CLIP = 0.02       # gradient clip magnitude
 TRAIN_LOSS_EMA_ALPHA = 0.05  # EMA smoothing factor for loss tracking
+
+BPTT_LR = 0.003              # slightly lower lr for truncated BPTT
+BPTT_WINDOW = 8              # trajectory window size for TBPTT
 
 
 # ── HiPPO-inspired stable init ───────────────────────────────────────────────
@@ -102,12 +108,17 @@ class StateSpaceMemory:
                     rng = np.random.default_rng(99)
                     self._D_out = (rng.standard_normal((INPUT_DIM, OUTPUT_DIM)).astype(np.float32)
                                    / np.sqrt(OUTPUT_DIM)) * 0.1
+                # h_bptt_start may not exist in older checkpoints — init to zeros
+                if "h_bptt_start" in p:
+                    self._h_bptt_start = p["h_bptt_start"].astype(np.float32)
+                else:
+                    self._h_bptt_start = np.zeros(STATE_DIM, dtype=np.float32)
             except Exception:
                 self._init_params()
         else:
             self._init_params()
 
-        # Hidden state
+        # Hidden state — live recurrent state updated every step()
         if STATE_VEC.exists():
             try:
                 self._h = np.load(STATE_VEC).astype(np.float32)
@@ -118,14 +129,20 @@ class StateSpaceMemory:
         else:
             self._h = np.zeros(STATE_DIM, dtype=np.float32)
 
-        # Previous hidden state — cached before each step for BPTT
+        # Previous hidden state — cached before each step for 1-step BPTT
         self._h_prev: np.ndarray = np.zeros(STATE_DIM, dtype=np.float32)
 
         # Last predicted next embedding (384-d), updated every step()
         self._last_prediction: Optional[np.ndarray] = None
 
-        # Online training loss EMA
+        # Online training loss EMA (1-step train_step)
         self._train_loss_ema: float = 0.0
+
+        # BPTT loss EMA — updated by train_on_trajectory()
+        self._bptt_loss_ema: float = 0.0
+
+        # Trajectory buffer: accumulates embeddings for TBPTT windows
+        self._trajectory_buffer: deque = deque(maxlen=BPTT_WINDOW)
 
         # Trajectory of recent compressed outputs (for attention queries)
         self._y_history: List[np.ndarray] = []
@@ -148,6 +165,8 @@ class StateSpaceMemory:
         # Decoder: maps 256-d SSM output back to 384-d embedding space
         self._D_out = (rng.standard_normal((INPUT_DIM, OUTPUT_DIM)).astype(np.float32)
                       / np.sqrt(OUTPUT_DIM)) * 0.1
+        # BPTT window start state (detached snapshot, not the live _h)
+        self._h_bptt_start = np.zeros(STATE_DIM, dtype=np.float32)
 
     def _load_meta(self) -> Dict:
         if META.exists():
@@ -162,7 +181,8 @@ class StateSpaceMemory:
             np.save(STATE_VEC, self._h)
             np.savez(PARAMS,
                      A=self._A, B_proj=self._B_proj, C_proj=self._C_proj,
-                     D=self._D, gate_W=self._gate_W, D_out=self._D_out)
+                     D=self._D, gate_W=self._gate_W, D_out=self._D_out,
+                     h_bptt_start=self._h_bptt_start)
             self._meta["steps"] = self._step_count
             self._meta["last_update"] = datetime.now().isoformat()
             META.write_text(json.dumps(self._meta, indent=2))
@@ -219,15 +239,118 @@ class StateSpaceMemory:
         Pure forward pass — no side-effects, no lock required."""
         return (self._D_out @ y).astype(np.float32)
 
+    def train_on_trajectory(self, xs: List[np.ndarray]) -> float:
+        """Truncated BPTT over a window of N embeddings (each 384-d).
+
+        Takes xs[0..N-1], predicts xs[1..N-1] from xs[0..N-2], and
+        backpropagates through all N-1 steps simultaneously.
+
+        Uses self._h_bptt_start as the detached initial state for this window
+        (NOT the live self._h — that one runs the world in real time).
+
+        Args:
+            xs: List of N 384-d embeddings (N >= 2).  Typically N = BPTT_WINDOW = 8.
+
+        Returns:
+            Average MSE loss across the N-1 prediction steps.
+        """
+        if len(xs) < 2:
+            return 0.0
+
+        xs = [x.astype(np.float32) for x in xs]
+
+        with self._mu:
+            # ── Forward pass — store intermediates ───────────────────────────
+            h = self._h_bptt_start.copy()   # detached snapshot, not live _h
+            h_states = [h.copy()]           # h_states[0] = h before any step
+            ys: List[np.ndarray] = []
+            gates: List[np.ndarray] = []
+
+            for x in xs[:-1]:              # predict xs[1..N-1]
+                gate = 1.0 / (1.0 + np.exp(-(x @ self._gate_W)))  # (STATE_DIM,)
+                A_eff = self._A * (0.5 + 0.5 * gate)
+                h = A_eff * h + self._B_proj @ x
+                y = self._C_proj @ h + self._D @ x
+                h_states.append(h.copy())
+                ys.append(y)
+                gates.append(gate)
+
+            targets = xs[1:]               # xs[1] .. xs[N-1]
+            N = len(ys)                    # number of prediction steps = len(xs)-1
+
+            # ── Backward pass (TBPTT, reversed) ─────────────────────────────
+            dD_out  = np.zeros_like(self._D_out)   # (INPUT_DIM,  OUTPUT_DIM)
+            dC_proj = np.zeros_like(self._C_proj)  # (OUTPUT_DIM, STATE_DIM)
+            dB_proj = np.zeros_like(self._B_proj)  # (STATE_DIM,  INPUT_DIM)
+            dh = np.zeros(STATE_DIM, dtype=np.float32)  # gradient flowing back in time
+
+            total_loss = 0.0
+
+            for t in reversed(range(N)):
+                # ── decode error at step t ────────────────────────────────
+                pred_x = self._D_out @ ys[t]           # (INPUT_DIM,)
+                err    = pred_x - targets[t]           # (INPUT_DIM,)
+                loss_t = float(np.mean(err ** 2))
+                total_loss += loss_t
+
+                # ── grad through D_out ────────────────────────────────────
+                dD_out += np.outer(err, ys[t])
+
+                # dy combines gradient from decode loss + gradient from next step
+                dy = self._D_out.T @ err + dh          # (OUTPUT_DIM,)
+
+                # ── grad through C_proj (readout) ─────────────────────────
+                # y_t = C_proj @ h_{t+1}  =>  dh_{t+1} = C_proj^T @ dy
+                dh_t = self._C_proj.T @ dy             # (STATE_DIM,)
+                dC_proj += np.outer(dy, h_states[t + 1])
+
+                # ── grad through state update h = A_eff * h_prev + B @ x ──
+                # dL/dh_prev = dL/dh_new * A_eff  (pass back in time)
+                A_eff_t = self._A * (0.5 + 0.5 * gates[t])
+                dh = dh_t * A_eff_t
+
+                # ── grad through B_proj ───────────────────────────────────
+                dB_proj += np.outer(dh_t, xs[t])
+
+            # ── Clip & apply accumulated gradients (averaged over N steps) ─
+            for grad, param_name in [
+                (dD_out  / N, "D_out"),
+                (dC_proj / N, "C_proj"),
+                (dB_proj / N, "B_proj"),
+            ]:
+                grad_clipped = np.clip(grad, -TRAIN_GRAD_CLIP, TRAIN_GRAD_CLIP)
+                if param_name == "D_out":
+                    self._D_out  -= BPTT_LR * grad_clipped
+                elif param_name == "C_proj":
+                    self._C_proj -= BPTT_LR * grad_clipped
+                elif param_name == "B_proj":
+                    self._B_proj -= BPTT_LR * grad_clipped
+
+            # ── Advance the BPTT window start to end of this window ────────
+            self._h_bptt_start = h_states[-1].copy()
+
+            # ── Update BPTT loss EMA ───────────────────────────────────────
+            avg_loss = total_loss / N
+            if self._bptt_loss_ema == 0.0:
+                self._bptt_loss_ema = avg_loss
+            else:
+                self._bptt_loss_ema = ((1.0 - TRAIN_LOSS_EMA_ALPHA) * self._bptt_loss_ema
+                                       + TRAIN_LOSS_EMA_ALPHA * avg_loss)
+
+        return avg_loss
+
     def train_step(self, x_t: np.ndarray, x_next: np.ndarray) -> float:
         """Self-supervised update: teach the SSM to predict the next embedding.
+
+        Backward compat API — also feeds into the trajectory buffer so that
+        every 8 calls it auto-triggers train_on_trajectory() for TBPTT.
 
         Args:
             x_t:    Current 384-d world-model embedding (input at step t).
             x_next: Actual next 384-d embedding observed (prediction target).
 
         Returns:
-            Scalar MSE loss (float) before the parameter update.
+            Scalar MSE loss (float) before the 1-step parameter update.
 
         Algorithm (1-step BPTT, manual numpy):
           Forward:
@@ -298,12 +421,32 @@ class StateSpaceMemory:
             self._B_proj -= TRAIN_LR * dL_dB_proj
             self._gate_W -= TRAIN_LR * dL_dgate_W
 
-            # EMA loss tracking
+            # EMA loss tracking (1-step path)
             if self._train_loss_ema == 0.0:
                 self._train_loss_ema = loss
             else:
                 self._train_loss_ema = ((1.0 - TRAIN_LOSS_EMA_ALPHA) * self._train_loss_ema
                                         + TRAIN_LOSS_EMA_ALPHA * loss)
+
+            # ── Feed trajectory buffer; trigger TBPTT when window is full ───
+            # Add x_t first; when we have a full window train_on_trajectory
+            # will use xs[0..N-2] as inputs and xs[1..N-1] as targets.
+            self._trajectory_buffer.append(x_t.copy())
+            # Also ensure x_next is present as the final target
+            if len(self._trajectory_buffer) == BPTT_WINDOW:
+                # We have exactly N items; the last is the "next" of N-1
+                # Append x_next temporarily so trajectory ends on the right target
+                buf_snapshot = list(self._trajectory_buffer)
+                buf_snapshot.append(x_next.copy())
+
+        # ── TBPTT call outside the inner lock section (train_on_trajectory
+        #    re-acquires _mu internally) ────────────────────────────────────
+        try:
+            if (len(self._trajectory_buffer) == BPTT_WINDOW
+                    and 'buf_snapshot' in locals()):
+                self.train_on_trajectory(buf_snapshot)
+        except Exception:
+            pass
 
         return loss
 
@@ -358,6 +501,8 @@ class StateSpaceMemory:
             "decay_min": round(float(self._A.min()), 4),
             "decay_max": round(float(self._A.max()), 4),
             "train_loss_ema": round(self._train_loss_ema, 6),
+            "bptt_loss_ema": round(self._bptt_loss_ema, 6),
+            "bptt_window": BPTT_WINDOW,
         }
 
     def decode_recent_dynamics(self) -> str:

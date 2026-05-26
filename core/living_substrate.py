@@ -171,6 +171,30 @@ def start_living_substrate() -> Dict[str, Any]:
         status["replay_consolidation"] = "ok"
     except Exception as e:
         status["replay_consolidation"] = f"err:{e}"
+
+    # 8. LoRA evolution daemon
+    try:
+        from core.lora_evolution import get_lora_evolution
+        get_lora_evolution().start_daemon(interval_hours=6)
+        status["lora_evolution"] = "ok"
+    except Exception as e:
+        status["lora_evolution"] = f"err:{e}"
+
+    # 8. Autonomous self-improvement daemon
+    try:
+        from core.autonomous_self_improvement import get_autonomous_self_improvement
+        get_autonomous_self_improvement().start_daemon()
+        status["self_improvement"] = "ok"
+    except Exception as e:
+        status["self_improvement"] = f"err:{e}"
+
+    # 8. GWT Ignition daemon
+    try:
+        from core.ignition_daemon import start_ignition_daemon
+        start_ignition_daemon()
+        status["ignition_daemon"] = "ok"
+    except Exception as e:
+        status["ignition_daemon"] = f"err:{e}"
     print(f"[LivingSubstrate] startup status: {status}")
     return status
 
@@ -214,4 +238,22 @@ def substrate_snapshot() -> Dict[str, Any]:
         snap["replay_consolidation"] = get_replay_consolidation().snapshot()
     except Exception as e:
         snap["replay_consolidation"] = {"err": str(e)}
+    # lora_evolution snapshot
+    try:
+        from core.lora_evolution import get_lora_evolution
+        snap["lora_evolution"] = get_lora_evolution().snapshot()
+    except Exception as e:
+        snap["lora_evolution"] = {"err": str(e)}
+    # self_improvement snapshot
+    try:
+        from core.autonomous_self_improvement import get_autonomous_self_improvement
+        snap["self_improvement"] = get_autonomous_self_improvement().snapshot()
+    except Exception as e:
+        snap["self_improvement"] = {"err": str(e)}
+    # global_workspace snapshot
+    try:
+        from core.global_workspace import get_global_workspace
+        snap["global_workspace"] = get_global_workspace().snapshot()
+    except Exception as e:
+        snap["global_workspace"] = {"err": str(e)}
     return snap
