@@ -926,6 +926,29 @@ def register_all_modules(lm, _loop=None):
         description="Monitors CPU/RAM/GPU every 5s — sets SYSTEM_UNDER_LOAD flag when threshold exceeded, triggering model hot-swap"
     ))
 
+    # ── WAVE 5: UTILITY MODULES (Prompts 21-24) ──
+    # These are library modules, not daemons — registered for visibility in lifecycle
+    lm.register(ModuleDescriptor(
+        name="causal_guardrail", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="LLM-based sanity check decorator for high-risk actions (trades, commits, emails)"
+    ))
+    lm.register(ModuleDescriptor(
+        name="axiological_engine", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Utility formula gating: (priority*2) - cost - (stress/2) vs threshold based on energy"
+    ))
+    lm.register(ModuleDescriptor(
+        name="reality_check", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Pure Python state conflict reconciler — fixes sleeping+device_active, work_hours>24, stress clamping"
+    ))
+    lm.register(ModuleDescriptor(
+        name="tts_interventions", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Audio intervention wrapper — TTS for 9-hour limit and high-stress alerts"
+    ))
+
     # ── WAVE 5: TERMINAL MONITOR — REAL-TIME ERROR WATCHER + LLM AUTO-FIX ──
     def start_terminal_monitor():
         from core.terminal_monitor import get_terminal_monitor
@@ -5776,6 +5799,60 @@ async def system_model_info():
         return {"error": str(e)}
 
 
+# ========== PROMPTS 21-24: CAUSAL GUARDRAIL, AXIOLOGICAL ENGINE, REALITY CHECK, TTS INTERVENTIONS ==========
+
+@app.post("/causal/simulate")
+async def causal_simulate(data: dict):
+    """Run a causal guardrail sanity check on a proposed action."""
+    try:
+        from core.causal_guardrail import simulate_outcome
+        action = data.get("action", "")
+        context = data.get("context", {})
+        safe = await simulate_outcome(action, context)
+        return {"safe": safe, "action": action}
+    except Exception as e:
+        return {"error": str(e), "safe": True}  # fail-safe
+
+
+@app.post("/axiological/evaluate")
+async def axiological_evaluate(data: dict):
+    """Evaluate whether a task should proceed based on utility formula."""
+    try:
+        from core.axiological_engine import evaluate_utility
+        task_priority = int(data.get("task_priority", 5))
+        compute_cost = int(data.get("compute_cost", 5))
+        user_energy = int(data.get("user_energy", 5))
+        user_stress = int(data.get("user_stress", 5))
+        allowed = evaluate_utility(task_priority, compute_cost, user_energy, user_stress)
+        return {"allowed": allowed}
+    except Exception as e:
+        return {"error": str(e), "allowed": True}  # fail-safe
+
+
+@app.post("/reality/reconcile")
+async def reality_reconcile(data: dict):
+    """Reconcile state conflicts in user profile JSON."""
+    try:
+        from core.reality_check import reconcile_state_conflicts
+        state = data.get("state", {})
+        cleaned = reconcile_state_conflicts(state)
+        return {"cleaned": cleaned}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/voice/intervention")
+async def voice_intervention(data: dict):
+    """Trigger audio intervention for work limit or high stress."""
+    try:
+        from voice.tts_interventions import trigger_hype_intervention
+        trigger_type = data.get("trigger_type", "")
+        await trigger_hype_intervention(trigger_type)
+        return {"triggered": trigger_type}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ========== TERMINAL ERROR MONITOR (Wave 31) ==========
 
 @app.get("/terminal/errors")
@@ -5859,6 +5936,62 @@ def _redirect_stderr_to_log():
         print(f"[TerminalMonitor] Could not set up log capture: {e}")
 
 _redirect_stderr_to_log()
+
+
+# ========== WAVE 27: ACTIVE PLANNING + FOCUS-AWARE HEARTBEAT ==========
+
+@app.get("/planner/snapshot")
+async def planner_snapshot():
+    """Get rollout planner telemetry including outcome learning stats."""
+    from core.rollout_planner import get_rollout_planner
+    return get_rollout_planner().snapshot()
+
+
+@app.post("/planner/plan_active")
+async def planner_plan_active(data: dict):
+    """Run active planning for a query. Returns directive + ranked styles."""
+    from core.rollout_planner import get_rollout_planner
+    query = data.get("query", "")
+    if not query:
+        return {"error": "query required"}
+    planner = get_rollout_planner()
+    return planner.plan_active(query)
+
+
+@app.get("/planner/calibration")
+async def planner_calibration():
+    """Get planning calibration state (confidence, accuracy, outcomes)."""
+    from core.rollout_planner import get_rollout_planner
+    planner = get_rollout_planner()
+    snap = planner.snapshot()
+    return {
+        "confidence": snap.get("calibration_confidence", 0.5),
+        "total_outcomes": snap.get("total_outcomes", 0),
+        "accuracy": snap.get("outcome_accuracy", 0.0),
+        "avg_prediction_delta": snap.get("avg_prediction_delta", 0.0),
+    }
+
+
+@app.get("/heartbeat/focus-status")
+async def heartbeat_focus_status():
+    """Check if heartbeat is in focus-aware suppression mode."""
+    from core.heartbeat import get_heartbeat
+    hb = get_heartbeat()
+    in_focus = hb._is_focus_mode()
+    suppressed = []
+    try:
+        from pathlib import Path
+        import json
+        queue_file = Path(__file__).parent.parent / "data" / "suppressed_nudges.json"
+        if queue_file.exists():
+            suppressed = json.loads(queue_file.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {
+        "focus_mode_active": in_focus,
+        "suppressed_nudge_count": len(suppressed),
+        "suppressed_nudges": suppressed,
+    }
 
 
 if __name__ == "__main__":
