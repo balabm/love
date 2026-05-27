@@ -109,6 +109,11 @@ function wsSend(payload) {
 
 /* ── Event Router ──────────────────────────────────────────────── */
 function handleEvent(data) {
+  // Show activity indicator on monologue events
+  if (data.type === 'monologue' || data.type === 'proactive_nudge') {
+    showActivity('LOVE is active');
+  }
+  
   switch (data.type) {
     case 'state_sync':      handleStateSync(data);      break;
     case 'monologue':       handleMonologue(data);       break;
@@ -577,18 +582,6 @@ function hideActivity() {
   if (activityIndicator) {
     activityIndicator.classList.remove('visible');
   }
-}
-
-// Show activity indicator on WebSocket events
-const originalWsOnMessage = ws?.onmessage;
-if (ws) {
-  ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === 'monologue' || data.type === 'proactive_nudge') {
-      showActivity('LOVE is active');
-    }
-    if (originalWsOnMessage) originalWsOnMessage(event);
-  };
 }
 
 // Initialize onboarding on page load
