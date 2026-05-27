@@ -1185,6 +1185,20 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
+    # ═══ WAVE 27: PLANNING OUTCOME VERIFICATION ═══
+    try:
+        from core.rollout_planner import get_rollout_planner
+        _planner_v = get_rollout_planner()
+        _outcome = _planner_v.verify_outcome(response)
+        if _outcome:
+            _delta = _outcome.get("prediction_delta", 0)
+            _accurate = _outcome.get("prediction_accurate", False)
+            if thinking is None:
+                thinking = ""
+            thinking += f" [Planning: predicted FE={_outcome['predicted_fe']:.3f}, actual={_outcome['actual_fe']:.3f}, delta={_delta:+.3f}, accurate={_accurate}]"
+    except Exception:
+        pass
+
     # Record interaction for adaptive learning
     elapsed_ms = int((time.time() - t_start) * 1000)
     record_interaction(user_input, response, mode=mode, response_time_ms=elapsed_ms)

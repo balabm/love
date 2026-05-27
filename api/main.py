@@ -529,6 +529,10 @@ def register_all_modules(lm, _loop=None):
         if not bridge.is_connected():
             return {"status": "degraded", "error": "Phone Bridge not connected"}
 
+    def start_notification_ingestion_module():
+        from core.notification_ingestion import start_ingestion
+        start_ingestion()
+
     lm.register(ModuleDescriptor(
         name="awareness", wave=1, start_fn=start_awareness_module, stop_fn=stop_awareness_module,
         depends_on=["neural_bus"], optional=False, description="Real-time system/app context monitoring"
@@ -548,6 +552,10 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="phone_bridge", wave=1, start_fn=start_phone_bridge_module,
         depends_on=[], optional=True, description="Mobile companion connection"
+    ))
+    lm.register(ModuleDescriptor(
+        name="notification_ingestion", wave=1, start_fn=start_notification_ingestion_module,
+        depends_on=["phone_bridge"], optional=True, description="Ingest phone and teams notifications"
     ))
 
     # ── WAVE 2: COGNITION ──
@@ -777,6 +785,17 @@ def register_all_modules(lm, _loop=None):
         briefing = get_briefing_system()
         briefing.start(brief_time=brief_time)
 
+    def start_autonomy_supervisor_module():
+        if AUTONOMY_SUPERVISOR_AVAILABLE:
+            interval = int(_os.getenv("LOVE_SUPERVISOR_INTERVAL_SEC", "300"))
+            get_autonomy_supervisor().start(interval_seconds=interval)
+        else:
+            raise RuntimeError("Autonomy Supervisor not available")
+
+    def stop_autonomy_supervisor_module():
+        if AUTONOMY_SUPERVISOR_AVAILABLE:
+            get_autonomy_supervisor().stop()
+
     def start_idle_mind_module():
         if IDLE_MIND_AVAILABLE:
             start_idle_mind()
@@ -864,6 +883,11 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True, description="Generates and schedules morning brief report"
     ))
     lm.register(ModuleDescriptor(
+        name="autonomy_supervisor", wave=5, start_fn=start_autonomy_supervisor_module, stop_fn=stop_autonomy_supervisor_module,
+        depends_on=["heartbeat", "self_improvement_daemon", "autonomous_goal_engine", "wave_engine"],
+        optional=True, description="Supervises autonomous loops and restarts failed daemons"
+    ))
+    lm.register(ModuleDescriptor(
         name="idle_mind", wave=5, start_fn=start_idle_mind_module, stop_fn=stop_idle_mind_module,
         depends_on=["consciousness"], optional=True, description="Generates insights/reflections during quiet periods"
     ))
@@ -942,18 +966,30 @@ def register_all_modules(lm, _loop=None):
 
     # ── WAVE 5: UTILITY MODULES (Prompts 21-24) ──
     # These are library modules, not daemons — registered for visibility in lifecycle
+    def start_causal_guardrail():
+        from core.causal_guardrail import start_guardrail
+        return start_guardrail()
+        
+    def start_axiological_engine():
+        from core.axiological_engine import start_axiological_engine
+        return start_axiological_engine()
+        
+    def start_reality_check():
+        from core.reality_check import start_reality_check
+        return start_reality_check()
+
     lm.register(ModuleDescriptor(
-        name="causal_guardrail", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="causal_guardrail", wave=5, start_fn=start_causal_guardrail, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="LLM-based sanity check decorator for high-risk actions (trades, commits, emails)"
     ))
     lm.register(ModuleDescriptor(
-        name="axiological_engine", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="axiological_engine", wave=5, start_fn=start_axiological_engine, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Utility formula gating: (priority*2) - cost - (stress/2) vs threshold based on energy"
     ))
     lm.register(ModuleDescriptor(
-        name="reality_check", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="reality_check", wave=5, start_fn=start_reality_check, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Pure Python state conflict reconciler — fixes sleeping+device_active, work_hours>24, stress clamping"
     ))
@@ -1026,7 +1062,7 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="mock_reality", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
         depends_on=["neural_bus"], optional=True,
-        description="Mock reality injector — fake sensor data for E2E testing"
+        description="Mock reality injector — disabled to prevent fake data injection"
     ))
     lm.register(ModuleDescriptor(
         name="integration_inspector", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
@@ -1080,6 +1116,12 @@ async def lifespan(app: FastAPI):
         print(f"[API] ChromaDB pre-warm skipped: {_ce}")
     from core.module_lifecycle import get_lifecycle
     lm = get_lifecycle()
+    # Clear any previously registered modules (useful when Uvicorn reloads)
+    if hasattr(lm, 'clear_modules'):
+        try:
+            lm.clear_modules()
+        except Exception:
+            pass
     _loop = asyncio.get_event_loop()
     register_all_modules(lm, _loop=_loop)
 
@@ -1140,17 +1182,23 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
         # Bypass auth for same-machine requests (UI running on localhost)
         client_host = request.client.host if request.client else ""
-        if client_host in ("127.0.0.1", "::1", "localhost"):
+        if client_host in ("127.0.0.1", "::1", "localhost") or client_host.endswith("127.0.0.1"):
             return await call_next(request)
 
-        # External requests must supply X-API-Key
-        # NOTE: return JSONResponse — never raise HTTPException inside BaseHTTPMiddleware
-        # (raising causes a Starlette task-group ExceptionGroup that renders as 500)
+        # External requests may supply X-API-Key, Authorization Bearer token, or api_key query param
         api_key = request.headers.get("X-API-Key")
+        if not api_key:
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.lower().startswith("bearer "):
+                api_key = auth_header.split(" ", 1)[1].strip()
+
+        if not api_key:
+            api_key = request.query_params.get("api_key") or request.query_params.get("key")
+
         if not api_key:
             return JSONResponse(
                 status_code=401,
-                content={"detail": "API key missing. Provide X-API-Key header."}
+                content={"detail": "API key missing. Provide X-API-Key header, Authorization: Bearer <key>, or api_key query parameter."}
             )
 
         if api_key != API_KEY:
@@ -1186,6 +1234,8 @@ app.add_middleware(
 class Message(BaseModel):
     text: str
     mode: str = "general"
+    context_override: Optional[str] = None
+    include_live_context: bool = True
 
 class FixRequest(BaseModel):
     crash_id: str
@@ -1530,6 +1580,24 @@ try:
 except ImportError:
     DAEMON_AVAILABLE = False
 
+try:
+    from core.autonomy_supervisor import get_autonomy_supervisor
+    AUTONOMY_SUPERVISOR_AVAILABLE = True
+except ImportError:
+    AUTONOMY_SUPERVISOR_AVAILABLE = False
+
+try:
+    from core.autonomy_policy import load_policy as load_autonomy_policy, save_policy as save_autonomy_policy, set_mode as set_autonomy_mode
+    AUTONOMY_POLICY_AVAILABLE = True
+except ImportError:
+    AUTONOMY_POLICY_AVAILABLE = False
+
+try:
+    from core.autonomous_mission_queue import get_mission_queue
+    MISSION_QUEUE_AVAILABLE = True
+except ImportError:
+    MISSION_QUEUE_AVAILABLE = False
+
 @app.get("/agi/daemon/status")
 async def get_daemon_status():
     """Get the self-improvement daemon status."""
@@ -1568,6 +1636,102 @@ async def run_diagnostics_endpoint():
         "strengths": report.strengths,
         "timestamp": report.timestamp,
     }
+
+
+@app.get("/agi/autonomy-supervisor/status")
+async def autonomy_supervisor_status():
+    """Get the autonomy supervisor status."""
+    if not AUTONOMY_SUPERVISOR_AVAILABLE:
+        return {"error": "Autonomy supervisor not available"}
+    return get_autonomy_supervisor().get_status()
+
+
+@app.post("/agi/autonomy-supervisor/start")
+async def autonomy_supervisor_start():
+    """Start the autonomy supervisor."""
+    if not AUTONOMY_SUPERVISOR_AVAILABLE:
+        return {"error": "Autonomy supervisor not available"}
+    interval = int(_os.getenv("LOVE_SUPERVISOR_INTERVAL_SEC", "300"))
+    return get_autonomy_supervisor().start(interval_seconds=interval)
+
+
+@app.post("/agi/autonomy-supervisor/stop")
+async def autonomy_supervisor_stop():
+    """Stop the autonomy supervisor."""
+    if not AUTONOMY_SUPERVISOR_AVAILABLE:
+        return {"error": "Autonomy supervisor not available"}
+    return get_autonomy_supervisor().stop()
+
+
+@app.post("/agi/autonomy-supervisor/tick")
+async def autonomy_supervisor_tick():
+    """Run one immediate autonomy supervision tick."""
+    if not AUTONOMY_SUPERVISOR_AVAILABLE:
+        return {"error": "Autonomy supervisor not available"}
+    return await asyncio.to_thread(get_autonomy_supervisor().run_tick)
+
+
+@app.get("/agi/autonomy-policy")
+async def get_autonomy_policy():
+    """Get current autonomy policy."""
+    if not AUTONOMY_POLICY_AVAILABLE:
+        return {"error": "Autonomy policy not available"}
+    return load_autonomy_policy()
+
+
+@app.post("/agi/autonomy-policy/mode")
+async def set_autonomy_policy_mode(req: dict):
+    """Set autonomy mode: safe | balanced | aggressive."""
+    if not AUTONOMY_POLICY_AVAILABLE:
+        return {"error": "Autonomy policy not available"}
+    mode = (req or {}).get("mode", "")
+    try:
+        policy = set_autonomy_mode(mode)
+    except Exception as e:
+        return {"error": str(e)}
+    return {"success": True, "policy": policy}
+
+
+@app.post("/agi/autonomy-policy")
+async def update_autonomy_policy(req: dict):
+    """Update autonomy policy fields (partial merge)."""
+    if not AUTONOMY_POLICY_AVAILABLE:
+        return {"error": "Autonomy policy not available"}
+    current = load_autonomy_policy()
+    if isinstance(req, dict):
+        current.update(req)
+    policy = save_autonomy_policy(current)
+    return {"success": True, "policy": policy}
+
+
+@app.get("/agi/missions/status")
+async def missions_status():
+    """Get autonomous mission queue status."""
+    if not MISSION_QUEUE_AVAILABLE:
+        return {"error": "Mission queue not available"}
+    return get_mission_queue().get_status()
+
+
+@app.post("/agi/missions/request")
+async def missions_request(req: dict):
+    """Add a new autonomous feature/capability request mission."""
+    if not MISSION_QUEUE_AVAILABLE:
+        return {"error": "Mission queue not available"}
+    text = (req or {}).get("text", "")
+    requested_by = (req or {}).get("requested_by", "user")
+    if not text:
+        return {"error": "Missing text"}
+    result = get_mission_queue().add_feature_request(text=text, requested_by=requested_by)
+    return {"success": True, **result}
+
+
+@app.post("/agi/missions/cycle")
+async def missions_cycle():
+    """Run one autonomous mission execution cycle immediately."""
+    if not MISSION_QUEUE_AVAILABLE:
+        return {"error": "Mission queue not available"}
+    result = await asyncio.to_thread(get_mission_queue().run_cycle)
+    return {"success": True, **result}
 
 @app.get("/agi/modules/status")
 async def get_modules_status():
@@ -2053,7 +2217,31 @@ async def websocket_telemetry_endpoint(websocket: WebSocket, client_id: Optional
 
 @app.post("/chat")
 async def chat_endpoint(msg: Message):
-    result = await asyncio.to_thread(chat, msg.text, msg.mode)
+    injected_context = (msg.context_override or "").strip() or None
+    if msg.include_live_context:
+        try:
+            ctx = get_live_context()
+            live_parts = [
+                f"Local time: {ctx.local_time} ({ctx.time_of_day})",
+                f"Activity: {ctx.activity or 'unknown'}",
+                f"Active app: {ctx.active_app or 'unknown'}",
+                f"Window: {ctx.active_window or 'unknown'}",
+                f"Battery: {ctx.battery if ctx.battery is not None else 'unknown'}",
+                f"Work hours today: {ctx.hours_worked_today if ctx.hours_worked_today is not None else 0}",
+                f"Tasks overdue: {ctx.tasks_overdue or 0}",
+                f"Tasks due today: {ctx.tasks_due_today or 0}",
+                f"Important unread email: {ctx.unread_important or 0}",
+                f"In meeting: {bool(ctx.is_in_meeting)}",
+                f"Suggested action: {ctx.suggested_action or 'none'}",
+            ]
+            if ctx.proactive_alerts:
+                live_parts.append("Alerts: " + " | ".join(ctx.proactive_alerts[:5]))
+            backend_live_context = "LIVE CONTEXT SNAPSHOT:\n" + "\n".join(live_parts)
+            injected_context = f"{injected_context}\n\n{backend_live_context}".strip() if injected_context else backend_live_context
+        except Exception:
+            pass
+
+    result = await asyncio.to_thread(chat, msg.text, msg.mode, injected_context)
     return {
         "response": result["response"],
         "thinking": result.get("thinking", "")
@@ -2451,7 +2639,6 @@ async def guardian_work_status():
         tracker = get_work_tracker()
         tracked_today = tracker.get_today_hours()
         git_hours = status.get("hours_worked", 0) or 0
-        # Use whichever is higher — they may overlap, so take max, not sum
         status["hours_worked"] = round(max(git_hours, tracked_today), 2)
         status["tracked_hours"] = tracked_today
         status["git_hours"] = git_hours
@@ -2462,6 +2649,16 @@ async def guardian_work_status():
         **status,
         "love_message": love_message
     }
+
+
+@app.get("/guardian/timesheet")
+async def guardian_timesheet():
+    """Return today's generated timesheet and persisted work details."""
+    try:
+        from tools.guardian import get_today_timesheet
+        return await asyncio.to_thread(get_today_timesheet)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/guardian/enforce-limit")
@@ -5193,7 +5390,7 @@ def get_predictions():
 def get_curiosity_gaps():
     """Get knowledge gaps LOVE is working to fill."""
     try:
-        from core.curiosity_engine import get_gap_count, _load_gaps
+        from core.curiosity_engine import _load_gaps
         gaps = _load_gaps()
         open_gaps = [g for g in gaps if g.get("status") == "open"]
         return {
@@ -6056,6 +6253,19 @@ async def system_load():
         }
     except Exception as e:
         return {"under_load": False, "error": str(e)}
+
+
+@app.get("/llm/status")
+async def llm_status():
+    """Return the current LLM routing and fallback state."""
+    try:
+        from core.llm import get_current_model_info
+        info = get_current_model_info()
+        info["auto_fallback_enabled"] = os.getenv("OLLAMA_AUTO_FALLBACK", "true")
+        info["force_high_quality"] = os.getenv("OLLAMA_FORCE_HIGH_QUALITY", "false")
+        return info
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.get("/system/idle")
