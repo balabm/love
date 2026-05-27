@@ -6,7 +6,7 @@ The genome is LOVE's behavioral DNA — active prompt modifications that shape
 how it thinks, speaks, and acts. Mutations that prove beneficial survive;
 the rest get reverted. Natural selection for an AI companion.
 """
-import json, math, time, uuid, threading, statistics
+import json, math, time, uuid, threading, statistics, traceback
 from collections import defaultdict
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
@@ -137,6 +137,76 @@ class CapabilityGap:
     identified_at: str = field(default_factory=lambda: datetime.now().isoformat())
     addressed: bool = False
 
+# ── Helper Functions ─────────────────────────────────────────────────────────
+
+def _try_convert_scalar(s: Any):
+    """Try to convert a scalar string to int/float/bool. Returns original on failure."""
+    from fractions import Fraction
+    if not isinstance(s, str):
+        return s
+    s_strip = s.strip()
+    # boolean
+    if s_strip.lower() in ('true', 'false', '1', '0', 'yes', 'no'):
+        return s_strip.lower() in ('true', '1', 'yes')
+    # fraction like '1/2'
+    if '/' in s_strip:
+        try:
+            return float(Fraction(s_strip))
+        except Exception:
+            pass
+    # try int then float
+    try:
+        if '.' in s_strip or 'e' in s_strip.lower():
+            return float(s_strip)
+        return int(s_strip)
+    except Exception:
+        try:
+            return float(s_strip)
+        except Exception:
+            return s
+
+
+def _safe_float(v: Any, default: float = 0.0) -> float:
+    try:
+        if v is None:
+            return default
+        if isinstance(v, (int, float)):
+            return float(v)
+        if isinstance(v, str):
+            return float(v.strip())
+        return float(v)
+    except Exception:
+        return default
+
+
+def _convert_numeric_fields(data: Dict[str, Any], numeric_fields: Dict[str, type]) -> Dict[str, Any]:
+    """Recursively convert string numeric values to proper types before dataclass unpacking.
+
+    This will coerce common string formats ("0.5", "1/2", "true") into native types.
+    """
+    def convert_item(item):
+        if isinstance(item, dict):
+            return {k: convert_item(v) for k, v in item.items()}
+        if isinstance(item, list):
+            return [convert_item(v) for v in item]
+        return _try_convert_scalar(item)
+
+    converted = convert_item(data)
+    # Ensure the explicitly listed fields have expected types when possible
+    for field_name, field_type in numeric_fields.items():
+        if field_name in converted:
+            v = converted[field_name]
+            try:
+                if field_type == float and not isinstance(v, float):
+                    converted[field_name] = float(v)
+                elif field_type == int and not isinstance(v, int):
+                    converted[field_name] = int(float(v))
+                elif field_type == bool and not isinstance(v, bool):
+                    converted[field_name] = bool(v)
+            except Exception:
+                pass
+    return converted
+
 # ── Evolution Engine ─────────────────────────────────────────────────────────
 
 class EvolutionEngine:
@@ -177,10 +247,26 @@ class EvolutionEngine:
             if not GENOME_FILE.exists(): return
             data = json.loads(GENOME_FILE.read_text(encoding="utf-8"))
             self._generation = data.get("generation", 1)
+            
+            # Load mutations with type conversion for corrupted numeric fields
             for mid, md in data.get("mutations", {}).items():
-                self._mutations[mid] = Mutation(**md)
+                md_converted = _convert_numeric_fields(md, {
+                    "fitness": float,
+                    "interactions_since_applied": int,
+                    "quality_before": float,
+                    "quality_after": float,
+                    "generation": int,
+                    "active": bool,
+                })
+                self._mutations[mid] = Mutation(**md_converted)
+            
+            # Load hypotheses with type conversion
             for hid, hd in data.get("hypotheses", {}).items():
-                self._hypotheses[hid] = Hypothesis(**hd)
+                hd_converted = _convert_numeric_fields(hd, {
+                    "predicted_delta": float,
+                    "confidence": float,
+                })
+                self._hypotheses[hid] = Hypothesis(**hd_converted)
         except Exception as e:
             print(f"[EvolutionEngine] Genome load error: {e}")
 
@@ -201,7 +287,16 @@ class EvolutionEngine:
             if not METRICS_FILE.exists(): return
             data = json.loads(METRICS_FILE.read_text(encoding="utf-8"))
             for rd in data.get("interactions", [])[-500:]:
-                self._interactions.append(InteractionRecord(**rd))
+                rd_converted = _convert_numeric_fields(rd, {
+                    "user_satisfaction": float,
+                    "response_quality": float,
+                    "latency_ms": float,
+                    "tokens_used": int,
+                    "context_relevance": float,
+                    "error_occurred": bool,
+                    "was_proactive": bool,
+                })
+                self._interactions.append(InteractionRecord(**rd_converted))
             self._metrics_cache = defaultdict(list, data.get("cache", {}))
         except Exception as e:
             print(f"[EvolutionEngine] Metrics load error: {e}")
@@ -221,9 +316,18 @@ class EvolutionEngine:
             if not EXPERIMENTS_FILE.exists(): return
             data = json.loads(EXPERIMENTS_FILE.read_text(encoding="utf-8"))
             for eid, ed in data.get("experiments", {}).items():
-                self._experiments[eid] = Experiment(**ed)
+                ed_converted = _convert_numeric_fields(ed, {
+                    "duration_hours": float,
+                    "min_samples": int,
+                })
+                self._experiments[eid] = Experiment(**ed_converted)
             for gid, gd in data.get("gaps", {}).items():
-                self._capability_gaps[gid] = CapabilityGap(**gd)
+                gd_converted = _convert_numeric_fields(gd, {
+                    "severity": float,
+                    "priority": float,
+                    "addressed": bool,
+                })
+                self._capability_gaps[gid] = CapabilityGap(**gd_converted)
         except Exception as e:
             print(f"[EvolutionEngine] Experiments load error: {e}")
 
@@ -245,52 +349,150 @@ class EvolutionEngine:
         try:
             with open(HISTORY_FILE, "a", encoding="utf-8") as f:
                 f.write(json.dumps(asdict(event), default=str) + "\n")
-        except Exception: pass
+        except Exception as e:
+            print(f"[EvolutionEngine] Error: {e}")
 
     def _emit(self, event_type: str, payload: Dict, priority=EventPriority.NORMAL):
         try:
             get_neural_bus().publish(domain="self_evolution", event_type=event_type,
                 payload=payload, source_module="evolution_engine", priority=priority)
-        except Exception: pass
+        except Exception as e:
+            print(f"[EvolutionEngine] Error: {e}")
 
     # ── 1. Performance Measurement ────────────────────────────────────────
     def record_interaction(self, interaction_type="conversation", response_quality=0.5,
                            user_satisfaction=None, latency_ms=0.0, tokens_used=0,
                            was_proactive=False, context_relevance=0.5, error_occurred=False,
                            tags=None, metadata=None) -> InteractionRecord:
-        """Record a single interaction for performance tracking."""
+        """Record a single interaction for performance tracking.
+
+        Accepts either an InteractionRecord instance or individual fields.
+        """
+        if isinstance(interaction_type, InteractionRecord):
+            rec = interaction_type
+            with self._lock:
+                self._interactions.append(rec)
+                self._metrics_cache["quality"].append(_safe_float(rec.response_quality, 0.5))
+                self._metrics_cache["latency"].append(_safe_float(rec.latency_ms, 0.0))
+                if rec.user_satisfaction is not None:
+                    self._metrics_cache["satisfaction"].append(_safe_float(rec.user_satisfaction, 0.0))
+                self._metrics_cache["errors"].append(1.0 if rec.error_occurred else 0.0)
+                for m in self._mutations.values():
+                    if m.active: m.interactions_since_applied += 1
+                self._save_metrics()
+            return rec
+
+        # Coerce common numeric/string inputs into proper types and normalize type fields
+        try:
+            rq = _safe_float(response_quality, 0.5)
+        except Exception:
+            rq = 0.5
+        try:
+            us = None if user_satisfaction is None else _safe_float(user_satisfaction, None)
+        except Exception:
+            us = None
+        try:
+            lat = _safe_float(latency_ms, 0.0)
+        except Exception:
+            lat = 0.0
+        try:
+            toks = int(tokens_used) if tokens_used is not None else 0
+        except Exception:
+            toks = 0
+
+        # Ensure interaction_type is a stable str (some callers passed dicts)
+        try:
+            itype = interaction_type if isinstance(interaction_type, str) else str(interaction_type)
+        except Exception:
+            itype = "conversation"
+
         rec = InteractionRecord(
-            interaction_type=interaction_type, response_quality=response_quality,
-            user_satisfaction=user_satisfaction, latency_ms=latency_ms,
-            tokens_used=tokens_used, was_proactive=was_proactive,
-            context_relevance=context_relevance, error_occurred=error_occurred,
+            interaction_type=itype, response_quality=rq,
+            user_satisfaction=us, latency_ms=lat,
+            tokens_used=toks, was_proactive=bool(was_proactive),
+            context_relevance=_safe_float(context_relevance, 0.5), error_occurred=bool(error_occurred),
             tags=tags or [], metadata=metadata or {})
         with self._lock:
             self._interactions.append(rec)
-            self._metrics_cache["quality"].append(response_quality)
-            self._metrics_cache["latency"].append(latency_ms)
-            if user_satisfaction is not None:
-                self._metrics_cache["satisfaction"].append(user_satisfaction)
+            self._metrics_cache["quality"].append(rq)
+            self._metrics_cache["latency"].append(lat)
+            if us is not None:
+                self._metrics_cache["satisfaction"].append(us)
             self._metrics_cache["errors"].append(1.0 if error_occurred else 0.0)
             for m in self._mutations.values():
                 if m.active: m.interactions_since_applied += 1
             self._save_metrics()
         return rec
 
+    def generate_performance_report(self, window_hours: float = 24.0) -> PerformanceReport:
+        """Alias for get_performance_metrics used by tests and integration callers."""
+        return self.get_performance_metrics(window_hours=window_hours)
+
+    def create_hypothesis(self, claim: str, rationale: str, target_metric: str = "response_quality",
+                          predicted_delta: float = 0.0, confidence: float = 0.5) -> Hypothesis:
+        """Create a new hypothesis based on a claim and expected metric change."""
+        hypothesis = Hypothesis(
+            claim=claim,
+            rationale=rationale,
+            target_metric=target_metric,
+            predicted_delta=predicted_delta,
+            confidence=confidence,
+        )
+        with self._lock:
+            self._hypotheses[hypothesis.id] = hypothesis
+            self._save_genome()
+        self._log_event("hypothesis_created", f"Hypothesis '{claim}' created",
+                        {"hypothesis_id": hypothesis.id, "target_metric": target_metric})
+        return hypothesis
+
+    def create_mutation(self, mutation_type: str, description: str,
+                        prompt_modification: str, injection_point: str = "system_suffix") -> Mutation:
+        """Create and register a behavioral mutation."""
+        mutation = Mutation(
+            mutation_type=mutation_type,
+            description=description,
+            prompt_modification=prompt_modification,
+            injection_point=injection_point,
+            active=True,
+            fitness=0.5,
+        )
+        with self._lock:
+            self._mutations[mutation.id] = mutation
+            self._save_genome()
+        self._log_event("mutation_created", f"Mutation '{description}' created",
+                        {"mutation_id": mutation.id, "type": mutation_type})
+        return mutation
+
     def get_performance_metrics(self, window_hours: float = 24.0) -> PerformanceReport:
         """Compute aggregated performance over a time window."""
         cutoff = (datetime.now() - timedelta(hours=window_hours)).isoformat()
         with self._lock:
-            win = [r for r in self._interactions if r.timestamp >= cutoff]
+            # Normalize entries: support both InteractionRecord instances and plain dicts
+            normalized = []
+            for r in self._interactions:
+                try:
+                    if isinstance(r, dict):
+                        # ensure timestamp exists
+                        ts = r.get('timestamp', datetime.now().isoformat())
+                        r_obj = InteractionRecord(**r)
+                    else:
+                        r_obj = r
+                    normalized.append(r_obj)
+                except Exception:
+                    # fallback: skip malformed record
+                    continue
+            win = [r for r in normalized if r.timestamp >= cutoff]
         if not win:
             return PerformanceReport(window_start=cutoff, window_end=datetime.now().isoformat())
-        quals = [r.response_quality for r in win]
-        lats = [r.latency_ms for r in win]
-        sats = [r.user_satisfaction for r in win if r.user_satisfaction is not None]
+        quals = [_safe_float(r.response_quality, 0.0) for r in win]
+        lats = [_safe_float(r.latency_ms, 0.0) for r in win]
+        sats = [ _safe_float(r.user_satisfaction, 0.0) for r in win if r.user_satisfaction is not None]
         mid = len(quals) // 2
         trend = (statistics.mean(quals[mid:]) - statistics.mean(quals[:mid])) if mid > 0 else 0.0
         by_type: Dict[str, List[InteractionRecord]] = defaultdict(list)
-        for r in win: by_type[r.interaction_type].append(r)
+        for r in win:
+            key = r.interaction_type if isinstance(r.interaction_type, str) else str(r.interaction_type)
+            by_type[key].append(r)
         bd = {}
         for t, recs in by_type.items():
             tq = [r.response_quality for r in recs]
@@ -335,12 +537,20 @@ class EvolutionEngine:
             raw = str(get_reasoning_llm(temperature=0.7).invoke(prompt)).strip()
             s, e = raw.find("["), raw.rfind("]") + 1
             for item in (json.loads(raw[s:e]) if s >= 0 and e > s else [])[:max_hypotheses]:
+                try:
+                    p_delta = float(item.get("predicted_delta", 0.05))
+                except (ValueError, TypeError):
+                    p_delta = 0.05
+                try:
+                    conf = min(1.0, max(0.0, float(item.get("confidence", 0.5))))
+                except (ValueError, TypeError):
+                    conf = 0.5
                 h = Hypothesis(
                     claim=item.get("claim",""), rationale=item.get("rationale",""),
                     predicted_effect=item.get("predicted_effect",""),
                     target_metric=item.get("target_metric","response_quality"),
-                    predicted_delta=float(item.get("predicted_delta", 0.05)),
-                    confidence=min(1.0, max(0.0, float(item.get("confidence", 0.5)))),
+                    predicted_delta=p_delta,
+                    confidence=conf,
                 )
                 h.evidence.append(json.dumps({
                     "mutation_type": item.get("mutation_type", "prompt_injection"),
@@ -629,10 +839,12 @@ class EvolutionEngine:
     def _evolution_loop(self, interval: int):
         time.sleep(30)  # let other systems init
         while self._loop_running:
-            try: self._run_evolution_cycle()
+            try:
+                self._run_evolution_cycle()
             except Exception as e:
-                print(f"[EvolutionEngine] Cycle error: {e}")
-                self._log_event("cycle_error", f"Cycle failed: {e}")
+                tb = traceback.format_exc()
+                print(f"[EvolutionEngine] Cycle error: {e}\n{tb}")
+                self._log_event("cycle_error", f"Cycle failed: {e}\n{tb}")
             for _ in range(interval):  # interruptible sleep
                 if not self._loop_running: break
                 time.sleep(1)
@@ -726,7 +938,10 @@ class EvolutionEngine:
             raw = str(get_reasoning_llm(temperature=0.5).invoke(prompt)).strip()
             s, e = raw.find("["), raw.rfind("]") + 1
             for item in (json.loads(raw[s:e]) if s >= 0 and e > s else [])[:3]:
-                sev = min(1.0, max(0.0, float(item.get("severity", 0.5))))
+                try:
+                    sev = min(1.0, max(0.0, float(item.get("severity", 0.5))))
+                except (ValueError, TypeError):
+                    sev = 0.5
                 gap = CapabilityGap(area=item.get("area","unknown"), description=item.get("description",""),
                                     severity=sev, suggested_fix=item.get("suggested_fix",""), priority=sev)
                 with self._lock: self._capability_gaps[gap.id] = gap

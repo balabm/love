@@ -156,20 +156,49 @@ Plan:
 
 Provide the FULL updated content for {fpath}. Output ONLY the code, nothing else. No markdown blocks, just the raw code.
 """
-                task.logs.append(f"[{time.time()}] Generating code for {fpath}...")
-                new_code = str(llm.invoke(code_prompt))
-                
-                # Clean up markdown if present
-                if new_code.startswith("```"):
-                    lines = new_code.split(chr(10))
-                    if len(lines) > 2:
-                        new_code = chr(10).join(lines[1:-1])
+                import subprocess
+                import shutil
+                import sys
 
-                success = self._write_file(fpath, new_code)
-                if success:
-                    task.logs.append(f"[{time.time()}] Successfully wrote to {fpath}.")
-                else:
-                    task.logs.append(f"[{time.time()}] Failed to write to {fpath}.")
+                max_retries = 3
+                for attempt in range(max_retries):
+                    task.logs.append(f"[{time.time()}] Generating code for {fpath} (Attempt {attempt+1})...")
+                    new_code = str(llm.invoke(code_prompt))
+                    
+                    # Clean up markdown if present
+                    if new_code.startswith("```"):
+                        lines = new_code.split(chr(10))
+                        if len(lines) > 2:
+                            new_code = chr(10).join(lines[1:-1])
+
+                    # 3.1 Sandbox & Syntax Check
+                    tmp_fpath = fpath + ".tmp"
+                    self._write_file(tmp_fpath, new_code)
+                    
+                    if fpath.endswith(".py"):
+                        try:
+                            # Run python compile to check syntax
+                            subprocess.check_output([sys.executable, "-m", "py_compile", tmp_fpath], stderr=subprocess.STDOUT)
+                            syntax_ok = True
+                        except subprocess.CalledProcessError as e:
+                            syntax_ok = False
+                            error_msg = e.output.decode('utf-8', errors='ignore')
+                            task.logs.append(f"[{time.time()}] Syntax error on {fpath}: {error_msg.strip()}")
+                            code_prompt += f"\n\nWait, the previous code had a syntax error:\n```\n{error_msg}\n```\nPlease fix the syntax error and output the FULL updated content again."
+                    else:
+                        syntax_ok = True
+                        
+                    if syntax_ok:
+                        # 3.2 Backup and Overwrite
+                        if os.path.exists(fpath):
+                            shutil.copy2(fpath, fpath + ".bak")
+                        os.replace(tmp_fpath, fpath)
+                        task.logs.append(f"[{time.time()}] Successfully validated and wrote to {fpath}.")
+                        break
+                    elif attempt == max_retries - 1:
+                        task.logs.append(f"[{time.time()}] Failed to generate valid syntax for {fpath} after {max_retries} attempts.")
+                        if os.path.exists(tmp_fpath):
+                            os.remove(tmp_fpath)
 
             task.status = "review"
             task.completed_at = time.time()

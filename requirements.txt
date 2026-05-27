@@ -21,6 +21,9 @@ sentence-transformers>=2.2.2
 pyyaml>=6.0.1
 python-dotenv>=1.0.0
 
+# MCP (Model Context Protocol) Integration
+mcp>=0.1.0
+
 # Finance & Market Data
 requests>=2.31.0
 # Optional: For real-time market data

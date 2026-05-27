@@ -10,6 +10,8 @@ import json
 import subprocess
 import traceback
 import hashlib
+import threading
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, List, Any
@@ -22,9 +24,25 @@ DATA_DIR = PROJECT_ROOT / "data"
 CRASH_LOG_DIR = DATA_DIR / "crashes"
 API_LOG_FILE = DATA_DIR / "api.log"
 ERROR_LOG_FILE = DATA_DIR / "error.log"
+EVOLUTION_LOG_DIR = PROJECT_ROOT / "logs"
+EVOLUTION_LOG_FILE = EVOLUTION_LOG_DIR / "evolution.log"
 
 # Ensure directories exist
 CRASH_LOG_DIR.mkdir(parents=True, exist_ok=True)
+EVOLUTION_LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Module-level reentrant lock for thread safety
+evolution_lock = threading.RLock()
+
+# Configure logging for evolution module -> logs/evolution.log
+evolution_logger = logging.getLogger("evolution")
+evolution_logger.setLevel(logging.ERROR)
+if not evolution_logger.handlers:
+    evolution_handler = logging.FileHandler(EVOLUTION_LOG_FILE)
+    evolution_handler.setFormatter(
+        logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    )
+    evolution_logger.addHandler(evolution_handler)
 
 class CrashMonitor:
     """Monitors logs and stderr for crashes and exceptions."""
@@ -54,40 +72,37 @@ class CrashMonitor:
         """Parse a log file for tracebacks and exceptions."""
         crashes = []
         
-        try:
-            with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                content = f.read()
+        with evolution_lock:
+            try:
+                with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
                 
-            # Find tracebacks using regex
-            traceback_pattern = r'(Traceback \(most recent call last\):.*?)(?:\n\n|\Z)'
-            matches = re.finditer(traceback_pattern, content, re.DOTALL)
-            
-            for match in matches:
-                tb_text = match.group(1)
-                crash_id = self._generate_crash_id(tb_text)
+                # Find tracebacks using regex
+                traceback_pattern = r'(Traceback \(most recent call last\):.*?)(?:\n\n|\Z)'
+                matches = re.finditer(traceback_pattern, content, re.DOTALL)
+                for match in matches:
+                    tb_text = match.group(1)
+                    crash_id = self._generate_crash_id(tb_text)
+                    # Skip if already processed
+                    if self._is_crash_processed(crash_id):
+                        continue
+                    crash = {
+                        "id": crash_id,
+                        "timestamp": datetime.now().isoformat(),
+                        "source": source,
+                        "traceback": tb_text,
+                        "file_path": self._extract_error_file(tb_text),
+                        "error_line": self._extract_error_line(tb_text),
+                        "error_type": self._extract_error_type(tb_text),
+                        "status": "detected",
+                        "fix_proposed": None,
+                        "fix_applied": False
+                    }
+                    crashes.append(crash)
+                    self._save_crash(crash)
+            except Exception as e:
+                evolution_logger.error(f"Error parsing log file {log_file}", exc_info=True)
                 
-                # Skip if already processed
-                if self._is_crash_processed(crash_id):
-                    continue
-                    
-                crash = {
-                    "id": crash_id,
-                    "timestamp": datetime.now().isoformat(),
-                    "source": source,
-                    "traceback": tb_text,
-                    "file_path": self._extract_error_file(tb_text),
-                    "error_line": self._extract_error_line(tb_text),
-                    "error_type": self._extract_error_type(tb_text),
-                    "status": "detected",
-                    "fix_proposed": None,
-                    "fix_applied": False
-                }
-                crashes.append(crash)
-                self._save_crash(crash)
-                
-        except Exception as e:
-            print(f"Error parsing log file {log_file}: {e}")
-            
         return crashes
     
     def _generate_crash_id(self, traceback_text: str) -> str:
@@ -101,9 +116,10 @@ class CrashMonitor:
     
     def _save_crash(self, crash: Dict[str, Any]):
         """Save crash details to file."""
-        crash_file = CRASH_LOG_DIR / f"{crash['id']}.json"
-        with open(crash_file, 'w') as f:
-            json.dump(crash, f, indent=2)
+        with evolution_lock:
+            crash_file = CRASH_LOG_DIR / f"{crash['id']}.json"
+            with open(crash_file, 'w') as f:
+                json.dump(crash, f, indent=2)
             
     def _extract_error_file(self, traceback_text: str) -> Optional[str]:
         """Extract the file path where error occurred."""
@@ -154,6 +170,7 @@ class FixProposer:
                 with open(file_path, 'r') as f:
                     file_content = f.read()
             except Exception as e:
+                evolution_logger.error(f"Could not read file {file_path} for crash analysis", exc_info=True)
                 file_content = f"[Could not read file: {e}]"
                 
         # Build the prompt for Qwen
@@ -218,6 +235,7 @@ Rules:
             return fix_data
             
         except Exception as e:
+            evolution_logger.error(f"Error analyzing crash {crash.get('id', 'unknown')}", exc_info=True)
             error_fix = {
                 "analysis": f"Error analyzing crash: {str(e)}",
                 "root_cause": "Analysis failed",
@@ -234,9 +252,10 @@ Rules:
     
     def _update_crash_file(self, crash: Dict[str, Any]):
         """Update crash file with fix proposal."""
-        crash_file = CRASH_LOG_DIR / f"{crash['id']}.json"
-        with open(crash_file, 'w') as f:
-            json.dump(crash, f, indent=2)
+        with evolution_lock:
+            crash_file = CRASH_LOG_DIR / f"{crash['id']}.json"
+            with open(crash_file, 'w') as f:
+                json.dump(crash, f, indent=2)
 
 
 class FixApplicator:
@@ -323,44 +342,47 @@ class FixApplicator:
     
     def _create_backup(self, file_path: str) -> Path:
         """Create timestamped backup of file."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = Path(file_path).name
-        backup_path = self.backup_dir / f"{filename}.{timestamp}.bak"
-        
-        with open(file_path, 'r') as src:
-            content = src.read()
-        with open(backup_path, 'w') as dst:
-            dst.write(content)
+        with evolution_lock:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = Path(file_path).name
+            backup_path = self.backup_dir / f"{filename}.{timestamp}.bak"
             
+            with open(file_path, 'r') as src:
+                content = src.read()
+            with open(backup_path, 'w') as dst:
+                dst.write(content)
+                
         return backup_path
     
     def rollback(self, crash_id: str) -> Dict[str, Any]:
         """Rollback a fix using backup."""
-        crash_file = CRASH_LOG_DIR / f"{crash_id}.json"
-        
-        with open(crash_file, 'r') as f:
-            crash = json.load(f)
+        with evolution_lock:
+            crash_file = CRASH_LOG_DIR / f"{crash_id}.json"
             
-        backup_path = crash.get("backup_path")
-        if not backup_path or not os.path.exists(backup_path):
-            return {"success": False, "error": "Backup not found"}
-            
-        file_path = crash.get("file_path")
-        
-        try:
-            with open(backup_path, 'r') as src:
-                content = src.read()
-            with open(file_path, 'w') as dst:
-                dst.write(content)
+            with open(crash_file, 'r') as f:
+                crash = json.load(f)
                 
-            crash["status"] = "rolled_back"
-            with open(crash_file, 'w') as f:
-                json.dump(crash, f, indent=2)
+            backup_path = crash.get("backup_path")
+            if not backup_path or not os.path.exists(backup_path):
+                return {"success": False, "error": "Backup not found"}
                 
-            return {"success": True, "message": f"Rolled back {file_path}"}
+            file_path = crash.get("file_path")
             
-        except Exception as e:
-            return {"success": False, "error": f"Rollback failed: {str(e)}"}
+            try:
+                with open(backup_path, 'r') as src:
+                    content = src.read()
+                with open(file_path, 'w') as dst:
+                    dst.write(content)
+                    
+                crash["status"] = "rolled_back"
+                with open(crash_file, 'w') as f:
+                    json.dump(crash, f, indent=2)
+                    
+                return {"success": True, "message": f"Rolled back {file_path}"}
+                
+            except Exception as e:
+                evolution_logger.error(f"Rollback failed for crash {crash_id}", exc_info=True)
+                return {"success": False, "error": f"Rollback failed: {str(e)}"}
 
 
 class PackageInstaller:
@@ -387,7 +409,8 @@ Example response: requests, pandas, numpy
             # Parse comma-separated packages
             packages = [p.strip() for p in response.split(',') if p.strip()]
             return packages
-        except Exception:
+        except Exception as e:
+            evolution_logger.error("Error finding missing packages", exc_info=True)
             return []
     
     def is_installed(self, package: str) -> bool:
@@ -429,8 +452,10 @@ Example response: requests, pandas, numpy
                 }
                 
         except subprocess.TimeoutExpired:
+            evolution_logger.error(f"Package installation timed out: {package}", exc_info=True)
             return {"success": False, "error": "Installation timed out"}
         except Exception as e:
+            evolution_logger.error(f"Error installing package {package}", exc_info=True)
             return {"success": False, "error": str(e)}
     
     def _update_requirements(self, package: str):
@@ -634,6 +659,7 @@ Be specific and practical. Only suggest changes that are safe and measurable."""
             return analysis
             
         except Exception as e:
+            evolution_logger.error(f"Error analyzing {file_path} for optimization", exc_info=True)
             return {
                 "optimizations_found": False,
                 "error": str(e),
@@ -704,15 +730,16 @@ Be specific and practical. Only suggest changes that are safe and measurable."""
         }
         
         # Save to log
-        if self.optimization_log.exists():
-            with open(self.optimization_log, 'r') as f:
-                history = json.load(f)
-        else:
-            history = []
-        
-        history.append(log_entry)
-        with open(self.optimization_log, 'w') as f:
-            json.dump(history[-10:], f, indent=2)  # Keep last 10
+        with evolution_lock:
+            if self.optimization_log.exists():
+                with open(self.optimization_log, 'r') as f:
+                    history = json.load(f)
+            else:
+                history = []
+            
+            history.append(log_entry)
+            with open(self.optimization_log, 'w') as f:
+                json.dump(history[-10:], f, indent=2)  # Keep last 10
         
         return {
             "ran": True,

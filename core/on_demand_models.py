@@ -70,7 +70,7 @@ def _check_ollama_model(model_name: str) -> bool:
     """Check if an Ollama model is pulled locally."""
     try:
         import requests
-        resp = requests.get("http://localhost:11434/api/tags", timeout=3)
+        resp = requests.get("http://127.0.0.1:11434/api/tags", timeout=3)
         if resp.status_code == 200:
             models = resp.json().get("models", [])
             return any(m.get("name", "").startswith(model_name) for m in models)
@@ -140,7 +140,7 @@ def _run_ollama_vision(image_path: str, prompt: str = "Describe this image.") ->
     with open(image_path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
     resp = requests.post(
-        "http://localhost:11434/api/generate",
+        "http://127.0.0.1:11434/api/generate",
         json={"model": "llava", "prompt": prompt, "images": [b64], "stream": False},
         timeout=60
     )

@@ -20,8 +20,11 @@ from typing import Dict, List, Optional, Any
 from threading import Lock
 
 DATA_DIR = Path(__file__).parent.parent / "data"
-CREDS_PATH = Path(os.getenv("GOOGLE_CREDENTIALS_PATH", "./credentials.json"))
-TOKEN_PATH = Path(os.getenv("GOOGLE_TOKEN_PATH", "./data/google_token.json"))
+def get_creds_path():
+    return Path(os.getenv("GOOGLE_CREDENTIALS_PATH", "./credentials.json"))
+
+def get_token_path():
+    return Path(os.getenv("GOOGLE_TOKEN_PATH", "./data/google_token.json"))
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar.readonly",
@@ -68,8 +71,8 @@ class GoogleServices:
         return {
             "connected": self._connected,
             "packages_installed": packages_ok,
-            "credentials_file_exists": CREDS_PATH.exists(),
-            "token_file_exists": TOKEN_PATH.exists(),
+            "credentials_file_exists": get_creds_path().exists(),
+            "token_file_exists": get_token_path().exists(),
             "error": self._last_error,
             "setup_instructions": (
                 "1. Visit https://console.cloud.google.com\n"
@@ -88,14 +91,16 @@ class GoogleServices:
         """
         try:
             from google_auth_oauthlib.flow import InstalledAppFlow
-            if not CREDS_PATH.exists():
-                return {"success": False, "error": f"credentials.json not found at {CREDS_PATH}"}
+            creds_path = get_creds_path()
+            if not creds_path.exists():
+                return {"success": False, "error": f"credentials.json not found at {creds_path}"}
 
-            flow = InstalledAppFlow.from_client_secrets_file(str(CREDS_PATH), SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(str(creds_path), SCOPES)
             creds = flow.run_local_server(port=0)
 
-            TOKEN_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with open(TOKEN_PATH, "w") as f:
+            token_path = get_token_path()
+            token_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(token_path, "w") as f:
                 f.write(creds.to_json())
 
             self._creds = creds
@@ -121,14 +126,15 @@ class GoogleServices:
             return
 
         try:
-            if not TOKEN_PATH.exists():
+            token_path = get_token_path()
+            if not token_path.exists():
                 return
 
-            creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+            creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
 
             if creds.expired and creds.refresh_token:
                 creds.refresh(Request())
-                with open(TOKEN_PATH, "w") as f:
+                with open(token_path, "w") as f:
                     f.write(creds.to_json())
 
             self._creds = creds

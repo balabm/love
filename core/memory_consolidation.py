@@ -13,27 +13,32 @@ Runs automatically via idle_mind or cron.
 """
 
 import json
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 
+def _retry_with_backoff(func: Callable, max_retries: int = 3) -> Any:
+    """
+    Retry a function with exponential backoff (2s, 4s, 8s).
+    Used for HTTP client calls to Ollama that may experience transient timeouts.
+    """
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            if attempt == max_retries - 1:
+                raise
+            wait_time = 2 ** (attempt + 1)
+            print(f"[Consolidation] Retry {attempt + 1}/{max_retries} after {wait_time}s error: {e}")
+            time.sleep(wait_time)
+
 
 def _get_recent_conversations(hours: int = 24) -> List[Dict[str, Any]]:
-    """Pull recent conversation turns from memory log or ChromaDB."""
-    try:
-        from core.memory import recall_memory
-        # Try to get recent turns
-        results = recall_memory("recent conversations", mode="general", n=50)
-        if results:
-            # Parse results — they may be structured
-            return results if isinstance(results, list) else [results]
-    except Exception:
-        pass
-
-    # Fallback: read conversation log file
+    """Pull recent conversation turns from the structured conversation log."""
     log_file = DATA_DIR / "conversations.jsonl"
     if not log_file.exists():
         return []
@@ -41,18 +46,20 @@ def _get_recent_conversations(hours: int = 24) -> List[Dict[str, Any]]:
     cutoff = datetime.now() - timedelta(hours=hours)
     conversations = []
     try:
-        with open(log_file, "r") as f:
+        with open(log_file, "r", encoding="utf-8") as f:
             for line in f:
-                entry = json.loads(line)
-                ts = entry.get("timestamp", "")
+                if not line.strip():
+                    continue
                 try:
+                    entry = json.loads(line)
+                    ts = entry.get("timestamp", "")
                     dt = datetime.fromisoformat(ts)
                     if dt >= cutoff:
                         conversations.append(entry)
                 except Exception:
                     pass
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Consolidation] Error reading log file: {e}")
     return conversations
 
 
@@ -69,7 +76,7 @@ def _extract_events_from_conversations(conversations: List[Dict]) -> List[Dict[s
         love_text = conv.get("love", "")
         ts = conv.get("timestamp", "")
 
-        # Detect major themes
+        # Detect major themes (expanded)
         themes = []
         if any(w in user_text.lower() for w in ["stressed", "overwhelmed", "anxious", "burnout"]):
             themes.append("stress")
@@ -81,13 +88,24 @@ def _extract_events_from_conversations(conversations: List[Dict]) -> List[Dict[s
             themes.append("milestone")
         if any(w in user_text.lower() for w in ["sick", "tired", "headache", "sleep", "health"]):
             themes.append("health")
+        if any(w in user_text.lower() for w in ["code", "coding", "python", "build", "project", "agi", "system"]):
+            themes.append("coding")
+        if any(w in user_text.lower() for w in ["family", "brother", "sister", "friend", "visiting", "plan"]):
+            themes.append("personal")
+        if any(w in user_text.lower() for w in ["ship", "deadline", "goal", "want to", "need to"]):
+            themes.append("goals")
+        if any(w in user_text.lower() for w in ["work", "office", "job", "task", "assignment"]):
+            themes.append("work")
+        if any(w in user_text.lower() for w in ["thanks", "helped", "better", "appreciate"]):
+            themes.append("gratitude")
 
         # Check if this continues current event or starts new one
         if current_event and themes and any(t in current_event["themes"] for t in themes):
             current_event["entries"].append(conv)
             current_event["themes"] = list(set(current_event["themes"] + themes))
         else:
-            if current_event and len(current_event["entries"]) >= 2:
+            # Save current event (keep ALL events, even single-turn ones)
+            if current_event:
                 events.append(current_event)
             current_event = {
                 "start_time": ts,
@@ -95,113 +113,121 @@ def _extract_events_from_conversations(conversations: List[Dict]) -> List[Dict[s
                 "themes": themes or ["general"],
             }
 
-    if current_event and len(current_event["entries"]) >= 1:
+    if current_event:
         events.append(current_event)
 
     return events
 
 
 def _summarize_event(event: Dict[str, Any]) -> Dict[str, Any]:
-    """Use LLM to summarize a cluster of conversations into an episodic memory."""
+    """Summarize a cluster of conversations into an episodic memory.
+    Uses LLM if available (with a short timeout), otherwise uses rich rule-based extraction.
+    """
+    entries_text = "\n".join([
+        f"Karthi: {e.get('user', '')[:200]}\nLOVE: {e.get('love', '')[:200]}"
+        for e in event["entries"][:10]
+    ])
+
+    # --- Rule-based analysis (always runs, used as fallback or enrichment) ---
+    import re
+
+    # Extract people
+    people = set()
+    for m in re.finditer(r'\b([A-Z][a-z]{2,})\b', entries_text):
+        name = m.group(1)
+        if name not in {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
+                        "Saturday", "Sunday", "January", "February", "March",
+                        "April", "May", "June", "July", "August", "September",
+                        "October", "November", "December", "Love", "Karthi",
+                        "I", "You", "We", "They", "He", "She", "It", "The", "This", "That",
+                        "User", "When", "What", "Where", "Why", "How", "But", "And",
+                        "Not", "Also", "Just", "Like", "Really", "Very"}:
+            people.add(name)
+
+    # Detect emotion
+    text_lower = entries_text.lower()
+    emotion_scores = {"stressed": 0, "excited": 0, "proud": 0, "concerned": 0, "sad": 0, "content": 0}
+    for theme in event["themes"]:
+        if theme == "stress": emotion_scores["stressed"] += 1
+        elif theme == "excitement": emotion_scores["excited"] += 1
+        elif theme == "milestone": emotion_scores["proud"] += 1
+        elif theme == "health": emotion_scores["concerned"] += 1
+    if any(w in text_lower for w in ["happy", "great", "awesome", "love", "excited"]):
+        emotion_scores["content"] += 1
+    if any(w in text_lower for w in ["sad", "down", "depressed", "lonely"]):
+        emotion_scores["sad"] += 1
+    emotion = max(emotion_scores.items(), key=lambda x: x[1])[0] if any(emotion_scores.values()) else "neutral"
+
+    # Calculate importance
+    importance = 0.5
+    if len(event["entries"]) > 5: importance += 0.2
+    if "milestone" in event["themes"]: importance += 0.3
+    if emotion in {"stressed", "excited", "proud"}: importance += 0.1
+    if len(people) > 0: importance += 0.1
+    importance = min(importance, 1.0)
+
+    # Build a smart summary from the actual text
+    user_texts = [e.get("user", "") for e in event["entries"]]
+    themes = ", ".join(event["themes"])
+    n_turns = len(event["entries"])
+    ts_str = event.get("start_time", "")[:16]
+
+    # Extract key phrases from user messages
+    all_user = " ".join(user_texts)
+    key_topics = set()
+    # Find noun phrases and important terms
+    for pattern in [r'\b(?:building|working on|developing|coding|shipping|deploying|fixing|debugging)\s+(\w+(?:\s+\w+)?)',
+                    r'\b(?:project|app|system|module|feature|code)\s+(\w+)',
+                    r'\b(?:AGI|LOVE|Python|React|API|UI|LLM|Ollama)\b']:
+        for m in re.finditer(pattern, all_user, re.IGNORECASE):
+            key_topics.add(m.group(0).strip())
+
+    people_str = f" involving {', '.join(people)}" if people else ""
+    topic_str = f" Topics discussed: {', '.join(list(key_topics)[:4])}." if key_topics else ""
+
+    # Build the summary
+    first_user_msg = user_texts[0][:120] if user_texts else ""
+    summary = f"On {ts_str}, Karthi had a {n_turns}-turn conversation about {themes}{people_str}. "
+    summary += f'It started with: "{first_user_msg}..."'
+    if emotion != "neutral":
+        summary += f" Karthi's emotional state was {emotion}."
+    if topic_str:
+        summary += topic_str
+
+    # Try LLM-based summarization with a short timeout
     try:
         from core.llm import get_reasoning_llm
-        from core.context_engine import get_live_context
-        llm = get_reasoning_llm(temperature=0.3, max_tokens=300)
+        import concurrent.futures
 
-        entries_text = "\n".join([
-            f"Karthi: {e.get('user', '')[:200]}\nLOVE: {e.get('love', '')[:200]}"
-            for e in event["entries"][:10]
-        ])
-
-        # Add context to prompt for richer summaries
-        try:
-            ctx = get_live_context()
-            context_str = f"\nContext: Working on {ctx.active_project or 'unknown'}, mood: {ctx.mood_score or 'unknown'}, activity: {ctx.activity or 'unknown'}"
-        except Exception:
-            context_str = ""
-
-        prompt = f"""Summarize this conversation cluster into ONE concise episodic memory.
-Include: what happened, Karthi's emotional state, any key people mentioned, and significance.
-{context_str}
+        def _llm_summarize():
+            llm = get_reasoning_llm(temperature=0.3, max_tokens=200)
+            prompt = f"""Summarize this conversation cluster into ONE concise episodic memory.
+Include: what happened, Karthi's emotional state, significance.
 
 Conversations:
-{entries_text}
+{entries_text[:1500]}
 
-Format: One paragraph, past tense, specific."""
+Format: One paragraph, past tense, specific, 2-3 sentences max."""
+            return llm.invoke(prompt).strip()
 
-        summary = llm.invoke(prompt).strip()
-
-        # Extract emotion with enhanced detection
-        emotion = "neutral"
-        emotion_scores = {"stressed": 0, "excited": 0, "proud": 0, "concerned": 0, "sad": 0, "content": 0}
-        
-        for theme in event["themes"]:
-            if theme == "stress":
-                emotion_scores["stressed"] += 1
-            elif theme == "excitement":
-                emotion_scores["excited"] += 1
-            elif theme == "milestone":
-                emotion_scores["proud"] += 1
-            elif theme == "health":
-                emotion_scores["concerned"] += 1
-        
-        # Check text for emotional indicators
-        text_lower = entries_text.lower()
-        if any(w in text_lower for w in ["happy", "great", "awesome", "love", "excited"]):
-            emotion_scores["content"] += 1
-        if any(w in text_lower for w in ["sad", "down", "depressed", "lonely"]):
-            emotion_scores["sad"] += 1
-        
-        # Get highest scoring emotion
-        emotion = max(emotion_scores.items(), key=lambda x: x[1])[0] if any(emotion_scores.values()) else "neutral"
-
-        # Extract people with better filtering
-        people = set()
-        import re
-        for m in re.finditer(r'\b([A-Z][a-z]{2,})\b', entries_text):
-            name = m.group(1)
-            if name not in {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
-                            "Saturday", "Sunday", "January", "February", "March",
-                            "April", "May", "June", "July", "August", "September",
-                            "October", "November", "December", "Love", "Karthi",
-                            "I", "You", "We", "They", "He", "She", "It", "The", "This", "That"}:
-                people.add(name)
-
-        # Calculate importance based on multiple factors
-        importance = 0.5
-        if len(event["entries"]) > 5:
-            importance += 0.2
-        if "milestone" in event["themes"]:
-            importance += 0.3
-        if emotion in {"stressed", "excited", "proud"}:
-            importance += 0.1
-        if len(people) > 0:
-            importance += 0.1
-
-        return {
-            "summary": summary,
-            "emotion": emotion,
-            "intensity": importance,
-            "people": list(people),
-            "tags": event["themes"],
-            "source": "milestone" if "milestone" in event["themes"] else "conversation",
-            "timestamp": event["start_time"],
-            "importance": min(importance, 1.0),
-        }
-
+        with concurrent.futures.ThreadPoolExecutor() as ex:
+            future = ex.submit(_llm_summarize)
+            llm_summary = _retry_with_backoff(lambda: future.result(timeout=45))
+            if llm_summary and len(llm_summary) > 20:
+                summary = llm_summary
     except Exception:
-        # Fallback: simple concatenation
-        themes = ", ".join(event["themes"])
-        return {
-            "summary": f"Conversations about {themes} ({len(event['entries'])} turns)",
-            "emotion": "neutral",
-            "intensity": 0.3,
-            "people": [],
-            "tags": event["themes"],
-            "source": "conversation",
-            "timestamp": event["start_time"],
-            "importance": 0.3,
-        }
+        pass  # Use rule-based summary
+
+    return {
+        "summary": summary,
+        "emotion": emotion,
+        "intensity": importance,
+        "people": list(people),
+        "tags": event["themes"],
+        "source": "milestone" if "milestone" in event["themes"] else "conversation",
+        "timestamp": event["start_time"],
+        "importance": importance,
+    }
 
 
 def _extract_semantic_facts(conversations: List[Dict]) -> List[Dict[str, Any]]:
@@ -314,45 +340,54 @@ def _learn_procedures(conversations: List[Dict]) -> List[Dict[str, Any]]:
     """Learn what responses work for what situations."""
     procedures = []
 
-    for i, conv in enumerate(conversations[:-1]):
+    positive = ["thanks", "helped", "better", "yes", "good point", "that works",
+                "appreciate", "feel better", "makes sense", "smarter", "great", "awesome"]
+    negative = ["no", "not really", "doesn't help", "wrong", "annoying", "stop",
+                "useless", "don't", "terrible", "bad"]
+
+    for i, conv in enumerate(conversations):
         user_text = conv.get("user", "").lower()
         love_response = conv.get("love", "")
-        next_user = conversations[i + 1].get("user", "").lower() if i + 1 < len(conversations) else ""
 
-        # Detect situation
+        # Detect situation (expanded)
         situation = None
-        if any(w in user_text for w in ["stressed", "overwhelmed", "burnout"]):
+        if any(w in user_text for w in ["stressed", "overwhelmed", "burnout", "anxiety"]):
             situation = "Karthi is stressed"
-        elif any(w in user_text for w in ["tired", "exhausted", "sleepy", "no energy"]):
+        elif any(w in user_text for w in ["tired", "exhausted", "sleepy", "no energy", "sleep"]):
             situation = "Karthi is tired"
-        elif any(w in user_text for w in ["excited", "pumped", "great news"]):
+        elif any(w in user_text for w in ["excited", "pumped", "great news", "amazing"]):
             situation = "Karthi is excited"
         elif any(w in user_text for w in ["stuck", "frustrated", "blocked", "not working"]):
             situation = "Karthi is stuck/frustrated"
         elif any(w in user_text for w in ["sad", "down", "depressed", "lonely"]):
             situation = "Karthi is sad"
+        elif any(w in user_text for w in ["coding", "building", "developing", "debugging"]):
+            situation = "Karthi is coding"
+        elif any(w in user_text for w in ["planning", "want to", "goal", "ship"]):
+            situation = "Karthi is planning"
 
         if situation and len(love_response) > 10:
-            # Determine success from next response
-            success = False
-            positive = ["thanks", "helped", "better", "yes", "good point", "that works",
-                        "appreciate", "feel better", "makes sense"]
-            negative = ["no", "not really", "doesn't help", "wrong", "annoying", "stop"]
+            # Look ahead up to 2 turns for feedback
+            success = None
+            for look_ahead in range(1, min(3, len(conversations) - i)):
+                next_user = conversations[i + look_ahead].get("user", "").lower()
+                if any(p in next_user for p in positive):
+                    success = True
+                    break
+                elif any(n in next_user for n in negative):
+                    success = False
+                    break
 
-            if any(p in next_user for p in positive):
-                success = True
-            elif any(n in next_user for n in negative):
-                success = False
-            else:
-                success = None  # Ambiguous
+            # Store all procedures — ambiguous ones get neutral success
+            if success is None:
+                success = True  # Assume neutral-to-positive if no explicit negative feedback
 
-            if success is not None:
-                action = love_response[:200]  # Truncate
-                procedures.append({
-                    "situation": situation,
-                    "action": action,
-                    "success": success,
-                })
+            action = love_response[:200]
+            procedures.append({
+                "situation": situation,
+                "action": action,
+                "success": success,
+            })
 
     return procedures
 
@@ -367,118 +402,159 @@ def consolidate_period(hours: int = 24) -> Dict[str, Any]:
     conversations = _get_recent_conversations(hours)
     if not conversations:
         return {"processed": 0, "created": 0, "message": "No conversations to consolidate"}
-
-    events = _extract_events_from_conversations(conversations)
-    created_memories = 0
-    types_breakdown = {"episodic": 0, "semantic": 0, "procedural": 0}
-
-    # 1. Create episodic memories with importance scoring
+    
     try:
-        from core.long_term_memory import add_episodic
-        for event in events:
-            summary = _summarize_event(event)
-            add_episodic(
-                summary=summary["summary"],
-                detail=f"Consolidated from {len(event['entries'])} conversation turns",
-                timestamp=summary["timestamp"],
-                emotion=summary["emotion"],
-                intensity=summary["intensity"],
-                people=summary["people"],
-                tags=summary["tags"],
-                source=summary["source"],
-                importance=summary.get("importance", 0.5),
-            )
-            created_memories += 1
-            types_breakdown["episodic"] += 1
-    except Exception as e:
-        print(f"[Consolidation] Episodic error: {e}")
+        events = _extract_events_from_conversations(conversations)
+        created_memories = 0
+        types_breakdown = {"episodic": 0, "semantic": 0, "procedural": 0}
 
-    # 2. Extract semantic facts with cross-referencing
-    try:
-        from core.long_term_memory import add_semantic
-        from core.doc_analyst import get_analyst
-        facts = _extract_semantic_facts(conversations)
-        
-        # Cross-reference with project context
+        # 1. Create episodic memories with importance scoring
         try:
-            analyst = get_analyst()
-            project = analyst.get_active_project()
-            if project:
-                # Add project context to work-related facts
-                for fact in facts:
-                    if fact["category"] == "work":
-                        fact["project_context"] = project
+            from core.long_term_memory import add_episodic
+            for event in events:
+                summary = _summarize_event(event)
+                add_episodic(
+                    summary=summary["summary"],
+                    detail=f"Consolidated from {len(event['entries'])} conversation turns",
+                    timestamp=summary["timestamp"],
+                    emotion=summary["emotion"],
+                    intensity=summary["intensity"],
+                    people=summary["people"],
+                    tags=summary["tags"],
+                    source=summary["source"],
+                    importance=summary.get("importance", 0.5),
+                )
+                created_memories += 1
+                types_breakdown["episodic"] += 1
+        except Exception as e:
+            print(f"[Consolidation] Episodic error: {e}")
+
+        # 2. Extract semantic facts with cross-referencing
+        try:
+            from core.long_term_memory import add_semantic
+            from core.doc_analyst import get_analyst
+            facts = _extract_semantic_facts(conversations)
+            
+            # Cross-reference with project context
+            try:
+                analyst = _retry_with_backoff(get_analyst)
+                project = analyst.get_active_project()
+                if project:
+                    # Add project context to work-related facts
+                    for fact in facts:
+                        if fact["category"] == "work":
+                            fact["project_context"] = project
+            except Exception:
+                pass
+            
+            for fact in facts:
+                add_semantic(
+                    category=fact["category"],
+                    subject=fact["subject"],
+                    predicate=fact["predicate"],
+                    obj=fact["object"],
+                    confidence=fact["confidence"],
+                    source="consolidation",
+                    metadata={"project_context": fact.get("project_context")} if fact.get("project_context") else None,
+                )
+                created_memories += 1
+                types_breakdown["semantic"] += 1
+        except Exception as e:
+            print(f"[Consolidation] Semantic error: {e}")
+
+        # 3. Learn procedures with success rate tracking
+        try:
+            from core.long_term_memory import add_procedural
+            procedures = _learn_procedures(conversations)
+            
+            # Calculate success rates per situation
+            success_rates = {}
+            for proc in procedures:
+                situation = proc["situation"]
+                if situation not in success_rates:
+                    success_rates[situation] = {"success": 0, "total": 0}
+                success_rates[situation]["total"] += 1
+                if proc["success"]:
+                    success_rates[situation]["success"] += 1
+            
+            for proc in procedures:
+                situation = proc["situation"]
+                success_rate = success_rates[situation]["success"] / success_rates[situation]["total"] if success_rates[situation]["total"] > 0 else 0
+                add_procedural(
+                    situation=proc["situation"],
+                    action=proc["action"],
+                    success=proc["success"],
+                    metadata={"success_rate": success_rate, "total_attempts": success_rates[situation]["total"]},
+                )
+                created_memories += 1
+                types_breakdown["procedural"] += 1
+        except Exception as e:
+            print(f"[Consolidation] Procedural error: {e}")
+
+        # Log consolidation
+        try:
+            from core.long_term_memory import _db
+            with _db() as conn:
+                conn.execute("""
+                    INSERT INTO consolidation_log (date, conversations_processed, memories_created, types_breakdown)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    datetime.now().isoformat(),
+                    len(conversations),
+                    created_memories,
+                    json.dumps(types_breakdown),
+                ))
         except Exception:
             pass
-        
-        for fact in facts:
-            add_semantic(
-                category=fact["category"],
-                subject=fact["subject"],
-                predicate=fact["predicate"],
-                obj=fact["object"],
-                confidence=fact["confidence"],
-                source="consolidation",
-                metadata={"project_context": fact.get("project_context")} if fact.get("project_context") else None,
-            )
-            created_memories += 1
-            types_breakdown["semantic"] += 1
+
+        return {
+            "processed": len(conversations),
+            "events": len(events),
+            "created": created_memories,
+            "types_breakdown": types_breakdown,
+            "message": f"Consolidated {len(conversations)} conversations into {created_memories} memories",
+        }
+    
     except Exception as e:
-        print(f"[Consolidation] Semantic error: {e}")
-
-    # 3. Learn procedures with success rate tracking
-    try:
-        from core.long_term_memory import add_procedural
-        procedures = _learn_procedures(conversations)
+        print(f"[Consolidation] Complete failure: {e}")
+        # Fallback: write to backlog
+        try:
+            backlog_file = DATA_DIR / "memory" / "backlog.json"
+            backlog_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            backlog_data = {
+                "timestamp": datetime.now().isoformat(),
+                "conversations": conversations,
+                "reason": "consolidation_failed"
+            }
+            
+            if backlog_file.exists():
+                try:
+                    with open(backlog_file, "r", encoding="utf-8") as f:
+                        existing = json.load(f)
+                    if isinstance(existing, list):
+                        existing.append(backlog_data)
+                    else:
+                        existing = [existing, backlog_data]
+                except Exception:
+                    existing = [backlog_data]
+            else:
+                existing = [backlog_data]
+            
+            with open(backlog_file, "w", encoding="utf-8") as f:
+                json.dump(existing, f, indent=2, ensure_ascii=False)
+            
+            print(f"[Consolidation] Fallback: wrote {len(conversations)} conversations to backlog")
+        except Exception as fallback_error:
+            print(f"[Consolidation] Fallback also failed: {fallback_error}")
         
-        # Calculate success rates per situation
-        success_rates = {}
-        for proc in procedures:
-            situation = proc["situation"]
-            if situation not in success_rates:
-                success_rates[situation] = {"success": 0, "total": 0}
-            success_rates[situation]["total"] += 1
-            if proc["success"]:
-                success_rates[situation]["success"] += 1
-        
-        for proc in procedures:
-            situation = proc["situation"]
-            success_rate = success_rates[situation]["success"] / success_rates[situation]["total"] if success_rates[situation]["total"] > 0 else 0
-            add_procedural(
-                situation=proc["situation"],
-                action=proc["action"],
-                success=proc["success"],
-                metadata={"success_rate": success_rate, "total_attempts": success_rates[situation]["total"]},
-            )
-            created_memories += 1
-            types_breakdown["procedural"] += 1
-    except Exception as e:
-        print(f"[Consolidation] Procedural error: {e}")
-
-    # Log consolidation
-    try:
-        from core.long_term_memory import _db
-        with _db() as conn:
-            conn.execute("""
-                INSERT INTO consolidation_log (date, conversations_processed, memories_created, types_breakdown)
-                VALUES (?, ?, ?, ?)
-            """, (
-                datetime.now().isoformat(),
-                len(conversations),
-                created_memories,
-                json.dumps(types_breakdown),
-            ))
-    except Exception:
-        pass
-
-    return {
-        "processed": len(conversations),
-        "events": len(events),
-        "created": created_memories,
-        "types_breakdown": types_breakdown,
-        "message": f"Consolidated {len(conversations)} conversations into {created_memories} memories",
-    }
-
+        return {
+            "processed": len(conversations),
+            "created": 0,
+            "types_breakdown": {"episodic": 0, "semantic": 0, "procedural": 0},
+            "message": f"Consolidation failed, wrote to backlog: {len(conversations)} conversations",
+            "fallback": True,
+        }
 
 def should_run_consolidation() -> bool:
     """Run once per day, ideally at night (10 PM - 6 AM)."""

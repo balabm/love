@@ -534,7 +534,7 @@ Return your reflection as a JSON:
             cognitive_state = self.monitor_cognitive_state()
             
             # Suggest improvements based on cognitive state
-            if cognitive_state == CognitiveState.OVERLOAD:
+            if cognitive_state == CognitiveState.OVERWHELMED:
                 suggestions.append({
                     "type": "cognitive_load",
                     "priority": "high",

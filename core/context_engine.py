@@ -88,6 +88,10 @@ class LiveContext:
     def pc_battery(self):
         return self.battery
 
+    @property
+    def cpu_percent(self):
+        return self.system_cpu
+
 class ContextEngine:
     """
     Master context fusion engine.

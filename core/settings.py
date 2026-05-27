@@ -87,7 +87,7 @@ class ModelsConfig:
     reasoning: str = "deepseek-r1:7b"
     coding: str = "qwen2.5-coder:7b"
     embedding: str = "nomic-embed-text"
-    base_url: str = "http://localhost:11434"
+    base_url: str = "http://127.0.0.1:11434"
 
 
 @dataclass

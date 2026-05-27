@@ -195,6 +195,14 @@ def start_living_substrate() -> Dict[str, Any]:
         status["ignition_daemon"] = "ok"
     except Exception as e:
         status["ignition_daemon"] = f"err:{e}"
+
+    # 9. Rollout planner
+    try:
+        from core.rollout_planner import get_rollout_planner
+        get_rollout_planner()
+        status["rollout_planner"] = "ok"
+    except Exception as e:
+        status["rollout_planner"] = f"err:{e}"
     print(f"[LivingSubstrate] startup status: {status}")
     return status
 
@@ -256,4 +264,10 @@ def substrate_snapshot() -> Dict[str, Any]:
         snap["global_workspace"] = get_global_workspace().snapshot()
     except Exception as e:
         snap["global_workspace"] = {"err": str(e)}
+    # rollout_planner snapshot
+    try:
+        from core.rollout_planner import get_rollout_planner
+        snap["rollout_planner"] = get_rollout_planner().snapshot()
+    except Exception as e:
+        snap["rollout_planner"] = {"err": str(e)}
     return snap

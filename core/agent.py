@@ -1019,6 +1019,15 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
+    # [PLANNER-PATCH]
+    _plan_ctx = ""
+    try:
+        from core.rollout_planner import get_rollout_planner
+        _planner = get_rollout_planner()
+        _plan_ctx = _planner.get_planning_context(user_input if 'user_input' in dir() else message)
+    except Exception:
+        _plan_ctx = ""
+
     # ═══ WAVE 16: NEURAL MESH CONTEXT ═══
     neural_block = ""
     try:
@@ -1135,7 +1144,7 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     except Exception:
         pass
 
-    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{_substrate_context_block}{intel_block}{agent_context_block}{teaching_block}{cognitive_block}{final_instructions}
+    prompt = f"""{system}{crash_note}{device_context}{consciousness_block}{temporal_block}{goals_block}{live_block}{profile_block}{dream_block}{prediction_block}{agi_block}{curiosity_block}{web_block}{adapt_block}{news_block}{kg_block}{flow_block}{pred_block}{emotional_block}{ltm_block}{extra_context}{vision_block}{personality_block}{dna_block}{behavior_mod}{neural_block}{_substrate_context_block}{_plan_ctx}{intel_block}{agent_context_block}{teaching_block}{cognitive_block}{final_instructions}
 
 {USER_NAME}: {user_input}
 {LOVE_NAME}:"""

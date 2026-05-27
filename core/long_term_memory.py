@@ -163,7 +163,7 @@ def _chroma_query(query: str, n: int = 5, collection_name: str = "episodic") -> 
 def add_episodic(summary: str, detail: str = None, timestamp: str = None,
                  emotion: str = None, intensity: float = 0.5,
                  people: List[str] = None, location: str = None,
-                 tags: List[str] = None, source: str = "conversation") -> Dict[str, Any]:
+                 tags: List[str] = None, source: str = "conversation", **kwargs) -> Dict[str, Any]:
     """Add a life event memory."""
     ts = timestamp or _now()
     mem_id = _make_id(summary + ts)
@@ -257,7 +257,7 @@ def get_life_timeline(year: int = None, month: int = None) -> List[Dict]:
 # ── Semantic Memory ────────────────────────────────────────────────────────
 
 def add_semantic(category: str, subject: str, predicate: str, obj: str,
-                 confidence: float = 1.0, source: str = None) -> Dict[str, Any]:
+                 confidence: float = 1.0, source: str = None, metadata: Dict = None, **kwargs) -> Dict[str, Any]:
     """
     Add a fact about Karthi's world.
     Examples:
@@ -326,7 +326,7 @@ def get_karthi_profile() -> Dict[str, Any]:
 # ── Procedural Memory ──────────────────────────────────────────────────────
 
 def add_procedural(situation: str, action: str, outcome: str = None,
-                   success: bool = True) -> Dict[str, Any]:
+                   success: bool = True, metadata: Dict = None, **kwargs) -> Dict[str, Any]:
     """
     Record what LOVE learned about helping Karthi.
     Example:

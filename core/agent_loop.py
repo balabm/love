@@ -26,6 +26,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import pydantic
+from pydantic import BaseModel, ValidationError
+
 
 # ── Data structures ───────────────────────────────────────────────────────────
 
@@ -49,6 +52,74 @@ class LoopResult:
     total_ms: int = 0
     stopped_reason: str = ""   # "final_answer" | "max_steps" | "error"
     error: str = ""
+
+
+# ── Execution Tracker for rate limiting ─────────────────────────────────────────
+
+class ExecutionTracker:
+    """Track tool call frequency to prevent runaway loops."""
+    
+    def __init__(self):
+        self._calls: Dict[str, List[float]] = {}  # tool_name -> list of timestamps
+    
+    def record_call(self, tool_name: str) -> None:
+        """Record a tool call timestamp."""
+        now = time.time()
+        if tool_name not in self._calls:
+            self._calls[tool_name] = []
+        self._calls[tool_name].append(now)
+        
+        # Clean up old calls (older than 60 seconds)
+        self._calls[tool_name] = [t for t in self._calls[tool_name] if now - t <= 60]
+    
+    def is_rate_limited(self, tool_name: str, limit: int = 5, window: int = 60) -> bool:
+        """Check if tool has exceeded rate limit (default: 5 calls in 60 seconds)."""
+        now = time.time()
+        if tool_name not in self._calls:
+            return False
+        
+        # Count calls within the window
+        recent_calls = [t for t in self._calls[tool_name] if now - t <= window]
+        return len(recent_calls) >= limit
+
+
+# Global execution tracker instance
+_execution_tracker = ExecutionTracker()
+
+
+# ── Parameter validation using Pydantic ───────────────────────────────────────────
+
+def _validate_tool_parameters(tool_name: str, parameters: Dict[str, Any], 
+                              parameter_schema: Dict[str, Any]) -> tuple[bool, str]:
+    """
+    Validate tool parameters against a Pydantic schema.
+    
+    Returns:
+        (is_valid, error_message_or_empty_string)
+    """
+    if not parameter_schema:
+        # No schema defined, accept any parameters
+        return True, ""
+    
+    try:
+        # Build a dynamic Pydantic model from the schema
+        fields = {}
+        for param_name, param_desc in parameter_schema.items():
+            # Simple type inference from description
+            if "optional" in str(param_desc).lower():
+                fields[param_name] = (Optional[str], None)
+            else:
+                fields[param_name] = (str, ...)
+        
+        # Create and validate the model
+        DynamicModel = pydantic.create_model(f'{tool_name}_Params', **fields)
+        DynamicModel(**parameters)
+        return True, ""
+    except ValidationError as e:
+        return False, f"Parameter validation failed: {str(e)[:200]}"
+    except Exception as e:
+        # If validation fails for any reason, log it but don't block
+        return False, f"Validation error: {str(e)[:200]}"
 
 
 # ── Trigger detection — when to use the agent loop ───────────────────────────
@@ -251,11 +322,23 @@ def run_agent_loop(
             elif tool_name not in registry.tools:
                 observation = f"Unknown tool '{tool_name}'. Available: {list(registry.tools.keys())[:10]}"
             else:
-                try:
-                    obs_raw = registry.execute_tool(tool_name, tool_params)
-                    observation = str(obs_raw)[:3000]
-                except Exception as e:
-                    observation = f"Tool error: {e}"
+                # Check rate limit
+                if _execution_tracker.is_rate_limited(tool_name):
+                    observation = "Rate limit exceeded for this tool. Pause and rethink your strategy."
+                else:
+                    # Validate parameters
+                    tool_schema = registry.tools[tool_name]["parameters"]
+                    is_valid, validation_error = _validate_tool_parameters(tool_name, tool_params, tool_schema)
+                    
+                    if not is_valid:
+                        observation = validation_error
+                    else:
+                        try:
+                            _execution_tracker.record_call(tool_name)
+                            obs_raw = registry.execute_tool(tool_name, tool_params)
+                            observation = str(obs_raw)[:3000]
+                        except Exception as e:
+                            observation = f"Tool error: {e}"
 
             step = LoopStep(
                 step=step_num,

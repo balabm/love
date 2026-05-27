@@ -201,7 +201,7 @@ def main():
 
     # Preserve existing LLM settings
     if "OLLAMA_BASE_URL" not in env:
-        env["OLLAMA_BASE_URL"] = "http://localhost:11434"
+        env["OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
     if "REASONING_MODEL" not in env:
         env["REASONING_MODEL"] = "deepseek-r1:7b"
     if "CODING_MODEL" not in env:

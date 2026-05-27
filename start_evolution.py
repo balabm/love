@@ -1,0 +1,185 @@
+"""
+LOVE Evolution System Startup Script
+
+This script starts all of LOVE's evolution systems:
+- Base evolution engine
+- Meta-evolution (learning how to learn)
+- Swarm evolution (parallel hypothesis testing)
+- Self-coder (automated code generation)
+- Cross-instance learning (distributed intelligence)
+- Capability gap detector (enhanced cross-domain analysis)
+- Autonomous CI/CD (self-deployment pipeline)
+- Evolution integration (unified coordination)
+
+Usage:
+    python start_evolution.py
+"""
+
+import sys
+import time
+from pathlib import Path
+
+# Add project root to path
+project_root = Path(__file__).parent
+sys.path.insert(0, str(project_root))
+
+
+def print_header(text):
+    print("\n" + "=" * 60)
+    print(f"  {text}")
+    print("=" * 60 + "\n")
+
+
+def start_evolution_systems():
+    """Start all evolution systems."""
+    print_header("LOVE Evolution System Startup")
+    
+    # Import evolution modules
+    try:
+        from core.evolution_engine import EvolutionEngine
+        from core.meta_evolution import get_meta_evolution
+        from core.swarm_evolution import get_swarm_evolution
+        from core.self_coder import get_self_coder
+        from core.cross_instance_learning import get_cross_instance_learning
+        from core.capability_gap_detector import get_capability_gap_detector
+        from core.autonomous_cicd import get_autonomous_cicd
+        from core.evolution_integration import get_evolution_integration
+    except ImportError as e:
+        print(f"Error importing evolution modules: {e}")
+        return False
+    
+    # Start base evolution engine
+    print("[1/8] Starting base evolution engine...")
+    try:
+        base_engine = EvolutionEngine()
+        base_engine.start_evolution_loop()
+        print("      ✓ Base evolution engine started")
+    except Exception as e:
+        print(f"      ✗ Base evolution engine error: {e}")
+    
+    time.sleep(2)
+    
+    # Start meta-evolution
+    print("[2/8] Starting meta-evolution...")
+    try:
+        meta_engine = get_meta_evolution()
+        meta_engine.initialize_strategies()
+        meta_engine.start()
+        print("      ✓ Meta-evolution started")
+    except Exception as e:
+        print(f"      ✗ Meta-evolution error: {e}")
+    
+    time.sleep(2)
+    
+    # Start swarm evolution
+    print("[3/8] Starting swarm evolution...")
+    try:
+        swarm_engine = get_swarm_evolution()
+        swarm_engine.start()
+        print("      ✓ Swarm evolution started")
+    except Exception as e:
+        print(f"      ✗ Swarm evolution error: {e}")
+    
+    time.sleep(2)
+    
+    # Start self-coder
+    print("[4/8] Starting self-coder...")
+    try:
+        self_coder = get_self_coder()
+        self_coder.start()
+        print("      ✓ Self-coder started")
+    except Exception as e:
+        print(f"      ✗ Self-coder error: {e}")
+    
+    time.sleep(2)
+    
+    # Start cross-instance learning
+    print("[5/8] Starting cross-instance learning...")
+    try:
+        cross_instance = get_cross_instance_learning()
+        cross_instance.start()
+        print("      ✓ Cross-instance learning started")
+    except Exception as e:
+        print(f"      ✗ Cross-instance learning error: {e}")
+    
+    time.sleep(2)
+    
+    # Start capability gap detector
+    print("[6/8] Starting capability gap detector...")
+    try:
+        gap_detector = get_capability_gap_detector()
+        gap_detector.start()
+        print("      ✓ Capability gap detector started")
+    except Exception as e:
+        print(f"      ✗ Capability gap detector error: {e}")
+    
+    time.sleep(2)
+    
+    # Start autonomous CI/CD
+    print("[7/8] Starting autonomous CI/CD...")
+    try:
+        cicd = get_autonomous_cicd()
+        cicd.start()
+        print("      ✓ Autonomous CI/CD started")
+    except Exception as e:
+        print(f"      ✗ Autonomous CI/CD error: {e}")
+    
+    time.sleep(2)
+    
+    # Start evolution integration
+    print("[8/8] Starting evolution integration...")
+    try:
+        integration = get_evolution_integration()
+        integration.start_all()
+        print("      ✓ Evolution integration started")
+    except Exception as e:
+        print(f"      ✗ Evolution integration error: {e}")
+    
+    print_header("Evolution Systems Started")
+    print("All evolution systems are now running.")
+    print("LOVE will continuously improve itself based on:")
+    print("  • Performance metrics and user feedback")
+    print("  • Meta-learning strategies")
+    print("  • Parallel hypothesis testing")
+    print("  • Automated code generation")
+    print("  • Cross-instance knowledge sharing")
+    print("  • Capability gap detection")
+    print("  • Safe autonomous deployment")
+    print("\nMonitor evolution progress via:")
+    print("  • API: /evolution/status")
+    print("  • API: /evolution/metrics")
+    print("  • API: /evolution/experiments")
+    print("  • API: /evolution/swarms")
+    print("\nPress Ctrl+C to stop all systems.\n")
+    
+    return True
+
+
+def stop_evolution_systems():
+    """Stop all evolution systems."""
+    print_header("Stopping Evolution Systems")
+    
+    try:
+        from core.evolution_integration import get_evolution_integration
+        integration = get_evolution_integration()
+        integration.stop_all()
+        print("✓ All evolution systems stopped")
+    except Exception as e:
+        print(f"✗ Error stopping systems: {e}")
+
+
+if __name__ == "__main__":
+    try:
+        if start_evolution_systems():
+            # Keep script running
+            print("Evolution systems running. Press Ctrl+C to stop.")
+            while True:
+                time.sleep(1)
+    except KeyboardInterrupt:
+        print("\n\nShutdown requested...")
+        stop_evolution_systems()
+        print("Goodbye!")
+    except Exception as e:
+        print(f"\nError: {e}")
+        stop_evolution_systems()
+        sys.exit(1)

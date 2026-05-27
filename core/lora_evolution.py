@@ -33,6 +33,20 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+# ── Optional torch/peft — activates automatically if available ─────────────────
+_TORCH_AVAILABLE = False
+_PEFT_AVAILABLE = False
+try:
+    import torch  # noqa: F401
+    _TORCH_AVAILABLE = True
+except ImportError:
+    pass
+try:
+    import peft  # noqa: F401
+    _PEFT_AVAILABLE = True
+except ImportError:
+    pass
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "lora_evolution"
@@ -153,7 +167,53 @@ def _load_adapter(adapter_id: str) -> Optional[LoRAAdapter]:
             win_count=int(meta["win_count"]),
         )
     except Exception as e:
-        print(f"[LoRAEvolution] load_adapter failed ({adapter_id}): {e}")
+        # Quarantine the corrupted file to avoid repeated noisy failures.
+        # If the file is locked by another process (WinError 32), avoid repeated
+        # move attempts by adding it to a pending skip list.
+        import shutil, time, os
+        try:
+            pending_file = DATA_DIR / "corrupt_pending.txt"
+            pending = set()
+            if pending_file.exists():
+                try:
+                    pending = set(l.strip() for l in pending_file.read_text(encoding='utf-8').splitlines() if l.strip())
+                except Exception:
+                    pending = set()
+
+            if adapter_id in pending:
+                print(f"[LoRAEvolution] skipping quarantine for {adapter_id} (previously pending)")
+                return None
+
+            corrupt_dir = DATA_DIR / "corrupted_adapters"
+            corrupt_dir.mkdir(parents=True, exist_ok=True)
+            ts = int(time.time())
+            target = corrupt_dir / f"{adapter_id}.{ts}.npz.corrupt"
+
+            # Try moving with retries in case of transient locks
+            moved = False
+            for attempt in range(3):
+                try:
+                    shutil.move(str(path), str(target))
+                    moved = True
+                    break
+                except Exception as move_exc:
+                    # If the file is locked, wait a short time and retry
+                    time.sleep(0.2)
+
+            if not moved:
+                # Record in pending file to avoid repeated noisy attempts
+                try:
+                    with open(pending_file, 'a', encoding='utf-8') as pf:
+                        pf.write(adapter_id + '\n')
+                except Exception:
+                    pass
+                print(f"[LoRAEvolution] load_adapter failed and quarantine failed ({adapter_id}): {e} / move failed")
+                return None
+
+            print(f"[LoRAEvolution] load_adapter failed ({adapter_id}): {e} — moved to {target}")
+            _log_event({"event": "adapter_quarantined", "id": adapter_id, "reason": str(e), "time": datetime.utcnow().isoformat()})
+        except Exception as e3:
+            print(f"[LoRAEvolution] load_adapter failed and quarantine failed ({adapter_id}): {e3}")
         return None
 
 
@@ -635,12 +695,147 @@ class LoRAEvolution:
             # Never crash the substrate
             print(f"[LoRAEvolution] apply_best_to_substrate failed (non-fatal): {e}")
 
+    # ── peft / torch bridge methods ───────────────────────────────────────────
+
+    def export_as_peft_config(self, adapter: LoRAAdapter) -> Optional[dict]:
+        """
+        Export adapter as a peft-compatible config dict.
+        When peft is available, this can be used to initialize a LoraConfig.
+
+        Returns dict that maps to peft.LoraConfig(**returned_dict) when peft
+        is available.  Always returns the dict (for logging/inspection) even
+        when peft isn't installed.
+        """
+        config: Dict[str, Any] = {
+            "r": adapter.rank,
+            "lora_alpha": adapter.alpha,
+            "lora_dropout": 0.05,
+            "bias": "none",
+            "task_type": "CAUSAL_LM",
+            # LOVE metadata
+            "_love_adapter_id": adapter.id,
+            "_love_fitness": adapter.fitness,
+            "_love_generation": adapter.generation,
+            "_love_description": adapter.mutation_description,
+            "_peft_available": _PEFT_AVAILABLE,
+            "_torch_available": _TORCH_AVAILABLE,
+        }
+
+        if _PEFT_AVAILABLE:
+            try:
+                from peft import LoraConfig
+                lc = LoraConfig(  # noqa: F841  — validate it's instantiable
+                    r=config["r"],
+                    lora_alpha=config["lora_alpha"],
+                    lora_dropout=config["lora_dropout"],
+                    bias=config["bias"],
+                )
+                config["_peft_validated"] = True
+            except Exception as e:
+                config["_peft_validated"] = False
+                config["_peft_error"] = str(e)
+
+        return config
+
+    def save_as_checkpoint(
+        self,
+        adapter: LoRAAdapter,
+        output_dir: str = None,
+    ) -> Optional[str]:
+        """
+        Save adapter weights in a format compatible with peft's safetensors format.
+
+        When torch is available: saves as proper peft checkpoint with
+        adapter_model.bin and adapter_config.json in the standard peft
+        directory structure.
+
+        When torch is NOT available: saves A/B matrices as .npy files with a
+        README explaining how to load them when torch becomes available.
+
+        Returns: path to the checkpoint directory, or None on failure.
+        """
+        try:
+            if output_dir is None:
+                output_dir = str(DATA_DIR / "checkpoints" / adapter.id)
+
+            Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+            # Always save numpy version
+            np.save(str(Path(output_dir) / "A.npy"), adapter.A)
+            np.save(str(Path(output_dir) / "B.npy"), adapter.B)
+
+            # Save peft-compatible config
+            config = self.export_as_peft_config(adapter)
+            with open(str(Path(output_dir) / "adapter_config.json"), "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+
+            if _TORCH_AVAILABLE:
+                try:
+                    import torch
+                    # Convert A/B to torch tensors and save as state dict.
+                    # peft expects base_model.model.{layer}.lora_A.weight /
+                    # lora_B.weight — we save with generic keys for future mapping.
+                    state_dict = {
+                        "lora_A_weight": torch.tensor(adapter.A, dtype=torch.float32),
+                        "lora_B_weight": torch.tensor(adapter.B, dtype=torch.float32),
+                        "lora_alpha": torch.tensor(adapter.alpha),
+                        "lora_rank": torch.tensor(float(adapter.rank)),
+                    }
+                    torch.save(state_dict, str(Path(output_dir) / "adapter_model.bin"))
+                    with open(str(Path(output_dir) / "README.md"), "w", encoding="utf-8") as f:
+                        f.write(f"# LOVE LoRA Adapter\n\nGeneration: {adapter.generation}\n")
+                        f.write(f"Fitness: {adapter.fitness:.4f}\n")
+                        f.write(f"Description: {adapter.mutation_description}\n")
+                        f.write(f"\nSaved with torch. Load with: torch.load('adapter_model.bin')\n")
+                except Exception:
+                    # Fallback: numpy version is already on disk
+                    pass
+            else:
+                with open(str(Path(output_dir) / "README.md"), "w", encoding="utf-8") as f:
+                    f.write(f"# LOVE LoRA Adapter (numpy format)\n\n")
+                    f.write(f"Generation: {adapter.generation}, Fitness: {adapter.fitness:.4f}\n")
+                    f.write(f"Description: {adapter.mutation_description}\n\n")
+                    f.write(f"A matrix: A.npy (shape {adapter.A.shape})\n")
+                    f.write(f"B matrix: B.npy (shape {adapter.B.shape})\n\n")
+                    f.write("To load when torch is available:\n")
+                    f.write("  A = torch.tensor(np.load('A.npy'))\n")
+                    f.write("  B = torch.tensor(np.load('B.npy'))\n")
+                    f.write("  # Apply: x + (alpha/r) * (B @ (A @ x))\n")
+
+            return output_dir
+        except Exception as e:
+            print(f"[LoRAEvolution] save_as_checkpoint failed ({adapter.id}): {e}")
+            return None
+
+    def evolve_and_checkpoint(self) -> Dict[str, Any]:
+        """
+        Run one generation of evolution, then checkpoint the best adapter.
+
+        Calls evolve_generation(), finds the best adapter, saves it via
+        save_as_checkpoint(), and returns the generation result dict enriched
+        with a 'checkpoint_path' key.
+        """
+        result = self.evolve_generation()
+        best = self.get_best_adapter()
+        checkpoint_path: Optional[str] = None
+        if best is not None:
+            checkpoint_path = self.save_as_checkpoint(best)
+        result["checkpoint_path"] = checkpoint_path
+        return result
+
     def snapshot(self) -> Dict[str, Any]:
         """Summary of current LoRA evolution state."""
         with self._mu:
             pop = list(self._population.values())
 
         best = max(pop, key=lambda a: a.fitness) if pop else None
+
+        # Count saved checkpoints (each has an adapter_config.json)
+        try:
+            checkpoints_saved = len(list((DATA_DIR / "checkpoints").glob("*/adapter_config.json")))
+        except Exception:
+            checkpoints_saved = 0
+
         return {
             "population_size": len(pop),
             "best_fitness": round(best.fitness, 6) if best else 0.0,
@@ -648,6 +843,9 @@ class LoRAEvolution:
             "best_adapter_description": best.mutation_description if best else "",
             "best_adapter_id": best.id if best else None,
             "total_evolved": self._total_evolved,
+            "torch_available": _TORCH_AVAILABLE,
+            "peft_available": _PEFT_AVAILABLE,
+            "checkpoints_saved": checkpoints_saved,
         }
 
     # ── background daemon ─────────────────────────────────────────────────────
@@ -670,11 +868,12 @@ class LoRAEvolution:
             interval_secs = interval_hours * 3600.0
             while self._daemon_running:
                 try:
-                    result = self.evolve_generation()
+                    result = self.evolve_and_checkpoint()
                     print(
                         f"[LoRAEvolution] gen {result.get('generation')} | "
                         f"winner: {result.get('winner_fitness', 0):.4f} | "
-                        f"pop: {result.get('population_size')}"
+                        f"pop: {result.get('population_size')} | "
+                        f"ckpt: {result.get('checkpoint_path') or 'n/a'}"
                     )
                     self.apply_best_to_substrate()
                 except Exception as e:

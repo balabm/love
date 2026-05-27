@@ -143,6 +143,26 @@ def _get_phone_state() -> List[Situation]:
                 urgency="low", relevance_score=0.2,
                 timestamp=datetime.now(), raw_data=state
             ))
+
+        # Parse detailed phone notifications
+        notifications = state.get("notifications", [])
+        for notif in notifications:
+            urgency = "low"
+            if any(w in notif.lower() for w in ["urgent", "asap", "emergency", "important", "help"]):
+                urgency = "critical"
+            elif any(w in notif.lower() for w in ["call", "meeting", "join", "where", "now"]):
+                urgency = "high"
+            elif any(w in notif.lower() for w in ["whatsapp", "telegram", "sms", "messages", "signal"]):
+                urgency = "medium"
+
+            situations.append(Situation(
+                source="phone", category="social", title="Phone Notification",
+                body=notif,
+                urgency=urgency,
+                relevance_score=0.75 if urgency == "critical" else 0.55 if urgency == "high" else 0.45,
+                timestamp=datetime.now(),
+                raw_data={"notification": notif}
+            ))
     except Exception:
         pass
     return situations
@@ -172,19 +192,64 @@ def _get_office_state() -> List[Situation]:
         except Exception:
             pass
 
-        # Check unread email
+        # Check unread email details
         try:
-            email = ms.get_unread_email_count()
-            if email > 0:
+            unread_emails = ms.get_unread_emails(limit=5)
+            for em in unread_emails:
+                urgency = "high" if em.get("important") else "medium"
+                if any(w in em.get("subject", "").lower() or w in em.get("preview", "").lower() for w in ["urgent", "asap", "action required", "priority"]):
+                    urgency = "critical"
+                
                 situations.append(Situation(
-                    source="office", category="work",
-                    title=f"{email} Unread Emails",
-                    body="New emails in Outlook",
-                    urgency="medium", relevance_score=0.5,
-                    timestamp=datetime.now(), raw_data={"count": email}
+                    source="office", category="work", 
+                    title=f"Email from {em.get('from', 'Unknown')}: {em.get('subject', '')}",
+                    body=em.get("preview", ""),
+                    urgency=urgency,
+                    relevance_score=0.7 if urgency == "critical" else 0.5,
+                    timestamp=datetime.now(),
+                    raw_data=em
                 ))
         except Exception:
             pass
+
+        # Check Teams messages
+        try:
+            teams_msgs = ms.get_teams_messages(limit=5)
+            for msg in teams_msgs:
+                situations.append(Situation(
+                    source="office", category="social",
+                    title=f"Teams message from {msg.get('from', 'Someone')} ({msg.get('chat', 'Direct')})",
+                    body=msg.get("text", ""),
+                    urgency="medium",
+                    relevance_score=0.45,
+                    timestamp=datetime.now(),
+                    raw_data=msg
+                ))
+        except Exception:
+            pass
+    except Exception:
+        pass
+    return situations
+
+
+def _get_github_state() -> List[Situation]:
+    situations = []
+    try:
+        from integrations.github_monitor import GitHubMonitor
+        git = GitHubMonitor.get_instance()
+        if not git.is_connected():
+            return situations
+        notifs = git.get_notifications(limit=5)
+        for n in notifs:
+            urgency = "high" if n.get("reason") in ("mention", "review_requested", "assign") else "medium"
+            situations.append(Situation(
+                source="web", category="work",
+                title=f"GitHub {n.get('reason', 'notification')} in {n.get('repo', '')}",
+                body=n.get("title", ""),
+                urgency=urgency,
+                relevance_score=0.6 if urgency == "high" else 0.4,
+                timestamp=datetime.now(), raw_data=n
+            ))
     except Exception:
         pass
     return situations
@@ -279,6 +344,7 @@ def fuse_all() -> Dict[str, Any]:
     all_situations.extend(_get_office_state())
     all_situations.extend(_get_recent_notifications())
     all_situations.extend(_get_file_activity())
+    all_situations.extend(_get_github_state())
 
     # Score and sort
     scored = []

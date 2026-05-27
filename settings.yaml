@@ -95,10 +95,10 @@ devices:
 # === MODELS ===
 # Configure which models LOVE uses
 models:
-  reasoning: "deepseek-r1:7b"     # For complex reasoning
-  coding: "qwen2.5-coder:7b"      # For code generation
+  reasoning: "llama3.2:1b"     # For complex reasoning (highly efficient, low memory)
+  coding: "qwen2.5-coder:1.5b"      # For code generation (highly efficient, fast)
   embedding: "nomic-embed-text"  # For memory/vector search
-  base_url: "http://localhost:11434"  # Ollama URL
+  base_url: "http://127.0.0.1:11434"  # Ollama URL
 
 # === MEMORY & SYNC ===
 memory:
@@ -118,7 +118,7 @@ voice:
 
 awareness:
   enabled: true
-  scan_interval_seconds: 30       # How often to scan system state
+  scan_interval_seconds: 300       # How often to scan system state
 
 google:
   enabled: false                  # Set to true after running POST /integrations/google/auth
@@ -140,7 +140,7 @@ phone:
 
 doc_analyst:
   enabled: true
-  scan_interval_seconds: 120      # How often to scan docs/code
+  scan_interval_seconds: 1200      # How often to scan docs/code
   watch_folders: []               # Additional folders to watch
   # Example:
   # watch_folders:

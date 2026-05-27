@@ -95,10 +95,10 @@ devices:
 # === MODELS ===
 # Configure which models LOVE uses
 models:
-  reasoning: "deepseek-r1:7b"     # For complex reasoning
-  coding: "qwen2.5-coder:7b"      # For code generation
+  reasoning: "llama3.2:1b"     # For complex reasoning
+  coding: "qwen2.5-coder:1.5b"      # For code generation
   embedding: "nomic-embed-text"  # For memory/vector search
-  base_url: "http://localhost:11434"  # Ollama URL
+  base_url: "http://127.0.0.1:11434"  # Ollama URL
 
 # === MEMORY & SYNC ===
 memory:

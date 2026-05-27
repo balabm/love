@@ -244,3 +244,99 @@ def monitor_stdout_stderr() -> Optional[str]:
         except Exception:
             pass
     return None
+
+
+def rollback_all_backups() -> List[str]:
+    """
+    Finds all .bak files in core/, api/, tools/, and agents/ and restores them.
+    Returns a list of restored file names.
+    """
+    import shutil
+    import os
+    from pathlib import Path
+    
+    restored_files = []
+    # Path(__file__).parent is the 'core' directory
+    core_dir = Path(__file__).parent
+    project_root = core_dir.parent
+    search_dirs = [project_root / "core", project_root / "api", project_root / "tools", project_root / "agents"]
+    
+    for sdir in search_dirs:
+        if not sdir.exists():
+            continue
+        for bak_path in sdir.glob("*.bak"):
+            py_path = bak_path.with_suffix("")
+            try:
+                if bak_path.exists():
+                    shutil.copy2(bak_path, py_path)
+                    # Remove the backup after restoring to prevent infinite rollback loops
+                    os.remove(bak_path)
+                    restored_files.append(str(py_path.name))
+                    print(f"[Sentinel] Restored {py_path.name} from backup.")
+            except Exception as e:
+                print(f"[Sentinel] Error restoring {bak_path.name}: {e}")
+                
+    if restored_files:
+        try:
+            _log_healing({
+                "error_type": "startup_crash_rollback",
+                "error": "Failed to import core modules on startup",
+                "action": f"Restored backups for: {', '.join(restored_files)}",
+                "status": "auto_fixed"
+            })
+        except Exception:
+            pass
+        
+    return restored_files
+
+
+def verify_and_heal_system():
+    """
+    Verifies that all core modules can be imported without errors.
+    If an import fails, restores any .bak backups and restarts the process.
+    """
+    import sys
+    import os
+    
+    modules_to_test = [
+        "core.agent",
+        "core.evolution",
+        "core.sync",
+        "core.orchestrator",
+        "core.heartbeat",
+        "core.awareness",
+        "core.context_engine",
+        "core.doc_analyst",
+        "core.settings",
+        "core.consciousness",
+        "core.self_modification_pipeline",
+        "core.ghost_dev",
+        "core.self_improvement_daemon"
+    ]
+    
+    failed = False
+    error_msg = ""
+    for mod_name in modules_to_test:
+        try:
+            # Try to dynamically import the module
+            if mod_name in sys.modules:
+                import importlib
+                importlib.reload(sys.modules[mod_name])
+            else:
+                __import__(mod_name)
+        except Exception as e:
+            failed = True
+            error_msg = f"Failed to import {mod_name}: {e}"
+            print(f"[Sentinel] Startup verification failed: {error_msg}")
+            break
+            
+    if failed:
+        print("[Sentinel] Crash or import error detected. Initiating emergency rollback...")
+        restored = rollback_all_backups()
+        if restored:
+            print(f"[Sentinel] Successfully rolled back: {restored}. Restarting process...")
+            # Re-execute the current process to start fresh
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        else:
+            print("[Sentinel] No backups found to roll back. System is in a broken state.")
+

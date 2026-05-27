@@ -95,6 +95,8 @@ class Sentinel:
     def __init__(self):
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._shutdown_event: Optional[asyncio.Event] = None
         self._presence = UserPresence()
         self._events: deque = deque(maxlen=200)
         self._callbacks: List[Callable] = []
@@ -114,7 +116,7 @@ class Sentinel:
             return
         self._running = True
         self._thread = threading.Thread(
-            target=self._main_loop, daemon=True, name="LOVE-Sentinel"
+            target=self._run_async_loop, daemon=True, name="LOVE-Sentinel"
         )
         self._thread.start()
         self._emit("health", "Sentinel Online", "Self-monitoring protocol activated.", "low")
@@ -122,6 +124,10 @@ class Sentinel:
 
     def stop(self):
         self._running = False
+        if self._loop and self._shutdown_event:
+            asyncio.run_coroutine_threadsafe(
+                self._shutdown_event.set(), self._loop
+            )
         self._emit("health", "Sentinel Offline", "Self-monitoring protocol stopped.", "normal")
 
     def register_callback(self, cb: Callable):
@@ -130,43 +136,56 @@ class Sentinel:
 
     # ── Main Loop ──────────────────────────────────────────────────────────────
 
-    def _main_loop(self):
-        time.sleep(30)  # Let other systems boot first
-        while self._running:
+    def _run_async_loop(self):
+        """Run the async event loop in a dedicated thread."""
+        self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
+        self._shutdown_event = asyncio.Event()
+        try:
+            self._loop.run_until_complete(self._main_loop())
+        finally:
+            self._loop.close()
+
+    async def _main_loop(self):
+        await asyncio.sleep(30)  # Let other systems boot first
+        while self._running and not self._shutdown_event.is_set():
             try:
-                self._fast_tick()
+                await self._fast_tick()
             except Exception as e:
                 print(f"[Sentinel] Fast tick error: {e}")
 
             now = time.time()
             if now - self._last_slow_tick >= SLOW_TICK:
                 try:
-                    self._slow_tick()
+                    await self._slow_tick()
                 except Exception as e:
                     print(f"[Sentinel] Slow tick error: {e}")
                 self._last_slow_tick = now
 
             if now - self._last_hourly_tick >= HOURLY_TICK:
                 try:
-                    self._hourly_tick()
+                    await self._hourly_tick()
                 except Exception as e:
                     print(f"[Sentinel] Hourly tick error: {e}")
                 self._last_hourly_tick = now
 
-            time.sleep(FAST_TICK)
+            await asyncio.sleep(FAST_TICK)
 
     # ── Fast Tick: Presence & Activity Detection ───────────────────────────────
 
-    def _fast_tick(self):
+    async def _fast_tick(self):
         """Every 60s: detect what the user is doing right now."""
         prev_state = self._presence.state
         prev_app = self._presence.active_app
 
-        # Get current awareness snapshot
+        # Get current awareness snapshot with timeout
         try:
             from core.awareness import get_awareness
             engine = get_awareness()
-            snapshot = engine.get_snapshot()
+            snapshot = await asyncio.wait_for(
+                asyncio.to_thread(engine.get_snapshot),
+                timeout=5.0
+            )
 
             system = snapshot.get("system", {})
             context = snapshot.get("context", {})
@@ -185,8 +204,12 @@ class Sentinel:
                 self._app_switch_count = 0
                 self._app_switch_window_start = time.time()
 
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            self._subsystem_health["awareness"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Awareness subsystem stalled - timeout")
+        except Exception as e:
+            self._subsystem_health["awareness"] = {"status": "error", "error": str(e)}
+            print(f"[Sentinel] Awareness error: {e}")
 
         # Determine presence state
         idle = self._presence.idle_seconds
@@ -215,7 +238,7 @@ class Sentinel:
                 f"Active app: {self._presence.active_app}",
                 "low",
             )
-            self._on_state_change(prev_state, self._presence.state)
+            await self._on_state_change(prev_state, self._presence.state)
 
     def _classify_activity(self, window_title: str) -> str:
         """Classify what the user is doing based on active window."""
@@ -257,22 +280,22 @@ class Sentinel:
 
     # ── Slow Tick: Cross-Domain Intelligence ───────────────────────────────────
 
-    def _slow_tick(self):
+    async def _slow_tick(self):
         """Every 5 min: cross-reference all data sources, detect contradictions, take action."""
         decisions = []
 
         # 1. Calendar awareness — upcoming events
-        decisions.extend(self._check_calendar_context())
+        decisions.extend(await self._check_calendar_context())
         # 2. Work limit protection
-        decisions.extend(self._check_work_protection())
+        decisions.extend(await self._check_work_protection())
         # 3. Goal alignment check
-        decisions.extend(self._check_goal_alignment())
+        decisions.extend(await self._check_goal_alignment())
         # 4. Communication monitoring (emails/chat needing attention)
-        decisions.extend(self._check_communications())
+        decisions.extend(await self._check_communications())
         # 5. Finance monitoring
-        decisions.extend(self._check_finance_alerts())
+        decisions.extend(await self._check_finance_alerts())
         # 6. Focus protection
-        decisions.extend(self._check_focus_protection())
+        decisions.extend(await self._check_focus_protection())
 
         # Execute decisions
         for decision in decisions:
@@ -281,14 +304,20 @@ class Sentinel:
         # Save state
         self._save_state()
 
-    def _check_calendar_context(self) -> List[Dict]:
+    async def _check_calendar_context(self) -> List[Dict]:
         """Check if there's a meeting soon while user is not preparing."""
         decisions = []
         try:
             from integrations.google_services import GoogleServices
             gs = GoogleServices.get_instance()
-            if gs.is_connected():
-                events = gs.get_todays_events()
+            if await asyncio.wait_for(
+                asyncio.to_thread(gs.is_connected),
+                timeout=5.0
+            ):
+                events = await asyncio.wait_for(
+                    asyncio.to_thread(gs.get_todays_events),
+                    timeout=5.0
+                )
                 now = datetime.now()
                 for event in events:
                     start_str = event.get("start", "")
@@ -309,16 +338,23 @@ class Sentinel:
                             })
                     except Exception:
                         continue
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            self._subsystem_health["calendar"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Calendar subsystem stalled - timeout")
+        except Exception as e:
+            self._subsystem_health["calendar"] = {"status": "error", "error": str(e)}
+            print(f"[Sentinel] Calendar error: {e}")
         return decisions
 
-    def _check_work_protection(self) -> List[Dict]:
+    async def _check_work_protection(self) -> List[Dict]:
         """Enforce work limits — LOVE's guardian role."""
         decisions = []
         try:
             from tools.guardian import check_work_status
-            status = check_work_status()
+            status = await asyncio.wait_for(
+                asyncio.to_thread(check_work_status),
+                timeout=5.0
+            )
             hours = status.get("hours_worked", 0)
             limit = status.get("daily_limit", 8)
             pct = hours / limit if limit > 0 else 0
@@ -337,16 +373,23 @@ class Sentinel:
                     "message": f"{hours:.1f}h of {limit}h. Start wrapping up — what's the ONE thing you'll finish before stopping?",
                     "priority": "high",
                 })
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            self._subsystem_health["guardian"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Guardian subsystem stalled - timeout")
+        except Exception as e:
+            self._subsystem_health["guardian"] = {"status": "error", "error": str(e)}
+            print(f"[Sentinel] Guardian error: {e}")
         return decisions
 
-    def _check_goal_alignment(self) -> List[Dict]:
+    async def _check_goal_alignment(self) -> List[Dict]:
         """Check if current activity aligns with user's active goals."""
         decisions = []
         try:
             from core.autonomous_goal_engine import get_goals
-            goals = get_goals(status="active")
+            goals = await asyncio.wait_for(
+                asyncio.to_thread(get_goals, status="active"),
+                timeout=5.0
+            )
             if not goals:
                 return decisions
 
@@ -363,11 +406,15 @@ class Sentinel:
                                f"Is this intentional downtime?",
                     "priority": "normal",
                 })
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            self._subsystem_health["goal_engine"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Goal engine subsystem stalled - timeout")
+        except Exception as e:
+            self._subsystem_health["goal_engine"] = {"status": "error", "error": str(e)}
+            print(f"[Sentinel] Goal engine error: {e}")
         return decisions
 
-    def _check_communications(self) -> List[Dict]:
+    async def _check_communications(self) -> List[Dict]:
         """Check for urgent unread communications."""
         decisions = []
         # Only nudge about comms when user is active and not in a meeting
@@ -377,8 +424,14 @@ class Sentinel:
         try:
             from integrations.microsoft_bridge import MicrosoftBridge
             ms = MicrosoftBridge.get_instance()
-            if ms.is_connected():
-                count = ms.get_unread_count()
+            if await asyncio.wait_for(
+                asyncio.to_thread(ms.is_connected),
+                timeout=5.0
+            ):
+                count = await asyncio.wait_for(
+                    asyncio.to_thread(ms.get_unread_count),
+                    timeout=5.0
+                )
                 if count > 10:
                     decisions.append({
                         "type": "nudge",
@@ -386,30 +439,42 @@ class Sentinel:
                         "message": f"{count} unread emails. Want me to summarize the important ones?",
                         "priority": "normal",
                     })
-        except Exception:
-            pass
+        except asyncio.TimeoutError:
+            self._subsystem_health["microsoft_bridge"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Microsoft Bridge subsystem stalled - timeout")
+        except Exception as e:
+            self._subsystem_health["microsoft_bridge"] = {"status": "error", "error": str(e)}
+            print(f"[Sentinel] Microsoft Bridge error: {e}")
         return decisions
 
-    def _check_finance_alerts(self) -> List[Dict]:
+    async def _check_finance_alerts(self) -> List[Dict]:
         """Check for significant market moves."""
         decisions = []
         try:
             from integrations.finance_intelligence import FinanceIntelligence
             fi = FinanceIntelligence()
-            alerts = fi.get_proactive_alerts() if hasattr(fi, 'get_proactive_alerts') else []
-            for alert in alerts[:2]:
-                msg = alert if isinstance(alert, str) else alert.get("message", str(alert))
-                decisions.append({
-                    "type": "alert",
-                    "title": "Market Move",
-                    "message": msg,
-                    "priority": "normal",
-                })
-        except Exception:
-            pass
+            if hasattr(fi, 'get_proactive_alerts'):
+                alerts = await asyncio.wait_for(
+                    asyncio.to_thread(fi.get_proactive_alerts),
+                    timeout=5.0
+                )
+                for alert in alerts[:2]:
+                    msg = alert if isinstance(alert, str) else alert.get("message", str(alert))
+                    decisions.append({
+                        "type": "alert",
+                        "title": "Market Move",
+                        "message": msg,
+                        "priority": "normal",
+                    })
+        except asyncio.TimeoutError:
+            self._subsystem_health["finance_intelligence"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Finance Intelligence subsystem stalled - timeout")
+        except Exception as e:
+            self._subsystem_health["finance_intelligence"] = {"status": "error", "error": str(e)}
+            print(f"[Sentinel] Finance Intelligence error: {e}")
         return decisions
 
-    def _check_focus_protection(self) -> List[Dict]:
+    async def _check_focus_protection(self) -> List[Dict]:
         """Protect deep focus sessions — suppress non-critical notifications."""
         decisions = []
         # High focus depth + work activity = deep work session
@@ -437,15 +502,15 @@ class Sentinel:
 
     # ── Hourly Tick: Summaries & Self-Healing ──────────────────────────────────
 
-    def _hourly_tick(self):
+    async def _hourly_tick(self):
         """Every hour: summarize what happened, heal broken subsystems, plan ahead."""
         # 1. Self-heal check
-        self._self_heal()
+        await self._self_heal()
         # 2. Generate hourly summary if user is active
         if self._presence.state in ("active", "idle"):
             self._generate_hour_summary()
 
-    def _self_heal(self):
+    async def _self_heal(self):
         """Check all LOVE subsystems and restart crashed ones."""
         subsystems = [
             ("awareness", "core.awareness", "start_awareness"),
@@ -459,11 +524,18 @@ class Sentinel:
                 f = getattr(mod, func)
                 # Just calling the function validates it's alive
                 if name == "proactive_push":
-                    engine = f()
+                    engine = await asyncio.wait_for(
+                        asyncio.to_thread(f),
+                        timeout=5.0
+                    )
                     if not engine._running:
                         engine.start()
                         self._emit("health", f"Restarted: {name}",
                                    f"Self-healed {name} — was not running.", "normal")
+            except asyncio.TimeoutError:
+                self._subsystem_health[name] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+                self._emit("health", f"Subsystem Stalled: {name}",
+                           f"{name} health check timed out after 5.0s", "high")
             except Exception as e:
                 self._subsystem_health[name] = {"status": "dead", "error": str(e)}
                 self._emit("health", f"Subsystem Dead: {name}",
@@ -500,11 +572,11 @@ class Sentinel:
 
     # ── State Change Handlers ──────────────────────────────────────────────────
 
-    def _on_state_change(self, old_state: str, new_state: str):
+    async def _on_state_change(self, old_state: str, new_state: str):
         """Handle transitions between presence states."""
         if old_state == "away" and new_state == "active":
             # User came back — deliver "while you were away" summary
-            self._deliver_away_summary()
+            await self._deliver_away_summary()
         elif old_state == "active" and new_state == "away":
             # User left — enter guardian mode
             self._state["away_since"] = datetime.now().isoformat()
@@ -512,7 +584,7 @@ class Sentinel:
             # User went to sleep — run overnight tasks
             self._start_overnight_mode()
 
-    def _deliver_away_summary(self):
+    async def _deliver_away_summary(self):
         """When user returns from being away, summarize what they missed."""
         away_since = self._state.get("away_since")
         if not away_since:
@@ -523,10 +595,19 @@ class Sentinel:
         try:
             from integrations.microsoft_bridge import MicrosoftBridge
             ms = MicrosoftBridge.get_instance()
-            if ms.is_connected():
-                count = ms.get_unread_count()
+            if await asyncio.wait_for(
+                asyncio.to_thread(ms.is_connected),
+                timeout=5.0
+            ):
+                count = await asyncio.wait_for(
+                    asyncio.to_thread(ms.get_unread_count),
+                    timeout=5.0
+                )
                 if count > 0:
                     missed.append(f"{count} new emails")
+        except asyncio.TimeoutError:
+            self._subsystem_health["microsoft_bridge"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Microsoft Bridge stalled during away summary")
         except Exception:
             pass
 
@@ -534,13 +615,22 @@ class Sentinel:
         try:
             from integrations.google_services import GoogleServices
             gs = GoogleServices.get_instance()
-            if gs.is_connected():
-                events = gs.get_todays_events()
+            if await asyncio.wait_for(
+                asyncio.to_thread(gs.is_connected),
+                timeout=5.0
+            ):
+                events = await asyncio.wait_for(
+                    asyncio.to_thread(gs.get_todays_events),
+                    timeout=5.0
+                )
                 now = datetime.now()
                 away_dt = datetime.fromisoformat(away_since)
                 passed = [e for e in events if self._event_between(e, away_dt, now)]
                 if passed:
                     missed.append(f"{len(passed)} calendar event(s) passed")
+        except asyncio.TimeoutError:
+            self._subsystem_health["calendar"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+            print("[Sentinel] Calendar stalled during away summary")
         except Exception:
             pass
 
@@ -701,8 +791,13 @@ class Sentinel:
 
     def force_scan(self) -> Dict:
         """Manually trigger a full scan cycle."""
-        self._fast_tick()
-        self._slow_tick()
+        if self._loop and self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                self._fast_tick(), self._loop
+            ).result(timeout=10.0)
+            asyncio.run_coroutine_threadsafe(
+                self._slow_tick(), self._loop
+            ).result(timeout=30.0)
         return self.get_status()
 
     def set_user_away(self, reason: str = "manual"):
@@ -714,7 +809,10 @@ class Sentinel:
 
     def set_user_back(self):
         """User returned (e.g. from phone app tap)."""
-        self._on_state_change("away", "active")
+        if self._loop and self._loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                self._on_state_change("away", "active"), self._loop
+            )
         self._presence.state = "active"
 
 

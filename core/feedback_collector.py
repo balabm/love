@@ -76,6 +76,42 @@ class FeedbackSignal:
         }
 
 
+# ── EpisodeRecord dataclass ──────────────────────────────────────────────────
+
+@dataclass
+class EpisodeRecord:
+    """Aggregated satisfaction record for one session (episode)."""
+    episode_id: str                    # uuid
+    start_time: float
+    end_time: float
+    turn_count: int
+    satisfaction_arc: List[float]      # per-turn satisfaction values in order
+    arc_slope: float                   # linear regression slope (positive = improving)
+    peak_satisfaction: float
+    valley_satisfaction: float
+    net_satisfaction: float            # mean of last 25% of turns (recency-weighted)
+    returned_next_session: bool = False  # filled in when next session starts
+    episode_fitness: float = 0.0      # computed composite score
+
+    def to_dict(self) -> dict:
+        return {
+            "episode_id": self.episode_id,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "turn_count": self.turn_count,
+            "satisfaction_arc": self.satisfaction_arc,
+            "arc_slope": self.arc_slope,
+            "peak_satisfaction": self.peak_satisfaction,
+            "valley_satisfaction": self.valley_satisfaction,
+            "net_satisfaction": self.net_satisfaction,
+            "returned_next_session": self.returned_next_session,
+            "episode_fitness": self.episode_fitness,
+        }
+
+
+EPISODES_FILE = DATA_DIR / "episodes.jsonl"
+
+
 # ── Embedding helpers ─────────────────────────────────────────────────────────
 
 def _word_set(text: str) -> set:
@@ -147,7 +183,12 @@ class FeedbackCollector:
         self._implicit_count: int = 0
         self._last_user_text: str = ""             # for repeat-detection
 
+        # Episode-level tracking
+        self._episode_start: float = time.time()
+        self._episodes: List[EpisodeRecord] = []
+
         self._load_recent_signals()
+        self._start_episode_watcher()
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
@@ -179,6 +220,134 @@ class FeedbackCollector:
                 fh.write(json.dumps(sig.to_dict()) + "\n")
         except Exception:
             pass
+
+    # ── Episode watcher ────────────────────────────────────────────────────────
+
+    def _start_episode_watcher(self) -> None:
+        """Background daemon that auto-closes episodes after silence."""
+        def _watch():
+            while True:
+                time.sleep(300)  # check every 5 min
+                try:
+                    self.maybe_close_episode(silence_minutes=30)
+                except Exception:
+                    pass
+        t = threading.Thread(target=_watch, daemon=True)
+        t.start()
+
+    # ── Episode-level satisfaction ────────────────────────────────────────────
+
+    def compute_episode_fitness(self, arc: List[float]) -> float:
+        """Composite fitness from a session arc."""
+        if len(arc) < 2:
+            return arc[0] if arc else 0.0
+
+        # 1. Arc slope (improving = positive) — via linear regression
+        n = len(arc)
+        xs = np.arange(n, dtype=float)
+        slope = float(np.polyfit(xs, arc, 1)[0])
+
+        # 2. Recency-weighted mean (last 25% of session)
+        tail_n = max(1, n // 4)
+        tail_mean = float(np.mean(arc[-tail_n:]))
+
+        # 3. Peak (best moment in session)
+        peak = float(max(arc))
+
+        # 4. Composite: arc trajectory matters most (50%), recency next (30%), peak last (20%)
+        fitness = 0.50 * np.clip(slope * 5, -1, 1) + 0.30 * tail_mean + 0.20 * peak
+        return float(np.clip(fitness, -1, 1))
+
+    def close_episode(self, session_id: str = None) -> Optional[EpisodeRecord]:
+        """
+        Called when a session ends (or after N minutes of silence).
+        Aggregates all signals since _episode_start into an EpisodeRecord,
+        computes episode_fitness, updates LoRA, and resets the episode buffer.
+        """
+        with self._lock:
+            episode_signals = [
+                s for s in self._signals if s.timestamp >= self._episode_start
+            ]
+            # Fallback: if no signals pass timestamp filter (e.g. historical
+            # timestamps loaded from disk), use all un-episodized signals
+            if not episode_signals and self._signals:
+                episode_signals = list(self._signals)
+
+        if not episode_signals:
+            return None
+
+        # Build satisfaction arc (satisfaction * confidence per turn)
+        satisfaction_arc = [
+            s.satisfaction * s.confidence for s in episode_signals
+        ]
+
+        n = len(satisfaction_arc)
+
+        # Arc slope via linear regression
+        if n >= 2:
+            xs = np.arange(n, dtype=float)
+            arc_slope = float(np.polyfit(xs, satisfaction_arc, 1)[0])
+        else:
+            arc_slope = 0.0
+
+        # Peak and valley
+        peak_satisfaction = float(max(satisfaction_arc))
+        valley_satisfaction = float(min(satisfaction_arc))
+
+        # Net satisfaction: mean of last 25% of turns
+        tail_n = max(1, n // 4)
+        net_satisfaction = float(np.mean(satisfaction_arc[-tail_n:]))
+
+        # Episode fitness
+        episode_fitness = self.compute_episode_fitness(satisfaction_arc)
+
+        # Mark returned_next_session on previous episode if it exists
+        if self._episodes:
+            self._episodes[-1].returned_next_session = True
+
+        # Create the episode record
+        record = EpisodeRecord(
+            episode_id=str(uuid.uuid4()),
+            start_time=self._episode_start,
+            end_time=time.time(),
+            turn_count=n,
+            satisfaction_arc=satisfaction_arc,
+            arc_slope=round(arc_slope, 6),
+            peak_satisfaction=round(peak_satisfaction, 4),
+            valley_satisfaction=round(valley_satisfaction, 4),
+            net_satisfaction=round(net_satisfaction, 4),
+            returned_next_session=False,
+            episode_fitness=round(episode_fitness, 4),
+        )
+
+        self._episodes.append(record)
+
+        # Persist to episodes.jsonl
+        try:
+            with EPISODES_FILE.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record.to_dict()) + "\n")
+        except Exception:
+            pass
+
+        # Propagate episode-level signal to LoRA evolution (higher confidence)
+        try:
+            from core.lora_evolution import get_lora_evolution
+            get_lora_evolution().receive_feedback(episode_fitness, confidence=0.85)
+        except Exception:
+            pass
+
+        # Reset episode buffer
+        self._episode_start = time.time()
+
+        return record
+
+    def maybe_close_episode(self, silence_minutes: float = 30.0) -> None:
+        """Auto-close if last signal was > silence_minutes ago."""
+        if not self._signals:
+            return
+        last_ts = max(s.timestamp for s in self._signals[-20:])
+        if time.time() - last_ts > silence_minutes * 60:
+            self.close_episode()
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -370,6 +539,9 @@ class FeedbackCollector:
             explicit = self._explicit_count
             implicit = self._implicit_count
             last_ts = self._signals[-1].timestamp if self._signals else None
+            current_episode_turns = len(
+                [s for s in self._signals if s.timestamp >= self._episode_start]
+            )
 
         return {
             "total_signals": total,
@@ -377,6 +549,9 @@ class FeedbackCollector:
             "explicit_count": explicit,
             "implicit_count": implicit,
             "last_signal_timestamp": last_ts,
+            "episodes_total": len(self._episodes),
+            "last_episode_fitness": self._episodes[-1].episode_fitness if self._episodes else None,
+            "current_episode_turns": current_episode_turns,
         }
 
 

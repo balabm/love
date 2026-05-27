@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Add variance to qualities in test_validate_mutation to pass Welch's t-test",
+  "updatedAt":  "2026-05-26T15:28:03.489655Z"
+}

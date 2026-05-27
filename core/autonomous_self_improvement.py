@@ -27,6 +27,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import numpy as np
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "self_improvement"
@@ -224,6 +226,65 @@ class AutonomousSelfImprovement:
         delta["should_revert"] = score < -0.05   # revert only on meaningful degradation
         return delta
 
+    # ── Monte Carlo rollout prediction ────────────────────────────────────────
+
+    def _predict_improvement_value(self, module_path: str) -> float:
+        """
+        Use world model rollout to estimate how much improving this module
+        would reduce predicted free energy.
+
+        Approach (Monte Carlo, cheap):
+        1. Get current world model state embedding
+        2. Generate a "improved module X" embedding by embedding a description string
+        3. Simulate: what would the world model predict if this module was better?
+           - Blend current state with improvement direction: x_improved = 0.8*x + 0.2*x_mod
+           - Roll out for 4 steps from x_improved
+           - Compare cumulative FE to baseline (4-step rollout from x unchanged)
+        4. Value = baseline_fe - improved_fe (positive = improvement reduces surprise)
+        """
+        try:
+            from core.world_model_latent import get_world_model_latent, embed, _mlp_forward  # noqa: F401
+            wm = get_world_model_latent()
+
+            if not wm._history:
+                return 0.0
+
+            current = wm._history[-1]
+
+            # Generate improvement direction for this module
+            module_name = Path(module_path).stem
+            improvement_desc = f"improved {module_name} module working well correctly"
+            x_mod = embed(improvement_desc)
+            if x_mod is None:
+                return 0.0
+
+            # Baseline rollout: 4 steps from current state
+            baseline_fe = self._rollout_fe(current, wm)
+
+            # Improved rollout: 4 steps from blended state
+            x_blend = 0.8 * current + 0.2 * x_mod
+            norm = np.linalg.norm(x_blend)
+            x_blend = x_blend / norm if norm > 0 else x_blend
+            improved_fe = self._rollout_fe(x_blend, wm)
+
+            return float(baseline_fe - improved_fe)  # positive = improvement helps
+        except Exception:
+            return 0.0
+
+    def _rollout_fe(self, x0: np.ndarray, wm) -> float:
+        """4-step rollout from x0, return cumulative discounted free energy."""
+        from core.world_model_latent import _mlp_forward
+        total = 0.0
+        x = x0
+        for step in range(4):
+            pred, _, _ = _mlp_forward(x, wm._W1, wm._b1, wm._W2, wm._b2)
+            pn = np.linalg.norm(pred)
+            pred_norm = pred / pn if pn > 0 else pred
+            fe = float(np.linalg.norm(pred_norm - x))
+            total += fe * (0.9 ** step)
+            x = pred_norm
+        return total
+
     # ── Step helpers ──────────────────────────────────────────────────────────
 
     def _get_target_module(self) -> Optional[str]:
@@ -297,20 +358,29 @@ class AutonomousSelfImprovement:
             # Dissatisfaction bonus (applies uniformly — nudge toward *any* change)
             score += dissatisfaction * 0.3
 
+            # Monte Carlo rollout prediction (+0.0 to +0.40)
+            mc_value = self._predict_improvement_value(rel_path)
+            # Normalize to [0, 0.4]: mc_value typically in [-0.5, 0.5]
+            mc_score = max(0.0, min(0.4, (mc_value + 0.5)))
+            score += mc_score
+
             # Small bonus for files not recently touched
             score += 0.05  # baseline so every file is eligible
 
-            scored.append((score, rel_path))
+            scored.append((score, rel_path, mc_value))
 
         if not scored:
             return None
 
         # Pick highest scorer, break ties by first occurrence
         scored.sort(key=lambda t: -t[0])
-        best_score, best_path = scored[0]
+        best_score, best_path, best_mc = scored[0]
 
         # If the best score is suspiciously low, still proceed — we can always find *something*
-        print(f"[ASI] Target module selected: {best_path} (score={best_score:.3f})")
+        print(
+            f"[ASI] Target module selected: {best_path} "
+            f"(score={best_score:.3f}, mc_value={best_mc:.4f})"
+        )
         return best_path
 
     def _generate_hypothesis(self, module_path: str) -> str:
@@ -496,6 +566,7 @@ class AutonomousSelfImprovement:
             return result
 
         base["target_module"] = target
+        base["mc_improvement_value"] = self._predict_improvement_value(target)
 
         # ── Step 3: Hypothesis ─────────────────────────────────────────────
         try:

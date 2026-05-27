@@ -26,12 +26,26 @@ Cross-source intelligence patterns:
 """
 
 import json
+import logging
 import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+
+# Configure logging
+LOG_DIR = Path(__file__).parent.parent / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_DIR / "love_system.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 HUB_STATE_FILE = DATA_DIR / "intelligence_hub_state.json"
@@ -116,7 +130,8 @@ class IntelligenceHub:
                 "next_event": next_ev,
                 "next_event_mins": next_ev.get("minutes_away") if next_ev else None,
             }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_google: {e}", exc_info=True)
             self._sources["google"] = False
             return {"connected": False}
 
@@ -135,7 +150,8 @@ class IntelligenceHub:
                 "unread_emails": unread,
                 "next_meeting": next_event,
             }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_microsoft: {e}", exc_info=True)
             self._sources["microsoft"] = False
             return {"connected": False}
 
@@ -146,7 +162,8 @@ class IntelligenceHub:
             state = bridge.get_state()
             self._sources["phone"] = bridge.is_connected()
             return state or {}
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_phone: {e}", exc_info=True)
             self._sources["phone"] = False
             return {}
 
@@ -162,7 +179,8 @@ class IntelligenceHub:
                 "unread_notifications": len(gh.get_notifications(5)),
                 "recent_event": (gh.get_recent_events(1) or [{}])[0].get("summary", ""),
             }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_github: {e}", exc_info=True)
             self._sources["github"] = False
             return {"connected": False}
 
@@ -177,7 +195,8 @@ class IntelligenceHub:
                 "alerts": fi.get_alerts(3),
                 "summary": fi.get_price_summary(),
             }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_finance: {e}", exc_info=True)
             self._sources["finance"] = False
             return {}
 
@@ -193,7 +212,8 @@ class IntelligenceHub:
                 "current_context": bm.get_current_context(),
                 "recent_topics": bm.get_recent_topics(3),
             }
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_browser: {e}", exc_info=True)
             self._sources["browser"] = False
             return {}
 
@@ -204,13 +224,14 @@ class IntelligenceHub:
             signal = cm.get_current_signal()
             self._sources["clipboard"] = True
             return signal or {}
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error in _collect_clipboard: {e}", exc_info=True)
             self._sources["clipboard"] = False
             return {}
 
     # ── Cross-source Pattern Detection ────────────────────────────────────────
 
-    def _detect_patterns(self, snap: IntelligenceSnapshot) -> List[str]:
+    def _detect_patterns(self, snap: IntelligenceSnapshot) -> tuple:
         patterns = []
         alerts = []
 
@@ -278,8 +299,8 @@ class IntelligenceHub:
                         parts.append(f"[CALENDAR] {ev['title']} in {mins}min" + (" (MEET)" if ev.get('meet_link') else ""))
                     elif mins is not None and mins <= 0 and mins > -30:
                         parts.append(f"[CALENDAR] {ev['title']} happening NOW")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (Google): {e}", exc_info=True)
 
         # Microsoft
         try:
@@ -288,8 +309,8 @@ class IntelligenceHub:
             ctx = ms.get_context_summary()
             if ctx:
                 parts.append(ctx)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (Microsoft): {e}", exc_info=True)
 
         # Phone
         try:
@@ -304,8 +325,8 @@ class IntelligenceHub:
                 missed = state.get("missed_calls", 0)
                 if missed:
                     parts.append(f"[PHONE] {missed} missed call(s)")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (Phone): {e}", exc_info=True)
 
         # GitHub
         try:
@@ -314,8 +335,8 @@ class IntelligenceHub:
             ctx = gh.get_context_summary()
             if ctx:
                 parts.append(ctx)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (GitHub): {e}", exc_info=True)
 
         # Finance
         try:
@@ -324,8 +345,8 @@ class IntelligenceHub:
             ctx = fi.get_context_summary()
             if ctx:
                 parts.append(ctx)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (Finance): {e}", exc_info=True)
 
         # Browser
         try:
@@ -334,8 +355,8 @@ class IntelligenceHub:
             ctx = bm.get_context_summary()
             if ctx:
                 parts.append(ctx)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (Browser): {e}", exc_info=True)
 
         # Clipboard
         try:
@@ -344,8 +365,8 @@ class IntelligenceHub:
             ctx = cm.get_context_summary()
             if ctx:
                 parts.append(ctx)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in get_context_for_prompt (Clipboard): {e}", exc_info=True)
 
         # Active alerts from cross-source patterns
         for alert in self._snapshot.active_alerts[:3]:
@@ -384,24 +405,25 @@ class IntelligenceHub:
                 from core.proactive_push import get_push_engine
                 priority = "critical" if "meeting" in alert.lower() or "market" in alert.lower() else "high"
                 get_push_engine().push("ALERT", alert, priority=priority, metadata={"source": "intelligence_hub"})
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Error in poll_all (push alerts): {e}", exc_info=True)
 
         # Emit neural bus event
         try:
             from core.neural_bus import get_neural_bus
             bus = get_neural_bus()
             bus.publish(
-                event_type="intelligence_poll_complete",
                 domain="awareness",
+                event_type="intelligence_poll_complete",
                 payload={
                     "sources_active": [k for k, v in self._sources.items() if v],
                     "alerts": len(alerts),
                     "patterns": len(patterns),
                 },
+                source_module="intelligence_hub",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in poll_all (neural bus): {e}", exc_info=True)
 
     def get_status(self) -> Dict[str, Any]:
         return {
@@ -422,23 +444,23 @@ class IntelligenceHub:
         try:
             from integrations.finance_intelligence import get_finance_intelligence
             get_finance_intelligence().start_monitoring(300)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in start (finance monitor): {e}", exc_info=True)
         try:
             from integrations.browser_monitor import get_browser_monitor
             get_browser_monitor().start_monitoring(30)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in start (browser monitor): {e}", exc_info=True)
         try:
             from integrations.clipboard_monitor import get_clipboard_monitor
             get_clipboard_monitor().start_monitoring(2)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in start (clipboard monitor): {e}", exc_info=True)
         try:
             from integrations.github_monitor import get_github_monitor
             get_github_monitor().start_polling(300)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error in start (github monitor): {e}", exc_info=True)
 
         def _loop():
             time.sleep(10)  # Brief init delay
@@ -455,6 +477,17 @@ class IntelligenceHub:
         self._thread = threading.Thread(target=_loop, daemon=True, name="LOVE-IntelligenceHub")
         self._thread.start()
         print(f"[IntelligenceHub] Started — monitoring all sources (interval={interval}s)")
+
+    def get_snapshot(self) -> dict:
+        """Returns a dictionary containing the current fused context and active patterns."""
+        return {
+            "fused_context": self.get_context_for_prompt(),
+            "active_patterns": self._snapshot.cross_patterns
+        }
+
+    def get_intelligence_snapshot(self) -> IntelligenceSnapshot:
+        """Public accessor for the current intelligence snapshot."""
+        return self._snapshot
 
     def stop(self):
         self._running = False

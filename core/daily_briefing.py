@@ -165,6 +165,29 @@ class DailyBriefingSystem:
         except Exception:
             pass
 
+
+        # Life Domains -- hydration, sleep, nutrition, skincare
+        try:
+            from core.life_domains import get_life_domains_engine
+            engine = get_life_domains_engine()
+            dash = engine.get_dashboard()
+            data["life_score"] = dash.get("life_score", 0)
+            data["life_nudges"] = dash.get("nudges", [])
+            data["life_hydration_pct"] = dash.get("hydration", {}).get("pct", 0)
+            data["life_sleep_hours"] = dash.get("sleep", {}).get("hours", 0)
+            data["life_sleep_quality"] = dash.get("sleep", {}).get("quality", 0)
+            data["life_meals_logged"] = dash.get("nutrition", {}).get("meal_count", 0)
+            data["life_skincare_done"] = dash.get("skincare", {}).get("daily_score", 0)
+            data["life_streaks"] = engine.get_streaks()
+        except Exception:
+            pass
+
+        # Cross-domain correlations
+        try:
+            from core.cross_domain_intelligence import get_correlations
+            data["cross_domain_insights"] = get_correlations()
+        except Exception:
+            pass
         return data
 
     # ── Brief generation ──────────────────────────────────────────────────────

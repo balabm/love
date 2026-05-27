@@ -145,6 +145,35 @@ def process_idle_drafts() -> int:
     return processed
 
 
+def _generate_code_optimization_task():
+    """Autonomously generate a Ghost Dev task to optimize a random core file."""
+    try:
+        import random
+        from core.llm import get_reasoning_llm
+        from core.ghost_dev import get_ghost_dev
+        
+        # Pick a random core file to optimize
+        core_dir = Path(__file__).parent
+        py_files = [f for f in core_dir.glob("*.py") if f.name not in ["ghost_dev.py", "self_modification_pipeline.py", "self_healing.py"]]
+        if not py_files:
+            return
+            
+        target = random.choice(py_files)
+        
+        prompt = f"""You are LOVE, analyzing your own source code for optimization.
+Review this file: {target.name}
+Propose one small, safe optimization or refactoring that improves performance, readability, or error handling without changing core functionality.
+Return ONLY a short description of the task."""
+        
+        llm = get_reasoning_llm()
+        task_desc = str(llm.invoke(prompt)).strip()
+        
+        if len(task_desc) > 10 and len(task_desc) < 300:
+            print(f"[SelfModPipeline] Assigning autonomous code task for {target.name}")
+            get_ghost_dev().assign_task(task_desc, [str(target.absolute())])
+    except Exception as e:
+        print(f"[SelfModPipeline] Auto-code task error: {e}")
+
 def start_pipeline_daemon(interval_seconds: int = 1800):
     """Start the self-modification pipeline as a background daemon (runs every 30min)."""
     def _loop():
@@ -154,6 +183,11 @@ def start_pipeline_daemon(interval_seconds: int = 1800):
                 n = process_idle_drafts()
                 if n > 0:
                     print(f"[SelfModPipeline] Processed {n} idle drafts")
+                
+                # 10% chance per cycle to trigger an autonomous code optimization
+                import random
+                if random.random() < 0.10:
+                    _generate_code_optimization_task()
             except Exception as e:
                 print(f"[SelfModPipeline] Daemon error: {e}")
             time.sleep(interval_seconds)

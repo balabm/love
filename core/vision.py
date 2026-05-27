@@ -68,7 +68,7 @@ def describe_image(image_path: str, detail_level: str = "normal") -> Dict[str, A
             prompt = "One sentence description of this image."
 
         resp = requests.post(
-            "http://localhost:11434/api/generate",
+            "http://127.0.0.1:11434/api/generate",
             json={"model": "llava", "prompt": prompt, "images": [b64], "stream": False},
             timeout=60
         )

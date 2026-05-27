@@ -1,0 +1,5 @@
+{
+  "artifactType":  "ARTIFACT_TYPE_OTHER",
+  "summary":  "Improve test_jarvis.py using direct module mocks in sys.modules to avoid patching issues and dependencies",
+  "updatedAt":  "2026-05-26T15:27:49.747737400Z"
+}

@@ -1,3 +1,4 @@
+import os
 """
 Jarvis Protocol - Wave 6 Extreme AGI
 The Neural Cortex: Continuous Background Cognitive Stream.
@@ -131,16 +132,25 @@ Return ONLY valid JSON:
 }}
 """
         
+        # 1. LLM Invocation - Separate try/except block to avoid triggering self-healing on transient network/service errors
         try:
-            # Use route_llm to get the right model instance, then invoke it
             llm = route_llm(prompt)
             response = llm.invoke(prompt) if hasattr(llm, 'invoke') else llm(prompt)
-            
+        except Exception as llm_e:
+            print(f"[NeuralCortex] Monologue LLM invocation failed: {llm_e}")
+            return
+
+        # 2. Main processing - If this fails due to a local bug, self-healing is triggered
+        try:
             # Parse JSON
             start = response.find("{")
             end = response.rfind("}")
             if start != -1 and end != -1:
-                data = json.loads(response[start:end+1])
+                try:
+                    data = json.loads(response[start:end+1])
+                except json.JSONDecodeError as jde:
+                    print(f"[NeuralCortex] Failed to parse JSON response: {jde}")
+                    return
                 
                 monologue = data.get("internal_monologue", "")
                 speech = data.get("proactive_speech")
@@ -190,11 +200,11 @@ Return ONLY valid JSON:
                         c = get_consciousness()
                         state = {
                             "type": "state_sync",
-                            "consciousness": c.get_full_state(),
+                            "consciousness": c.get_full_state() if c else None,
                             "context": {
                                 "activity": ctx.activity,
                                 "active_window": ctx.active_window,
-                                "cpu_percent": ctx.cpu_percent,
+                                "cpu_percent": ctx.system_cpu,
                                 "stress_score": ctx.stress_score
                             }
                         }
@@ -209,7 +219,7 @@ Return ONLY valid JSON:
                     print(f"WS Broadcast Error: {e}")
                 
                 # Proactive Speech
-                if speech and isinstance(speech, str) and len(speech) > 5:
+                if speech and isinstance(speech, str) and len(speech) > 5 and speech.lower() not in ("null", "none"):
                     now = time.time()
                     # 5 minute global cooldown for unprompted speech (unless critical)
                     if now - self.last_speech_time > 300 or "critical" in speech.lower():
@@ -218,7 +228,7 @@ Return ONLY valid JSON:
                         self.last_speech_time = now
                 
                 # Background Action (Future hook to Swarm/Ghost Dev)
-                if action and isinstance(action, str):
+                if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
                     print(f"[Jarvis] ⚙️ Triggering background action: {action}")
                     self._trigger_action(action)
                     
@@ -247,7 +257,7 @@ Return ONLY valid JSON:
                     f"Please analyze jarvis_protocol.py and any dependencies (like core/llm.py), "
                     f"and write code to fix this exception so I can think properly again."
                 )
-                dev.assign_task(fix_task, ["d:\\Balamurugan\\Love\\love\\core\\jarvis_protocol.py"])
+                dev.assign_task(fix_task, [os.path.abspath(__file__)])
                 print("[NeuralCortex] 🛠️ Ghost Developer dispatched to fix the brain.")
             except Exception as inner_e:
                 print(f"[NeuralCortex] Self-healing failed to launch: {inner_e}")
