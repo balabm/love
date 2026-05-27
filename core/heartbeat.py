@@ -328,24 +328,26 @@ class ProactiveHeartbeat:
         return triggers
 
     def _scan_life_domains(self) -> List[TriggerEvent]:
-        """Scan life domains (hydration, sleep, nutrition, skincare) for proactive nudges."""
+        """Scan life domains via Life Coach for time-aware, context-aware nudges."""
         triggers = []
         try:
-            from core.life_domains import get_life_domains_engine
-            engine = get_life_domains_engine()
-            nudges = engine.get_active_nudges()
+            from core.life_coach import get_life_coach
+            coach = get_life_coach()
+            nudges = coach.get_nudges()
+            severity_map = {"high": "warning", "medium": "info", "low": "info"}
             for nudge in nudges:
-                key = f"life_domain_{nudge[:30].replace(' ','_')}"
-                if not self._recently_triggered(key, cooldown_minutes=90):
+                key = f"life_coach_{nudge.get('type', 'generic')}_{nudge.get('domain', '')}"
+                cooldown = 120 if nudge.get("priority") == "high" else 180
+                if not self._recently_triggered(key, cooldown_minutes=cooldown):
                     triggers.append(TriggerEvent(
                         source='life_domains',
-                        trigger_type='nudge',
-                        severity='info',
-                        message=nudge,
-                        action_suggestion='Log it in the Life Domains panel'
+                        trigger_type=nudge.get("type", "nudge"),
+                        severity=severity_map.get(nudge.get("priority", "low"), "info"),
+                        message=nudge.get("message", ""),
+                        action_suggestion=nudge.get("action", "Check the Life panel")
                     ))
         except Exception as e:
-            print(f"[Heartbeat] Life domains scan error: {e}")
+            print(f"[Heartbeat] Life coach scan error: {e}")
         return triggers
 
     def _maybe_self_improve(self):

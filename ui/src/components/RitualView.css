@@ -154,3 +154,75 @@
   border: 1px solid rgba(248,113,113,0.2);
   line-height: 1.45;
 }
+
+/* Body status grid */
+.rv-body-grid {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.rv-body-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 55px;
+}
+
+.rv-body-icon { font-size: 1rem; margin-bottom: 2px; }
+.rv-body-val { font-size: 0.95rem; font-weight: 700; color: #e2e8f0; }
+.rv-body-lbl { font-size: 0.6rem; color: #475569; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Goals list in ritual */
+.rv-goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rv-goal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #0f172a;
+}
+
+.rv-goal-item:last-child { border-bottom: none; }
+
+.rv-goal-domain {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #818cf8;
+  background: rgba(129,140,248,0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  min-width: 60px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.rv-goal-msg {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* Coach nudges */
+.rv-nudge {
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  margin-bottom: 0.3rem;
+  line-height: 1.4;
+}
+
+.rv-nudge-high   { color: #fbbf24; background: rgba(251,191,36,0.08); border-left: 3px solid #fbbf24; }
+.rv-nudge-medium { color: #60a5fa; background: rgba(96,165,250,0.08); border-left: 3px solid #60a5fa; }
+.rv-nudge-low    { color: #94a3b8; background: rgba(148,163,184,0.05); border-left: 3px solid #334155; }
+
+.rv-evening-nudges {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}

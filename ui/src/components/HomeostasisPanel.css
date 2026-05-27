@@ -1,0 +1,356 @@
+/* ── Homeostasis Panel ── */
+
+.hms-panel {
+  padding: 24px;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.hms-loading, .hms-offline {
+  padding: 64px;
+  text-align: center;
+  opacity: 0.5;
+  font-size: 16px;
+}
+.hms-offline-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
+.hms-offline-hint { font-size: 12px; margin-top: 6px; opacity: 0.6; }
+
+/* Header */
+.hms-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.hms-title {
+  margin: 0 0 2px;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f3f4f6;
+}
+.hms-subtitle {
+  font-size: 12px;
+  color: #6b7280;
+  letter-spacing: 0.5px;
+}
+
+/* Phase badge */
+.hms-phase-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  min-width: 200px;
+}
+.hms-phase-icon {
+  font-size: 24px;
+  opacity: 0.9;
+}
+.hms-phase-name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.hms-phase-desc {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+  max-width: 200px;
+}
+
+/* Phase override */
+.hms-phase-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.hms-phase-btn {
+  background: transparent;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  color: #9ca3af;
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+.hms-phase-btn:hover { border-color: #6b7280; color: #e5e7eb; }
+.hms-phase-btn-active { font-weight: 700; }
+
+/* Tabs */
+.hms-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #1f2937;
+  padding-bottom: 0;
+}
+.hms-tab {
+  background: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+}
+.hms-tab:hover { color: #9ca3af; }
+.hms-tab-active { color: #c084fc; border-bottom-color: #c084fc; }
+
+/* Drives */
+.hms-drives-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hms-drive {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: border-color 0.2s;
+}
+.hms-drive-dominant {
+  border-color: #374151;
+  background: rgba(255,255,255,0.04);
+}
+.hms-drive-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.hms-drive-icon { font-size: 14px; width: 18px; text-align: center; }
+.hms-drive-name {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #e5e7eb;
+  flex: 1;
+}
+.hms-dom-badge {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  background: rgba(192,132,252,0.15);
+  color: #c084fc;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-weight: 700;
+}
+.hms-high-badge {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  background: rgba(249,115,22,0.12);
+  color: #f97316;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.hms-drive-pct {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+  text-align: right;
+  color: #9ca3af;
+}
+.hms-drive-track {
+  height: 4px;
+  background: #1f2937;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.hms-drive-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* Sparklines */
+.hms-sparklines {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #1f2937;
+}
+.hms-spark-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.hms-spark-label {
+  font-size: 11px;
+  font-weight: 600;
+  width: 90px;
+  text-transform: capitalize;
+  opacity: 0.85;
+}
+.hms-sparkline {
+  flex: 1;
+  height: 30px;
+  opacity: 0.8;
+}
+.hms-spark-cur {
+  font-size: 11px;
+  font-weight: 700;
+  width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Energy */
+.hms-energy-section { display: flex; flex-direction: column; gap: 8px; }
+.hms-energy-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.hms-throttled { border-color: #f871713a; }
+.hms-energy-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #e5e7eb;
+  font-weight: 600;
+}
+.hms-throttle-icon { color: #f87171; font-size: 14px; }
+.hms-energy-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hms-energy-bar {
+  flex: 1;
+  height: 4px;
+  background: #1f2937;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.hms-energy-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.hms-energy-pct {
+  font-size: 11px;
+  color: #6b7280;
+  min-width: 32px;
+  text-align: right;
+}
+.hms-energy-numbers {
+  font-size: 11px;
+  color: #4b5563;
+  font-variant-numeric: tabular-nums;
+  min-width: 90px;
+  text-align: right;
+}
+
+/* Autophagy */
+.hms-autophagy-section { display: flex; flex-direction: column; gap: 8px; }
+.hms-autophagy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+.hms-autophagy-ready { border-color: #f871713a; }
+.hms-autophagy-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hms-autophagy-icon { font-size: 14px; color: #6b7280; }
+.hms-autophagy-name { font-size: 13px; font-weight: 600; color: #e5e7eb; }
+.hms-autophagy-badge {
+  font-size: 10px;
+  background: rgba(248,113,113,0.15);
+  color: #f87171;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.hms-preserve-btn {
+  background: transparent;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  color: #9ca3af;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.hms-preserve-btn:hover { border-color: #4ade80; color: #4ade80; }
+.hms-autophagy-hint {
+  font-size: 11px;
+  color: #4b5563;
+  padding: 8px 0 0;
+  line-height: 1.5;
+}
+
+/* Shared */
+.hms-section-label {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #4b5563;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.hms-empty {
+  font-size: 13px;
+  color: #4b5563;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Running indicator */
+.hms-running {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #1f2937;
+  color: #4b5563;
+}
+.hms-running-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4b5563;
+}
+.hms-running-live .hms-running-dot {
+  background: #4ade80;
+  box-shadow: 0 0 6px #4ade8080;
+  animation: pulse-dot 2s infinite;
+}
+.hms-running-live { color: #6b7280; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}

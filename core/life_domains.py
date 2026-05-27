@@ -504,8 +504,20 @@ class LifeDomainsEngine:
             "skincare": self.skincare.get_insights(7),
         }
 
-    def get_active_nudges(self) -> List[str]:
-        return self.get_dashboard()["nudges"]
+    def get_active_nudges(self, emotional_state: dict = None) -> List[str]:
+        nudges = self.get_dashboard()["nudges"]
+        if emotional_state:
+            stress = emotional_state.get("current_stress", 0) or emotional_state.get("stress", 0)
+            if stress and float(stress) > 70:
+                # Drop exercise/workout nudges — wrong time to push physical exertion
+                nudges = [n for n in nudges if not any(
+                    kw in n.lower() for kw in ("exercise", "workout", "gym", "run", "training")
+                )]
+                # Inject a stress-aware recovery nudge if not already present
+                recovery = "You're carrying a lot right now — even 5 minutes away from the screen helps."
+                if recovery not in nudges:
+                    nudges.insert(0, recovery)
+        return nudges
 
     def get_streaks(self) -> Dict:
         return {

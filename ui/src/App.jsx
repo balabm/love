@@ -18,6 +18,7 @@ import TerminalPanel from "./components/TerminalPanel";
 import EvolutionPanel from "./components/EvolutionPanel";
 import LifeDomains from "./components/LifeDomains";
 import WaveEngine from "./components/WaveEngine";
+import HomeostasisPanel from "./components/HomeostasisPanel";
 
 
 
@@ -221,6 +222,9 @@ export default function App() {
           <button className={`nav-btn${view === "waves" ? " active" : ""}`} onClick={() => setView("waves")}>
             <span>◈</span> Waves
           </button>
+          <button className={`nav-btn${view === "homeostasis" ? " active" : ""}`} onClick={() => setView("homeostasis")}>
+            <span>◎</span> Body
+          </button>
           <button className={`nav-btn${view === "setup" ? " active" : ""}`} onClick={() => setView("setup")}>
             <span>⚙</span> Setup
           </button>
@@ -348,6 +352,9 @@ export default function App() {
         )}
         {view === "waves" && (
           <ErrorBoundary name="Waves"><div className="view-scroll"><WaveEngine /></div></ErrorBoundary>
+        )}
+        {view === "homeostasis" && (
+          <ErrorBoundary name="Body"><div className="view-scroll"><HomeostasisPanel /></div></ErrorBoundary>
         )}
       </main>
     </div>
