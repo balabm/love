@@ -25,12 +25,16 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
 from threading import Lock, Thread
 
+from core.central_logger import get_logger
+
 # Neural Bus integration
 try:
     from core.neural_bus import get_neural_bus, EventPriority
     NEURAL_BUS_AVAILABLE = True
 except ImportError:
     NEURAL_BUS_AVAILABLE = False
+
+logger = get_logger(__name__)
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 
@@ -113,10 +117,10 @@ class AwarenessEngine:
         try:
             self._scan()
         except Exception as e:
-            print(f"[Awareness] Initial scan error: {e}")
+            logger.error(f"Initial scan error: {e}")
         self._thread = Thread(target=self._loop, args=(interval_seconds,), daemon=True)
         self._thread.start()
-        print(f"[Awareness] Environment scanner started ({interval_seconds}s interval)")
+        logger.info(f"Environment scanner started ({interval_seconds}s interval)")
 
     def stop(self):
         self._running = False
@@ -200,7 +204,7 @@ class AwarenessEngine:
             try:
                 self._scan()
             except Exception as e:
-                print(f"[Awareness] Scan error: {e}")
+                logger.error(f"Scan error: {e}")
             time.sleep(interval)
 
     def _scan(self):
@@ -233,7 +237,7 @@ class AwarenessEngine:
                     priority=EventPriority.AMBIENT
                 )
             except Exception as e:
-                print(f"[Awareness] Neural bus publish error: {e}")
+                logger.error(f"Neural bus publish error: {e}")
 
     # ──────────────────────────────────────────────
     # SYSTEM SCANNER

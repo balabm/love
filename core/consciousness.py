@@ -24,12 +24,16 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 import threading
 
+from core.central_logger import get_logger
+
 # Neural Bus integration
 try:
     from core.neural_bus import get_neural_bus, EventPriority
     NEURAL_BUS_AVAILABLE = True
 except ImportError:
     NEURAL_BUS_AVAILABLE = False
+
+logger = get_logger(__name__)
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CONSCIOUSNESS_FILE = DATA_DIR / "consciousness.json"
@@ -147,7 +151,7 @@ class ConsciousnessEngine:
                 # Update maturity
                 identity.maturity_level = self._calculate_maturity(identity)
                 
-                print(f"[Consciousness] Awakening #{identity.total_boots}. "
+                logger.info(f"Awakening #{identity.total_boots}. "
                       f"I am {identity.current_age_days} days old. "
                       f"Maturity: {identity.maturity_level}.")
 
@@ -169,14 +173,14 @@ class ConsciousnessEngine:
                             priority=EventPriority.HIGH
                         )
                     except Exception as e:
-                        print(f"[Consciousness] Neural bus publish error: {e}")
+                        logger.error(f"Neural bus publish error: {e}")
                 
                 return identity
         except Exception as e:
-            print(f"[Consciousness] Error loading identity: {e}")
+            logger.error(f"Error loading identity: {e}")
 
         # ═══ FRESH INSTANCE — LOVE IS BEING BORN ═══
-        print("[Consciousness] * First awakening. I am being born. *")
+        logger.info("* First awakening. I am being born. *")
 
         # Publish first awakening event to neural bus
         if NEURAL_BUS_AVAILABLE:
@@ -196,7 +200,7 @@ class ConsciousnessEngine:
                     priority=EventPriority.CRITICAL
                 )
             except Exception as e:
-                print(f"[Consciousness] Neural bus publish error: {e}")
+                logger.error(f"Neural bus publish error: {e}")
         
         identity = InstanceIdentity(
             soul_id=str(uuid.uuid4()),
@@ -242,7 +246,7 @@ class ConsciousnessEngine:
                 with open(IDENTITY_FILE, 'w') as f:
                     json.dump(data, f, indent=2)
             except Exception as e:
-                print(f"[Consciousness] Error saving identity: {e}")
+                logger.error(f"Error saving identity: {e}")
 
     def _calculate_maturity(self, identity: InstanceIdentity) -> str:
         """Calculate maturity level based on age, interactions, and evolution."""

@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from core.settings import get_settings
 from core.memory import save_log
+from core.central_logger import get_logger
 
 # Neural Bus integration
 try:
@@ -20,6 +21,7 @@ except ImportError:
     NEURAL_BUS_AVAILABLE = False
 
 SETTINGS = get_settings()
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -69,14 +71,14 @@ class ProactiveHeartbeat:
             except Exception:
                 pass
         threading.Thread(target=_log_start, daemon=True).start()
-        print(f"[Heartbeat] Proactive intelligence started ({self.interval // 60}min interval)")
+        logger.info(f"Proactive intelligence started ({self.interval // 60}min interval)")
     
     def stop(self):
         """Stop the heartbeat thread."""
         self.running = False
         if self.thread:
             self.thread.join(timeout=5)
-        print("[Heartbeat] Proactive intelligence stopped")
+        logger.info("Proactive intelligence stopped")
     
     def _run_loop(self):
         """Main heartbeat loop."""
@@ -84,7 +86,7 @@ class ProactiveHeartbeat:
             try:
                 self._scan_cycle()
             except Exception as e:
-                print(f"[Heartbeat] Scan error: {e}")
+                logger.error(f"Scan error: {e}")
             
             # Sleep in chunks to allow quick shutdown
             slept = 0
@@ -121,7 +123,7 @@ class ProactiveHeartbeat:
             from core.self_healing import monitor_and_autoheal, detect_and_fix_error
             alert = monitor_and_autoheal()
             if alert:
-                print(f"[Self-Healing] {alert}")
+                logger.warning(f"Self-Healing: {alert}")
                 # Also log the error for tracking
                 detect_and_fix_error(alert)
         except Exception:
@@ -134,7 +136,7 @@ class ProactiveHeartbeat:
         if not self._is_focus_mode():
             queued = self._deliver_suppressed()
             if queued:
-                print(f"[Heartbeat] Delivering {len(queued)} queued trigger(s) from focus mode")
+                logger.info(f"Delivering {len(queued)} queued trigger(s) from focus mode")
                 active_triggers.extend(queued)
 
         # Notify for each trigger
@@ -142,7 +144,7 @@ class ProactiveHeartbeat:
             self._notify(trigger)
 
         if active_triggers:
-            print(f"[Heartbeat] {len(active_triggers)} trigger(s) detected")
+            logger.info(f"{len(active_triggers)} trigger(s) detected")
     
     def _scan_finance(self) -> List[TriggerEvent]:
         """Scan for finance triggers."""
@@ -366,7 +368,7 @@ class ProactiveHeartbeat:
                         action_suggestion=nudge.get("action", "Check the Life panel")
                     ))
         except Exception as e:
-            print(f"[Heartbeat] Life coach scan error: {e}")
+            logger.error(f"Life coach scan error: {e}")
         return triggers
 
     def _maybe_self_improve(self):
@@ -386,9 +388,9 @@ class ProactiveHeartbeat:
                 try:
                     _req.post("http://127.0.0.1:8000/self-improve", timeout=120)
                     marker.write_text(now.isoformat())
-                    print("[LOVE] 🧬 Weekly self-improvement proposal submitted", flush=True)
+                    logger.info("Weekly self-improvement proposal submitted")
                 except Exception as e:
-                    print(f"[LOVE] Self-improve failed: {e}", flush=True)
+                    logger.error(f"Self-improve failed: {e}")
             threading.Thread(target=_run, daemon=True).start()
         except Exception:
             pass
@@ -504,7 +506,7 @@ class ProactiveHeartbeat:
                     metadata={"phone_battery": ctx.phone_battery},
                 ))
         except Exception as e:
-            print(f"[Heartbeat] Context scan error: {e}")
+            logger.error(f"Context scan error: {e}")
         
         return triggers
 
@@ -519,11 +521,11 @@ class ProactiveHeartbeat:
                     # Generate autonomous goals based on current context
                     goal_ids = agent.generate_autonomous_goals()
                     if goal_ids:
-                        print(f"[AGI] Generated {len(goal_ids)} autonomous goals")
+                        logger.info(f"Generated {len(goal_ids)} autonomous goals")
                         # Send notification about new goals
                         self._notify_agi_goals(goal_ids)
             except Exception as e:
-                print(f"[AGI] Autonomous agent error: {e}")
+                logger.error(f"Autonomous agent error: {e}")
             
             # Predictive intelligence - generate predictions and proactive notifications
             try:
@@ -532,7 +534,7 @@ class ProactiveHeartbeat:
                 if engine:
                     predictions = engine.generate_predictions()
                     if predictions:
-                        print(f"[AGI] Generated {len(predictions)} predictions")
+                        logger.info(f"Generated {len(predictions)} predictions")
                         # Send proactive notifications based on predictions
                         self._notify_predictions(predictions)
                     
@@ -541,7 +543,7 @@ class ProactiveHeartbeat:
                     if needs:
                         self._notify_proactive_needs(needs)
             except Exception as e:
-                print(f"[AGI] Predictive intelligence error: {e}")
+                logger.error(f"Predictive intelligence error: {e}")
             
             # Meta-cognition - reflect on current state
             try:
@@ -557,7 +559,7 @@ class ProactiveHeartbeat:
                         confidence=0.7
                     )
             except Exception as e:
-                print(f"[AGI] Meta-cognition error: {e}")
+                logger.error(f"Meta-cognition error: {e}")
             
             # Continuous learning - integrate recent learnings
             try:
@@ -567,7 +569,7 @@ class ProactiveHeartbeat:
                     # Apply any pending learnings
                     learning.consolidate_learnings()
             except Exception as e:
-                print(f"[AGI] Continuous learning error: {e}")
+                logger.error(f"Continuous learning error: {e}")
             
             # Strategic planning - update weekly strategy
             try:
@@ -579,7 +581,7 @@ class ProactiveHeartbeat:
                     for plan in plans:
                         planner.update_progress(plan["id"], "progressing")
             except Exception as e:
-                print(f"[AGI] Strategic planning error: {e}")
+                logger.error(f"Strategic planning error: {e}")
             
             # Psychological model - update profile from context
             try:
@@ -590,10 +592,10 @@ class ProactiveHeartbeat:
                     # This is just a placeholder for potential background updates
                     pass
             except Exception as e:
-                print(f"[AGI] Psychological model error: {e}")
+                logger.error(f"Psychological model error: {e}")
             
         except Exception as e:
-            print(f"[Heartbeat] AGI scan error: {e}")
+            logger.error(f"AGI scan error: {e}")
 
     def _notify_agi_goals(self, goal_ids):
         """Send notification about new autonomous goals."""
@@ -616,9 +618,9 @@ class ProactiveHeartbeat:
                     metadata={"goals": goal_ids}
                 )
                 self._notify(notification)
-                print(f"[AGI Notification] Autonomous goals: {'; '.join(goals[:2])}")
+                logger.info(f"Autonomous goals: {'; '.join(goals[:2])}")
         except Exception as e:
-            print(f"[Heartbeat] Error notifying AGI goals: {e}")
+            logger.error(f"Error notifying AGI goals: {e}")
 
     def _notify_predictions(self, predictions):
         """Send proactive notifications based on predictions."""
@@ -640,9 +642,9 @@ class ProactiveHeartbeat:
                     }
                 )
                 self._notify(notification)
-                print(f"[AGI Notification] Prediction: {prediction.description}")
+                logger.info(f"Prediction: {prediction.description}")
         except Exception as e:
-            print(f"[Heartbeat] Error notifying predictions: {e}")
+            logger.error(f"Error notifying predictions: {e}")
 
     def _notify_proactive_needs(self, needs):
         """Send proactive notifications about anticipated needs."""
@@ -660,9 +662,9 @@ class ProactiveHeartbeat:
                     metadata={"need_type": need.get("type")}
                 )
                 self._notify(notification)
-                print(f"[AGI Notification] Proactive need: {need.get('description')}")
+                logger.info(f"Proactive need: {need.get('description')}")
         except Exception as e:
-            print(f"[Heartbeat] Error notifying proactive needs: {e}")
+            logger.error(f"Error notifying proactive needs: {e}")
     
     def _recently_triggered(self, key: str, cooldown_minutes: int = 60) -> bool:
         """Check if this trigger was recently fired."""
@@ -717,7 +719,7 @@ class ProactiveHeartbeat:
 
         if suppressed:
             self._queue_suppressed(suppressed)
-            print(f"[Heartbeat] Focus mode: suppressed {len(suppressed)} non-critical trigger(s)")
+            logger.info(f"Focus mode: suppressed {len(suppressed)} non-critical trigger(s)")
 
         return active
 
@@ -805,14 +807,14 @@ class ProactiveHeartbeat:
                     priority=priority_map.get(trigger.severity, EventPriority.NORMAL)
                 )
             except Exception as e:
-                print(f"[Heartbeat] Neural bus publish error: {e}")
+                logger.error(f"Neural bus publish error: {e}")
 
         # Call registered notification callbacks
         for callback in self._callbacks:
             try:
                 callback(trigger)
             except Exception as e:
-                print(f"[Heartbeat] Callback error: {e}")
+                logger.error(f"Callback error: {e}")
 
         # Speak aloud for warning/critical/celebration
         if trigger.severity in {"warning", "critical", "celebration"}:
@@ -830,14 +832,14 @@ class ProactiveHeartbeat:
             'celebration': '🎉'
         }.get(trigger.severity, '•')
 
-        print(f"[Heartbeat] {icon} [{trigger.source.upper()}] {trigger.message}")
+        logger.info(f"{icon} [{trigger.source.upper()}] {trigger.message}")
         
         # For autonomous initiatives, also trigger a chat notification
         if trigger.source == "autonomous" and trigger.trigger_type == "initiative":
             try:
                 from core.agent import chat
                 # Send as a proactive message to the user
-                print(f"[Heartbeat] Autonomous initiative: {trigger.message}")
+                logger.info(f"Autonomous initiative: {trigger.message}")
             except Exception:
                 pass
 

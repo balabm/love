@@ -219,6 +219,51 @@ async def get_learning_status():
         return {"error": str(e)}
 
 
+# ── Central Logging Endpoints ────────────────────────────────────────────────
+
+@router.get("/logs/stats")
+async def get_log_stats():
+    """Get central logging statistics."""
+    try:
+        from core.central_logger import get_central_logger_manager
+        manager = get_central_logger_manager()
+        return manager.get_log_stats()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("/logs/recent")
+async def get_recent_logs(limit: int = 100):
+    """Get recent log entries from memory."""
+    try:
+        from core.central_logger import get_central_logger_manager
+        manager = get_central_logger_manager()
+        logs = manager.get_log_history(limit=limit)
+        return {
+            "logs": [log.to_dict() for log in logs],
+            "total": len(logs)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@router.get("/logs/search")
+async def search_logs(query: str = "", level: str = None, module: str = None, limit: int = 100):
+    """Search logs by query, level, and/or module."""
+    try:
+        from core.central_logger import get_central_logger_manager
+        manager = get_central_logger_manager()
+        logs = manager.search_logs(query=query, level=level, module=module, limit=limit)
+        return {
+            "logs": [log.to_dict() for log in logs],
+            "total": len(logs),
+            "query": query,
+            "filters": {"level": level, "module": module}
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Research Engine Endpoints ────────────────────────────────────────────────
 
 @router.get("/research/status")
