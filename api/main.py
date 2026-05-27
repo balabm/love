@@ -495,6 +495,20 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True, description="Proactive periodic triggers"
     ))
 
+    # -- MASTER ORCHESTRATOR --
+    def start_master_orchestrator_module():
+        from core.master_orchestrator import start_master_orchestrator
+        start_master_orchestrator()
+
+    def stop_master_orchestrator_module():
+        from core.master_orchestrator import stop_master_orchestrator
+        stop_master_orchestrator()
+
+    lm.register(ModuleDescriptor(
+        name="master_orchestrator", wave=0, start_fn=start_master_orchestrator_module, stop_fn=stop_master_orchestrator_module,
+        depends_on=["neural_bus"], optional=True, description="Executive function -- coordinates all modules via neural bus"
+    ))
+
     # ── WAVE 1: AWARENESS ──
     def start_awareness_module():
         from core.awareness import start_awareness
