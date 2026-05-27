@@ -31,9 +31,9 @@ ACTIONS_LOG = DATA_DIR / "system_actions.jsonl"
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
 SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
-IS_WINDOWS = platform.system() == "Windows"
-IS_MAC = platform.system() == "Darwin"
-IS_LINUX = platform.system() == "Linux"
+IS_WINDOWS = sys.platform == "win32"
+IS_MAC = sys.platform == "darwin"
+IS_LINUX = sys.platform.startswith("linux")
 
 
 def _log(action: str, details: Dict[str, Any], success: bool, error: str = ""):

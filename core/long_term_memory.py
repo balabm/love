@@ -122,12 +122,26 @@ def _now() -> str:
     return datetime.now().isoformat()
 
 
+# -- Lazy shared ChromaDB client (avoids creating a new PersistentClient per call) --
+_ltm_chroma_client = None
+_ltm_chroma_collections: dict = {}
+
+def _ltm_get_collection(collection_name: str):
+    """Return a cached ChromaDB collection, opening the client once."""
+    global _ltm_chroma_client, _ltm_chroma_collections
+    import chromadb
+    if _ltm_chroma_client is None:
+        _ltm_chroma_client = chromadb.PersistentClient(path=str(DATA_DIR / "memory"))
+    key = f"love_{collection_name}"
+    if key not in _ltm_chroma_collections:
+        _ltm_chroma_collections[key] = _ltm_chroma_client.get_or_create_collection(name=key)
+    return _ltm_chroma_collections[key]
+
+
 def _chroma_store(text: str, metadata: Dict, collection_name: str = "episodic") -> str:
     """Store embedding in ChromaDB, return embedding ID."""
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=str(DATA_DIR / "memory"))
-        collection = client.get_or_create_collection(name=f"love_{collection_name}")
+        collection = _ltm_get_collection(collection_name)
         doc_id = _make_id(text + json.dumps(metadata, sort_keys=True))
         collection.add(
             documents=[text],
@@ -142,9 +156,7 @@ def _chroma_store(text: str, metadata: Dict, collection_name: str = "episodic") 
 def _chroma_query(query: str, n: int = 5, collection_name: str = "episodic") -> List[Dict]:
     """Semantic search via ChromaDB."""
     try:
-        import chromadb
-        client = chromadb.PersistentClient(path=str(DATA_DIR / "memory"))
-        collection = client.get_or_create_collection(name=f"love_{collection_name}")
+        collection = _ltm_get_collection(collection_name)
         results = collection.query(query_texts=[query], n_results=n)
         out = []
         for i, doc in enumerate(results["documents"][0]):

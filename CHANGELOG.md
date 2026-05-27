@@ -6,6 +6,24 @@ For honest capability assessment, see [GAP_TO_AGI.md](GAP_TO_AGI.md).
 
 ---
 
+## Wave 28 (May 2026) — Planning Calibration Depth + PEFT Adapter Export
+
+### 28A: Query-Category-Aware Calibration
+- `core/rollout_planner.py`: keyword-based query classifier (casual/emotional/technical/task)
+- Per-category style accuracy tracking (`casual:empathetic`, `technical:analytical`, etc.)
+- Graduated directives now use category-specific accuracy when available
+- `GET /planner/category-stats` — per-category accuracy dashboard
+- `POST /planner/detect-category` — query classification endpoint
+
+### 28B: Real PEFT Adapter Export
+- `core/lora_evolution.py`: `save_as_checkpoint()` produces proper PEFT format
+- `adapter_config.json` with standard PEFT keys (peft_type, r, lora_alpha, target_modules)
+- `adapter_model.bin` with PyTorch state_dict using standard PEFT weight keys
+- `adapter_model.safetensors` if safetensors available
+- `GET /lora/export-peft/{adapter_id}` — export any adapter as PEFT checkpoint
+- `GET /lora/peft-status` — torch/peft availability check
+- Added `get_adapter(id)` for retrieving adapters by ID
+
 ## Wave 27 (May 2026) — Active Planning + Focus-Aware Heartbeat
 
 ### 27A: Active Model Predictive Control

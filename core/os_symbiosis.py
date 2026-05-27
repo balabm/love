@@ -17,6 +17,13 @@ import os
 import time
 import shutil
 import platform
+
+def _platform_system() -> str:
+    """Return platform name without blocking (avoids platform.system() WMI hang)."""
+    import sys as _sys
+    if _sys.platform == "win32": return "Windows"
+    if _sys.platform == "darwin": return "Darwin"
+    return "Linux"
 import subprocess
 import threading
 from pathlib import Path
@@ -41,7 +48,7 @@ class OSSymbiosisEngine:
         self._lock = threading.Lock()
         self._running = False
         self._thread: Optional[threading.Thread] = None
-        self.os_type = platform.system()
+        self.os_type = _platform_system()
 
     def _log(self, event: str, data: Dict[str, Any]):
         try:
@@ -228,7 +235,7 @@ class OSSymbiosisEngine:
             try:
                 # Every 1 hour, check Downloads folder size
                 downloads_dir = Path.home() / "Downloads"
-                if platform.system() == "Windows":
+                if _platform_system() == "Windows":
                     downloads_dir = Path(os.environ.get('USERPROFILE', Path.home())) / "Downloads"
                 
                 if downloads_dir.exists():

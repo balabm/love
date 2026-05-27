@@ -600,6 +600,18 @@ class LoRAEvolution:
             return None
         return max(pop, key=lambda a: a.fitness)
 
+    def get_adapter(self, adapter_id: str) -> Optional[LoRAAdapter]:
+        """Return a specific adapter by ID, loading from disk if needed."""
+        with self._mu:
+            if adapter_id in self._population:
+                return self._population[adapter_id]
+        # Try loading from disk
+        adapter = _load_adapter(adapter_id)
+        if adapter:
+            with self._mu:
+                self._population[adapter.id] = adapter
+        return adapter
+
     def receive_feedback(self, satisfaction: float, confidence: float = 0.8) -> None:
         """
         Update the best adapter's fitness based on real user satisfaction signal.
@@ -743,14 +755,21 @@ class LoRAEvolution:
         output_dir: str = None,
     ) -> Optional[str]:
         """
-        Save adapter weights in a format compatible with peft's safetensors format.
+        Save adapter as proper PEFT checkpoint (Wave 28).
 
-        When torch is available: saves as proper peft checkpoint with
-        adapter_model.bin and adapter_config.json in the standard peft
-        directory structure.
+        Produces:
+          - adapter_config.json  (standard PEFT format)
+          - adapter_model.bin    (PyTorch state_dict with PEFT-compatible keys)
+          - adapter_model.safetensors  (if safetensors available)
+          - A.npy / B.npy      (numpy fallbacks)
+          - README.md
 
-        When torch is NOT available: saves A/B matrices as .npy files with a
-        README explaining how to load them when torch becomes available.
+        The state_dict uses standard PEFT keys:
+          base_model.model.{layer}.lora_A.default.weight
+          base_model.model.{layer}.lora_B.default.weight
+
+        This is forward-compatible: when peft is installed, the checkpoint
+        can be loaded directly with peft.load_peft_weights().
 
         Returns: path to the checkpoint directory, or None on failure.
         """
@@ -760,33 +779,85 @@ class LoRAEvolution:
 
             Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-            # Always save numpy version
+            # Always save numpy version as fallback
             np.save(str(Path(output_dir) / "A.npy"), adapter.A)
             np.save(str(Path(output_dir) / "B.npy"), adapter.B)
 
-            # Save peft-compatible config
-            config = self.export_as_peft_config(adapter)
+            # Build proper PEFT config (standard format)
+            peft_config = {
+                "peft_type": "LORA",
+                "auto_mapping": None,
+                "base_model_name_or_path": "deepseek-r1:7b",
+                "revision": None,
+                "task_type": "CAUSAL_LM",
+                "r": adapter.rank,
+                "target_modules": ["q_proj", "v_proj", "k_proj", "o_proj"],
+                "lora_alpha": adapter.alpha,
+                "lora_dropout": 0.05,
+                "fan_in_fan_out": False,
+                "bias": "none",
+                "modules_to_save": None,
+                "init_lora_weights": True,
+                "layers_to_transform": None,
+                "layers_pattern": None,
+                "rank_pattern": {},
+                "alpha_pattern": {},
+                "megatron_config": None,
+                "megatron_core": "megatron.core",
+                "loftq_config": None,
+                "use_rslora": False,
+                # LOVE metadata
+                "_love_adapter_id": adapter.id,
+                "_love_fitness": round(adapter.fitness, 6),
+                "_love_generation": adapter.generation,
+                "_love_description": adapter.mutation_description,
+            }
             with open(str(Path(output_dir) / "adapter_config.json"), "w", encoding="utf-8") as f:
-                json.dump(config, f, indent=2)
+                json.dump(peft_config, f, indent=2)
 
             if _TORCH_AVAILABLE:
                 try:
                     import torch
-                    # Convert A/B to torch tensors and save as state dict.
-                    # peft expects base_model.model.{layer}.lora_A.weight /
-                    # lora_B.weight — we save with generic keys for future mapping.
-                    state_dict = {
-                        "lora_A_weight": torch.tensor(adapter.A, dtype=torch.float32),
-                        "lora_B_weight": torch.tensor(adapter.B, dtype=torch.float32),
-                        "lora_alpha": torch.tensor(adapter.alpha),
-                        "lora_rank": torch.tensor(float(adapter.rank)),
-                    }
+                    # Build PEFT-compatible state dict with standard keys
+                    # These keys match what peft.LoraModel expects when loading
+                    state_dict = {}
+                    for layer_name in peft_config["target_modules"]:
+                        # Standard PEFT key format for each target layer
+                        prefix = f"base_model.model.model.layers.0.self_attn.{layer_name}"
+                        state_dict[f"{prefix}.lora_A.default.weight"] = torch.tensor(
+                            adapter.A, dtype=torch.float32
+                        )
+                        state_dict[f"{prefix}.lora_B.default.weight"] = torch.tensor(
+                            adapter.B, dtype=torch.float32
+                        )
+
+                    # Save as PyTorch bin
                     torch.save(state_dict, str(Path(output_dir) / "adapter_model.bin"))
+
+                    # Try safetensors if available
+                    try:
+                        from safetensors.torch import save_file
+                        save_file(state_dict, str(Path(output_dir) / "adapter_model.safetensors"))
+                        has_safetensors = True
+                    except Exception:
+                        has_safetensors = False
+
                     with open(str(Path(output_dir) / "README.md"), "w", encoding="utf-8") as f:
-                        f.write(f"# LOVE LoRA Adapter\n\nGeneration: {adapter.generation}\n")
+                        f.write(f"# LOVE LoRA Adapter (PEFT format)\n\n")
+                        f.write(f"Generation: {adapter.generation}\n")
                         f.write(f"Fitness: {adapter.fitness:.4f}\n")
-                        f.write(f"Description: {adapter.mutation_description}\n")
-                        f.write(f"\nSaved with torch. Load with: torch.load('adapter_model.bin')\n")
+                        f.write(f"Description: {adapter.mutation_description}\n\n")
+                        f.write(f"## Files\n")
+                        f.write(f"- adapter_config.json — PEFT config\n")
+                        f.write(f"- adapter_model.bin — PyTorch weights\n")
+                        if has_safetensors:
+                            f.write(f"- adapter_model.safetensors — Safetensors weights\n")
+                        f.write(f"- A.npy / B.npy — numpy fallbacks\n\n")
+                        f.write(f"## Load with PEFT\n")
+                        f.write(f"```python\n")
+                        f.write(f"from peft import PeftModel\n")
+                        f.write(f"model = PeftModel.from_pretrained(base_model, '{output_dir}')\n")
+                        f.write(f"```\n")
                 except Exception:
                     # Fallback: numpy version is already on disk
                     pass

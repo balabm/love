@@ -10,6 +10,13 @@ import sys
 import json
 import time
 import platform
+
+def _platform_system() -> str:
+    """Return platform name without blocking (avoids platform.system() WMI hang)."""
+    import sys as _sys
+    if _sys.platform == "win32": return "Windows"
+    if _sys.platform == "darwin": return "Darwin"
+    return "Linux"
 import subprocess
 import socket
 from datetime import datetime, timedelta
@@ -209,7 +216,7 @@ class AwarenessEngine:
     def _scan_system(self) -> SystemSnapshot:
         snap = SystemSnapshot()
         snap.hostname = socket.gethostname()
-        snap.platform = platform.system()
+        snap.platform = _platform_system()
 
         try:
             import psutil
@@ -245,7 +252,7 @@ class AwarenessEngine:
         return snap
 
     def _get_gpu_name(self) -> Optional[str]:
-        if platform.system() == "Windows":
+        if _platform_system() == "Windows":
             try:
                 out = subprocess.check_output(
                     ["wmic", "path", "win32_VideoController", "get", "name"],
@@ -298,7 +305,7 @@ class AwarenessEngine:
 
     def _get_active_window(self):
         """Get the currently focused window title and app name."""
-        if platform.system() != "Windows":
+        if _platform_system() != "Windows":
             return "", ""
         try:
             import ctypes

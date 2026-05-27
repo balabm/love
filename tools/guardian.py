@@ -3,6 +3,14 @@ Work-Life Guardian (Professional Autonomy)
 Monitors work hours, Git activity, and enforces configurable work-life balance.
 """
 
+
+def _platform_system() -> str:
+    """Return platform name without blocking."""
+    import sys as _sys
+    if _sys.platform == "win32": return "Windows"
+    if _sys.platform == "darwin": return "Darwin"
+    return "Linux"
+
 import os
 import json
 import subprocess
@@ -631,7 +639,7 @@ class HardStopEnforcer:
         lock_triggered = False
         dim_triggered = False
         
-        system = platform.system()
+        system = _platform_system()
         
         try:
             # Windows: Dim screen using powercfg (reduce brightness) or send notification

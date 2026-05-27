@@ -1,8 +1,5 @@
 # LOVE LLM configuration - updated for efficient model switching
-try:
-    from langchain_ollama import OllamaLLM as Ollama
-except ImportError:
-    from langchain_community.llms import Ollama
+# langchain_ollama import removed -- DirectOllama handles all LLM calls
 from core.settings import get_settings
 from dotenv import load_dotenv
 import os

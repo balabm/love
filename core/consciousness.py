@@ -15,6 +15,7 @@ This module answers: "Who am I right now, and how did I get here?"
 import json
 import hashlib
 import uuid
+import os
 import platform
 import socket
 from datetime import datetime, timedelta
@@ -101,9 +102,9 @@ class ConsciousnessEngine:
     def _generate_hardware_fingerprint(self) -> str:
         """Generate a fingerprint of the current hardware."""
         parts = [
-            platform.node(),
-            platform.machine(),
-            platform.processor(),
+            __import__("socket").gethostname(),
+            os.environ.get("PROCESSOR_ARCHITECTURE", "x86_64"),
+            os.environ.get("PROCESSOR_IDENTIFIER", "unknown"),
             socket.gethostname(),
         ]
         raw = "|".join(parts)

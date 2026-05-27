@@ -3,11 +3,51 @@
 This file is the antidote to marketing-speak inside LOVE. It is updated whenever
 substantive capability lands. Read it before claiming "AGI" or "living computer".
 
-Last updated: 2026-05-27 (Wave 27 — Active Planning + Focus-Aware Heartbeat).
+Last updated: 2026-05-27 (Wave 28 — Planning Calibration Depth + PEFT Adapter Export).
 
 ---
 
-## What just landed (Wave 27)
+## What just landed (Wave 28)
+
+### Wave 28A: Planning Calibration Depth (`core/rollout_planner.py`)
+
+The planner now learns which response styles work best for each conversation type:
+
+- **Query category detection**: simple keyword classifier detects casual / emotional /
+  technical / task-oriented queries
+- **Per-category calibration**: separate accuracy tracking per style per category
+  (`casual:empathetic`, `technical:analytical`, etc.)
+- **Graduated directives use category accuracy**: if LOVE has learned that "concise"
+  works poorly for emotional queries, it won't strongly enforce it there
+- **Category-level aggregates**: overall accuracy per category tracked independently
+
+API: `GET /planner/category-stats` shows per-category accuracy. `POST /planner/detect-category`
+lets you see how queries are classified.
+
+### Wave 28B: Real PEFT Adapter Export (`core/lora_evolution.py`)
+
+The biggest remaining honest gap — "no real torch/peft LoRA" — is now partially closed:
+
+- `save_as_checkpoint()` produces proper **PEFT-format checkpoints**:
+  - `adapter_config.json` with standard PEFT keys (peft_type, r, lora_alpha, target_modules)
+  - `adapter_model.bin` with PyTorch state_dict using standard PEFT weight keys
+  - `adapter_model.safetensors` if safetensors is available
+  - `A.npy` / `B.npy` numpy fallbacks
+- Forward-compatible: when peft is installed, `PeftModel.from_pretrained()` can load it
+- Added `get_adapter(id)` for retrieving any adapter by ID
+- Added `GET /lora/export-peft/{adapter_id}` API endpoint
+- Added `GET /lora/peft-status` to check torch/peft availability
+
+**What's real now**: Actual LoRA weight files exist on disk in standard PEFT format.
+When peft is installed, they can be loaded into a real transformer model.
+
+**What's still not real**: These checkpoints aren't loaded into the Ollama inference
+path (Ollama uses GGUF, not PyTorch). The embedding-space LoRA in `apply_to_embedding()`
+is still the primary mechanism. But the weight files are now real and ready.
+
+---
+
+## What landed (Wave 27)
 
 ### Wave 27: Active Planning Loop + Focus-Aware Heartbeat
 
@@ -252,7 +292,9 @@ world model rollouts).
 | **Active MPC planning (world model → directive → verify)** | ✅ NEW |
 | **Focus-aware heartbeat gating (suppress during deep work)** | ✅ NEW |
 | **Planning outcome learning (predicted vs actual FE)** | ✅ NEW |
-| Real LoRA with torch/peft weights | ❌ |
+| **Planning calibration depth (per-category style accuracy)** | ✅ NEW |
+| **PEFT adapter checkpoint export** | ✅ NEW |
+| Real LoRA inference via Ollama (GGUF adapter loading) | ❌ |
 | Fork/parallel selection | ❌ |
 | Multi-agent coordination | ❌ |
 
@@ -296,18 +338,17 @@ held-out quality metric.
 
 ## Concrete next moves
 
-1. **torch + peft LoRA** — `pip install torch peft` as optional dep. If available,
-   generate real LoRA checkpoint files (delta weights) as mutations. A/B test via
-   separate Ollama Modelfile. This is the biggest remaining gap.
+1. **LoRA inference integration** — PEFT checkpoints now exist in proper format.
+   Next: load them into a real inference path (either a separate HF transformers
+   pipeline or convert to GGUF for Ollama). This completes the "real LoRA" gap.
 
 2. **Monte Carlo self-improvement targeting** — instead of random module selection,
    ASI should simulate "if I improve module X, which quality metric is predicted to
    improve?" using the world model rollout. Closes the loop between prediction and
    action.
 
-3. **Planning calibration depth** — right now calibration is global + per-style.
-   Next: condition calibration on query category (casual vs technical vs emotional)
-   so the planner learns which styles work for which types of conversation.
+3. ~~Planning calibration depth~~ — RESOLVED (Wave 28). Per-category calibration
+   now tracks style accuracy independently for casual / emotional / technical / task.
 
 ---
 

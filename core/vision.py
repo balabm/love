@@ -1,11 +1,20 @@
 """
 LOVE Vision Engine
 
+
 LOVE can see. Screenshots, photos, documents — she reads them, understands them,
 detects objects, and reasons about what she sees.
 
 Built on the on-demand model manager — pulls capabilities as needed.
 """
+
+def _platform_system() -> str:
+    """Return platform name without blocking."""
+    import sys as _sys
+    if _sys.platform == "win32": return "Windows"
+    if _sys.platform == "darwin": return "Darwin"
+    return "Linux"
+
 
 import os
 import base64
@@ -218,7 +227,7 @@ def get_active_window_info() -> Dict[str, Any]:
     info = {"title": "", "process": "", "platform": "unknown"}
     try:
         import platform
-        sys_platform = platform.system()
+        sys_platform = _platform_system()
         info["platform"] = sys_platform
 
         if sys_platform == "Windows":

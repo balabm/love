@@ -5,8 +5,28 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = chromadb.PersistentClient(path="./data/memory")
-collection = client.get_or_create_collection("love_memory")
+# -- Lazy ChromaDB initialisation --
+# Opening a PersistentClient at module-import time blocks startup on network/
+# cloud-synced paths (OneDrive, Dropbox) because SQLite migrations run
+# synchronously. Defer the connection until first actual use.
+_client = None
+_collection = None
+
+def _get_client():
+    global _client
+    if _client is None:
+        _client = chromadb.PersistentClient(path="./data/memory")
+    return _client
+
+def _get_collection():
+    global _collection
+    if _collection is None:
+        _collection = _get_client().get_or_create_collection("love_memory")
+    return _collection
+
+# Shims for any code that imported these names directly
+client = None
+collection = None
 
 # Neural Sync integration (optional)
 try:
@@ -64,7 +84,7 @@ def save_memory(user_input: str, response: str, mode: str = "general"):
     except Exception:
         pass
     # Save to local ChromaDB
-    collection.add(
+    _get_collection().add(
         documents=[f"User: {user_input}\nLove: {response}"],
         metadatas=[{"mode": mode, "timestamp": datetime.now().isoformat()}],
         ids=[datetime.now().isoformat()],
@@ -105,7 +125,7 @@ def recall_memory(query: str, n: int = 5, mode: str = None):
     """Recall relevant past memories."""
     where = {"mode": mode} if mode else None
     try:
-        results = collection.query(
+        results = _get_collection().query(
             query_texts=[query],
             n_results=n,
             where=where
@@ -119,7 +139,7 @@ def recall_memory(query: str, n: int = 5, mode: str = None):
 def save_log(category: str, data: dict):
     """Save structured life logs — mood, fitness, finance etc. Syncs across devices."""
     # Save to local ChromaDB
-    log_collection = client.get_or_create_collection(f"love_{category}")
+    log_collection = _get_client().get_or_create_collection(f"love_{category}")
     log_collection.add(
         documents=[str(data)],
         metadatas=[{"timestamp": datetime.now().isoformat()}],
@@ -165,7 +185,7 @@ def prune_short_term_memory(days_to_keep: int = 7):
         # Query for all entries to find old ones
         # Note: ChromaDB doesn't support direct timestamp filtering in where clause,
         # so we need to get all entries and filter manually
-        results = collection.get(include=["metadatas"])
+        results = _get_collection().get(include=["metadatas"])
         
         if not results or not results["ids"]:
             return
@@ -179,7 +199,7 @@ def prune_short_term_memory(days_to_keep: int = 7):
         
         # Delete old entries if any found
         if ids_to_delete:
-            collection.delete(ids=ids_to_delete)
+            _get_collection().delete(ids=ids_to_delete)
             logging.info(f"Pruned {len(ids_to_delete)} old memory entries (older than {days_to_keep} days)")
         
     except Exception as e:

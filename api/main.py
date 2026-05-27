@@ -1,5 +1,5 @@
-# ── LOVE Self-Bootstrap: silently installs anything missing ──
-# LOVE never tells the user to run pip manually. It does it itself.
+# ── LOVE Self-Bootstrap: dependency preflight ──
+# Do not install packages during server boot unless explicitly enabled.
 import sys, subprocess, os as _os
 import builtins
 
@@ -54,28 +54,35 @@ builtins.print = safe_print
 
 
 _REQUIRED = {
-    # Core API
-    "python-multipart":  "python-multipart",
-    "langchain_ollama":  "langchain-ollama",
+    # Core API (langchain_ollama removed -- DirectOllama used instead)
+    "multipart":  "python-multipart",
     # Google integration
     "google.auth":                   "google-auth",
     "google.oauth2.credentials":     "google-auth",
     "google_auth_oauthlib":          "google-auth-oauthlib",
     "googleapiclient":               "google-api-python-client",
-    # Whisper voice transcription
-    "whisper":           "openai-whisper",
+    # Whisper: optional voice transcription -- NOT checked here, it hangs on import
 }
 
 if not _os.environ.get("_LOVE_DEPS_INSTALLED"):
+    _auto_install = _os.environ.get("LOVE_AUTO_INSTALL_DEPS", "").lower() in {"1", "true", "yes"}
     for _mod, _pkg in _REQUIRED.items():
         try:
             __import__(_mod)
         except (ImportError, ModuleNotFoundError):
+            if not _auto_install:
+                print(
+                    f"[LOVE] Missing optional dependency {_pkg}. "
+                    "Run `python -m pip install -r requirements.txt` or set LOVE_AUTO_INSTALL_DEPS=1.",
+                    flush=True,
+                )
+                continue
             print(f"[LOVE] Auto-installing {_pkg}...", flush=True)
             try:
                 subprocess.check_call(
                     [sys.executable, "-m", "pip", "install", "--quiet", _pkg],
                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    timeout=120,
                 )
                 print(f"[LOVE] [OK] {_pkg} installed", flush=True)
             except Exception as _e:
@@ -120,9 +127,6 @@ manager = ConnectionManager()
 
 
 # ═══ SENTINEL HEALING & ROLLBACK VERIFICATION ═══
-from core.self_healing import verify_and_heal_system
-verify_and_heal_system()
-
 
 from core.agent import chat
 from core.evolution import (
@@ -817,16 +821,23 @@ def register_all_modules(lm, _loop=None):
                 f"Location={location}, Goals=[{goals}], Interests=[{interests}], "
                 f"Wake={routine.get('wakeTime','')}, Work hours={routine.get('workHours','')}"
             )
-            from core.long_term_memory import add_episodic
-            add_episodic(
-                summary=profile_summary,
-                detail="User profile information",
-                timestamp=datetime.now().isoformat(),
-                emotion="neutral",
-                intensity=0.5,
-                tags=["profile", "user"],
-                source="profile_load"
-            )
+            # Run episodic write in background so module start() returns immediately
+            def _write_profile_memory():
+                try:
+                    from core.long_term_memory import add_episodic
+                    add_episodic(
+                        summary=profile_summary,
+                        detail="User profile information",
+                        timestamp=datetime.now().isoformat(),
+                        emotion="neutral",
+                        intensity=0.5,
+                        tags=["profile", "user"],
+                        source="profile_load"
+                    )
+                except Exception as _e:
+                    print(f"[ProfileLoad] Memory write failed: {_e}")
+            import threading as _threading
+            _threading.Thread(target=_write_profile_memory, daemon=True).start()
 
     lm.register(ModuleDescriptor(
         name="agent_registry", wave=5, start_fn=start_agent_registry_module,
@@ -946,17 +957,16 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True,
         description="Pure Python state conflict reconciler — fixes sleeping+device_active, work_hours>24, stress clamping"
     ))
+    # ── WAVE 5: START FUNCTIONS ──
+    def start_tts_interventions():
+        from voice.tts_interventions import trigger_hype_intervention
+        print("[TTSInterventions] Initialized")
+
     lm.register(ModuleDescriptor(
         name="tts_interventions", wave=5, start_fn=start_tts_interventions, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Audio intervention wrapper — TTS for 9-hour limit and high-stress alerts"
     ))
-
-
-    # ── WAVE 5: START FUNCTIONS ──
-    def start_tts_interventions():
-        from voice.tts_interventions import trigger_hype_intervention
-        print("[TTSInterventions] Initialized")
 
     def start_sandbox():
         from evolution.sandbox import run_in_sandbox
@@ -1020,7 +1030,7 @@ def register_all_modules(lm, _loop=None):
     ))
     lm.register(ModuleDescriptor(
         name="integration_inspector", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
-        depends_on=["mock_reality", "orchestrator", "neural_bus"], optional=True,
+        depends_on=["mock_reality", "neural_bus"], optional=True,
         description="E2E inspector — scenario testing + verification of LOVE's reactions"
     ))
     lm.register(ModuleDescriptor(
@@ -1044,6 +1054,30 @@ def register_all_modules(lm, _loop=None):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events using topological lifecycle management."""
+    # Startup verification -- safe here because all modules are already imported
+    try:
+        from core.self_healing import verify_and_heal_system
+        verify_and_heal_system()
+    except Exception as _e:
+        print(f"[Sentinel] Startup check error (non-fatal): {_e}")
+    # Living Substrate boot -- deferred from module-level to here
+    try:
+        from core.living_substrate import start_living_substrate
+        _ls = start_living_substrate()
+        print(f"[API] Living Substrate online: {_ls}")
+    except Exception as _e:
+        print(f"[API] Living Substrate boot error (non-fatal): {_e}")
+    # Pre-warm ChromaDB synchronously so module starts that call save_log() are instant
+    try:
+        _loop_pw = asyncio.get_event_loop()
+        from core.memory import _get_client as _chroma_init
+        await asyncio.wait_for(_loop_pw.run_in_executor(None, _chroma_init), timeout=20)
+        # Also warm up long_term_memory shared client
+        from core.long_term_memory import _ltm_get_collection as _ltm_init
+        await asyncio.wait_for(_loop_pw.run_in_executor(None, lambda: _ltm_init("episodic")), timeout=20)
+        print("[API] ChromaDB pre-warmed (memory + long_term_memory)")
+    except Exception as _ce:
+        print(f"[API] ChromaDB pre-warm skipped: {_ce}")
     from core.module_lifecycle import get_lifecycle
     lm = get_lifecycle()
     _loop = asyncio.get_event_loop()
@@ -5597,11 +5631,9 @@ async def get_agi_status():
 
 
 
-# ── LIVING SUBSTRATE BOOT (world model + SSM + MoE + homeostasis + body + HPC) ──
+# Living Substrate boot moved to lifespan (avoids blocking at import time)
 try:
-    from core.living_substrate import start_living_substrate, substrate_snapshot
-    _LS_STATUS = start_living_substrate()
-    print(f'[API] Living Substrate online: {_LS_STATUS}')
+    from core.living_substrate import substrate_snapshot
 
     @app.get('/substrate')
     async def get_substrate():
@@ -5617,7 +5649,8 @@ try:
             'inferred_activity': get_hpc().current_inferred_activity(),
         }
 except Exception as e:
-    print(f'[API] Living Substrate boot error: {e}')
+    substrate_snapshot = None
+    print(f'[API] Living Substrate route error: {e}')
 
 # Wave 17: Evolution Dashboard Routes
 try:
@@ -6376,6 +6409,70 @@ async def heartbeat_focus_status():
         "focus_mode_active": in_focus,
         "suppressed_nudge_count": len(suppressed),
         "suppressed_nudges": suppressed,
+    }
+
+
+# ========== WAVE 28: PLANNING CALIBRATION DEPTH + PEFT EXPORT ==========
+
+@app.get("/planner/category-stats")
+async def planner_category_stats():
+    """Per-category planning accuracy (casual/emotional/technical/task)."""
+    from core.rollout_planner import get_rollout_planner
+    planner = get_rollout_planner()
+    snap = planner.snapshot()
+    return {
+        "per_category": snap.get("per_category_stats", {}),
+        "per_style": snap.get("per_style_accuracy", {}),
+        "total_outcomes": snap.get("total_outcomes", 0),
+        "global_confidence": snap.get("calibration_confidence", 0.5),
+    }
+
+
+@app.post("/planner/detect-category")
+async def planner_detect_category(data: dict):
+    """Detect query category. Payload: { query: str }."""
+    from core.rollout_planner import get_rollout_planner
+    query = data.get("query", "")
+    if not query:
+        return {"error": "query required"}
+    planner = get_rollout_planner()
+    category = planner.detect_query_category(query)
+    return {"query": query[:100], "category": category}
+
+
+@app.get("/lora/export-peft/{adapter_id}")
+async def lora_export_peft(adapter_id: str):
+    """Export a LoRA adapter as proper PEFT checkpoint."""
+    try:
+        from core.lora_evolution import get_lora_evolution
+        evo = get_lora_evolution()
+        adapter = evo.get_adapter(adapter_id)
+        if not adapter:
+            return {"error": f"Adapter {adapter_id} not found"}
+        path = evo.export_adapter_checkpoint(adapter)
+        if not path:
+            return {"error": "Export failed"}
+        return {
+            "adapter_id": adapter_id,
+            "checkpoint_path": str(path),
+            "fitness": adapter.fitness,
+            "description": adapter.mutation_description,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/lora/peft-status")
+async def lora_peft_status():
+    """Check torch/peft availability and adapter export status."""
+    import importlib.util
+    torch_ok = importlib.util.find_spec("torch") is not None
+    peft_ok = importlib.util.find_spec("peft") is not None
+    return {
+        "torch_available": torch_ok,
+        "peft_available": peft_ok,
+        "peft_export_ready": torch_ok,
+        "note": "Install peft: pip install peft for full PEFT integration",
     }
 
 

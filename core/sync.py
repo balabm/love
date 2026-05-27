@@ -9,6 +9,13 @@ import json
 import sqlite3
 import threading
 import platform
+
+def _platform_system() -> str:
+    """Return platform name without blocking (avoids platform.system() WMI hang)."""
+    import sys as _sys
+    if _sys.platform == "win32": return "Windows"
+    if _sys.platform == "darwin": return "Darwin"
+    return "Linux"
 import subprocess
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -516,7 +523,7 @@ def get_personality_adapter() -> PersonalityAdapter:
         _personality_adapter = PersonalityAdapter(get_sync_db())
     return _personality_adapter
 
-def get_handoff_manager() -> DeviceHandoffManager:
+def get_handoff_manager() -> "DeviceHandoffManager":
     """Get singleton device handoff manager."""
     global _handoff_mgr
     if _handoff_mgr is None:
@@ -576,17 +583,17 @@ class HardwareResourceManager:
     def detect_hardware() -> Dict[str, Any]:
         """Detect current hardware capabilities."""
         info = {
-            "platform": platform.system(),
-            "machine": platform.machine(),
-            "processor": platform.processor(),
-            "hostname": platform.node(),
+            "platform": _platform_system(),
+            "machine": os.environ.get("PROCESSOR_ARCHITECTURE", "x86_64"),
+            "processor": os.environ.get("PROCESSOR_IDENTIFIER", "unknown"),
+            "hostname": __import__("socket").gethostname(),
             "gpu": None,
             "battery": None,
             "is_laptop": False
         }
         
         # Detect GPU on Windows
-        if platform.system() == "Windows":
+        if _platform_system() == "Windows":
             try:
                 result = subprocess.run(
                     ["wmic", "path", "win32_VideoController", "get", "name"],
@@ -1004,7 +1011,7 @@ class LaunchSequence:
     def _open_vscode(self, project_path: str) -> bool:
         """Open VS Code with project."""
         try:
-            if platform.system() == "Windows":
+            if _platform_system() == "Windows":
                 subprocess.Popen(["code", project_path], shell=True)
             else:
                 subprocess.Popen(["code", project_path])
@@ -1016,7 +1023,7 @@ class LaunchSequence:
     def _start_dotnet(self, project_path: str) -> bool:
         """Start .NET backend in terminal."""
         try:
-            if platform.system() == "Windows":
+            if _platform_system() == "Windows":
                 subprocess.Popen(
                     ["start", "cmd", "/k", f"cd {project_path} && dotnet run"],
                     shell=True

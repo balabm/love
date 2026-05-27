@@ -110,11 +110,7 @@ class ContextEngine:
         if self._running:
             return
         self._running = True
-        # Run one immediate scan
-        try:
-            self._refresh()
-        except Exception as e:
-            print(f"[ContextEngine] Initial scan error: {e}")
+        # Defer initial scan to background -- avoids blocking startup
         self._thread = Thread(target=self._loop, args=(interval_seconds,), daemon=True)
         self._thread.start()
         print(f"[ContextEngine] Live context engine started ({interval_seconds}s refresh)")

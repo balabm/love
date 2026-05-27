@@ -3,6 +3,14 @@ Text-to-Speech (TTS) Module
 Converts LOVE's responses to speech with configurable engine.
 """
 
+
+def _platform_system() -> str:
+    """Return platform name without blocking."""
+    import sys as _sys
+    if _sys.platform == "win32": return "Windows"
+    if _sys.platform == "darwin": return "Darwin"
+    return "Linux"
+
 import os
 import tempfile
 from pathlib import Path
@@ -298,7 +306,7 @@ class SystemControl:
         import platform
         
         try:
-            system = platform.system()
+            system = _platform_system()
             
             if project_path:
                 if system == "Windows":
@@ -321,7 +329,7 @@ class SystemControl:
         import platform
         
         try:
-            system = platform.system()
+            system = _platform_system()
             
             if system == "Windows":
                 subprocess.run(["rundll32.exe", "user32.dll,LockWorkStation"], check=True)

@@ -52,11 +52,16 @@ class ProactiveHeartbeat:
         self.running = True
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
         self.thread.start()
-        
-        save_log('heartbeat', {
-            'event': 'heartbeat_started',
-            'interval_minutes': self.interval // 60
-        })
+        # Defer ChromaDB log write to background so start() returns immediately
+        def _log_start():
+            try:
+                save_log('heartbeat', {
+                    'event': 'heartbeat_started',
+                    'interval_minutes': self.interval // 60
+                })
+            except Exception:
+                pass
+        threading.Thread(target=_log_start, daemon=True).start()
         print(f"[Heartbeat] Proactive intelligence started ({self.interval // 60}min interval)")
     
     def stop(self):

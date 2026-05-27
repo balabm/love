@@ -15,24 +15,32 @@ from core.settings import get_settings
 SETTINGS = get_settings()
 WAKE_WORD = SETTINGS.voice.wake_word or "Hey Love"
 
-# Try to import optional dependencies
-try:
-    import pvporcupine
-    PORCUPINE_AVAILABLE = True
-except ImportError:
-    PORCUPINE_AVAILABLE = False
+# Heavy optional deps are imported lazily to avoid startup hangs
+# (whisper/torch do GPU detection; pyaudio opens audio drivers)
+def _check_porcupine():
+    try:
+        import pvporcupine  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
-try:
-    import pyaudio
-    PYAUDIO_AVAILABLE = True
-except ImportError:
-    PYAUDIO_AVAILABLE = False
+def _check_pyaudio():
+    try:
+        import pyaudio  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
-try:
-    import whisper
-    WHISPER_AVAILABLE = True
-except ImportError:
-    WHISPER_AVAILABLE = False
+def _check_whisper():
+    try:
+        import whisper  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+PORCUPINE_AVAILABLE = False  # resolved on first use via _check_porcupine()
+PYAUDIO_AVAILABLE = False    # resolved on first use via _check_pyaudio()
+WHISPER_AVAILABLE = False    # resolved on first use via _check_whisper()
 
 
 try:

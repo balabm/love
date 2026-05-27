@@ -271,20 +271,73 @@ class RolloutPlanner:
 
         return self.plan(q_emb, style_list)
 
+    # ── Query category detection (Wave 28) ───────────────────────────────────
+
+    _CATEGORY_KEYWORDS: Dict[str, List[str]] = {
+        "casual": ["hey", "hi", "hello", "what's up", "yo", "sup", "morning",
+                   "evening", "how are you", "how's it going", "good day",
+                   "thanks", "thank you", "nice", "cool", "lol", "haha"],
+        "emotional": ["feel", "feeling", "sad", "happy", "stressed", "anxious",
+                      "worried", "angry", "upset", "lonely", "tired", "burned out",
+                      "overwhelmed", "excited", "nervous", "scared", "depressed",
+                      "frustrated", "disappointed", "grateful", "love", "miss"],
+        "technical": ["code", "function", "bug", "error", "fix", "implement",
+                      "architecture", "api", "database", "query", "deploy",
+                      "build", "compile", "debug", "refactor", "algorithm",
+                      "model", "train", "pipeline", "server", "client",
+                      "frontend", "backend", "framework", "library"],
+        "task": ["need to", "plan", "schedule", "remind me", "task", "todo",
+                 "deadline", "meeting", "call", "email", "send", "prepare",
+                 "review", "check", "follow up", "coordinate", "arrange",
+                 "book", "reserve", "appointment"],
+    }
+
+    def detect_query_category(self, query: str) -> str:
+        """Classify query into casual/emotional/technical/task."""
+        q_lower = query.lower()
+        scores: Dict[str, int] = {}
+        for category, keywords in self._CATEGORY_KEYWORDS.items():
+            scores[category] = sum(1 for kw in keywords if kw in q_lower)
+        # If no keywords match, use embedding similarity to determine
+        if max(scores.values(), default=0) == 0:
+            return "casual"  # default
+        # Tie-break: prefer emotional over technical, technical over task, task over casual
+        order = ["emotional", "technical", "task", "casual"]
+        best_score = max(scores.values())
+        tied = [c for c, s in scores.items() if s == best_score]
+        for c in order:
+            if c in tied:
+                return c
+        return tied[0]
+
+    def _get_category_calibration(self, category: str, style: str) -> float:
+        """Get prediction accuracy for a style in a specific category."""
+        key = f"{category}:{style}"
+        history = self._style_accuracy.get(key, [])
+        if not history:
+            # Fall back to global style accuracy
+            return self._get_style_accuracy(style)
+        return sum(history) / len(history)
+
     # ── Active planning (Wave 27) ──────────────────────────────────────────
 
     def plan_active(self, query: str) -> Dict[str, Any]:
         """
         Active planning: select style, store pending plan for verification.
 
+        Wave 28: Category-aware — detects query type (casual/emotional/technical/task)
+        and uses per-category calibration for directive strength.
+
         Returns dict with:
           - winner_style: the selected response style string
           - directive: prompt directive enforcing the style
           - plan_id: unique ID for outcome tracking
           - all_scores: full ranking for transparency
+          - category: detected query category
         """
         result = self.plan_response_style(query)
         winner = result["winner_candidate"]
+        category = self.detect_query_category(query)
         plan_id = f"plan_{int(time.time() * 1000)}"
 
         # Store pending plan for post-response verification
@@ -292,6 +345,7 @@ class RolloutPlanner:
             "plan_id": plan_id,
             "query": query[:200],
             "winner_style": winner,
+            "category": category,
             "predicted_fe": result["winner_fe"],
             "all_scores": result["all_scores"],
             "timestamp": time.time(),
@@ -299,8 +353,8 @@ class RolloutPlanner:
         with self._mu:
             self._pending_plan = pending
 
-        # Build directive — this is injected as a REQUIREMENT, not a hint
-        directive = self._build_directive(winner, result)
+        # Build directive — category-aware calibration (Wave 28)
+        directive = self._build_directive(winner, result, category=category)
 
         return {
             "winner_style": winner,
@@ -308,16 +362,21 @@ class RolloutPlanner:
             "plan_id": plan_id,
             "all_scores": result["all_scores"],
             "predicted_fe": result["winner_fe"],
+            "category": category,
         }
 
-    def _build_directive(self, winner: str, result: Dict) -> str:
-        """Build a prompt directive from the planning result."""
-        # Get calibration confidence for this style
+    def _build_directive(self, winner: str, result: Dict, category: str = "") -> str:
+        """Build a prompt directive from the planning result (Wave 28: category-aware)."""
+        # Get calibration confidence for this style (category-aware if available)
         confidence = self._calibration.get("confidence", 0.5)
         style_acc = self._get_style_accuracy(winner)
+        cat_acc = self._get_category_calibration(category, winner) if category else style_acc
+
+        # Use the more specific accuracy if category is available
+        effective_acc = cat_acc if category else style_acc
 
         # Strong directive when confidence is high, softer when uncertain
-        if confidence > 0.6 and style_acc > 0.4:
+        if confidence > 0.6 and effective_acc > 0.4:
             strength = "RESPOND IN THIS STYLE"
         elif confidence > 0.3:
             strength = "Prefer this response style"
@@ -331,9 +390,10 @@ class RolloutPlanner:
         if len(ranked) >= 2:
             runner_up = f" (runner-up: {ranked[1]['candidate']})"
 
+        cat_hint = f" [{category}]" if category else ""
         return (
             f"\n\n=== PLANNED RESPONSE STYLE (world model MPC, 4-step lookahead) ===\n"
-            f"{strength}: **{winner}**{runner_up}\n"
+            f"{strength}: **{winner}**{runner_up}{cat_hint}\n"
             f"Predicted surprise: {fe:.3f} | Planning confidence: {confidence:.0%}\n"
         )
 
@@ -380,6 +440,7 @@ class RolloutPlanner:
             "plan_id": pending["plan_id"],
             "query": pending["query"],
             "winner_style": pending["winner_style"],
+            "category": pending.get("category", ""),
             "predicted_fe": round(predicted_fe, 5),
             "actual_fe": round(actual_fe, 5),
             "prediction_delta": round(prediction_delta, 5),
@@ -387,7 +448,7 @@ class RolloutPlanner:
             "timestamp": time.time(),
         }
 
-        # Update calibration
+        # Update calibration (global + per-style + per-category)
         self._update_calibration(outcome)
 
         # Persist
@@ -399,8 +460,9 @@ class RolloutPlanner:
         return outcome
 
     def _update_calibration(self, outcome: Dict[str, Any]) -> None:
-        """Update planning confidence based on prediction accuracy."""
+        """Update planning confidence based on prediction accuracy (Wave 28: per-category)."""
         style = outcome["winner_style"]
+        category = outcome.get("category", "")
         accurate = outcome["prediction_accurate"]
         delta = abs(outcome["prediction_delta"])
 
@@ -414,9 +476,25 @@ class RolloutPlanner:
         if style not in self._style_accuracy:
             self._style_accuracy[style] = []
         self._style_accuracy[style].append(1.0 if accurate else 0.0)
-        # Keep last 20 per style
         if len(self._style_accuracy[style]) > 20:
             self._style_accuracy[style] = self._style_accuracy[style][-20:]
+
+        # Update per-category accuracy (Wave 28)
+        if category:
+            cat_key = f"{category}:{style}"
+            if cat_key not in self._style_accuracy:
+                self._style_accuracy[cat_key] = []
+            self._style_accuracy[cat_key].append(1.0 if accurate else 0.0)
+            if len(self._style_accuracy[cat_key]) > 20:
+                self._style_accuracy[cat_key] = self._style_accuracy[cat_key][-20:]
+
+            # Also update category-level aggregate
+            cat_agg_key = f"category:{category}"
+            if cat_agg_key not in self._style_accuracy:
+                self._style_accuracy[cat_agg_key] = []
+            self._style_accuracy[cat_agg_key].append(1.0 if accurate else 0.0)
+            if len(self._style_accuracy[cat_agg_key]) > 20:
+                self._style_accuracy[cat_agg_key] = self._style_accuracy[cat_agg_key][-20:]
 
         # Update total outcomes count
         self._calibration["total_outcomes"] = self._calibration.get("total_outcomes", 0) + 1
@@ -481,7 +559,7 @@ class RolloutPlanner:
             return ""
 
     def snapshot(self) -> Dict[str, Any]:
-        """Return planner telemetry (expanded for Wave 27)."""
+        """Return planner telemetry (expanded for Wave 27 + 28)."""
         with self._mu:
             total = self._total_plans
             avg_fe = (
@@ -497,6 +575,23 @@ class RolloutPlanner:
                 if n_outcomes > 0 else 0.0
             )
 
+            # Per-category stats (Wave 28)
+            cat_stats: Dict[str, Any] = {}
+            for cat in ["casual", "emotional", "technical", "task"]:
+                cat_key = f"category:{cat}"
+                if cat_key in self._style_accuracy:
+                    vals = self._style_accuracy[cat_key]
+                    cat_stats[cat] = {
+                        "accuracy": round(sum(vals) / len(vals), 3),
+                        "samples": len(vals),
+                    }
+
+            # Per-style accuracy
+            style_acc: Dict[str, float] = {}
+            for style, vals in self._style_accuracy.items():
+                if ":" not in style:  # global style accuracy, not category-specific
+                    style_acc[style] = round(sum(vals) / len(vals), 3)
+
             return {
                 "total_plans": total,
                 "avg_winner_fe": round(avg_fe, 5),
@@ -507,6 +602,8 @@ class RolloutPlanner:
                 "outcome_accuracy": round(accurate_count / n_outcomes, 3) if n_outcomes else 0.0,
                 "avg_prediction_delta": round(avg_delta, 5),
                 "has_pending_plan": self._pending_plan is not None,
+                "per_category_stats": cat_stats,
+                "per_style_accuracy": style_acc,
             }
 
 

@@ -92,7 +92,7 @@ class LifecycleManager:
         mod = self.get(name)
         return mod is not None and mod.state in (ModuleState.READY, ModuleState.DEGRADED)
 
-    MODULE_START_TIMEOUT = 30  # seconds per module
+    MODULE_START_TIMEOUT = 8   # seconds per module (reduced from 30 to avoid long startup stalls)
 
     async def start_all(self):
         self.loop = asyncio.get_event_loop()

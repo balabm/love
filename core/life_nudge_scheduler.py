@@ -196,7 +196,7 @@ class LifeNudgeScheduler:
             from core.proactive_push import get_push_engine
             engine = get_push_engine()
             engine.push(
-                trigger_type="NUDGE",
+                category="nudge",
                 message=message,
                 priority="medium",
                 metadata={"source": "life_nudge_scheduler"},
