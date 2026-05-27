@@ -13,6 +13,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 ERROR_LOG = DATA_DIR / "error_log.jsonl"
 HEALING_LOG = DATA_DIR / "healing_log.jsonl"
@@ -38,6 +45,20 @@ def _log_healing(healing: Dict[str, Any]):
             f.write(json.dumps(healing) + "\n")
     except Exception:
         pass
+
+    # Publish to neural bus for cross-module awareness
+    if NEURAL_BUS_AVAILABLE:
+        try:
+            bus = get_neural_bus()
+            bus.publish(
+                domain="system",
+                event_type="healing_attempt",
+                payload=healing,
+                source_module="self_healing",
+                priority=EventPriority.NORMAL
+            )
+        except Exception as e:
+            print(f"[SelfHealing] Neural bus publish error: {e}")
 
 
 def detect_and_fix_error(error_message: str) -> Dict[str, Any]:

@@ -25,6 +25,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 PUSH_LOG = DATA_DIR / "push_history.jsonl"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -77,13 +84,34 @@ class ProactivePushEngine:
             priority=priority,
             metadata=metadata or {},
         )
-        self._queue.append(msg)
+                self._queue.append(msg)
         # Log it
         try:
             with open(PUSH_LOG, "a") as f:
-                f.write(json.dumps(asdict(msg)) + "\n")
+                f.write(json.dumps(asdict(msg)) + "
+")
         except Exception:
             pass
+
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE:
+            try:
+                bus = get_neural_bus()
+                priority_map = {
+                    "critical": EventPriority.CRITICAL,
+                    "high": EventPriority.HIGH,
+                    "normal": EventPriority.NORMAL,
+                    "low": EventPriority.LOW
+                }
+                bus.publish(
+                    domain="proactive",
+                    event_type="push_queued",
+                    payload=asdict(msg),
+                    source_module="proactive_push",
+                    priority=priority_map.get(priority, EventPriority.NORMAL)
+                )
+            except Exception as e:
+                print(f"[ProactivePush] Neural bus publish error: {e}")
         # Deliver immediately if high priority
         if priority in ("high", "critical"):
             self._deliver(msg)

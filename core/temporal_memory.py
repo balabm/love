@@ -25,6 +25,13 @@ from dataclasses import dataclass, field
 import threading
 from collections import defaultdict
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 TEMPORAL_FILE = DATA_DIR / "temporal_memory.json"
 NARRATIVE_FILE = DATA_DIR / "narrative_threads.json"
@@ -103,6 +110,28 @@ class TemporalMemoryEngine:
 
         # Try to attach to a narrative thread
         self._auto_thread(memory)
+
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE:
+            try:
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="memory",
+                    event_type="temporal_memory_stored",
+                    payload={
+                        "memory_id": mem_id,
+                        "content": content,
+                        "category": category,
+                        "emotional_valence": emotional_valence,
+                        "importance": importance,
+                        "tags": tags or [],
+                        "timestamp": datetime.now().isoformat()
+                    },
+                    source_module="temporal_memory",
+                    priority=EventPriority.NORMAL
+                )
+            except Exception as e:
+                print(f"[TemporalMemory] Neural bus publish error: {e}")
 
         return mem_id
 

@@ -29,6 +29,13 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 import psutil
 
 # ---------------------------------------------------------------------------
@@ -115,6 +122,23 @@ class ResourceGovernor:
                 except Exception:
                     logger.exception("Load callback failed")
             self._previous_load_state = under_load
+
+            # Publish to neural bus for cross-module awareness
+            if NEURAL_BUS_AVAILABLE:
+                try:
+                    bus = get_neural_bus()
+                    bus.publish(
+                        domain="system",
+                        event_type="load_state_change",
+                        payload={
+                            "under_load": under_load,
+                            "snapshot": dict(self._snapshot)
+                        },
+                        source_module="resource_governor",
+                        priority=EventPriority.HIGH if under_load else EventPriority.NORMAL
+                    )
+                except Exception as e:
+                    logger.exception("Neural bus publish error: %s", e)
     def start(self) -> None:
         """Launch the monitor in a daemon thread."""
         if self._running:

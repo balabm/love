@@ -25,6 +25,13 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field, asdict
 from threading import Lock, Thread
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 
 
@@ -208,6 +215,25 @@ class AwarenessEngine:
             self._last_scan = datetime.now()
 
         self._save_snapshot()
+
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE:
+            try:
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="awareness",
+                    event_type="environment_scan",
+                    payload={
+                        "system": asdict(system),
+                        "context": asdict(context),
+                        "files": asdict(files),
+                        "timestamp": datetime.now().isoformat()
+                    },
+                    source_module="awareness",
+                    priority=EventPriority.AMBIENT
+                )
+            except Exception as e:
+                print(f"[Awareness] Neural bus publish error: {e}")
 
     # ──────────────────────────────────────────────
     # SYSTEM SCANNER

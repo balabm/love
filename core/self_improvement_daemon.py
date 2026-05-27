@@ -28,6 +28,13 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 DAEMON_LOG = DATA_DIR / "self_improvement_daemon.jsonl"
 DAEMON_STATE = DATA_DIR / "daemon_state.json"
@@ -320,6 +327,24 @@ class SelfImprovementDaemon:
                     "category": category, "action": action, "error": str(e)
                 })
                 failed += 1
+
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE and (executed > 0 or failed > 0):
+            try:
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="self_evolution",
+                    event_type="improvements_executed",
+                    payload={
+                        "executed": executed,
+                        "failed": failed,
+                        "timestamp": datetime.now().isoformat()
+                    },
+                    source_module="self_improvement_daemon",
+                    priority=EventPriority.NORMAL
+                )
+            except Exception as e:
+                print(f"[SelfImprovementDaemon] Neural bus publish error: {e}")
 
         return {"executed": executed, "failed": failed}
 

@@ -12,6 +12,13 @@ from dataclasses import dataclass, field
 from core.settings import get_settings
 from core.memory import save_log
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 SETTINGS = get_settings()
 
 
@@ -772,6 +779,33 @@ class ProactiveHeartbeat:
             'severity': trigger.severity,
             'message': trigger.message
         })
+
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE:
+            try:
+                bus = get_neural_bus()
+                priority_map = {
+                    "critical": EventPriority.CRITICAL,
+                    "warning": EventPriority.HIGH,
+                    "info": EventPriority.NORMAL,
+                    "celebration": EventPriority.NORMAL
+                }
+                bus.publish(
+                    domain="heartbeat",
+                    event_type="trigger_fired",
+                    payload={
+                        "source": trigger.source,
+                        "trigger_type": trigger.trigger_type,
+                        "severity": trigger.severity,
+                        "message": trigger.message,
+                        "action_suggestion": trigger.action_suggestion,
+                        "metadata": trigger.metadata
+                    },
+                    source_module="heartbeat",
+                    priority=priority_map.get(trigger.severity, EventPriority.NORMAL)
+                )
+            except Exception as e:
+                print(f"[Heartbeat] Neural bus publish error: {e}")
 
         # Call registered notification callbacks
         for callback in self._callbacks:

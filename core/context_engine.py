@@ -11,6 +11,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from threading import Lock, Thread
+
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
 from dataclasses import dataclass, field, asdict
 
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -288,6 +295,20 @@ class ContextEngine:
             self._ctx = ctx
 
         self._persist(ctx)
+
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE:
+            try:
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="context",
+                    event_type="context_updated",
+                    payload=asdict(ctx),
+                    source_module="context_engine",
+                    priority=EventPriority.NORMAL
+                )
+            except Exception as e:
+                print(f"[ContextEngine] Neural bus publish error: {e}")
 
     # ──────────────────────────────────────────────
     # SOURCE PULLERS
