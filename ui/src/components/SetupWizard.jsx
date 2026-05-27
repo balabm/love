@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./SetupWizard.css";
-
-const API = "http://localhost:8000";
 
 const ACCENT = {
   google: "red",
@@ -67,7 +65,7 @@ function IntegrationCard({ integration, onSave }) {
       }
     }
     try {
-      await axios.post(`${API}/neural/setup/save`, { updates });
+      await api.post(`${API}/neural/setup/save`, { updates });
       setSaved(true);
       setValues({});
       onSave();
@@ -81,7 +79,7 @@ function IntegrationCard({ integration, onSave }) {
     setAuthing(true);
     setAuthResult(null);
     try {
-      const res = await axios.post(`${API}${integration.auth_endpoint}`);
+      const res = await api.post(`${API}${integration.auth_endpoint}`);
       setAuthResult(res.data);
     } catch (e) {
       console.error("[Setup] auth trigger failed:", e);
@@ -185,7 +183,7 @@ export default function SetupWizard() {
 
   const loadIntegrations = async () => {
     try {
-      const res = await axios.get(`${API}/neural/setup/integrations`);
+      const res = await api.get(`${API}/neural/setup/integrations`);
       setIntegrations(res.data.integrations || []);
       setError(null);
     } catch (e) {

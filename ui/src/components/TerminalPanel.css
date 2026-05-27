@@ -1,0 +1,220 @@
+.terminal-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #090912;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+}
+
+.terminal-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.terminal-header-title h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f3f4f6;
+  margin: 0;
+}
+
+.terminal-icon {
+  font-size: 18px;
+}
+
+.clear-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #9ca3af;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.clear-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f3f4f6;
+}
+
+/* Output Console */
+.terminal-output {
+  flex: 1;
+  background: #05050b;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 14px;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.terminal-line.info {
+  color: #60a5fa; /* Blue info messages */
+}
+
+.terminal-line.input {
+  color: #34d399; /* Green user input */
+  font-weight: 600;
+}
+
+.terminal-line.output {
+  color: #e2e8f0; /* Off-white standard command output */
+}
+
+.terminal-line.error {
+  color: #f87171; /* Red error messages */
+}
+
+.prompt {
+  color: #a78bfa; /* Purple prompt symbol */
+}
+
+.loading-indicator {
+  color: #fbbf24;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Input Command Line */
+.terminal-input-bar {
+  display: flex;
+  align-items: center;
+  background: #05050b;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 12px;
+  gap: 8px;
+}
+
+.terminal-input-bar .prompt {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.terminal-input-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-family: monospace;
+  font-size: 14px;
+  outline: none;
+}
+
+.terminal-input-bar button {
+  background: #8b5cf6;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.terminal-input-bar button:hover {
+  opacity: 0.9;
+}
+
+.terminal-input-bar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Predefined Commands */
+.terminal-quick-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.terminal-quick-shortcuts h3 {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 1024px) {
+  .shortcuts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.shortcut-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #e2e8f0;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.shortcut-btn:hover {
+  background: rgba(139, 92, 246, 0.08);
+  border-color: rgba(139, 92, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

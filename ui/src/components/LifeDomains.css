@@ -1,0 +1,555 @@
+/* ─────────────────────────────────────────────
+   Life Domains — Wave 22
+   ───────────────────────────────────────────── */
+
+.ld-root {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.ld-header {
+  margin-bottom: 1.5rem;
+}
+
+.ld-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.ld-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.ld-life-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  padding: 0.3rem 0.9rem;
+  min-width: 60px;
+  transition: border-color 0.3s;
+}
+
+.ld-score-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.ld-score-lbl {
+  font-size: 0.65rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Nudge bar */
+.ld-nudge-bar {
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ld-nudge-item {
+  font-size: 0.82rem;
+  color: #fcd34d;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ld-nudge-dot-inline {
+  color: #fbbf24;
+  font-size: 0.6rem;
+  flex-shrink: 0;
+}
+
+/* Tabs */
+.ld-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #1e293b;
+  padding-bottom: 0.5rem;
+}
+
+.ld-tab {
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.ld-tab:hover { background: #1e293b; color: #94a3b8; }
+.ld-tab.active { background: #0f172a; color: #60a5fa; border-bottom: 2px solid #60a5fa; }
+
+/* Grid */
+.ld-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+/* Domain Cards */
+.ld-domain-card {
+  background: #0d1b2a;
+  border: 1px solid #1e2d3d;
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  transition: border-color 0.2s;
+}
+
+.ld-domain-card:hover { border-color: #2d4a6e; }
+.ld-domain-card.hydration { border-top: 2px solid #38bdf8; }
+.ld-domain-card.sleep     { border-top: 2px solid #818cf8; }
+.ld-domain-card.nutrition { border-top: 2px solid #34d399; }
+.ld-domain-card.skincare  { border-top: 2px solid #f9a8d4; }
+
+.ld-domain-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ld-domain-icon { font-size: 1.1rem; }
+
+.ld-domain-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  flex: 1;
+}
+
+.ld-streak {
+  font-size: 0.72rem;
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 20px;
+  padding: 0.1rem 0.45rem;
+}
+
+.ld-nudge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fbbf24;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px #fbbf24;
+}
+
+.ld-domain-body {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Ring */
+.ld-ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ld-ring-bg {
+  fill: none;
+  stroke: #1e293b;
+  stroke-width: 5;
+}
+
+.ld-ring-fill {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease;
+}
+
+.ld-ring-text {
+  fill: #94a3b8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ld-ring-label {
+  font-size: 0.6rem;
+  color: #475569;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+/* Stats */
+.ld-domain-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+  flex: 1;
+}
+
+.ld-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-stat-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.ld-stat-lbl {
+  font-size: 0.65rem;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ld-not-logged {
+  font-size: 0.8rem;
+  color: #475569;
+  font-style: italic;
+}
+
+/* Progress bar */
+.ld-bar-wrap {
+  height: 4px;
+  background: #1e293b;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ld-bar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Actions */
+.ld-domain-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ld-btn {
+  background: #1e293b;
+  border: 1px solid #2d3f55;
+  color: #94a3b8;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ld-btn:hover:not(:disabled) { background: #263347; color: #e2e8f0; }
+.ld-btn:disabled { opacity: 0.4; cursor: default; }
+.ld-btn-full { width: 100%; text-align: center; }
+.ld-btn-ghost { background: transparent; border-color: #1e293b; color: #475569; }
+.ld-btn-ghost:hover { background: #0f172a; }
+
+.ld-btn-sm {
+  background: #1e293b;
+  border: 1px solid #2d3f55;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.ld-custom-ml {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  margin-left: auto;
+}
+
+.ld-input {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.78rem;
+  width: 70px;
+  outline: none;
+}
+
+.ld-input:focus { border-color: #3b5270; }
+.ld-input-full { width: 100%; }
+
+/* Log form */
+.ld-log-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  border-top: 1px solid #1e293b;
+  padding-top: 0.7rem;
+}
+
+.ld-form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ld-form-row label {
+  font-size: 0.72rem;
+  color: #475569;
+  min-width: 60px;
+}
+
+.ld-quality-row {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.ld-q-btn {
+  background: #1e293b;
+  border: 1px solid #263347;
+  color: #475569;
+  font-size: 0.68rem;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.ld-q-btn:hover { background: #263347; color: #94a3b8; }
+.ld-q-btn.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
+
+.ld-form-btns {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Meal specific */
+.ld-meal-types {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.ld-meal-chip {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ld-meal-chip.done { background: rgba(52, 211, 153, 0.1); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.2); }
+.ld-meal-chip.missing { background: rgba(71, 85, 105, 0.2); color: #475569; border: 1px solid #1e293b; }
+
+.ld-meal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.ld-meal-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #0f172a;
+}
+
+.ld-meal-type-tag {
+  background: #1e293b;
+  color: #64748b;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+.ld-meal-desc { color: #94a3b8; flex: 1; }
+.ld-meal-q { color: #64748b; font-size: 0.68rem; }
+
+.ld-meal-type-select, .ld-routine-type-select {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ld-chip {
+  background: #1e293b;
+  border: 1px solid #2d3f55;
+  color: #64748b;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ld-chip:hover { background: #263347; color: #94a3b8; }
+.ld-chip.active { background: #1d4ed8; border-color: #3b82f6; color: #fff; }
+
+/* Skincare */
+.ld-routine-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.ld-routine-chip {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.ld-routine-chip.done    { background: rgba(249, 168, 212, 0.1); color: #f9a8d4; border: 1px solid rgba(249, 168, 212, 0.2); }
+.ld-routine-chip.pending { background: rgba(71, 85, 105, 0.2); color: #475569; border: 1px solid #1e293b; }
+
+.ld-routine-btns {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ld-steps-grid {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.ld-step-btn {
+  background: #1e293b;
+  border: 1px solid #2d3f55;
+  color: #64748b;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: capitalize;
+}
+
+.ld-step-btn:hover { background: #263347; color: #94a3b8; }
+.ld-step-btn.active { background: rgba(249, 168, 212, 0.15); border-color: #f9a8d4; color: #f9a8d4; }
+
+/* Insights */
+.ld-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.ld-insight-card {
+  background: #0d1b2a;
+  border: 1px solid #1e2d3d;
+  border-radius: 14px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.ld-insight-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ld-insight-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.ld-insight-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ld-insight-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.ld-insight-stat-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+
+.ld-insight-stat-lbl {
+  font-size: 0.65rem;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+/* Mini bar chart */
+.ld-mini-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 50px;
+  padding-top: 4px;
+}
+
+.ld-chart-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  height: 100%;
+  gap: 3px;
+}
+
+.ld-chart-bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s ease;
+}
+
+.ld-chart-day {
+  font-size: 0.55rem;
+  color: #334155;
+}
+
+.ld-loading {
+  color: #475569;
+  font-size: 0.85rem;
+  padding: 2rem;
+  text-align: center;
+}

@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
+import api, { API } from '../api';
 import "./FocusMode.css";
-
-const API = "http://localhost:8000";
 
 const PRESETS = [
   { label: "Deep Work", duration: 90, icon: "◈", color: "#c084fc" },
@@ -78,7 +76,7 @@ export default function FocusMode() {
     // Ask LOVE for a note
     setNoteLoading(true);
     try {
-      const res = await axios.post(`${API}/chat`, {
+      const res = await api.post(`${API}/chat`, {
         text: `I just completed a ${preset.duration}-minute ${preset.label} session${task ? ` working on: ${task}` : ""}. Give me a one-sentence acknowledgement — sharp, real, no fluff.`,
         mode: "general",
       });

@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api, { API } from '../api';
 import './Dashboard.css';
-
-const API = "http://localhost:8000";
 
 export default function Dashboard() {
   const [data, setData] = useState(null);
@@ -23,7 +21,7 @@ export default function Dashboard() {
 
   const fetchDashboard = async () => {
     try {
-      const res = await axios.get(`${API}/dashboard`);
+      const res = await api.get(`${API}/dashboard`);
       setData(res.data);
     } catch (err) {
       console.error('Dashboard fetch failed:', err);
@@ -34,7 +32,7 @@ export default function Dashboard() {
 
   const fetchLifeScore = async () => {
     try {
-      const res = await axios.get(`${API}/lifescore`);
+      const res = await api.get(`${API}/lifescore`);
       setLifeScore(res.data);
     } catch (err) {
       console.error('LifeScore fetch failed:', err);
@@ -43,7 +41,7 @@ export default function Dashboard() {
 
   const logMood = async () => {
     try {
-      await axios.post(`${API}/wellness/mood`, {
+      await api.post(`${API}/wellness/mood`, {
         mood_score: moodForm.mood,
         energy: moodForm.energy,
         stress: moodForm.stress,
@@ -58,7 +56,7 @@ export default function Dashboard() {
 
   const logWorkout = async () => {
     try {
-      await axios.post(`${API}/fitness/workout`, {
+      await api.post(`${API}/fitness/workout`, {
         workout_type: workoutForm.type,
         duration: workoutForm.duration,
         exercises: [],
@@ -135,15 +133,15 @@ export default function Dashboard() {
             <div className="stat-row">
               <div className="stat">
                 <label>Workouts</label>
-                <value>{fitness.workouts_this_week}/{fitness.goal}</value>
+                <span className="value">{fitness.workouts_this_week}/{fitness.goal}</span>
               </div>
               <div className="stat">
                 <label>Minutes</label>
-                <value>{fitness.total_minutes}</value>
+                <span className="value">{fitness.total_minutes}</span>
               </div>
               <div className="stat">
                 <label>Progress</label>
-                <value>{fitness.progress_percent}%</value>
+                <span className="value">{fitness.progress_percent}%</span>
               </div>
             </div>
             <p className="insight">{fitness.insight}</p>
@@ -178,11 +176,11 @@ export default function Dashboard() {
             <div className="stat-row">
               <div className="stat">
                 <label>Weekly Hours</label>
-                <value>{learning.weekly_hours}h</value>
+                <span className="value">{learning.weekly_hours}h</span>
               </div>
               <div className="stat">
                 <label>Materials</label>
-                <value>{learning.active_materials}</value>
+                <span className="value">{learning.active_materials}</span>
               </div>
             </div>
             <p className="insight">{learning.insight}</p>
@@ -210,19 +208,19 @@ export default function Dashboard() {
                 <div className="stat-row">
                   <div className="stat">
                     <label>Mood</label>
-                    <value className={`mood-${Math.round(wellness.avg_mood)}`}>
+                    <span className={`value mood-${Math.round(wellness.avg_mood)}`}>
                       {wellness.avg_mood}/10
-                    </value>
+                    </span>
                   </div>
                   <div className="stat">
                     <label>Energy</label>
-                    <value>{wellness.avg_energy}/10</value>
+                    <span className="value">{wellness.avg_energy}/10</span>
                   </div>
                   <div className="stat">
                     <label>Stress</label>
-                    <value className={wellness.avg_stress > 6 ? 'high-stress' : ''}>
+                    <span className={`value ${wellness.avg_stress > 6 ? 'high-stress' : ''}`}>
                       {wellness.avg_stress}/10
-                    </value>
+                    </span>
                   </div>
                 </div>
                 <p className="insight">{wellness.insight}</p>

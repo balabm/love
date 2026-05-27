@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api, { API } from '../api';
 import './VoiceInterface.css';
 
-const API = "http://localhost:8000";
+
 
 export default function VoiceInterface({ onTranscript, compact = false }) {
   const [isListening, setIsListening] = useState(false);
@@ -32,7 +32,7 @@ export default function VoiceInterface({ onTranscript, compact = false }) {
 
   const checkVoiceStatus = async () => {
     try {
-      const res = await axios.get(`${API}/voice/status`);
+      const res = await api.get(`${API}/voice/status`);
       setVoiceStatus(res.data);
     } catch {
       setVoiceStatus({ stt: false, tts: false });
@@ -44,7 +44,7 @@ export default function VoiceInterface({ onTranscript, compact = false }) {
     setStatus('listening');
     
     try {
-      const res = await axios.get(`${API}/voice/listen`);
+      const res = await api.get(`${API}/voice/listen`);
       const { transcription, available, error, command_recognized } = res.data;
       
       if (!available) {
@@ -79,7 +79,7 @@ export default function VoiceInterface({ onTranscript, compact = false }) {
     setStatus('speaking');
     
     try {
-      await axios.post(`${API}/voice/speak`, { 
+      await api.post(`${API}/voice/speak`, { 
         text: text.slice(0, 500), // Limit length
         engine: 'auto'
       });

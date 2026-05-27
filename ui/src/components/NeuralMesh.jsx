@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./NeuralMesh.css";
-
-const API = "http://localhost:8000";
 
 /**
  * NeuralMesh - The living brain visualization
@@ -169,19 +167,19 @@ export default function NeuralMesh() {
     try {
       const [eventsRes, researchRes, growthRes, ecoRes, teachRes, patternsRes, statsRes,
              intelRes, evoRes, metaRes, constRes, memRes] = await Promise.allSettled([
-        axios.get(`${API}/neural/events?limit=20`),
-        axios.get(`${API}/neural/research/status`),
-        axios.get(`${API}/neural/growth?days=7`),
-        axios.get(`${API}/neural/ecosystem`),
-        axios.get(`${API}/neural/teaching/status`),
-        axios.get(`${API}/neural/patterns`),
-        axios.get(`${API}/neural/bus/stats`),
+        api.get(`${API}/neural/events?limit=20`),
+        api.get(`${API}/neural/research/status`),
+        api.get(`${API}/neural/growth?days=7`),
+        api.get(`${API}/neural/ecosystem`),
+        api.get(`${API}/neural/teaching/status`),
+        api.get(`${API}/neural/patterns`),
+        api.get(`${API}/neural/bus/stats`),
         // Wave 17
-        axios.get(`${API}/neural/intelligence`),
-        axios.get(`${API}/neural/evolution`),
-        axios.get(`${API}/neural/metacognition`),
-        axios.get(`${API}/neural/constitution`),
-        axios.get(`${API}/neural/memory`),
+        api.get(`${API}/neural/intelligence`),
+        api.get(`${API}/neural/evolution`),
+        api.get(`${API}/neural/metacognition`),
+        api.get(`${API}/neural/constitution`),
+        api.get(`${API}/neural/memory`),
       ]);
 
       if (eventsRes.status === "fulfilled") setEvents(eventsRes.value.data.events || []);
@@ -275,7 +273,7 @@ export default function NeuralMesh() {
   useEffect(() => {
     const fetchGoals = async () => {
       try {
-        const res = await axios.get(`${API}/agi/goals/tree`);
+        const res = await api.get(`${API}/agi/goals/tree`);
         if (res.data && !res.data.error) {
           // Parse goal tree into flat list with progress
           const goalList = [];

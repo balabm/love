@@ -108,13 +108,18 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
-        for connection in self.active_connections:
-            try:
-                await connection.send_json(message)
-            except Exception:
-                pass
+        await asyncio.gather(
+            *[connection.send_json(message) for connection in self.active_connections],
+            return_exceptions=True
+        )
 
 manager = ConnectionManager()
+
+
+# ═══ SENTINEL HEALING & ROLLBACK VERIFICATION ═══
+from core.self_healing import verify_and_heal_system
+verify_and_heal_system()
+
 
 from core.agent import chat
 from core.evolution import (
@@ -196,6 +201,7 @@ from core.context_engine import start_context_engine, get_context_dict, get_live
 from core.doc_analyst import start_doc_analyst, get_analyst
 from core.settings import get_settings as _get_settings
 import uvicorn
+import socket
 
 # Autonomous systems
 try:
@@ -452,14 +458,15 @@ def tts_notification(trigger):
         except Exception:
             pass
 
-def register_all_modules(lm):
+def register_all_modules(lm, _loop=None):
     from core.module_lifecycle import ModuleDescriptor
     
     # ── WAVE 0: FOUNDATION ──
     def start_neural_bus_module():
         from core.neural_bus import get_neural_bus
         bus = get_neural_bus()
-        bus.set_async_loop(asyncio.get_event_loop())
+        if _loop is not None:
+            bus.set_async_loop(_loop)
         
     def stop_neural_bus_module():
         from core.neural_bus import get_neural_bus
@@ -747,7 +754,8 @@ def register_all_modules(lm):
     def start_proactive_push_module():
         from core.proactive_push import get_push_engine
         push_engine = get_push_engine()
-        push_engine.set_async_loop(asyncio.get_event_loop())
+        if _loop is not None:
+            push_engine.set_async_loop(_loop)
         push_engine.start()
 
     def start_intelligence_hub_module():
@@ -758,7 +766,7 @@ def register_all_modules(lm):
     def start_daily_briefing_module():
         from core.daily_briefing import get_briefing_system
         import os
-        brief_time = os.getenv("DAILY_BRIEF_TIME", "08:00")
+        brief_time = _os.getenv("DAILY_BRIEF_TIME", "08:00")
         briefing = get_briefing_system()
         briefing.start(brief_time=brief_time)
 
@@ -874,20 +882,94 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events using topological lifecycle management."""
     from core.module_lifecycle import get_lifecycle
     lm = get_lifecycle()
-    register_all_modules(lm)
-    
+    _loop = asyncio.get_event_loop()
+    register_all_modules(lm, _loop=_loop)
+
     await lm.start_all()
+
+    # ── Print access URLs so you know where to connect from ──────────────────
+    try:
+        local_ip = socket.gethostbyname(socket.gethostname())
+    except Exception:
+        local_ip = "127.0.0.1"
+    
+    # Get base URL from settings or environment variable
+    settings = _get_settings()
+    base_url = os.getenv("LOVE_API_BASE_URL", settings.models.base_url if hasattr(settings, 'models') and hasattr(settings.models, 'base_url') else "0.0.0.0")
+    
+    # Extract host from base_url for display
+    if base_url and base_url != "0.0.0.0":
+        display_host = base_url.replace("http://", "").replace("https://", "").split(":")[0]
+    else:
+        display_host = local_ip
+    
+    print("", flush=True)
+    print("╔══════════════════════════════════════════════════════╗", flush=True)
+    print("║            LOVE is live and watching over you        ║", flush=True)
+    print("╠══════════════════════════════════════════════════════╣", flush=True)
+    print(f"║  Local:     http://{display_host}:8000".ljust(54) + "║", flush=True)
+    print(f"║  LAN:       http://{local_ip}:8000".ljust(54) + "║", flush=True)
+    print("║  Tailscale: see  tailscale ip -4  (if installed)     ║", flush=True)
+    print("╠══════════════════════════════════════════════════════╣", flush=True)
+    print("║  Mobile app:  set server URL in Settings tab         ║", flush=True)
+    print("║  Office PC:   run  install.bat  to auto-start        ║", flush=True)
+    print("╚══════════════════════════════════════════════════════╝", flush=True)
+    print("", flush=True)
+
     yield
     await lm.stop_all()
 
 
 app = FastAPI(title="LOVE Core API", version="2.0.0", lifespan=lifespan)
 
+# Basic API Authentication Middleware
+from fastapi import Request, HTTPException, status
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+API_KEY = _os.environ.get("LOVE_API_KEY", "love-dev-key")  # Default for development
+
+# Paths that never require auth
+_AUTH_EXEMPT_PREFIXES = ("/static", "/health", "/ws", "/docs", "/openapi", "/redoc")
+
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        # Always allow static files, health, websockets, and API docs
+        if any(path.startswith(p) for p in _AUTH_EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        # Bypass auth for same-machine requests (UI running on localhost)
+        client_host = request.client.host if request.client else ""
+        if client_host in ("127.0.0.1", "::1", "localhost"):
+            return await call_next(request)
+
+        # External requests must supply X-API-Key
+        # NOTE: return JSONResponse — never raise HTTPException inside BaseHTTPMiddleware
+        # (raising causes a Starlette task-group ExceptionGroup that renders as 500)
+        api_key = request.headers.get("X-API-Key")
+        if not api_key:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "API key missing. Provide X-API-Key header."}
+            )
+
+        if api_key != API_KEY:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid API key."}
+            )
+
+        return await call_next(request)
+
+app.add_middleware(APIKeyMiddleware)
+
 # Mount Static Files and Templates for Companion App
 import os
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
+BASE_DIR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
+app.mount("/static", StaticFiles(directory=_os.path.join(BASE_DIR, "static")), name="static")
+templates = Jinja2Templates(directory=_os.path.join(BASE_DIR, "templates"))
 
 # Wave 16: Neural Mesh Routes
 try:
@@ -1758,9 +1840,35 @@ async def modes():
 @app.get("/connect")
 async def mobile_connect_page(request: Request):
     """Mobile device landing page — shows QR, auto-registers device."""
-    local_ip = "192.168.1.4"
-    companion_url = f"http://{local_ip}:8000/companion"
-    tailscale_url = "http://100.93.81.95:8000/companion"
+    # Get base URL from settings or environment variable
+    settings = _get_settings()
+    base_url = os.getenv("LOVE_API_BASE_URL", settings.models.base_url if hasattr(settings, 'models') and hasattr(settings.models, 'base_url') else "0.0.0.0")
+    
+    # Extract host from base_url, defaulting to request host if available
+    if base_url and base_url != "0.0.0.0":
+        host = base_url.replace("http://", "").replace("https://", "").split(":")[0]
+    else:
+        # Use request headers to determine external address
+        host = request.headers.get("host", "0.0.0.0").split(":")[0]
+        if host == "localhost":
+            # Fallback to local network IP if localhost
+            try:
+                host = socket.gethostbyname(socket.gethostname())
+            except Exception:
+                host = "0.0.0.0"
+    
+    # Determine port from request or default to 8000
+    request_host = request.headers.get("host", "")
+    if ":" in request_host:
+        port = request_host.split(":")[1]
+    else:
+        port = "8000"
+    
+    companion_url = f"http://{host}:{port}/companion"
+    
+    # For Tailscale, check environment variable or use the same host
+    tailscale_host = os.getenv("TAILSCALE_IP", host)
+    tailscale_url = f"http://{tailscale_host}:{port}/companion"
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2359,7 +2467,7 @@ async def voice_transcribe_upload(file: UploadFile = File(...)):
 
         transcriber = WhisperTranscriber()
         text = transcriber.transcribe_file(tmp_path)
-        os.unlink(tmp_path)
+        _os.unlink(tmp_path)
 
         return {
             "transcription": text,
@@ -4966,6 +5074,173 @@ async def get_agi_status():
         ])
     }
 
+
+
+# ── LIVING SUBSTRATE BOOT (world model + SSM + MoE + homeostasis + body + HPC) ──
+try:
+    from core.living_substrate import start_living_substrate, substrate_snapshot
+    _LS_STATUS = start_living_substrate()
+    print(f'[API] Living Substrate online: {_LS_STATUS}')
+
+    @app.get('/substrate')
+    async def get_substrate():
+        return substrate_snapshot()
+
+    @app.get('/substrate/attention')
+    async def get_substrate_attention():
+        from core.hierarchical_predictive_coding import get_hpc
+        from core.world_model_latent import get_world_model_latent
+        return {
+            'level_attention': get_hpc().attention(),
+            'channel_attention': get_world_model_latent().attention_distribution(),
+            'inferred_activity': get_hpc().current_inferred_activity(),
+        }
+except Exception as e:
+    print(f'[API] Living Substrate boot error: {e}')
+
+# Wave 17: Evolution Dashboard Routes
+try:
+    from api.evolution_routes import router as evolution_router
+    app.include_router(evolution_router)
+    print("[API] Wave 17 Evolution Dashboard routes loaded")
+except Exception as e:
+    print(f"[API] Evolution routes error: {e}")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 22: Life Domains API — hydration, sleep, nutrition, skincare
+# ─────────────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BM
+from typing import Optional as _Opt, List as _List, Dict as _Dict
+
+class HydrationLogRequest(_BM):
+    count: int = 1
+    ml: _Opt[int] = None
+
+class SleepLogRequest(_BM):
+    bedtime: str          # "HH:MM"
+    wake_time: str        # "HH:MM"
+    quality: int = 5
+    notes: str = ""
+
+class MealLogRequest(_BM):
+    meal_type: str        # breakfast|lunch|dinner|snack
+    description: str
+    quality: int = 5
+    calories: _Opt[int] = None
+    protein_g: _Opt[int] = None
+    carbs_g: _Opt[int] = None
+    fat_g: _Opt[int] = None
+
+class SkincareRoutineRequest(_BM):
+    routine_type: str     # morning|evening
+    steps_done: _List[str]
+    products: _Opt[_Dict[str, str]] = None
+    skin_notes: str = ""
+    feeling: int = 5
+
+class SkincareConcernRequest(_BM):
+    concern: str
+    severity: int = 3
+
+@app.get("/life/dashboard")
+async def life_dashboard():
+    """Full today snapshot across all life domains + nudges + life score."""
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().get_dashboard()
+
+@app.get("/life/insights")
+async def life_insights():
+    """7-day insights across all life domains."""
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().get_weekly_insights()
+
+@app.get("/life/streaks")
+async def life_streaks():
+    """Current streaks for all life domains."""
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().get_streaks()
+
+@app.get("/life/nudges")
+async def life_nudges():
+    """Active nudges — what LOVE should be proactively saying right now."""
+    from core.life_domains import get_life_domains_engine
+    nudges = get_life_domains_engine().get_active_nudges()
+    return {"nudges": nudges, "count": len(nudges)}
+
+# Hydration
+@app.get("/life/hydration/today")
+async def hydration_today():
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().hydration.get_today()
+
+@app.post("/life/hydration/log")
+async def hydration_log(req: HydrationLogRequest):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().hydration.log_glass(req.count, req.ml)
+
+@app.get("/life/hydration/insights")
+async def hydration_insights(days: int = 7):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().hydration.get_insights(days)
+
+# Sleep
+@app.get("/life/sleep/today")
+async def sleep_today():
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().sleep.get_today()
+
+@app.post("/life/sleep/log")
+async def sleep_log(req: SleepLogRequest):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().sleep.log_sleep(req.bedtime, req.wake_time, req.quality, req.notes)
+
+@app.get("/life/sleep/insights")
+async def sleep_insights(days: int = 7):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().sleep.get_insights(days)
+
+# Nutrition
+@app.get("/life/nutrition/today")
+async def nutrition_today():
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().nutrition.get_today()
+
+@app.post("/life/nutrition/log")
+async def nutrition_log(req: MealLogRequest):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().nutrition.log_meal(
+        req.meal_type, req.description, req.quality,
+        req.calories, req.protein_g, req.carbs_g, req.fat_g
+    )
+
+@app.get("/life/nutrition/insights")
+async def nutrition_insights(days: int = 7):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().nutrition.get_insights(days)
+
+# Skincare
+@app.get("/life/skincare/today")
+async def skincare_today():
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().skincare.get_today()
+
+@app.post("/life/skincare/routine")
+async def skincare_routine(req: SkincareRoutineRequest):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().skincare.log_routine(
+        req.routine_type, req.steps_done, req.products, req.skin_notes, req.feeling
+    )
+
+@app.post("/life/skincare/concern")
+async def skincare_concern(req: SkincareConcernRequest):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().skincare.log_concern(req.concern, req.severity)
+
+@app.get("/life/skincare/insights")
+async def skincare_insights(days: int = 7):
+    from core.life_domains import get_life_domains_engine
+    return get_life_domains_engine().skincare.get_insights(days)
 
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

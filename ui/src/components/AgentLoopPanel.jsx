@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./AgentLoopPanel.css";
-
-const API = "http://localhost:8000";
 
 function ToolBadge({ name }) {
   const colors = {
@@ -75,7 +73,7 @@ function ToolCard({ tool }) {
     setRunning(true);
     setResult(null);
     try {
-      const res = await axios.post(`${API}/neural/agent/tool/run`, {
+      const res = await api.post(`${API}/neural/agent/tool/run`, {
         tool_name: tool.name,
         params,
       });
@@ -131,7 +129,7 @@ export default function AgentLoopPanel() {
 
   useEffect(() => {
     if (tab === "tools" && tools.length === 0) {
-      axios.get(`${API}/neural/agent/tools`)
+      api.get(`${API}/neural/agent/tools`)
         .then(r => setTools(r.data.tools || []))
         .catch(e => { console.error("[Agent] tools load failed:", e); });
     }
@@ -146,7 +144,7 @@ export default function AgentLoopPanel() {
     setRunning(true);
     setResult(null);
     try {
-      const res = await axios.post(`${API}/neural/agent/run`, {
+      const res = await api.post(`${API}/neural/agent/run`, {
         query: query.trim(),
         max_steps: maxSteps,
       });

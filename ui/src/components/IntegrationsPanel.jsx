@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./IntegrationsPanel.css";
-
-const API = "http://localhost:8000";
 
 const ACCENT = {
   system:    "cyan",
@@ -95,7 +93,7 @@ export default function IntegrationsPanel() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/neural/integrations/status`);
+      const res = await api.get(`${API}/neural/integrations/status`);
       setData(res.data);
       setLastFetch(new Date());
       setError(null);
@@ -114,7 +112,7 @@ export default function IntegrationsPanel() {
   const triggerPoll = async () => {
     setPolling(true);
     try {
-      await axios.post(`${API}/neural/integrations/poll`);
+      await api.post(`${API}/neural/integrations/poll`);
       await fetchStatus();
     } catch (e) {
       console.error("[Integrations] poll failed:", e);

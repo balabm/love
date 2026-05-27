@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
+import api, { API } from '../api';
 import "./ContextPanel.css";
-
-const API = "http://localhost:8000";
 
 const ICON = {
   time: "◷",
@@ -64,7 +62,7 @@ export default function ContextPanel({ collapsed: externalCollapsed }) {
 
   const fetchContext = async () => {
     try {
-      const res = await axios.get(`${API}/context/summary`);
+      const res = await api.get(`${API}/context/summary`);
       const data = res.data;
       setCtx(data);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
@@ -274,7 +272,7 @@ function DevicesTab() {
   }, []);
 
   const load = () => {
-    axios.get(`${API}/devices`)
+    api.get(`${API}/devices`)
       .then(r => setDevices(r.data.devices || []))
       .catch(() => setError("Cannot reach device registry"));
   };
@@ -337,14 +335,14 @@ function IntegrationsTab({ ctx }) {
   const [showGoogleSteps, setShowGoogleSteps] = useState(false);
 
   const refreshGoogle = () => {
-    axios.get(`${API}/integrations/google/status`)
+    api.get(`${API}/integrations/google/status`)
       .then(r => setGoogleData(r.data))
       .catch(() => setGoogleData({ connected: false }));
   };
 
   useEffect(() => {
     refreshGoogle();
-    axios.get(`${API}/integrations/phone/status`)
+    api.get(`${API}/integrations/phone/status`)
       .then(r => setPhoneData(r.data))
       .catch(() => setPhoneData({ connected: false }));
   }, []);
@@ -353,7 +351,7 @@ function IntegrationsTab({ ctx }) {
     setConnecting(true);
     setGoogleMsg("Opening browser for Google auth…");
     try {
-      const res = await axios.post(`${API}/integrations/google/auth`, {}, { timeout: 120000 });
+      const res = await api.post(`${API}/integrations/google/auth`, {}, { timeout: 120000 });
       if (res.data.success) {
         setGoogleData({ connected: true });
         setGoogleMsg("✓ Connected!");
@@ -379,7 +377,7 @@ function IntegrationsTab({ ctx }) {
   // Auto-install silently — never ask user to pip install
   useEffect(() => {
     if (googleNeedsPackages) {
-      axios.post(`${API}/evolution/install-packages`, { feature: "google calendar gmail drive oauth" })
+      api.post(`${API}/evolution/install-packages`, { feature: "google calendar gmail drive oauth" })
         .then(() => setTimeout(refreshGoogle, 8000))
         .catch(() => {});
     }
@@ -540,7 +538,7 @@ function MicrosoftRow() {
   const [authInfo, setAuthInfo] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API}/integrations/microsoft/status`)
+    api.get(`${API}/integrations/microsoft/status`)
       .then(r => setMsData(r.data))
       .catch(() => setMsData({ connected: false, client_id_set: false }));
   }, []);
@@ -548,7 +546,7 @@ function MicrosoftRow() {
   const connect = async () => {
     setConnecting(true);
     try {
-      const res = await axios.post(`${API}/integrations/microsoft/auth`, {}, { timeout: 10000 });
+      const res = await api.post(`${API}/integrations/microsoft/auth`, {}, { timeout: 10000 });
       if (res.data.success) {
         setAuthInfo(res.data);
       }
@@ -601,7 +599,7 @@ function DocsTab() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    axios.get(`${API}/docs/insights`)
+    api.get(`${API}/docs/insights`)
       .then(r => setInsights(r.data))
       .catch(() => setError("Doc analysis not available"));
   }, []);
@@ -610,7 +608,7 @@ function DocsTab() {
     setScanning(true);
     setError("");
     try {
-      const res = await axios.post(`${API}/docs/scan`);
+      const res = await api.post(`${API}/docs/scan`);
       setInsights(res.data);
     } catch {
       setError("Scan failed");

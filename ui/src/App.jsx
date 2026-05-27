@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import axios from "axios";
+import api, { API } from "./api";
 import Dashboard from "./components/Dashboard";
 import ContextPanel from "./components/ContextPanel";
 import IntelligenceDashboard from "./components/IntelligenceDashboard";
@@ -16,8 +16,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import SentinelPanel from "./components/SentinelPanel";
 import TerminalPanel from "./components/TerminalPanel";
 import EvolutionPanel from "./components/EvolutionPanel";
+import LifeDomains from "./components/LifeDomains";
 
-const API = "http://localhost:8000";
+
 
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -55,7 +56,7 @@ const QUICK = [
 ];
 
 export default function App() {
-  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations | agent | briefing
+  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations | agent | briefing | life
   const [messages, setMessages] = useState([{
     role: "love",
     text: "Hey Karthi. I'm watching everything — your PC, your schedule, your patterns. Just talk to me.",
@@ -92,16 +93,16 @@ export default function App() {
   }, [input]);
 
   const ping = async () => {
-    try { await axios.get(`${API}/health`); setStatus("online"); }
+    try { await api.get(`${API}/health`); setStatus("online"); }
     catch { setStatus("offline"); }
   };
 
   const loadLive = async () => {
     try {
       const [scoreRes, intRes, ctxRes] = await Promise.allSettled([
-        axios.get(`${API}/lifescore`),
-        axios.get(`${API}/orchestrator/interventions`),
-        axios.get(`${API}/context/summary`),
+        api.get(`${API}/lifescore`),
+        api.get(`${API}/orchestrator/interventions`),
+        api.get(`${API}/context/summary`),
       ]);
       if (scoreRes.status === "fulfilled") setLifeScore(scoreRes.value.data.score);
       if (intRes.status === "fulfilled") setAlerts(intRes.value.data.interventions || []);
@@ -117,7 +118,7 @@ export default function App() {
     setLoading(true);
     setView("chat");
     try {
-      const res = await axios.post(`${API}/chat`, { text: msg, mode: "general" });
+      const res = await api.post(`${API}/chat`, { text: msg, mode: "general" });
       setMessages(p => [...p, {
         role: "love",
         text: res.data.response,
@@ -137,14 +138,14 @@ export default function App() {
   };
 
   const dismissAlert = async (id) => {
-    try { await axios.post(`${API}/orchestrator/dismiss/${id}`); }
+    try { await api.post(`${API}/orchestrator/dismiss/${id}`); }
     catch {}
     setAlerts(p => p.filter(a => a.id !== id));
   };
 
   const triggerAutoHeal = async () => {
     try {
-      await axios.post(`${API}/evolution/install-packages`, { feature: "google calendar gmail drive" });
+      await api.post(`${API}/evolution/install-packages`, { feature: "google calendar gmail drive" });
       setMessages(p => [...p, { role: "love", text: "Installing Google packages now. I'll let you know when done.", time: ts() }]);
     } catch (e) { console.error("[LOVE] auto-heal failed:", e); }
   };
@@ -334,6 +335,9 @@ export default function App() {
 
         {view === "evolution" && (
           <ErrorBoundary name="Evolution"><div className="view-scroll"><EvolutionPanel /></div></ErrorBoundary>
+        )}
+        {view === "life" && (
+          <ErrorBoundary name="Life"><div className="view-scroll"><LifeDomains /></div></ErrorBoundary>
         )}
       </main>
     </div>

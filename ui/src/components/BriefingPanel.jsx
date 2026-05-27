@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./BriefingPanel.css";
-
-const API = "http://localhost:8000";
 
 function TimeInput({ value, onChange }) {
   return (
@@ -26,8 +24,8 @@ export default function BriefingPanel() {
   const loadStatus = async () => {
     try {
       const [statusRes, briefRes] = await Promise.allSettled([
-        axios.get(`${API}/neural/briefing/status`),
-        axios.get(`${API}/neural/briefing/latest`),
+        api.get(`${API}/neural/briefing/status`),
+        api.get(`${API}/neural/briefing/latest`),
       ]);
       if (statusRes.status === "fulfilled") {
         const s = statusRes.value.data;
@@ -51,7 +49,7 @@ export default function BriefingPanel() {
     setGenerating(true);
     setError(null);
     try {
-      const res = await axios.post(`${API}/neural/briefing/generate?force=true`);
+      const res = await api.post(`${API}/neural/briefing/generate?force=true`);
       if (res.data.success) {
         setBrief(res.data);
       } else {
@@ -67,7 +65,7 @@ export default function BriefingPanel() {
   const saveTime = async () => {
     setSaving(true);
     try {
-      await axios.post(`${API}/neural/briefing/set-time`, { time: briefTime });
+      await api.post(`${API}/neural/briefing/set-time`, { time: briefTime });
       await loadStatus();
     } catch (e) {
       console.error("[Briefing] save time failed:", e);

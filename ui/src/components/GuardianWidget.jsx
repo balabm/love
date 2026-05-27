@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./GuardianWidget.css";
-
-const API = "http://localhost:8000";
 
 export default function GuardianWidget() {
   const [status, setStatus] = useState(null);
@@ -16,7 +14,7 @@ export default function GuardianWidget() {
 
   const fetch = async () => {
     try {
-      const res = await axios.get(`${API}/guardian/work-status`);
+      const res = await api.get(`${API}/guardian/work-status`);
       setStatus(res.data);
     } catch (e) { console.error("[Guardian] fetch failed:", e); }
   };
@@ -24,7 +22,7 @@ export default function GuardianWidget() {
   const hardStop = async () => {
     if (!window.confirm("Hard stop — LOVE will save and lock. Sure?")) return;
     try {
-      await axios.post(`${API}/guardian/hard-stop`);
+      await api.post(`${API}/guardian/hard-stop`);
       setStatus(s => s ? { ...s, message: "Hard stop triggered. Good call." } : s);
     } catch (e) { console.error("[Guardian] hard-stop failed:", e); }
   };

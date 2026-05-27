@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api, { API } from '../api';
 import "./IntelligenceDashboard.css";
-
-const API = "http://localhost:8000";
 
 const ICON = {
   brain: "◈",
@@ -74,11 +72,11 @@ export default function IntelligenceDashboard() {
   const fetchAll = async () => {
     try {
       const [predRes, dreamRes, curiousRes, emoRes, evoRes] = await Promise.all([
-        axios.get(`${API}/intelligence/predictions`).catch(() => ({ data: {} })),
-        axios.get(`${API}/intelligence/dream-insights`).catch(() => ({ data: {} })),
-        axios.get(`${API}/intelligence/curiosity-gaps`).catch(() => ({ data: {} })),
-        axios.get(`${API}/emotional/state`).catch(() => ({ data: {} })),
-        axios.get(`${API}/intelligence/self-evolution`).catch(() => ({ data: {} })),
+        api.get(`${API}/intelligence/predictions`).catch(() => ({ data: {} })),
+        api.get(`${API}/intelligence/dream-insights`).catch(() => ({ data: {} })),
+        api.get(`${API}/intelligence/curiosity-gaps`).catch(() => ({ data: {} })),
+        api.get(`${API}/emotional/state`).catch(() => ({ data: {} })),
+        api.get(`${API}/intelligence/self-evolution`).catch(() => ({ data: {} })),
       ]);
       if (predRes.data?.active) setPredictions(p => ({ ...p, ...predRes.data }));
       if (dreamRes.data?.insights) setDreamInsights(p => ({ ...p, ...dreamRes.data }));

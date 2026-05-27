@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api, { API } from "../api";
 import "./EmotionalPanel.css";
-
-const API = "http://localhost:8000";
 
 const MOOD_COLORS = {
   happy: "#34d399", focused: "#60a5fa", calm: "#a78bfa",
@@ -31,8 +29,8 @@ export default function EmotionalPanel() {
   const load = async () => {
     try {
       const [stateRes, sumRes] = await Promise.allSettled([
-        axios.get(`${API}/emotional/state`),
-        axios.get(`${API}/emotional/summary`),
+        api.get(`${API}/emotional/state`),
+        api.get(`${API}/emotional/summary`),
       ]);
       if (stateRes.status === "fulfilled") setState(stateRes.value.data);
       if (sumRes.status === "fulfilled") setSummary(sumRes.value.data);
@@ -43,7 +41,7 @@ export default function EmotionalPanel() {
     if (!mood) return;
     setLogging(true);
     try {
-      await axios.post(`${API}/emotional/record`, { emotion: mood, intensity: 0.7 });
+      await api.post(`${API}/emotional/record`, { emotion: mood, intensity: 0.7 });
       setMoodInput("");
       await load();
     } catch (e) { console.error("[Emotional] log mood failed:", e); }
