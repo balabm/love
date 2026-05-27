@@ -393,6 +393,36 @@ def _build_raw_sections(data: Dict) -> List[str]:
             prog = g.get("progress", 0)
             sections.append(f"  - {g.get('title','')[:40]} ({prog}%)")
 
+    # Life Domains (body tracking)
+    life_score = data.get("life_score", 0)
+    if life_score > 0 or data.get("life_nudges"):
+        parts = [f"Life score: {life_score:.0f}/100"]
+        sleep_h = data.get("life_sleep_hours", 0)
+        if sleep_h:
+            parts.append(f"Sleep: {sleep_h}h (quality {data.get('life_sleep_quality', '?')}/10)")
+        hydra = data.get("life_hydration_pct", 0)
+        if hydra:
+            parts.append(f"Hydration: {hydra:.0f}%")
+        meals = data.get("life_meals_logged", 0)
+        parts.append(f"Meals: {meals}/3")
+        skincare = data.get("life_skincare_done", 0)
+        if skincare:
+            parts.append(f"Skincare: {skincare:.0f}%")
+        sections.append("BODY: " + " | ".join(parts))
+        streaks = data.get("life_streaks", {})
+        streak_parts = [f"{k}: {v}d" for k, v in streaks.items() if v > 0]
+        if streak_parts:
+            sections.append(f"  Streaks: {', '.join(streak_parts)}")
+        for nudge in data.get("life_nudges", [])[:2]:
+            sections.append(f"  > {nudge}")
+
+    # Cross-domain insights
+    xd = data.get("cross_domain_insights")
+    if xd and isinstance(xd, dict):
+        correlations = xd.get("correlations", [])
+        for c in correlations[:2]:
+            sections.append(f"  PATTERN: {c}")
+
     # System
     bat = data.get("system_battery")
     if bat is not None and bat < 30:

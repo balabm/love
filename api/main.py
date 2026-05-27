@@ -5243,6 +5243,22 @@ async def skincare_insights(days: int = 7):
     return get_life_domains_engine().skincare.get_insights(days)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Wave 24: Cross-Domain Intelligence API
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/life/correlations")
+async def life_correlations(days: int = 7):
+    """Cross-domain correlations — sleep vs productivity, hydration vs focus, etc."""
+    from core.cross_domain_intelligence import get_correlations
+    return get_correlations(days)
+
+@app.get("/life/report")
+async def life_report(days: int = 7):
+    """Full life report — dashboard + insights + correlations."""
+    from core.cross_domain_intelligence import get_life_report
+    return get_life_report(days)
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Wave 23: Autonomous Wave Evolution Engine API
 # ─────────────────────────────────────────────────────────────────────────────
 
