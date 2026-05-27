@@ -88,8 +88,7 @@ class ProactivePushEngine:
         # Log it
         try:
             with open(PUSH_LOG, "a") as f:
-                f.write(json.dumps(asdict(msg)) + "
-")
+                f.write(json.dumps(asdict(msg)) + "\n")
         except Exception:
             pass
 
