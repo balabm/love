@@ -32,6 +32,8 @@ class Intervention:
     triggered_by: List[str] = field(default_factory=list)
     accepted: bool = False
     dismissed: bool = False
+    is_overridden: bool = False
+    override_reason: str = ""
     created_at: str = field(default_factory=lambda: datetime.now().isoformat())
 
 
@@ -464,8 +466,8 @@ class NeuralOrchestrator:
             overall_state = 'steady'
             state_message = 'Steady state. Nothing urgent, but always room to improve.'
         
-        # Active interventions
-        active = [i for i in interventions if not i.dismissed and not i.accepted]
+        # Active interventions (not dismissed, not accepted, not overridden)
+        active = [i for i in interventions if not i.dismissed and not i.accepted and not i.is_overridden]
         
         return {
             'timestamp': datetime.now().isoformat(),
@@ -491,7 +493,9 @@ class NeuralOrchestrator:
                     'priority': i.priority,
                     'message': i.message,
                     'action': i.action,
-                    'expires_at': i.expires_at
+                    'expires_at': i.expires_at,
+                    'is_overridden': i.is_overridden,
+                    'override_reason': i.override_reason
                 }
                 for i in active
             ],
@@ -632,6 +636,153 @@ class NeuralOrchestrator:
                 })
                 return True
         return False
+    
+    def override_intervention(self, intervention_id: str, reason: str) -> Dict[str, Any]:
+        """
+        Override an active intervention - user agency override.
+        
+        This is critical for user agency. When the user forcefully overrides
+        an intervention (like stress_market_lock), we:
+        1. Mark the intervention as overridden
+        2. Log the override reason to the knowledge graph for learning
+        3. Broadcast an event to NeuralBus so modules can resume processing
+        4. Maintain intervention history for future pattern learning
+        
+        Args:
+            intervention_id: The ID of the intervention to override
+            reason: Why the user is overriding this intervention
+            
+        Returns:
+            Dict with success status and details
+        """
+        with self._lock:
+            # Find the intervention
+            intervention = None
+            for i in self.interventions:
+                if i.id == intervention_id:
+                    intervention = i
+                    break
+            
+            if not intervention:
+                return {
+                    'success': False,
+                    'error': f'Intervention {intervention_id} not found',
+                    'intervention_id': intervention_id
+                }
+            
+            # Check if already overridden
+            if intervention.is_overridden:
+                return {
+                    'success': False,
+                    'error': f'Intervention {intervention_id} already overridden',
+                    'intervention_id': intervention_id,
+                    'current_reason': intervention.override_reason
+                }
+            
+            # Mark as overridden
+            intervention.is_overridden = True
+            intervention.override_reason = reason
+            
+            # Log to orchestrator log for history
+            save_log('orchestrator', {
+                'event': 'intervention_overridden',
+                'intervention_id': intervention_id,
+                'intervention_type': intervention.type,
+                'intervention_action': intervention.action,
+                'override_reason': reason,
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            # Log to knowledge graph for learning
+            try:
+                from core.knowledge_graph import add_entity, add_relation
+                
+                # Create entities for the intervention and context
+                intervention_entity_id = add_entity(
+                    f'intervention_{intervention_id}',
+                    'event',
+                    {
+                        'type': intervention.type,
+                        'action': intervention.action,
+                        'priority': intervention.priority,
+                        'message': intervention.message,
+                        'overridden': True,
+                        'override_reason': reason
+                    }
+                )
+                
+                # Add relation: user -> overrode -> intervention
+                add_relation(
+                    'user', 'person',
+                    f'intervention_{intervention_id}', 'event',
+                    'overrode',
+                    context=reason,
+                    strength=2.0  # Strong signal for learning
+                )
+                
+                # If this was a block action, add relation to the blocked domain
+                if intervention.action and intervention.triggered_by:
+                    for domain in intervention.triggered_by:
+                        add_relation(
+                            'user', 'person',
+                            domain, 'topic',
+                            'rejected_intervention',
+                            context=f'Overrode {intervention.action}: {reason}',
+                            strength=1.5
+                        )
+                
+            except Exception as e:
+                # Don't fail the override if knowledge graph logging fails
+                print(f'[Orchestrator] Failed to log override to knowledge graph: {e}')
+            
+            # Broadcast to NeuralBus so modules can resume
+            try:
+                from core.neural_bus import NeuralBus, EventPriority
+                
+                bus = NeuralBus()
+                bus.publish(
+                    domain='system',
+                    event_type='intervention_overridden',
+                    payload={
+                        'intervention_id': intervention_id,
+                        'intervention_type': intervention.type,
+                        'intervention_action': intervention.action,
+                        'override_reason': reason,
+                        'affected_domains': intervention.triggered_by,
+                        'timestamp': datetime.now().isoformat()
+                    },
+                    source_module='orchestrator',
+                    priority=EventPriority.HIGH.value
+                )
+                
+                # If this was a block action (like stress_market_lock), 
+                # send a specific unlock event
+                if intervention.action == 'pause_trading':
+                    bus.publish(
+                        domain='finance',
+                        event_type='trading_unlocked',
+                        payload={
+                            'intervention_id': intervention_id,
+                            'reason': reason,
+                            'timestamp': datetime.now().isoformat()
+                        },
+                        source_module='orchestrator',
+                        priority=EventPriority.CRITICAL.value
+                    )
+                
+            except Exception as e:
+                # Don't fail the override if NeuralBus broadcast fails
+                print(f'[Orchestrator] Failed to broadcast override event: {e}')
+            
+            return {
+                'success': True,
+                'intervention_id': intervention_id,
+                'intervention_type': intervention.type,
+                'intervention_action': intervention.action,
+                'override_reason': reason,
+                'timestamp': datetime.now().isoformat(),
+                'message': f'Intervention {intervention_id} has been overridden. {intervention.action if intervention.action else "Lock"} lifted.'
+            }
 
 
 # Singleton instance
@@ -660,3 +811,23 @@ def get_active_interventions() -> List[Dict[str, Any]]:
     orch = get_orchestrator()
     state = orch.get_unified_state()
     return state.get('active_interventions', [])
+
+
+def override_intervention(intervention_id: str, reason: str) -> Dict[str, Any]:
+    """
+    Public API: Override an active intervention.
+    
+    This gives users agency to forcefully override LOVE's interventions.
+    When called, it:
+    - Marks the intervention as overridden
+    - Logs the override to the knowledge graph for learning
+    - Broadcasts events to NeuralBus so modules can resume processing
+    
+    Args:
+        intervention_id: The ID of the intervention to override
+        reason: Why the user is overriding this intervention
+        
+    Returns:
+        Dict with success status and details
+    """
+    return get_orchestrator().override_intervention(intervention_id, reason)

@@ -150,6 +150,17 @@ async def get_causal_chain(event_id: str):
         return {"error": str(e)}
 
 
+@router.get("/telemetry/stats")
+async def get_telemetry_stats():
+    """Get WebSocket telemetry manager statistics."""
+    try:
+        from api.websocket_manager import get_telemetry_manager
+        manager = get_telemetry_manager()
+        return manager.get_stats()
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Research Engine Endpoints ────────────────────────────────────────────────
 
 @router.get("/research/status")

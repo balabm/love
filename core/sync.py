@@ -17,6 +17,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from core.memory import save_log
+# Neural Bus import for hardware shift events
+try:
+    from core.neural_bus import NeuralBus, EventPriority, EventDomain
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -472,6 +479,7 @@ _heartbeat_mgr = None
 _sync_memory = None
 _user_state = None
 _personality_adapter = None
+_handoff_mgr = None
 
 def get_sync_db() -> SyncDatabase:
     """Get singleton sync database."""
@@ -507,6 +515,13 @@ def get_personality_adapter() -> PersonalityAdapter:
     if _personality_adapter is None:
         _personality_adapter = PersonalityAdapter(get_sync_db())
     return _personality_adapter
+
+def get_handoff_manager() -> DeviceHandoffManager:
+    """Get singleton device handoff manager."""
+    global _handoff_mgr
+    if _handoff_mgr is None:
+        _handoff_mgr = DeviceHandoffManager(get_sync_db())
+    return _handoff_mgr
 
 
 @dataclass
@@ -631,9 +646,327 @@ class HardwareResourceManager:
             "max_tokens": profile.llm_max_tokens,
             "use_quantized": profile.use_quantized_models
         }
+    
+    @classmethod
+    def emit_hardware_shift_event(cls, to_device_id: str, to_device_type: str):
+        """
+        Emit a NeuralBus event when shifting to a new device.
+        This triggers the LLM router to switch models and pause heavy tasks.
+        """
+        if not NEURAL_BUS_AVAILABLE:
+            print(f"[HardwareManager] NeuralBus not available, skipping hardware shift event")
+            return
+        
+        try:
+            bus = NeuralBus()
+            
+            # Determine the mode based on device type
+            if to_device_type == DEVICE_ROG_ALLY or to_device_type == DEVICE_MOBILE:
+                mode = "power_saver"
+            elif to_device_type == DEVICE_LEGION or to_device_type == DEVICE_DESKTOP:
+                mode = "high_performance"
+            else:
+                mode = "balanced"
+            
+            # Emit the hardware shift event
+            event_id = bus.publish(
+                domain="device",
+                event_type="hardware_shift",
+                payload={
+                    "mode": mode,
+                    "to_device_id": to_device_id,
+                    "to_device_type": to_device_type,
+                    "timestamp": datetime.now().isoformat()
+                },
+                source_module="sync",
+                priority=EventPriority.HIGH,
+                propagate=True
+            )
+            
+            print(f"[HardwareManager] Emitted hardware_shift event: {event_id} -> mode: {mode}")
+            save_log('hardware_shift', {
+                'event_id': event_id,
+                'mode': mode,
+                'to_device_id': to_device_id,
+                'to_device_type': to_device_type,
+                'timestamp': datetime.now().isoformat()
+            })
+            
+        except Exception as e:
+            print(f"[HardwareManager] Failed to emit hardware shift event: {e}")
+            save_log('hardware_shift_error', {
+                'error': str(e),
+                'to_device_id': to_device_id,
+                'timestamp': datetime.now().isoformat()
+            })
+
+
+class DeviceHandoffManager:
+    """
+    Manages cross-device handoff - the "Follow Me" protocol.
+    
+    When a user switches from one device to another, this manager:
+    1. Packages the SensoryBuffer (last 5 minutes of context/chat/state)
+    2. Pushes it to the new device
+    3. Triggers hardware shift events for ROG Ally
+    4. Ensures seamless context transfer
+    """
+    
+    def __init__(self, db: SyncDatabase = None):
+        self.db = db or SyncDatabase()
+        self.heartbeat_mgr = HeartbeatManager(self.db)
+        self.sync_memory = SyncMemory(self.db)
+        self.user_state = UserStateSync(self.db)
+    
+    def _is_rog_ally(self, device_id: str, device_type: str = None) -> bool:
+        """
+        Identify if the target device is a ROG Ally.
+        Checks by device type, device ID patterns, or battery characteristics.
+        """
+        # Check by device type
+        if device_type == DEVICE_ROG_ALLY or device_type == DEVICE_MOBILE:
+            return True
+        
+        # Check by device ID patterns (common ROG Ally identifiers)
+        rog_patterns = ['rog', 'ally', 'handheld', 'portable']
+        device_id_lower = device_id.lower()
+        if any(pattern in device_id_lower for pattern in rog_patterns):
+            return True
+        
+        # Check device info from heartbeat
+        device_info = self._get_device_info(device_id)
+        if device_info:
+            # If it's a laptop/mobile type and not on AC power, likely ROG Ally
+            if device_info.get("device_type") in [DEVICE_MOBILE, DEVICE_LAPTOP]:
+                hw_info = HardwareResourceManager.detect_hardware()
+                if hw_info.get("is_laptop") and not hw_info.get("ac_power"):
+                    return True
+        
+        return False
+    
+    def _get_device_info(self, device_id: str) -> Optional[Dict[str, Any]]:
+        """Get device information from heartbeat database."""
+        with self.db._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT device_type, device_name, current_mode FROM device_heartbeats WHERE device_id = ?",
+                (device_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                return {
+                    "device_id": device_id,
+                    "device_type": row["device_type"],
+                    "device_name": row["device_name"],
+                    "current_mode": row["current_mode"]
+                }
+        return None
+    
+    def _package_sensory_buffer(self, from_device_id: str, minutes: int = 5) -> Dict[str, Any]:
+        """
+        Package the last N minutes of context/chat/state from the active device.
+        This includes:
+        - Recent chat/conversation history
+        - Working memory items
+        - User state
+        - Device context
+        """
+        cutoff = (datetime.now() - timedelta(minutes=minutes)).isoformat()
+        
+        # Get recent synced memory entries (chat, context, etc.)
+        recent_entries = self.sync_memory.get_unsynced_entries(
+            device_id=from_device_id,
+            since=cutoff
+        )
+        
+        # Get all user state
+        user_state = self.user_state.get_all_state()
+        
+        # Get device context
+        with self.db._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT personality_mode, active_context, work_hours_today FROM device_context WHERE device_id = ?",
+                (from_device_id,)
+            )
+            row = cursor.fetchone()
+            device_context = {
+                "personality_mode": row["personality_mode"] if row else "balanced",
+                "active_context": row["active_context"] if row else None,
+                "work_hours_today": row["work_hours_today"] if row else 0.0
+            } if row else {}
+        
+        # Package everything
+        context_package = {
+            "from_device_id": from_device_id,
+            "packaged_at": datetime.now().isoformat(),
+            "time_window_minutes": minutes,
+            "recent_entries": recent_entries,
+            "user_state": user_state,
+            "device_context": device_context,
+            "entry_count": len(recent_entries)
+        }
+        
+        return context_package
+    
+    def _push_context_to_device(self, to_device_id: str, context_package: Dict[str, Any]) -> bool:
+        """
+        Push the packaged context to the target device.
+        Stores it as a special handoff sync entry that the receiving device can process.
+        """
+        try:
+            # Create a handoff sync entry
+            handoff_id = self.sync_memory.sync_entry(
+                device_id=to_device_id,
+                category="handoff_context",
+                content=json.dumps(context_package),
+                metadata={
+                    "handoff_from": context_package["from_device_id"],
+                    "handoff_to": to_device_id,
+                    "packaged_at": context_package["packaged_at"],
+                    "entry_count": context_package["entry_count"]
+                }
+            )
+            
+            # Also update user state to reflect the handoff
+            self.user_state.set_state(
+                key="last_handoff",
+                value={
+                    "from_device": context_package["from_device_id"],
+                    "to_device": to_device_id,
+                    "timestamp": context_package["packaged_at"]
+                },
+                device_id=to_device_id,
+                priority=10  # High priority
+            )
+            
+            print(f"[Handoff] Pushed context to {to_device_id}: {context_package['entry_count']} entries")
+            return True
+            
+        except Exception as e:
+            print(f"[Handoff] Failed to push context to {to_device_id}: {e}")
+            return False
+    
+    def trigger_handoff(self, from_device_id: str, to_device_id: str) -> Dict[str, Any]:
+        """
+        Trigger a cross-device handoff from one device to another.
+        
+        This is the "Follow Me" protocol - when a user switches devices,
+        LOVE seamlessly transfers context and adjusts hardware resources.
+        
+        Args:
+            from_device_id: The device we're handing off from
+            to_device_id: The device we're handing off to
+            
+        Returns:
+            Dict with handoff status, context transferred, and any errors
+        """
+        result = {
+            "status": "initiated",
+            "from_device": from_device_id,
+            "to_device": to_device_id,
+            "timestamp": datetime.now().isoformat(),
+            "context_transferred": False,
+            "hardware_shift_emitted": False,
+            "errors": []
+        }
+        
+        try:
+            # Validate devices exist
+            from_device = self._get_device_info(from_device_id)
+            to_device = self._get_device_info(to_device_id)
+            
+            if not from_device:
+                result["errors"].append(f"Source device {from_device_id} not found")
+                result["status"] = "failed"
+                return result
+            
+            if not to_device:
+                result["errors"].append(f"Target device {to_device_id} not found")
+                result["status"] = "failed"
+                return result
+            
+            print(f"[Handoff] Initiating handoff: {from_device_id} -> {to_device_id}")
+            
+            # Step 1: Package sensory buffer/context from source device
+            try:
+                context_package = self._package_sensory_buffer(from_device_id, minutes=5)
+                result["context_package"] = {
+                    "entry_count": context_package["entry_count"],
+                    "time_window": context_package["time_window_minutes"]
+                }
+                print(f"[Handoff] Packaged {context_package['entry_count']} entries from {from_device_id}")
+            except Exception as e:
+                result["errors"].append(f"Failed to package context: {str(e)}")
+                context_package = None
+            
+            # Step 2: Push context to target device
+            if context_package:
+                try:
+                    success = self._push_context_to_device(to_device_id, context_package)
+                    result["context_transferred"] = success
+                    if not success:
+                        result["errors"].append("Context push failed")
+                except Exception as e:
+                    result["errors"].append(f"Context push error: {str(e)}")
+            
+            # Step 3: Emit hardware shift event if target is ROG Ally
+            try:
+                if self._is_rog_ally(to_device_id, to_device.get("device_type")):
+                    HardwareResourceManager.emit_hardware_shift_event(
+                        to_device_id=to_device_id,
+                        to_device_type=to_device.get("device_type", DEVICE_MOBILE)
+                    )
+                    result["hardware_shift_emitted"] = True
+                    result["hardware_mode"] = "power_saver"
+                    print(f"[Handoff] Emitted hardware shift event for ROG Ally")
+            except Exception as e:
+                result["errors"].append(f"Hardware shift event error: {str(e)}")
+            
+            # Step 4: Log the handoff
+            self.db.log_sync(
+                device_id=to_device_id,
+                action="handoff_received",
+                details=f"From: {from_device_id}, Entries: {context_package['entry_count'] if context_package else 0}"
+            )
+            
+            # Step 5: Update device heartbeats to reflect active device change
+            self.heartbeat_mgr.heartbeat(to_device_id, current_mode="active")
+            
+            # Final status
+            if result["context_transferred"] and not result["errors"]:
+                result["status"] = "success"
+            elif result["context_transferred"]:
+                result["status"] = "partial_success"
+            else:
+                result["status"] = "failed"
+            
+            # Log to memory
+            save_log('device_handoff', {
+                'from_device': from_device_id,
+                'to_device': to_device_id,
+                'status': result["status"],
+                'context_transferred': result["context_transferred"],
+                'hardware_shift_emitted': result["hardware_shift_emitted"],
+                'timestamp': datetime.now().isoformat()
+            })
+            
+            print(f"[Handoff] Handoff complete: {result['status']}")
+            
+        except Exception as e:
+            result["status"] = "error"
+            result["errors"].append(f"Handoff failed: {str(e)}")
+            print(f"[Handoff] Handoff error: {e}")
+            save_log('device_handoff_error', {
+                'from_device': from_device_id,
+                'to_device': to_device_id,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        return result
 
 
 class LaunchSequence:
+
     """Automated workspace preparation."""
     
     def __init__(self):
@@ -777,3 +1110,20 @@ def get_personality_modifications(device_id: str) -> Dict[str, Any]:
     """Get personality modifications for a device."""
     adapter = get_personality_adapter()
     return adapter.get_personality_for_device(device_id)
+
+def trigger_handoff(from_device_id: str, to_device_id: str) -> Dict[str, Any]:
+    """
+    Public API to trigger a cross-device handoff.
+    
+    This is the "Follow Me" protocol - when a user switches devices,
+    LOVE seamlessly transfers context and adjusts hardware resources.
+    
+    Args:
+        from_device_id: The device we're handing off from
+        to_device_id: The device we're handing off to
+        
+    Returns:
+        Dict with handoff status, context transferred, and any errors
+    """
+    mgr = get_handoff_manager()
+    return mgr.trigger_handoff(from_device_id, to_device_id)

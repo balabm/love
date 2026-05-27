@@ -84,6 +84,7 @@ if not _os.environ.get("_LOVE_DEPS_INSTALLED"):
 # ── End Bootstrap ──
 
 import asyncio
+import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
@@ -94,6 +95,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.requests import Request
 from pydantic import BaseModel
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 # Companion App WebSocket Manager
 class ConnectionManager:
@@ -1966,6 +1969,54 @@ async def websocket_companion_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+
+@app.websocket("/telemetry")
+async def websocket_telemetry_endpoint(websocket: WebSocket, client_id: Optional[str] = None):
+    """
+    Real-time NeuralBus telemetry stream for React UI.
+    
+    This endpoint provides a live stream of events from LOVE's NeuralBus,
+    including interventions, state changes, market alerts, and other system events.
+    
+    Query params:
+        client_id: Optional client identifier for connection tracking
+    """
+    from api.websocket_manager import get_telemetry_manager
+    
+    telemetry_manager = get_telemetry_manager()
+    connection_id = await telemetry_manager.connect(websocket, client_id)
+    
+    try:
+        while True:
+            # Keep connection alive and handle client messages
+            data = await websocket.receive_text()
+            
+            # Handle ping/pong for connection health
+            if data == "ping":
+                await websocket.send_text("pong")
+            # Handle client requests for stats
+            elif data == "stats":
+                stats = telemetry_manager.get_stats()
+                await websocket.send_json({
+                    "type": "stats",
+                    "data": stats
+                })
+            # Handle subscription changes (future enhancement)
+            elif data.startswith("subscribe:"):
+                domains = data.split(":", 1)[1].split(",")
+                # For now, we use the default domains
+                await websocket.send_json({
+                    "type": "subscription_ack",
+                    "data": {"domains": telemetry_manager.subscribed_domains}
+                })
+                
+    except WebSocketDisconnect:
+        telemetry_manager.disconnect(connection_id)
+    except Exception as e:
+        logger.error(f"[Telemetry] WebSocket error: {e}")
+        telemetry_manager.disconnect(connection_id)
+
+
 @app.post("/chat")
 async def chat_endpoint(msg: Message):
     result = await asyncio.to_thread(chat, msg.text, msg.mode)
@@ -3067,6 +3118,124 @@ async def dashboard():
             ]
         }
     }
+
+
+# ========== GOD VIEW: UNIFIED SYSTEM STATE ==========
+
+# Simple in-memory cache with TTL
+_god_view_cache = {
+    "data": None,
+    "timestamp": 0,
+    "ttl": 5  # 5 seconds
+}
+
+
+@app.get("/dashboard/god-view")
+async def god_view():
+    """
+    Unified System State — Single endpoint for the entire Life OS.
+    Returns: Life Score, Work Status, Finance Summary, System Health.
+    Cached for 5 seconds to prevent spamming internal modules.
+    """
+    from fastapi import Response
+    import time
+    current_time = time.time()
+    
+    # Check cache
+    if (_god_view_cache["data"] is not None and 
+        current_time - _god_view_cache["timestamp"] < _god_view_cache["ttl"]):
+        return Response(
+            content=_json.dumps(_god_view_cache["data"]),
+            media_type="application/json",
+            headers={"Cache-Control": "max-age=5"}
+        )
+    
+    # Gather data concurrently from all modules
+    results = {
+        "life_score": None,
+        "work": None,
+        "finance": None,
+        "system_health": None
+    }
+    
+    # 1. Orchestrator: Life Score & Active Interventions
+    try:
+        orchestrator_state = await asyncio.to_thread(get_unified_state)
+        results["life_score"] = {
+            "score": orchestrator_state.get("life_score", 0),
+            "overall_state": orchestrator_state.get("overall_state", "unknown"),
+            "state_message": orchestrator_state.get("state_message", ""),
+            "active_interventions": [
+                {
+                    "type": i.get("type"),
+                    "priority": i.get("priority"),
+                    "message": i.get("message"),
+                    "action": i.get("action")
+                }
+                for i in orchestrator_state.get("interventions", [])
+            ]
+        }
+    except Exception as e:
+        results["life_score"] = {"error": str(e), "available": False}
+    
+    # 2. Guardian: Work Status (Hours worked, limit status)
+    try:
+        work_status = await asyncio.to_thread(check_work_status)
+        results["work"] = {
+            "hours_worked": work_status.get("hours_worked", 0),
+            "work_limit": work_status.get("work_limit", 8),
+            "remaining": work_status.get("remaining", 0),
+            "overflow": work_status.get("overflow", 0),
+            "status": work_status.get("status", "unknown"),
+            "should_stop": work_status.get("should_stop", False)
+        }
+    except Exception as e:
+        results["work"] = {"error": str(e), "available": False}
+    
+    # 3. Finance: Portfolio Summary (Total value, active signals)
+    try:
+        from tools.finance import get_portfolio
+        portfolio = await asyncio.to_thread(get_portfolio)
+        results["finance"] = {
+            "total_value": portfolio.get("total_value", 0),
+            "total_cost": portfolio.get("total_cost", 0),
+            "total_pnl": portfolio.get("total_pnl", 0),
+            "total_pnl_pct": portfolio.get("total_pnl_pct", 0),
+            "position_count": portfolio.get("position_count", 0),
+            "available": True
+        }
+    except Exception as e:
+        results["finance"] = {"error": str(e), "available": False}
+    
+    # 4. Sentinel: System Health (Status of all modules)
+    try:
+        from core.sentinel import get_sentinel
+        sentinel = get_sentinel()
+        sentinel_status = sentinel.get_status()
+        results["system_health"] = {
+            "running": sentinel_status.get("running", False),
+            "presence": sentinel_status.get("presence", {}),
+            "subsystem_health": sentinel_status.get("subsystem_health", {}),
+            "decisions_today": sentinel_status.get("decisions_today", 0),
+            "available": True
+        }
+    except Exception as e:
+        results["system_health"] = {"error": str(e), "available": False}
+    
+    # Update cache
+    _god_view_cache["data"] = {
+        "timestamp": current_time,
+        "cached": True,
+        **results
+    }
+    _god_view_cache["timestamp"] = current_time
+    
+    # Return with Cache-Control header
+    return Response(
+        content=_json.dumps(_god_view_cache["data"]),
+        media_type="application/json",
+        headers={"Cache-Control": "max-age=5"}
+    )
 
 
 # ========== NEURAL ORCHESTRATOR ENDPOINTS ==========
