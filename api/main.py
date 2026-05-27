@@ -949,6 +949,29 @@ def register_all_modules(lm, _loop=None):
         description="Audio intervention wrapper — TTS for 9-hour limit and high-stress alerts"
     ))
 
+    # ── WAVE 5: EVOLUTION MODULES (Prompts 25-28) ──
+    lm.register(ModuleDescriptor(
+        name="sandbox", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Sandbox compiler — isolated subprocess code execution for LLM-generated tools"
+    ))
+    lm.register(ModuleDescriptor(
+        name="tool_forge", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=["sandbox"], optional=True,
+        description="Tool forge — LLM generates tools, sandbox tests, saves if valid"
+    ))
+    lm.register(ModuleDescriptor(
+        name="dna", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Personality DNA — trait mutation and dynamic prompt instructions"
+    ))
+    lm.register(ModuleDescriptor(
+        name="hot_swapper", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Hot-swapper — dynamic module reloading without server restart"
+    ))
+
+
     # ── WAVE 5: TERMINAL MONITOR — REAL-TIME ERROR WATCHER + LLM AUTO-FIX ──
     def start_terminal_monitor():
         from core.terminal_monitor import get_terminal_monitor
@@ -5851,6 +5874,71 @@ async def voice_intervention(data: dict):
         return {"triggered": trigger_type}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ========== PROMPTS 25-29: SANDBOX, TOOL FORGE, DNA, HOT-SWAP, WATCHDOG ==========
+
+@app.post("/evolution/sandbox/run")
+async def sandbox_run(data: dict):
+    """Run code in isolated subprocess sandbox."""
+    try:
+        from evolution.sandbox import run_in_sandbox
+        code = data.get("code", "")
+        timeout = int(data.get("timeout", 5))
+        result = await run_in_sandbox(code, timeout_seconds=timeout)
+        return result
+    except Exception as e:
+        return {"error": str(e), "success": False}
+
+
+@app.post("/evolution/tool/forge")
+async def tool_forge(data: dict):
+    """LLM generates a new tool, tests in sandbox, saves if valid."""
+    try:
+        from evolution.tool_forge import forge_new_tool
+        tool_name = data.get("tool_name", "")
+        objective = data.get("objective", "")
+        success = await forge_new_tool(tool_name, objective)
+        return {"success": success, "tool_name": tool_name}
+    except Exception as e:
+        return {"error": str(e), "success": False}
+
+
+@app.post("/dna/mutate")
+async def dna_mutate(data: dict):
+    """Mutate a personality trait up or down."""
+    try:
+        from core.dna import mutate_trait
+        trait = data.get("trait", "")
+        direction = data.get("direction", "")
+        mutate_trait(trait, direction)
+        return {"mutated": True, "trait": trait, "direction": direction}
+    except Exception as e:
+        return {"error": str(e), "mutated": False}
+
+
+@app.get("/dna/instructions")
+async def dna_instructions():
+    """Get dynamic prompt instructions based on personality weights."""
+    try:
+        from core.dna import get_dynamic_instructions
+        instructions = get_dynamic_instructions()
+        return {"instructions": instructions}
+    except Exception as e:
+        return {"error": str(e), "instructions": ""}
+
+
+@app.post("/evolution/hotswap/reload")
+async def hotswap_reload(data: dict):
+    """Hot-reload a module without restarting the server."""
+    try:
+        from evolution.hot_swapper import reload_module
+        module_path = data.get("module_path", "")
+        success = reload_module(module_path)
+        return {"reloaded": success, "module": module_path}
+    except Exception as e:
+        return {"error": str(e), "reloaded": False}
+
 
 
 # ========== TERMINAL ERROR MONITOR (Wave 31) ==========
