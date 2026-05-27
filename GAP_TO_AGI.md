@@ -3,7 +3,73 @@
 This file is the antidote to marketing-speak inside LOVE. It is updated whenever
 substantive capability lands. Read it before claiming "AGI" or "living computer".
 
-Last updated: 2026-05-27 (Wave 21 — Closing the Feedback Loops).
+Last updated: 2026-05-27 (Wave 26 — Life Domains + Cross-Domain Intelligence + Life Coach).
+
+---
+
+## What just landed (Waves 22-26)
+
+### Wave 22: Life Domains Engine (`core/life_domains.py`)
+
+Full physical life tracking across four domains:
+- **Hydration** — glass/ml logging, daily goal (2500ml), time-aware nudges
+- **Sleep** — bedtime/wake logging, duration+quality, goal-based scoring
+- **Nutrition** — meal logging (breakfast/lunch/dinner/snack), quality scoring, macros
+- **Skincare** — morning/evening routine tracking, step completion %, skin concerns
+
+Each domain: `log()`, `get_today()`, `get_streak()`, `needs_nudge()`, `get_insights(days)`.
+20+ API routes under `/life/`. Unified `LifeDomainsEngine` with `get_dashboard()`.
+Wired into heartbeat 15-minute scan cycle for proactive nudges.
+
+**UI**: `LifeDomains.jsx` — 4-card grid with SVG score rings, inline logging forms,
+quality sliders, progress bars, 7-day mini bar charts, nudge notification bar.
+New `Life` tab in main navigation.
+
+### Wave 23: Autonomous Wave Evolution Engine (`core/wave_engine.py`)
+
+LOVE's self-directed growth loop:
+- **GapScanner**: Scans all subsystems (life domains, emotional, guardian, memory,
+  capabilities, modules, fitness) for gaps and stagnation
+- **WaveProposer**: Generates concrete next-Wave proposals from gap scan results,
+  mapped to 6 template categories (physical, mental, productivity, intelligence,
+  capability, system health)
+- **WaveEngine**: 24h daemon loop — scan, propose, store, track execution
+
+API: `/wave/scan`, `/wave/status`, `/wave/latest`, `/wave/all`, `/wave/gaps`.
+UI: `WaveEngine.jsx` — gap scan view, wave proposal cards, execution tracking.
+
+### Wave 24: Cross-Domain Intelligence (`core/cross_domain_intelligence.py`)
+
+Connects the dots across all life domains:
+- Sleep quality vs next-day productivity correlation
+- Hydration vs sleep quality correlation
+- Nutrition consistency vs energy patterns
+- Skincare consistency as routine discipline proxy
+- Compound deficit detection (sleep + hydration + nutrition all low)
+- Streak momentum analysis
+- Adaptive goal suggestions (20% above 7-day average, capped at standard)
+
+API: `/life/correlations`, `/life/report`.
+Daily briefing now includes BODY section with life domain data.
+
+### Wave 25: Proactive Life Coach (`core/life_coach.py`)
+
+Time-aware, focus-aware coaching engine:
+- **Time windows**: Breakfast nudge at 8am, bedtime at 10pm, not random
+- **Adaptive goals**: Based on 7-day rolling average, gradually ramp up
+- **Focus mode awareness**: Suppresses non-urgent nudges during deep work
+- **Streak protection**: Warns before a streak breaks (after 6pm only)
+- **Priority sorting**: High/medium/low with color coding
+
+API: `/life/coach/nudges`, `/life/coach/goals`.
+UI: WeeklyInsights tab shows cross-domain patterns + adaptive goals.
+
+### Wave 26: Ritual View + Proactive Push Integration
+
+- Morning ritual: body status grid (hydration/sleep/meals/skin), adaptive goals,
+  coach nudges with priority colors
+- Evening ritual: body score, remaining nudges
+- Heartbeat `_scan_life_domains` upgraded to Life Coach (time-aware, focus-aware)
 
 ---
 
@@ -112,6 +178,11 @@ world model rollouts).
 | GWT prompt gating | ✅ |
 | GWT ignition (proactive MoE firing) | ✅ |
 | **Ignition → proactive push to user** | ✅ NEW |
+| **Life domain tracking (hydration/sleep/nutrition/skincare)** | ✅ NEW |
+| **Cross-domain intelligence (correlation detection)** | ✅ NEW |
+| **Time-aware proactive life coaching** | ✅ NEW |
+| **Adaptive goals (rolling average based)** | ✅ NEW |
+| **Autonomous Wave evolution engine** | ✅ NEW |
 | Circadian phases | ✅ |
 | Hot-reload self-modification | ✅ |
 | Autonomous daily self-modification loop | ✅ |
@@ -180,14 +251,21 @@ held-out quality metric.
 
 ## Naming honesty (updated)
 
-- "AGI" — no. ~4% there (up from 3%). Every wave closes real gaps; the remaining ones
+- "AGI" — no. ~5% there (up from 4%). Every wave closes real gaps; the remaining ones
   are fundamental (true weight evolution, parallel selection, long-horizon planning).
 - "Living computer" — strongest honest claim: has drives, metabolism, proprioception,
   non-linear online learning (1-step + 8-step BPTT + 4-step rollout), hippocampal
   replay, GWT ignition with proactive push, autonomous self-modification with A/B
-  revert, user-aligned LoRA evolution. Missing: true weight-level adaptation, fork.
+  revert, user-aligned LoRA evolution. Now also: physical life domain tracking,
+  cross-domain pattern detection, time-aware proactive coaching, autonomous Wave
+  evolution planning. Missing: true weight-level adaptation, fork.
 - "Self-improving" — yes, autonomously, with auto-revert safety net.
-- "User-aligned" — *now true* for the first time. Every conversation implicitly
-  updates the system's fitness signal toward what the user actually finds helpful.
+  Now also: autonomous gap detection + Wave proposal generation.
+- "User-aligned" — *now true*. Every conversation implicitly updates the system's
+  fitness signal. Life domains adapt goals to user behavior, not arbitrary targets.
+- "Life OS" — *first credible claim*. Tracks hydration, sleep, nutrition, skincare
+  with streaks, adaptive goals, cross-domain correlations, and time-aware coaching.
+  Wired into daily briefing, ritual views, and proactive push. Not a dashboard —
+  LOVE notices patterns the user can't see about themselves.
 
 Keep the marketing pegged here.
