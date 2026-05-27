@@ -911,6 +911,21 @@ def register_all_modules(lm, _loop=None):
         description="Proactively delivers life domain nudges (hydration, sleep, nutrition, skincare) every 30min — respects quiet hours + focus mode"
     ))
 
+    # ── WAVE 5: TERMINAL MONITOR — REAL-TIME ERROR WATCHER + LLM AUTO-FIX ──
+    def start_terminal_monitor():
+        from core.terminal_monitor import get_terminal_monitor
+        get_terminal_monitor().start()
+
+    def stop_terminal_monitor():
+        from core.terminal_monitor import get_terminal_monitor
+        get_terminal_monitor().stop()
+
+    lm.register(ModuleDescriptor(
+        name="terminal_monitor", wave=5, start_fn=start_terminal_monitor, stop_fn=stop_terminal_monitor,
+        depends_on=["proactive_push"], optional=True,
+        description="Watches server.log for Python tracebacks in real time — LLM diagnoses + auto-patches + WebSocket alert"
+    ))
+
     # ── WAVE 6: SENTINEL — ALWAYS-ON SELF-MONITORING PROTOCOL ──
     def start_sentinel_module():
         from core.sentinel import start_sentinel
@@ -5684,6 +5699,91 @@ async def homeostasis_drives_history(hours: int = 6):
         return {"entries": entries[-200:]}  # cap at 200 data points
     except Exception as e:
         return {"error": str(e)}
+
+
+# ========== TERMINAL ERROR MONITOR (Wave 31) ==========
+
+@app.get("/terminal/errors")
+async def terminal_errors(limit: int = 20):
+    """Get recent errors detected by the terminal monitor."""
+    from core.terminal_monitor import get_terminal_monitor
+    return {"errors": get_terminal_monitor().get_errors(limit)}
+
+
+@app.get("/terminal/fixes")
+async def terminal_fixes(limit: int = 20):
+    """Get recent auto-fix attempts by the terminal monitor."""
+    from core.terminal_monitor import get_terminal_monitor
+    return {"fixes": get_terminal_monitor().get_fixes(limit)}
+
+
+@app.get("/terminal/monitor/status")
+async def terminal_monitor_status():
+    """Terminal monitor daemon status."""
+    from core.terminal_monitor import get_terminal_monitor
+    return get_terminal_monitor().get_status()
+
+
+@app.post("/terminal/ingest")
+async def terminal_ingest(data: dict):
+    """
+    Submit an error string (from frontend, mobile app, or external script) for
+    LLM diagnosis and auto-fix. Used by the UI to report JS/Python errors.
+    """
+    from core.terminal_monitor import get_terminal_monitor
+    text = data.get("error", "") or data.get("text", "")
+    file = data.get("file", "")
+    line = int(data.get("line", 0))
+    return get_terminal_monitor().ingest_error(text, file=file, line=line)
+
+
+# ── Log file capture — redirect Python's stderr to server.log so the
+#    terminal monitor can see ALL uvicorn/FastAPI output including --reload ──
+def _redirect_stderr_to_log():
+    """Tee stderr to data/server.log without losing console output."""
+    import sys
+    from pathlib import Path
+    log_path = Path(__file__).parent.parent / "data" / "server.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    class TeeStream:
+        def __init__(self, original, log_file):
+            self._orig = original
+            self._log = log_file
+
+        def write(self, msg):
+            self._orig.write(msg)
+            try:
+                self._log.write(msg)
+                self._log.flush()
+            except Exception:
+                pass
+
+        def flush(self):
+            self._orig.flush()
+            try:
+                self._log.flush()
+            except Exception:
+                pass
+
+        def fileno(self):
+            return self._orig.fileno()
+
+        def isatty(self):
+            return False
+
+    try:
+        # Rotate: keep last 5 MB
+        if log_path.exists() and log_path.stat().st_size > 5 * 1024 * 1024:
+            bak = log_path.with_suffix(".log.1")
+            log_path.replace(bak)
+        log_file = open(log_path, "a", encoding="utf-8", buffering=1)
+        sys.stderr = TeeStream(sys.stderr, log_file)
+        sys.stdout = TeeStream(sys.stdout, log_file)
+    except Exception as e:
+        print(f"[TerminalMonitor] Could not set up log capture: {e}")
+
+_redirect_stderr_to_log()
 
 
 if __name__ == "__main__":
