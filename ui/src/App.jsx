@@ -17,6 +17,7 @@ import SentinelPanel from "./components/SentinelPanel";
 import TerminalPanel from "./components/TerminalPanel";
 import EvolutionPanel from "./components/EvolutionPanel";
 import LifeDomains from "./components/LifeDomains";
+import WaveEngine from "./components/WaveEngine";
 
 
 
@@ -214,6 +215,12 @@ export default function App() {
           <button className={`nav-btn${view === "sentinel" ? " active" : ""}`} onClick={() => setView("sentinel")}>
             <span>◉</span> Sentinel
           </button>
+          <button className={`nav-btn${view === "life" ? " active" : ""}`} onClick={() => setView("life")}>
+            <span>◎</span> Life
+          </button>
+          <button className={`nav-btn${view === "waves" ? " active" : ""}`} onClick={() => setView("waves")}>
+            <span>◈</span> Waves
+          </button>
           <button className={`nav-btn${view === "setup" ? " active" : ""}`} onClick={() => setView("setup")}>
             <span>⚙</span> Setup
           </button>
@@ -338,6 +345,9 @@ export default function App() {
         )}
         {view === "life" && (
           <ErrorBoundary name="Life"><div className="view-scroll"><LifeDomains /></div></ErrorBoundary>
+        )}
+        {view === "waves" && (
+          <ErrorBoundary name="Waves"><div className="view-scroll"><WaveEngine /></div></ErrorBoundary>
         )}
       </main>
     </div>

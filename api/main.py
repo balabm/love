@@ -5242,5 +5242,47 @@ async def skincare_insights(days: int = 7):
     from core.life_domains import get_life_domains_engine
     return get_life_domains_engine().skincare.get_insights(days)
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Wave 23: Autonomous Wave Evolution Engine API
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/wave/status")
+async def wave_status():
+    """Wave engine status — running state, total waves, last cycle."""
+    from core.wave_engine import get_wave_engine
+    return get_wave_engine().get_status()
+
+@app.post("/wave/scan")
+async def wave_scan():
+    """Run one gap-scan + wave-propose cycle now (on demand)."""
+    from core.wave_engine import get_wave_engine
+    return get_wave_engine().run_cycle()
+
+@app.get("/wave/latest")
+async def wave_latest():
+    """Get the most recent Wave proposal."""
+    from core.wave_engine import get_wave_engine
+    p = get_wave_engine().get_latest_proposal()
+    return p or {"message": "No waves proposed yet. Run /wave/scan first."}
+
+@app.get("/wave/all")
+async def wave_all():
+    """All Wave proposals (proposed + executed)."""
+    from core.wave_engine import get_wave_engine
+    return get_wave_engine().get_all_waves()
+
+@app.post("/wave/execute/{wave_number}")
+async def wave_execute(wave_number: int, outcome: str = "completed"):
+    """Mark a Wave as executed."""
+    from core.wave_engine import get_wave_engine
+    get_wave_engine().mark_wave_executed(wave_number, outcome)
+    return {"ok": True, "wave_number": wave_number, "outcome": outcome}
+
+@app.get("/wave/gaps")
+async def wave_gaps():
+    """Run a gap scan only (no wave proposal)."""
+    from core.wave_engine import GapScanner
+    return GapScanner().scan()
+
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

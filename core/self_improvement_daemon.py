@@ -110,8 +110,9 @@ class SelfImprovementDaemon:
                 })
 
             scores.append(0.8 if not issues else 0.5)
-        except Exception:
+        except Exception as e:
             scores.append(0.3)
+            print(f"[SelfImprovementDaemon] Consciousness health check error: {e}")
 
         # 2. Prompt DNA Health
         try:
@@ -137,8 +138,9 @@ class SelfImprovementDaemon:
                 strengths.append(f"Prompt DNA is healthy (generation {report['generation']})")
 
             scores.append(0.8 if not low_fitness_genes else 0.4)
-        except Exception:
+        except Exception as e:
             scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
         # 3. Temporal Memory Health
         try:
@@ -162,8 +164,9 @@ class SelfImprovementDaemon:
                 })
 
             scores.append(0.7 if mem_count > 0 else 0.3)
-        except Exception:
+        except Exception as e:
             scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
         # 4. Self-Evolution Health
         try:
@@ -187,8 +190,9 @@ class SelfImprovementDaemon:
                     strengths.append("Self-evolution experiments are landing well")
 
             scores.append(0.7)
-        except Exception:
+        except Exception as e:
             scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
         # 5. Goal System Health
         try:
@@ -213,8 +217,9 @@ class SelfImprovementDaemon:
                 strengths.append(f"{len(completed)} goals completed")
 
             scores.append(0.7 if not stale_goals else 0.4)
-        except Exception:
+        except Exception as e:
             scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
         # 6. Causal Model Health
         try:
@@ -231,20 +236,22 @@ class SelfImprovementDaemon:
             else:
                 strengths.append(f"Causal model has {link_count} relationships")
             scores.append(0.6 if link_count >= 5 else 0.3)
-        except Exception:
+        except Exception as e:
             scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
         # 7. Continuous Learning Health
         try:
             from core.continuous_learning import get_continuous_learning_engine
             cle = get_continuous_learning_engine()
-            learning_state = cle.get_learning_state()
+            learning_state = cle.get_learning_summary() if hasattr(cle, 'get_learning_summary') else (cle.get_learning_state() if hasattr(cle, 'get_learning_state') else {})
             total_experiences = learning_state.get("total_experiences", 0)
             if total_experiences > 0:
                 strengths.append(f"Continuous learning active with {total_experiences} experiences")
             scores.append(0.7 if total_experiences > 0 else 0.4)
-        except Exception:
+        except Exception as e:
             scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
         health_score = sum(scores) / len(scores) if scores else 0.5
 
@@ -365,23 +372,26 @@ class SelfImprovementDaemon:
 
     def start(self, interval_minutes: int = 30):
         """Start the daemon."""
-        if self._running:
-            return {"status": "already_running"}
+        with self._lock:
+            if self._running:
+                return {"status": "already_running"}
 
-        self._running = True
-        self._thread = threading.Thread(
-            target=self._daemon_loop,
-            args=(interval_minutes,),
-            daemon=True,
-            name="LOVE-SelfImprovementDaemon",
-        )
-        self._thread.start()
-        return {"status": "started", "interval_minutes": interval_minutes}
+            interval_minutes = max(1, interval_minutes)
+            self._running = True
+            self._thread = threading.Thread(
+                target=self._daemon_loop,
+                args=(interval_minutes,),
+                daemon=True,
+                name="LOVE-SelfImprovementDaemon",
+            )
+            self._thread.start()
+            return {"status": "started", "interval_minutes": interval_minutes}
 
     def stop(self):
         """Stop the daemon."""
-        self._running = False
-        return {"status": "stopped"}
+        with self._lock:
+            self._running = False
+            return {"status": "stopped"}
 
     def get_status(self) -> Dict[str, Any]:
         """Get daemon status."""

@@ -91,6 +91,7 @@ class ProactiveHeartbeat:
         triggers.extend(self._scan_wellness())
         triggers.extend(self._scan_fitness())
         triggers.extend(self._scan_tasks())
+        triggers.extend(self._scan_life_domains())
         triggers.extend(self._scan_memory_consolidation())
         triggers.extend(self._scan_dream_engine())
 
@@ -103,10 +104,10 @@ class ProactiveHeartbeat:
         # Weekly self-improvement proposal
         self._maybe_self_improve()
 
-        # Self-healing check - monitor for errors
+        # Self-healing check - monitor for errors and attempt auto-heal
         try:
-            from core.self_healing import monitor_stdout_stderr, detect_and_fix_error
-            alert = monitor_stdout_stderr()
+            from core.self_healing import monitor_and_autoheal, detect_and_fix_error
+            alert = monitor_and_autoheal()
             if alert:
                 print(f"[Self-Healing] {alert}")
                 # Also log the error for tracking
@@ -324,6 +325,27 @@ class ProactiveHeartbeat:
         except Exception:
             pass
         
+        return triggers
+
+    def _scan_life_domains(self) -> List[TriggerEvent]:
+        """Scan life domains (hydration, sleep, nutrition, skincare) for proactive nudges."""
+        triggers = []
+        try:
+            from core.life_domains import get_life_domains_engine
+            engine = get_life_domains_engine()
+            nudges = engine.get_active_nudges()
+            for nudge in nudges:
+                key = f"life_domain_{nudge[:30].replace(' ','_')}"
+                if not self._recently_triggered(key, cooldown_minutes=90):
+                    triggers.append(TriggerEvent(
+                        source='life_domains',
+                        trigger_type='nudge',
+                        severity='info',
+                        message=nudge,
+                        action_suggestion='Log it in the Life Domains panel'
+                    ))
+        except Exception as e:
+            print(f"[Heartbeat] Life domains scan error: {e}")
         return triggers
 
     def _maybe_self_improve(self):
