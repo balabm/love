@@ -12,7 +12,12 @@ echo.
 
 cd /d C:\Users\balab\OneDrive\Documents\Projects\LLove\love
 
+REM -- Ensure data dir exists for server log (Terminal Monitor needs it)
+if not exist "data" mkdir data
+
 REM -- Start Backend API in new window
+REM    stdout+stderr are tee'd to data\server.log by _redirect_stderr_to_log() in main.py
+REM    Terminal Monitor watches that file and auto-fixes Python errors via LLM
 echo  [1/2] Starting Backend API (port 8000)...
 start "LOVE Backend" cmd /k "set PATH=C:\Program Files\nodejs;C:\Users\balab\AppData\Local\Programs\Ollama;%%PATH%% && set PYTHONPATH=C:\Users\balab\OneDrive\Documents\Projects\LLove\love && cd /d C:\Users\balab\OneDrive\Documents\Projects\LLove\love && venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir api --reload-dir core --reload-dir tools --reload-dir agents"
 
