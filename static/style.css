@@ -8,6 +8,7 @@
   --surface-3: rgba(14, 34, 58, 0.5);
   --border: rgba(0, 200, 255, 0.18);
   --border-bright: rgba(0, 200, 255, 0.5);
+  --border-dim: rgba(0, 200, 255, 0.08);
   --cyan: #00c8ff;
   --cyan-dim: rgba(0, 200, 255, 0.12);
   --cyan-glow: 0 0 20px rgba(0, 200, 255, 0.35);
@@ -642,3 +643,210 @@ body {
   from { opacity: 0; transform: translateX(-10px); }
   to { opacity: 1; transform: translateX(0); }
 }
+
+/* ── Onboarding Overlay ───────────────────────────────────────────── */
+.onboarding-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(3, 8, 17, 0.95);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.3s ease;
+}
+
+.onboarding-content {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.onboarding-header h1 {
+  font-size: 2em;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  font-family: var(--font-hud);
+}
+
+.onboarding-header p {
+  color: var(--text-dim);
+  font-size: 1.1em;
+}
+
+.onboarding-steps {
+  margin-bottom: 30px;
+}
+
+.step {
+  display: none;
+  animation: fade-in 0.3s ease;
+}
+
+.step.active {
+  display: block;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--cyan);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2em;
+  margin-bottom: 15px;
+  font-family: var(--font-hud);
+}
+
+.step-content h3 {
+  color: var(--text-bright);
+  margin-bottom: 10px;
+  font-size: 1.2em;
+}
+
+.step-content p {
+  color: var(--text);
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.step-content ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 15px;
+}
+
+.step-content li {
+  padding: 8px 0;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-dim);
+}
+
+.step-content li:last-child {
+  border-bottom: none;
+}
+
+.step-content strong {
+  color: var(--cyan);
+}
+
+.step-tip {
+  background: var(--cyan-dim);
+  border-left: 3px solid var(--cyan);
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: var(--text);
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.btn-skip, .btn-next, .btn-start {
+  padding: 12px 30px;
+  border-radius: 25px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+}
+
+.btn-skip {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.btn-skip:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.btn-next {
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  color: white;
+  border: none;
+}
+
+.btn-next:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 200, 255, 0.4);
+}
+
+.btn-start {
+  background: linear-gradient(135deg, var(--green), var(--cyan));
+  color: white;
+  border: none;
+}
+
+.btn-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(0, 255, 136, 0.4);
+}
+
+/* ── Activity Indicator ──────────────────────────────────────────── */
+.activity-indicator {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 15px;
+  animation: fade-in 0.3s ease;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.activity-indicator.visible {
+  opacity: 1;
+}
+
+.activity-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cyan);
+  animation: activity-pulse 1.5s infinite;
+}
+
+@keyframes activity-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.5;
+  }
+}
+
+.activity-text {
+  color: var(--text);
+  font-size: 0.8em;
+  font-family: var(--font-hud);
+  letter-spacing: 1px;
+}
+

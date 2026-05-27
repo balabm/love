@@ -2,6 +2,8 @@
 # Do not install packages during server boot unless explicitly enabled.
 import sys, subprocess, os as _os
 import builtins
+# Add parent directory to path for core module imports
+sys.path.insert(0, str(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))))
 
 _original_print = builtins.print
 

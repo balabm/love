@@ -499,3 +499,97 @@ setInterval(async () => {
     if (!data.error) handleLearningUpdate(data);
   } catch { /* non-blocking */ }
 }, 30000);
+
+/* ── Onboarding Overlay ───────────────────────────────────────────── */
+const onboardingOverlay = $('onboarding-overlay');
+const skipOnboarding = $('skip-onboarding');
+const nextOnboarding = $('next-onboarding');
+const startUsing = $('start-using');
+const activityIndicator = $('activity-indicator');
+const activityText = $('activity-text');
+
+let currentStep = 1;
+const totalSteps = 3;
+
+function showOnboarding() {
+  const hasSeenOnboarding = localStorage.getItem('love_onboarding_seen');
+  if (!hasSeenOnboarding && onboardingOverlay) {
+    onboardingOverlay.style.display = 'flex';
+  }
+}
+
+function hideOnboarding() {
+  if (onboardingOverlay) {
+    onboardingOverlay.style.display = 'none';
+    localStorage.setItem('love_onboarding_seen', 'true');
+  }
+}
+
+function updateStep(step) {
+  currentStep = step;
+  
+  // Update step visibility
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  const activeStep = document.querySelector(`.step[data-step="${step}"]`);
+  if (activeStep) activeStep.classList.add('active');
+  
+  // Update buttons
+  if (step === totalSteps) {
+    nextOnboarding.style.display = 'none';
+    startUsing.style.display = 'inline-block';
+  } else {
+    nextOnboarding.style.display = 'inline-block';
+    startUsing.style.display = 'none';
+  }
+}
+
+if (skipOnboarding) {
+  skipOnboarding.addEventListener('click', hideOnboarding);
+}
+
+if (nextOnboarding) {
+  nextOnboarding.addEventListener('click', () => {
+    if (currentStep < totalSteps) {
+      updateStep(currentStep + 1);
+    }
+  });
+}
+
+if (startUsing) {
+  startUsing.addEventListener('click', hideOnboarding);
+}
+
+/* ── Activity Indicator ──────────────────────────────────────────── */
+let activityTimeout;
+
+function showActivity(message = 'LOVE is thinking...') {
+  if (activityText) activityText.textContent = message;
+  if (activityIndicator) {
+    activityIndicator.classList.add('visible');
+    clearTimeout(activityTimeout);
+    activityTimeout = setTimeout(() => {
+      activityIndicator.classList.remove('visible');
+    }, 5000);
+  }
+}
+
+function hideActivity() {
+  if (activityIndicator) {
+    activityIndicator.classList.remove('visible');
+  }
+}
+
+// Show activity indicator on WebSocket events
+const originalWsOnMessage = ws?.onmessage;
+if (ws) {
+  ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'monologue' || data.type === 'proactive_nudge') {
+      showActivity('LOVE is active');
+    }
+    if (originalWsOnMessage) originalWsOnMessage(event);
+  };
+}
+
+// Initialize onboarding on page load
+document.addEventListener('DOMContentLoaded', showOnboarding);

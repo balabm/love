@@ -24,6 +24,65 @@
   <div class="bg-grid"></div>
   <div class="ambient-glow"></div>
 
+  <!-- Onboarding Overlay -->
+  <div id="onboarding-overlay" class="onboarding-overlay">
+    <div class="onboarding-content">
+      <div class="onboarding-header">
+        <h1>Welcome to LOVE</h1>
+        <p>Your autonomous AI companion is ready to help.</p>
+      </div>
+      
+      <div class="onboarding-steps">
+        <div class="step active" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Get Started</h3>
+            <p>LOVE runs in the background, monitoring your system and learning from your interactions.</p>
+            <div class="step-tip">
+              <strong>Tip:</strong> Try asking "What are you thinking right now?" to see LOVE's internal monologue.
+            </div>
+          </div>
+        </div>
+        
+        <div class="step" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Key Features</h3>
+            <ul>
+              <li><strong>Chat Interface:</strong> Talk directly with LOVE</li>
+              <li><strong>Quick Commands:</strong> One-click actions for common tasks</li>
+              <li><strong>Monitoring:</strong> Real-time system and learning insights</li>
+              <li><strong>Voice Input:</strong> Click the microphone to speak</li>
+            </ul>
+          </div>
+        </div>
+        
+        <div class="step" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Proactive Intelligence</h3>
+            <p>LOVE will periodically scan for triggers and nudge you with helpful suggestions.</p>
+            <div class="step-tip">
+              <strong>Note:</strong> First proactive scan happens in 15 minutes.
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="onboarding-actions">
+        <button class="btn-skip" id="skip-onboarding">Skip Tour</button>
+        <button class="btn-next" id="next-onboarding">Next →</button>
+        <button class="btn-start" id="start-using" style="display:none;">Start Using LOVE</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Activity Indicator -->
+  <div id="activity-indicator" class="activity-indicator">
+    <div class="activity-pulse"></div>
+    <div class="activity-text" id="activity-text">LOVE is thinking...</div>
+  </div>
+
   <div class="hud-container">
     <!-- ── Header ────────────────────────────────────── -->
     <header class="hud-header">
