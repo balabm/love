@@ -2225,8 +2225,20 @@ async def guardian_checkin():
 
 @app.get("/guardian/work-status")
 async def guardian_work_status():
-    """Check current work hours and 9-hour limit."""
+    """Check current work hours and 9-hour limit (Git + real-time tracked sessions merged)."""
     status = check_work_status()
+    # Wave 28: merge in real-time tracked hours so non-commit work is counted
+    try:
+        from core.work_tracker import get_work_tracker
+        tracker = get_work_tracker()
+        tracked_today = tracker.get_today_hours()
+        git_hours = status.get("hours_worked", 0) or 0
+        # Use whichever is higher — they may overlap, so take max, not sum
+        status["hours_worked"] = round(max(git_hours, tracked_today), 2)
+        status["tracked_hours"] = tracked_today
+        status["git_hours"] = git_hours
+    except Exception:
+        pass
     love_message = format_work_status_for_chat(status)
     return {
         **status,
@@ -2253,6 +2265,63 @@ async def guardian_add_meeting(req: MeetingRequest):
     """Add a meeting to the user's calendar."""
     result = add_meeting(req.name, req.date, req.time, req.project)
     return result
+
+
+# ========== REAL-TIME WORK TRACKER (Wave 28) ==========
+
+@app.post("/work/session/start")
+async def work_session_start(data: dict = {}):
+    """Start a real-time work session (non-Git work: meetings, docs, debugging)."""
+    from core.work_tracker import get_work_tracker
+    tracker = get_work_tracker()
+    return tracker.start_session(
+        activity=data.get("activity", "general"),
+        context=data.get("context", ""),
+    )
+
+
+@app.post("/work/session/end")
+async def work_session_end():
+    """End current real-time work session and save."""
+    from core.work_tracker import get_work_tracker
+    tracker = get_work_tracker()
+    return tracker.end_session()
+
+
+@app.post("/work/focus/log")
+async def work_focus_log(data: dict):
+    """Log a completed focus session from FocusMode.jsx."""
+    from core.work_tracker import get_work_tracker
+    tracker = get_work_tracker()
+    result = tracker.log_focus_session(
+        preset=data.get("preset", "focus"),
+        duration_minutes=int(data.get("duration_minutes", 25)),
+        task=data.get("task", ""),
+    )
+    # Proactively push celebration
+    try:
+        from core.proactive_push import get_push_engine
+        mins = data.get("duration_minutes", 25)
+        preset = data.get("preset", "focus")
+        task = data.get("task", "")
+        task_part = f" on '{task}'" if task else ""
+        msg = f"{mins}m of {preset}{task_part} — logged. That's real work, whether Git knows it or not."
+        get_push_engine().push("NUDGE", msg, "low")
+    except Exception:
+        pass
+    return result
+
+
+@app.get("/work/tracker/today")
+async def work_tracker_today():
+    """Get today's real-time tracked work hours and sessions."""
+    from core.work_tracker import get_work_tracker
+    tracker = get_work_tracker()
+    return {
+        "hours_today": tracker.get_today_hours(),
+        "sessions": tracker.get_today_sessions(),
+        "status": tracker.get_status(),
+    }
 
 
 # ========== WORK LIMIT HARD-STOP ENDPOINTS ==========
@@ -2879,8 +2948,14 @@ async def orchestrator_state():
 
 @app.get("/orchestrator/interventions")
 async def orchestrator_interventions():
-    """Get active cross-domain interventions."""
+    """Get active cross-domain interventions, filtered by emotional state."""
     interventions = get_active_interventions()
+    # Wave 27: apply emotional filter — mood shapes what LOVE surfaces
+    try:
+        from core.emotional_behavior import apply_emotional_filter
+        interventions = apply_emotional_filter(interventions)
+    except Exception:
+        pass
     return {
         "active_count": len(interventions),
         "interventions": interventions
@@ -4454,6 +4529,80 @@ async def exec_brief():
     return await asyncio.to_thread(generate_daily_brief)
 
 
+@app.get("/neural/briefing/status")
+async def neural_briefing_status():
+    """BriefingPanel: get daily briefing daemon status."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        return get_briefing_system().get_status()
+    except Exception as e:
+        return {"running": False, "error": str(e)}
+
+
+@app.get("/neural/briefing/latest")
+async def neural_briefing_latest():
+    """BriefingPanel: fetch latest generated brief."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        sys = get_briefing_system()
+        brief = sys.get_last_brief()
+        return {"available": brief is not None, "briefing": brief}
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
+
+@app.post("/neural/briefing/generate")
+async def neural_briefing_generate(force: bool = False):
+    """BriefingPanel: manually generate brief now."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        brief = await asyncio.to_thread(get_briefing_system().generate_brief, force)
+        return {"status": "ok", "briefing": brief}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/neural/briefing/set-time")
+async def neural_briefing_set_time(data: dict):
+    """BriefingPanel: change daily brief delivery time (HH:MM)."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        t = data.get("time", "08:00")
+        get_briefing_system().set_brief_time(t)
+        return {"status": "ok", "brief_time": t}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/briefing/latest")
+async def briefing_latest():
+    """Get the most recent daily brief (Wave 30 — on-demand fetch for UI)."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        sys = get_briefing_system()
+        brief = sys.get_last_brief()
+        status = sys.get_status()
+        return {
+            "available": brief is not None,
+            "briefing": brief,
+            "status": status,
+        }
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
+
+@app.post("/briefing/now")
+async def briefing_trigger_now():
+    """Manually trigger a daily brief right now (for testing or re-delivery)."""
+    try:
+        from core.daily_briefing import get_briefing_system
+        sys = get_briefing_system()
+        brief = await asyncio.to_thread(sys.generate_brief, True)
+        return {"status": "delivered", "preview": (brief.get("text", "") or "")[:300]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.post("/executive/reminder")
 async def exec_reminder(data: dict):
     """Set a reminder. Payload: { text, trigger_at: '+30m' | '+2h' | 'tomorrow' | ISO }"""
@@ -4481,10 +4630,27 @@ async def emotional_detect(data: dict):
 
 @app.post("/emotional/record")
 async def emotional_record(data: dict):
-    """Record mood from text and update stress tracking."""
+    """Record mood from text, update stress tracking, and push proactive response."""
     if not EMOTIONAL_AVAILABLE:
         return {"error": "Emotional module not available"}
-    return await asyncio.to_thread(record_mood, data.get("text", ""))
+    result = await asyncio.to_thread(record_mood, data.get("text", ""))
+    # Wave 27: proactive push when mood warrants immediate response
+    try:
+        from core.emotional import get_current_dominant_mood
+        from core.emotional_behavior import get_proactive_mood_response
+        mood_state = get_current_dominant_mood()
+        push_msg = get_proactive_mood_response(mood_state)
+        if push_msg:
+            from core.proactive_push import get_push_engine
+            engine = get_push_engine()
+            engine.push(
+                push_msg["category"],
+                push_msg["message"],
+                push_msg["priority"],
+            )
+    except Exception:
+        pass
+    return result
 
 
 @app.get("/emotional/summary")

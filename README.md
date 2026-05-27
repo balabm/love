@@ -1,263 +1,316 @@
 # Project LOVE — Autonomous Life OS
 
-> *"An AI companion that lives in your terminal, knows your goals, and actively works to make them happen."*
+> *Not a chatbot. A local-first, self-evolving AI companion that tracks your body, protects your energy, manages your work, and builds itself while you sleep.*
 
-Project LOVE is an open-source, local-first Autonomous Life OS. It runs entirely on your machine, remembers everything, manages your work-life balance, helps with code, tracks your finances, and speaks to you like a real companion — not a chatbot.
+**91,000+ lines of Python | 120 core modules | 443 API endpoints | 20 UI panels**
 
-## Philosophy
+---
 
-- **Local-first**: All your data stays on your machine. No cloud. No subscriptions.
-- **Proactive, not reactive**: LOVE doesn't wait for prompts. It checks on you, suggests actions, enforces limits.
-- **Companion, not assistant**: It has opinions, calls you out, celebrates wins, and genuinely knows you.
-- **Self-improving**: It heals its own crashes, optimizes its own code, and learns from every interaction.
+## What This Actually Is
 
-## Features
+LOVE is a full-stack autonomous system that runs entirely on your machine. It combines:
 
-| Pillar | What It Does |
-|--------|-------------|
-| **Companion Chat** | Contextual, memory-aware conversations with personality |
-| **Work-Life Guardian** | Tracks hours, enforces work limits, prevents burnout |
-| **Finance Sentinel** | Portfolio tracking, market signals, predictive trade advice |
-| **Neural Sync** | Multi-device memory and personality synchronization |
-| **Self-Healing** | Auto-detects crashes, analyzes root cause, applies fixes |
-| **Continuous Improvement** | Weekly self-refactoring for better performance |
-| **Ghost Developer** | Auto-generates tests and architecture boilerplate |
-| **Environment Intelligence** | Hardware-aware power profiles and launch sequences |
-| **Alpha Sentinel** | News sentiment analysis correlated with portfolio |
-| **Hard Stop Enforcer** | Physical work limit enforcement with auto-save |
-| **Voice Interface** | Wake word detection, speech-to-text, text-to-speech |
+- A **companion AI** that knows you, not just answers questions
+- A **life tracking engine** (sleep, hydration, nutrition, skincare) with cross-domain intelligence
+- A **work guardian** that enforces limits and prevents burnout
+- A **proactive coach** that nudges at the right time, not randomly
+- A **self-evolving substrate** that detects its own gaps and proposes improvements
+- A **neural mesh** of 34 interconnected modules with event-driven communication
+
+It runs on local Ollama models (deepseek-r1:7b for reasoning, qwen2.5-coder:7b for code). No cloud. No subscriptions. Your data never leaves your machine.
+
+---
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.10+
-- [Ollama](https://ollama.ai/) running locally (or compatible API)
-- Windows 10+/macOS/Linux
-- Git (optional, for auto-commit features)
-
-### Installation
-
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/project-love.git
-cd project-love
+git clone https://github.com/balabm/love.git
+cd love
 
-# Create virtual environment
+# Backend
 python -m venv venv
-
-# Activate (Windows)
-venv\Scripts\activate
-# Or (macOS/Linux)
-source venv/bin/activate
-
-# Install dependencies
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
+cp .env.example .env
+cp config.yaml settings.yaml   # Edit with your name + preferences
 
-# Configure your settings
-cp config.yaml settings.yaml
-# Edit settings.yaml with your name, work hours, and preferences
+# Frontend
+cd ui && npm install && cd ..
+
+# Run (needs Ollama running on localhost:11434)
+start.bat                      # Windows — starts backend + frontend + Ollama
+# Or manually:
+# uvicorn api.main:app --host 0.0.0.0 --port 8000
+# cd ui && npm run dev
 ```
 
-### Configure
+**Backend**: http://localhost:8000  
+**Frontend**: http://localhost:5173  
+**Health check**: http://localhost:8000/health
+
+### Required Models
+
+```bash
+ollama pull deepseek-r1:7b        # Reasoning
+ollama pull qwen2.5-coder:7b      # Code generation
+ollama pull nomic-embed-text       # Embeddings
+```
+
+---
+
+## System Architecture
+
+```
+love/
+├── core/                 # 120 modules — the brain
+│   ├── Life Tracking
+│   │   ├── life_domains.py        # Hydration, sleep, nutrition, skincare
+│   │   ├── life_coach.py          # Time-aware proactive nudge scheduler
+│   │   ├── cross_domain_intelligence.py  # Correlation detection across domains
+│   │   └── daily_briefing.py      # LLM-generated morning brief
+│   │
+│   ├── Autonomous Evolution
+│   │   ├── wave_engine.py         # Gap scan → Wave proposal → execution
+│   │   ├── autonomous_self_improvement.py  # A/B tested self-modification
+│   │   ├── self_coder.py          # Writes and applies its own code patches
+│   │   ├── evolution_engine.py    # Multi-strategy evolution with fitness
+│   │   ├── capability_gap_detector.py  # Cross-domain gap detection
+│   │   └── self_healing.py        # Auto-detect and fix crashes
+│   │
+│   ├── Neural Substrate
+│   │   ├── neural_bus.py          # Event-driven inter-module communication
+│   │   ├── consciousness.py       # Global Workspace Theory implementation
+│   │   ├── living_substrate.py    # World model + SSM + MoE + homeostasis
+│   │   ├── cognitive_architecture.py  # Predictive hierarchy + attention
+│   │   ├── heartbeat.py           # 15-min scan cycle across all domains
+│   │   └── ignition_daemon.py     # Proactive push from internal state
+│   │
+│   ├── Intelligence
+│   │   ├── llm.py                 # Ollama routing (reasoning vs coding)
+│   │   ├── context_engine.py      # Real-time context assembly
+│   │   ├── intelligence_hub.py    # Cross-source intelligence fusion
+│   │   ├── memory.py              # ChromaDB vector memory
+│   │   ├── memory_architect.py    # Infinite memory with consolidation
+│   │   └── knowledge_graph.py     # Semantic knowledge structure
+│   │
+│   ├── Companion
+│   │   ├── agent.py               # Personality, chat flow, tone
+│   │   ├── emotional.py           # Mood tracking + stress detection
+│   │   ├── personality.py         # Configurable companion presets
+│   │   └── conversation_flow.py   # Multi-turn conversation management
+│   │
+│   └── Safety
+│       ├── constitution.py        # Ethical guardrails
+│       ├── sentinel.py            # Always-on system watchdog
+│       └── sandbox.py             # Code execution sandboxing
+│
+├── agents/               # Specialized domain agents
+│   ├── emotional_agent.py         # Wellness check-ins + mood patterns
+│   ├── fitness_agent.py           # Workout tracking + suggestions
+│   ├── learning_agent.py          # Skill tracking + learning plans
+│   ├── task_agent.py              # Task management + prioritization
+│   └── file_explorer.py           # Codebase analysis
+│
+├── tools/                # Proactive tools (not just reactive)
+│   ├── guardian.py                # Work-life balance enforcement
+│   ├── finance.py                 # Portfolio + market signals
+│   └── bio_query.py               # Biometric data queries
+│
+├── integrations/         # External service bridges
+│   ├── google_services.py         # Calendar, Gmail, Drive
+│   ├── microsoft_bridge.py        # Outlook, Teams, OneDrive
+│   ├── github_monitor.py          # Notifications, PR activity
+│   ├── finance_intelligence.py    # Crypto/stock prices + alerts
+│   ├── phone_bridge.py            # Mobile sync
+│   └── browser_monitor.py         # Tab/activity awareness
+│
+├── api/                  # FastAPI backend — 443 endpoints
+│   ├── main.py                    # 327 routes (5,500+ lines)
+│   ├── neural_routes.py           # 107 neural mesh routes
+│   └── evolution_routes.py        # 9 evolution dashboard routes
+│
+└── ui/                   # React frontend — 20 panels
+    └── src/components/
+        ├── Dashboard.jsx            # System overview
+        ├── LifeDomains.jsx          # Body tracking (4 domains)
+        ├── WaveEngine.jsx           # Self-evolution status
+        ├── RitualView.jsx           # Morning/evening rituals
+        ├── FocusMode.jsx            # Deep work timer
+        ├── EmotionalPanel.jsx       # Mood + stress tracking
+        ├── BriefingPanel.jsx        # Daily AI briefing
+        ├── GuardianWidget.jsx       # Work limit sidebar
+        ├── NeuralMesh.jsx           # Neural bus visualization
+        ├── EvolutionPanel.jsx       # Evolution system dashboard
+        ├── SentinelPanel.jsx        # System health monitor
+        ├── IntegrationsPanel.jsx    # Google/Microsoft/GitHub status
+        ├── AgentLoopPanel.jsx       # Agent execution viewer
+        ├── IntelligenceDashboard.jsx # Intelligence hub
+        ├── ContextPanel.jsx         # Real-time context
+        ├── TerminalPanel.jsx        # In-browser terminal
+        ├── SetupWizard.jsx          # Credential setup
+        ├── HomeostasisPanel.jsx     # Living substrate vitals
+        ├── VoiceInterface.jsx       # Voice I/O
+        └── ErrorBoundary.jsx        # Error isolation
+```
+
+---
+
+## Key Features
+
+### Life Domains (Wave 22)
+Track hydration, sleep, nutrition, and skincare with streaks, adaptive goals, and proactive nudges.
+
+```
+GET  /life/dashboard          # Full today snapshot + life score + nudges
+POST /life/hydration/log      # Log water intake
+POST /life/sleep/log          # Log last night's sleep
+POST /life/nutrition/log      # Log a meal
+POST /life/skincare/routine   # Log skincare routine
+GET  /life/insights           # 7-day trends across all domains
+GET  /life/streaks            # Current streaks
+```
+
+### Cross-Domain Intelligence (Wave 24)
+Detects patterns the user can't see: poor sleep after low hydration days, compound deficits, streak momentum.
+
+```
+GET  /life/correlations       # Sleep vs focus, hydration vs stress, etc.
+GET  /life/report             # Full life report with insights
+```
+
+### Proactive Life Coach (Wave 25)
+Time-aware nudges — breakfast reminder at 8am, bedtime at 10pm. Adapts goals to your 7-day average. Respects focus mode.
+
+```
+GET  /life/coach/nudges       # What LOVE should say right now
+GET  /life/coach/goals        # Adaptive daily goals
+```
+
+### Wave Evolution Engine (Wave 23)
+LOVE detects its own capability gaps and proposes what to build next.
+
+```
+POST /wave/scan               # Run gap scan + propose next Wave
+GET  /wave/status             # Engine status
+GET  /wave/gaps               # Current detected gaps
+GET  /wave/all                # All Wave proposals
+```
+
+### Work-Life Guardian
+Tracks hours, enforces limits, suggests recovery. Proactive — warns before you hit the wall.
+
+```
+GET  /guardian/work-status    # Current hours + limit + overflow
+GET  /guardian/check-in       # Morning work assessment
+POST /guardian/hard-stop      # Force stop with auto-save
+```
+
+### Daily Briefing
+LLM-generated morning brief from all connected sources — calendar, email, finance, body status, goals.
+
+```
+GET  /neural/briefing/today   # Today's AI-written brief
+POST /neural/briefing/generate # Force regenerate
+```
+
+### Companion Chat
+Memory-aware, personality-driven conversation with reasoning transparency.
+
+```
+POST /chat                    # Main chat (streaming supported)
+GET  /modes                   # Available personality modes
+```
+
+### Full API Reference
+
+443 endpoints across 42 prefixes. Key groups:
+
+| Prefix | Endpoints | Purpose |
+|--------|-----------|---------|
+| `/agi` | 45 | AGI substrate (world model, SSM, MoE, homeostasis) |
+| `/neural` | 107 | Neural mesh (bus, memory, cognition, evolution, integrations) |
+| `/life` | 20+ | Life domains, coaching, correlations |
+| `/love` | 23 | Core companion features |
+| `/integrations` | 15 | Google, Microsoft, GitHub, finance |
+| `/system` | 13 | System control + monitoring |
+| `/evolution` | 20 | Self-improvement + evolution dashboard |
+| `/guardian` | 7 | Work-life balance |
+| `/finance` | 7 | Portfolio + market signals |
+| `/wave` | 6 | Autonomous Wave evolution |
+| `/voice` | 6 | Speech I/O |
+| `/memory` | 7 | Vector memory + recall |
+
+---
+
+## Configuration
 
 Edit `settings.yaml`:
 
 ```yaml
 user:
-  name: "Your Name"
-  timezone: "UTC"
+  name: "Karthi"
+  timezone: "Asia/Kolkata"
 
 work:
   daily_limit_hours: 8
+  warning_threshold: 0.8
+  hard_stop_enabled: true
   dev_folders:
-    - "C:/Users/You/Projects"
-
-finance:
-  watchlist:
-    - "BTCUSDT"
-    - "ETHUSDT"
-  risk_profile: "moderate"
+    - "C:/Users/you/Projects"
 
 models:
   reasoning: "deepseek-r1:7b"
   coding: "qwen2.5-coder:7b"
-```
-
-### Run
-
-```bash
-# Start the API server
-python -m api.main
-
-# Or with uvicorn directly
-uvicorn api.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-## API Endpoints
-
-### Chat
-- `POST /chat` — Main companion chat endpoint
-
-### Guardian (Work-Life Balance)
-- `GET /guardian/check-in` — Morning work summary
-- `GET /guardian/work-status` — Current work hours and status
-- `POST /guardian/hard-stop` — Enforce work limit (auto-save, lock)
-- `GET /guardian/day-summary` — Today's work summary
-
-### Ghost Developer
-- `GET /ghost/suggestions` — Get code staging suggestions
-- `GET /ghost/scan/{project_path}` — Scan project for missing tests/architecture
-
-### Finance
-- `GET /finance/signal/{symbol}` — AI trading signal
-- `GET /finance/portfolio` — Portfolio overview
-- `GET /finance/advice/{symbol}` — Predictive trade advice with sentiment
-- `GET /finance/alpha-scan` — High-confidence opportunities
-
-### Environment
-- `GET /environment/hardware` — Hardware detection and power profile
-- `POST /environment/launch-work` — Launch work sequence (IDE, backend, docs)
-
-### Evolution (Self-Healing)
-- `GET /evolution/crash-check` — Check for system errors
-- `POST /evolution/propose-fix` — Propose fix for crash
-- `GET /evolution/run-optimization` — Trigger code optimization
-
-### Sync (Multi-Device)
-- `POST /sync/register` — Register new device
-- `POST /sync/heartbeat` — Device heartbeat
-- `GET /sync/device-types` — Available device types
-
-### Voice
-- `GET /voice/status` — Voice system availability
-- `POST /voice/speak` — Text-to-speech
-- `GET /voice/listen` — Speech-to-text (5 second capture)
-
-## Personality Presets
-
-Choose your companion's personality in `settings.yaml`:
-
-- **companion** (default): Sharp, caring best friend. Blunt, warm, real.
-- **assistant**: Professional, efficient, helpful.
-- **coach**: Accountability partner. Pushes you to be better.
-- **mentor**: Wise guide. Asks questions, shares experience.
-
-Or create a custom personality with `custom_traits`.
-
-## Architecture
-
-```
-love/
-├── core/
-│   ├── agent.py          # Companion personality & chat flow
-│   ├── llm.py            # Model routing (reasoning vs coding)
-│   ├── memory.py         # ChromaDB vector memory
-│   ├── sync.py           # Multi-device sync & hardware detection
-│   ├── evolution.py      # Self-healing & self-optimization
-│   └── settings.py       # Configuration management
-├── tools/
-│   ├── guardian.py       # Work-life balance & hard-stop
-│   ├── finance.py        # Portfolio & market analysis
-│   └── .gitkeep
-├── voice/
-│   ├── stt.py            # Speech-to-text (Whisper + Porcupine)
-│   └── tts.py            # Text-to-speech (gTTS / pyttsx3)
-├── api/
-│   └── main.py           # FastAPI server (35+ endpoints)
-├── data/
-│   ├── memory/           # ChromaDB storage
-│   ├── love_os.db        # SQLite sync database
-│   └── user_profile.json # User preferences
-├── config.yaml           # Default configuration template
-└── settings.yaml         # Your personal settings (gitignored)
-```
-
-## Customization
-
-### Power Profiles
-
-Define hardware-specific behavior in `settings.yaml`:
-
-```yaml
-devices:
-  power_profiles:
-    desktop:
-      llm_temperature: 0.4
-      llm_max_tokens: 2048
-      market_scan_interval: 5
-      gpu_acceleration: true
-    
-    laptop:
-      llm_temperature: 0.5
-      llm_max_tokens: 1024
-      market_scan_interval: 15
-      use_quantized: true
-```
-
-### Work Limit
-
-Set your daily limit and warning threshold:
-
-```yaml
-work:
-  daily_limit_hours: 8
-  warning_threshold: 0.8  # Warn at 80% (6.4 hours)
-  hard_stop_enabled: true
-```
-
-### Models
-
-Works with any Ollama-compatible model:
-
-```yaml
-models:
-  reasoning: "llama3.1:8b"
-  coding: "codellama:7b"
   embedding: "nomic-embed-text"
   base_url: "http://localhost:11434"
+
+finance:
+  watchlist: ["BTCUSDT", "ETHUSDT", "BNBUSDT"]
+  risk_profile: "moderate"
 ```
-
-## Safety & Privacy
-
-- **100% local**: All data stays on your machine
-- **No telemetry**: We don't track usage
-- **Open source**: Audit every line of code
-- **Optional cloud**: Only if you explicitly enable sync
-- **Model-agnostic**: Use your own local models
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-### Areas that need help
-- Voice wake word training for custom names
-- Wearable device integrations (smart glasses, watches)
-- More finance exchange integrations
-- Additional personality presets
-- macOS/Linux hard-stop screen dimming
-- Docker/container deployment
-
-## Roadmap
-
-- [x] Phase 1-6: Core companion, memory, finance, sync, voice
-- [x] Phase 7-8: Self-healing, self-optimization, ghost developer
-- [ ] Phase 9: Wearable integration, smart glasses
-- [ ] Phase 10: Advanced reasoning chains, agent networks
-- [ ] Phase 11: Distributed intelligence, swarm coordination
-
-## License
-
-MIT License — see [LICENSE](LICENSE)
-
-## Acknowledgments
-
-Built with ❤️ using:
-- [LangChain](https://github.com/langchain-ai/langchain) for LLM orchestration
-- [ChromaDB](https://github.com/chroma-core/chroma) for vector memory
-- [FastAPI](https://github.com/tiangolo/fastapi) for the API layer
-- [Ollama](https://ollama.ai/) for local LLM inference
 
 ---
 
-> *"The goal isn't to build a better chatbot. It's to build something that genuinely cares about your life."*
+## Wave History
+
+| Wave | What Landed |
+|------|-------------|
+| 1-8 | Core companion, memory, finance, sync, voice, self-healing, ghost dev |
+| 9-11 | Context engine, intelligence hub, awareness |
+| 12-14 | Agent loop, integrations (Google, Microsoft, GitHub) |
+| 15 | Daily briefing, credential setup wizard |
+| 16 | Neural mesh, living substrate, consciousness |
+| 17 | Evolution dashboard, sentinel watchdog |
+| 18 | Error boundaries, UI hardening |
+| 19-21 | Self-modification pipeline, BPTT, LoRA scaffold, user-aligned fitness |
+| **22** | **Life Domains engine (hydration, sleep, nutrition, skincare)** |
+| **23** | **Autonomous Wave Evolution engine (gap scan + proposal)** |
+| **24** | **Cross-domain intelligence (pattern correlation)** |
+| **25** | **Proactive Life Coach (time-aware nudges, adaptive goals)** |
+| **26** | **Ritual integration + push notifications via Life Coach** |
+
+---
+
+## Safety & Privacy
+
+- **100% local** — all data in `data/` on your machine, never uploaded
+- **No telemetry** — zero tracking, zero phone-home
+- **Constitutional guardrails** — ethical constraints baked into the core
+- **Sentinel watchdog** — continuous system health monitoring
+- **A/B revert** — self-modifications auto-revert if quality degrades
+- **Open source** — audit every line
+
+---
+
+## Tech Stack
+
+- **Backend**: Python 3.12 + FastAPI + Uvicorn
+- **Frontend**: React + Vite
+- **LLM**: Ollama (deepseek-r1:7b, qwen2.5-coder:7b)
+- **Memory**: ChromaDB (vector) + JSON (structured)
+- **Integrations**: Google APIs, Microsoft Graph, GitHub API
+
+---
+
+> *"The goal isn't to build a better chatbot. It's to build something that genuinely gives a damn about how your day goes."*

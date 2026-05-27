@@ -322,6 +322,38 @@ def get_emotional_summary(days: int = 7) -> Dict[str, Any]:
     }
 
 
+def get_current_dominant_mood() -> Dict[str, Any]:
+    """Return current dominant mood + stress level for behavioral filtering."""
+    s = _load_stress()
+    level = s.get("current_level", 0)
+    trend = s.get("trend", "stable")
+
+    # Derive dominant mood from recent history (last 5 entries)
+    recent = [h["mood"] for h in s.get("history", [])[-5:]]
+    if recent:
+        from collections import Counter
+        dominant = Counter(recent).most_common(1)[0][0]
+    else:
+        dominant = "neutral"
+
+    # Stress-level overrides mood label for behavioral purposes
+    if level > 80:
+        dominant = "stressed"
+    elif level > 70 and trend == "rising":
+        dominant = "overwhelmed"
+
+    return {
+        "mood": dominant,
+        "stress": round(level, 1),
+        "trend": trend,
+        "is_stressed": level > 60,
+        "is_tired": dominant in ("tired",),
+        "is_focused": dominant in ("focused",),
+        "is_overwhelmed": dominant == "overwhelmed" or level > 75,
+        "needs_break": level > 70 or dominant in ("stressed", "overwhelmed", "exhausted"),
+    }
+
+
 # ── Relationship Tracking ───────────────────────────────────────────────────
 
 RELATIONSHIP_FILE = DATA_DIR / "relationships.json"

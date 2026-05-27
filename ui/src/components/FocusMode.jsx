@@ -73,6 +73,15 @@ export default function FocusMode() {
     };
     setLog(l => [entry, ...l.slice(0, 9)]);
 
+    // Wave 29: log focus session to backend (Guardian sees it, real-time tracker counts it)
+    try {
+      await api.post(`${API}/work/focus/log`, {
+        preset: preset.label,
+        duration_minutes: preset.duration,
+        task: task || "",
+      });
+    } catch (e) { console.error("[Focus] backend log failed:", e); }
+
     // Ask LOVE for a note
     setNoteLoading(true);
     try {
