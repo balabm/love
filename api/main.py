@@ -987,6 +987,24 @@ def register_all_modules(lm, _loop=None):
         description="Watches server.log for Python tracebacks in real time — LLM diagnoses + auto-patches + WebSocket alert"
     ))
 
+    # ── WAVE 6: TEST & DIAGNOSTICS MODULES (Prompts 1-3) ──
+    lm.register(ModuleDescriptor(
+        name="mock_reality", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=["neural_bus"], optional=True,
+        description="Mock reality injector — fake sensor data for E2E testing"
+    ))
+    lm.register(ModuleDescriptor(
+        name="integration_inspector", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=["mock_reality", "orchestrator", "neural_bus"], optional=True,
+        description="E2E inspector — scenario testing + verification of LOVE's reactions"
+    ))
+    lm.register(ModuleDescriptor(
+        name="dependency_mapper", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
+        depends_on=[], optional=True,
+        description="Dependency graph mapper — AST import tracing to identify orphaned modules"
+    ))
+
+
     # ── WAVE 6: SENTINEL — ALWAYS-ON SELF-MONITORING PROTOCOL ──
     def start_sentinel_module():
         from core.sentinel import start_sentinel
@@ -5938,6 +5956,77 @@ async def hotswap_reload(data: dict):
         return {"reloaded": success, "module": module_path}
     except Exception as e:
         return {"error": str(e), "reloaded": False}
+
+# ========== PROMPTS 1-3: MOCK REALITY, E2E INSPECTOR, DEPENDENCY MAPPER ==========
+
+@app.post("/tests/mock/burnout")
+async def mock_burnout():
+    """Inject mock work burnout reality for testing."""
+    try:
+        from tests.mock_reality import RealitySimulator
+        sim = RealitySimulator()
+        await sim.trigger_work_burnout()
+        return {"injected": "work_burnout"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/tests/mock/crash")
+async def mock_crash():
+    """Inject mock market crash reality for testing."""
+    try:
+        from tests.mock_reality import RealitySimulator
+        sim = RealitySimulator()
+        await sim.trigger_market_crash()
+        return {"injected": "market_crash"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/tests/mock/flow")
+async def mock_flow():
+    """Inject mock deep flow reality for testing."""
+    try:
+        from tests.mock_reality import RealitySimulator
+        sim = RealitySimulator()
+        await sim.trigger_deep_flow()
+        return {"injected": "deep_flow"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/tests/inspector/run")
+async def inspector_run(data: dict):
+    """Run E2E integration inspector scenarios."""
+    try:
+        from tests.integration_inspector import run_all_diagnostics
+        scenario = data.get("scenario", "all")
+        if scenario == "all":
+            result = await run_all_diagnostics()
+        elif scenario == "burnout":
+            from tests.integration_inspector import run_scenario_alpha_burnout
+            result = await run_scenario_alpha_burnout()
+        elif scenario == "flow":
+            from tests.integration_inspector import run_scenario_beta_flow
+            result = await run_scenario_beta_flow()
+        else:
+            return {"error": "Unknown scenario"}
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/tests/dependencies/map")
+async def dependencies_map():
+    """Map all dependencies and identify orphaned modules."""
+    try:
+        from scripts.map_dependencies import map_dependencies
+        result = map_dependencies()
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
 
 
 
