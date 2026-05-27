@@ -253,23 +253,20 @@ Return ONLY valid JSON:
                     print(f"[Jarvis] ⚙️ Triggering background action: {action}")
                     self._trigger_action(action)
                     
-                # 🚀 Wave 9: Action Engine Computer Use
+                # 🚀 Wave 9: Action Engine Computer Use - DISABLED FOR SAFETY
+                # Autonomous computer control has been disabled to prevent unauthorized actions
                 if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
-                    print(f"[Jarvis] 🤖 Executing Autonomous Computer Action Plan: {len(action_plan)} steps.")
-                    try:
-                        from core.action_engine import get_action_engine
-                        get_action_engine().execute_action_plan(action_plan)
-                    except Exception as ae:
-                        print(f"[Jarvis] Action Engine failed: {ae}")
+                    print(f"[Jarvis] ⚠️ Autonomous Computer Action Plan BLOCKED: {len(action_plan)} steps.")
+                    print(f"[Jarvis] SAFETY: Autonomous computer control disabled. User approval required.")
                     
-                    # Publish action plan to neural bus
+                    # Publish action plan to neural bus for user review instead
                     if NEURAL_BUS_AVAILABLE:
                         try:
                             bus = get_neural_bus()
                             bus.publish(
                                 domain="action",
-                                event_type="autonomous_action",
-                                payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat()},
+                                event_type="autonomous_action_blocked",
+                                payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat(), "reason": "Safety block - user approval required"},
                                 source_module="jarvis_protocol",
                                 priority=EventPriority.HIGH
                             )

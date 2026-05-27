@@ -83,6 +83,12 @@ class ActionEngine:
     def click(self, x: int, y: int, right_click: bool = False):
         """Click at specific coordinates on screen."""
         self._ensure_active()
+        # SAFETY CHECK: Require user approval for clicking
+        approval_required = os.getenv("LOVE_AUTO_COMPUTER_CONTROL", "").lower() in {"1", "true", "yes"}
+        if not approval_required:
+            print(f"[ActionEngine] ⚠️ Click BLOCKED - user approval required.")
+            print(f"[ActionEngine] Set LOVE_AUTO_COMPUTER_CONTROL=1 to enable (not recommended)")
+            return
         print(f"[ActionEngine] 🖱️ Clicking at ({x}, {y})")
         if right_click:
             pyautogui.rightClick(x, y)
@@ -92,6 +98,12 @@ class ActionEngine:
     def type_text(self, text: str, enter: bool = True):
         """Type text as if using the keyboard."""
         self._ensure_active()
+        # SAFETY CHECK: Require user approval for typing
+        approval_required = os.getenv("LOVE_AUTO_COMPUTER_CONTROL", "").lower() in {"1", "true", "yes"}
+        if not approval_required:
+            print(f"[ActionEngine] ⚠️ Typing BLOCKED - user approval required.")
+            print(f"[ActionEngine] Set LOVE_AUTO_COMPUTER_CONTROL=1 to enable (not recommended)")
+            return
         print(f"[ActionEngine] ⌨️ Typing: '{text}'")
         pyautogui.write(text, interval=0.01)
         if enter:
@@ -100,6 +112,12 @@ class ActionEngine:
     def press_key(self, key_combo: str):
         """Press a key combination (e.g., 'ctrl+c', 'win+d')."""
         self._ensure_active()
+        # SAFETY CHECK: Require user approval for key presses
+        approval_required = os.getenv("LOVE_AUTO_COMPUTER_CONTROL", "").lower() in {"1", "true", "yes"}
+        if not approval_required:
+            print(f"[ActionEngine] ⚠️ Key press BLOCKED - user approval required.")
+            print(f"[ActionEngine] Set LOVE_AUTO_COMPUTER_CONTROL=1 to enable (not recommended)")
+            return
         print(f"[ActionEngine] ⌨️ Pressing combo: {key_combo}")
         keys = [k.strip() for k in key_combo.split("+")]
         pyautogui.hotkey(*keys)
@@ -137,6 +155,12 @@ class ActionEngine:
         Execute a sequence of actions.
         plan is a list of dicts: {"action": "type_text", "args": {"text": "hello"}}
         """
+        # SAFETY CHECK: Require user approval for any computer control
+        approval_required = os.getenv("LOVE_AUTO_COMPUTER_CONTROL", "").lower() in {"1", "true", "yes"}
+        if not approval_required:
+            print(f"[ActionEngine] ⚠️ Computer control BLOCKED - user approval required.")
+            print(f"[ActionEngine] Set LOVE_AUTO_COMPUTER_CONTROL=1 to enable (not recommended)")
+            return {"success": False, "error": "Computer control disabled - user approval required", "blocked_plan": plan}
         results = []
         for step in plan:
             action = step.get("action")
