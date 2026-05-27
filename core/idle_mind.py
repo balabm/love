@@ -263,6 +263,38 @@ def get_recent_thoughts(n: int = 10) -> List[Dict]:
         return []
 
 
+    # Publish to neural bus for cross-module learning (Gap Analysis fix)
+    try:
+        from core.neural_bus import get_neural_bus, EventPriority
+        bus = get_neural_bus()
+        
+        # Determine domain based on entry type
+        domain = "learning"
+        event_type = entry.get("event", "idle_activity")
+        
+        # Map specific task types to appropriate domains
+        task = entry.get("task", "")
+        if "research" in task or "web_exploration" in task:
+            domain = "research"
+        elif "self_evolution" in task or "dream" in task:
+            domain = "self_evolution"
+        elif "learn_user" in task or "profile" in task:
+            domain = "user"
+        elif "gap_filling" in task:
+            domain = "learning"
+        
+        # Publish the event
+        bus.publish(
+            domain=domain,
+            event_type=event_type,
+            payload=entry,
+            source_module="idle_mind",
+            priority=EventPriority.NORMAL
+        )
+    except Exception:
+        pass
+
+
 # ── LLM helper ──────────────────────────────────────────────────────────────
 
 def _think(prompt: str, temperature: float = 0.7, max_tokens: int = 800) -> str:
@@ -1087,6 +1119,24 @@ def _idle_loop():
     _idle_status["state"] = "stopped"
     _log({"event": "idle_mind_stopped"})
 
+def _handle_neural_event(event):
+    """Handle events from Neural Bus — learn from cross-module signals."""
+    # For now, just log; can be expanded to react to events
+    print(f"[IdleMind] Neural event: {event.get('domain')}/{event.get('event_type')}")
+
+def _on_system_load_change(under_load: bool):
+    """Callback from resource governor when system load state changes.
+    
+    Gap Analysis fix: When system goes under load, cancel all heavy tasks
+    to protect host resources. When load clears, allow normal operation.
+    """
+    if under_load:
+        _log({"event": "system_under_load", "action": "cancelling_heavy_tasks"})
+        cancel_all_heavy_tasks()
+    else:
+        _log({"event": "system_load_cleared", "action": "resuming_normal_operation"})
+
+
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
@@ -1113,6 +1163,27 @@ def stop_idle_mind():
 
 
 def get_idle_status() -> Dict[str, Any]:
+
+    # Wire to Neural Bus for cross-module learning (Gap Analysis fix)
+    try:
+        from core.neural_bus import get_neural_bus
+        bus = get_neural_bus()
+        bus.subscribe(
+            subscriber_id="idle_mind",
+            domains=["learning", "self_evolution"],
+            callback=_handle_neural_event,
+            is_async=False
+        )
+    except Exception:
+        pass
+
+    # Wire to Resource Governor for load-aware task cancellation (Gap Analysis fix)
+    try:
+        from core.resource_governor import get_resource_governor
+        gov = get_resource_governor()
+        gov.register_load_callback(_on_system_load_change)
+    except Exception:
+        pass
     return {
         **_idle_status,
         "is_idle": is_idle(),

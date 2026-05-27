@@ -21,6 +21,7 @@ export default function TerminalPanel() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const terminalEndRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -33,15 +34,30 @@ export default function TerminalPanel() {
     setHistory(prev => [...prev, { type: 'input', text: trimmed }]);
     setInput('');
     setLoading(true);
+    abortControllerRef.current = new AbortController();
 
     try {
-      const res = await api.post(`${API}/neural/terminal/run`, { command: trimmed });
+      const res = await api.post(`${API}/neural/terminal/run`, { command: trimmed }, {
+        signal: abortControllerRef.current.signal
+      });
       const output = res.data.output || '[No output returned]';
       setHistory(prev => [...prev, { type: 'output', text: output }]);
     } catch (err) {
-      const errMsg = err.response?.data?.detail || err.message || 'Execution error';
-      setHistory(prev => [...prev, { type: 'error', text: errMsg }]);
+      if (err.name === 'CanceledError' || err.message?.includes('cancel')) {
+        setHistory(prev => [...prev, { type: 'info', text: 'Command cancelled by user' }]);
+      } else {
+        const errMsg = err.response?.data?.detail || err.message || 'Execution error';
+        setHistory(prev => [...prev, { type: 'error', text: errMsg }]);
+      }
     } finally {
+      setLoading(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const cancelCommand = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
       setLoading(false);
     }
   };
@@ -98,6 +114,11 @@ export default function TerminalPanel() {
         <button onClick={() => executeCommand(input)} disabled={loading || !input.trim()}>
           Run
         </button>
+        {loading && (
+          <button className="cancel-btn" onClick={cancelCommand}>
+            Cancel
+          </button>
+        )}
       </div>
 
       {/* Quick shortcuts */}

@@ -66,22 +66,38 @@ function ToolCard({ tool }) {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState(null);
   const [params, setParams] = useState({});
+  const abortControllerRef = useRef(null);
 
   const paramKeys = Object.keys(tool.parameters || {});
 
   const runTool = async () => {
     setRunning(true);
     setResult(null);
+    abortControllerRef.current = new AbortController();
     try {
       const res = await api.post(`${API}/neural/agent/tool/run`, {
         tool_name: tool.name,
         params,
+      }, {
+        signal: abortControllerRef.current.signal
       });
       setResult(res.data.result || res.data.error || "no output");
     } catch (e) {
-      console.error("[Agent] tool run failed:", e);
-      setResult("Request failed: " + (e?.message || "unknown error"));
+      if (e.name === 'CanceledError' || e.message?.includes('cancel')) {
+        setResult("Operation cancelled by user");
+      } else {
+        console.error("[Agent] tool run failed:", e);
+        setResult("Request failed: " + (e?.message || "unknown error"));
+      }
     } finally {
+      setRunning(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const cancelTool = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
       setRunning(false);
     }
   };
@@ -110,6 +126,14 @@ function ToolCard({ tool }) {
       >
         {running ? "Running..." : "Run"}
       </button>
+      {running && (
+        <button
+          className="agl-cancel-btn"
+          onClick={cancelTool}
+        >
+          Cancel
+        </button>
+      )}
       {result && (
         <pre className="agl-tool-result">{result.slice(0, 500)}{result.length > 500 ? "\n…" : ""}</pre>
       )}
@@ -126,6 +150,7 @@ export default function AgentLoopPanel() {
   const [tools, setTools] = useState([]);
   const [toolSearch, setToolSearch] = useState("");
   const bottomRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   useEffect(() => {
     if (tab === "tools" && tools.length === 0) {
@@ -143,15 +168,30 @@ export default function AgentLoopPanel() {
     if (!query.trim() || running) return;
     setRunning(true);
     setResult(null);
+    abortControllerRef.current = new AbortController();
     try {
       const res = await api.post(`${API}/neural/agent/run`, {
         query: query.trim(),
         max_steps: maxSteps,
+      }, {
+        signal: abortControllerRef.current.signal
       });
       setResult(res.data);
     } catch (e) {
-      setResult({ success: false, error: "Backend unreachable", steps: [] });
+      if (e.name === 'CanceledError' || e.message?.includes('cancel')) {
+        setResult({ success: false, error: "Operation cancelled by user", steps: [] });
+      } else {
+        setResult({ success: false, error: "Backend unreachable", steps: [] });
+      }
     } finally {
+      setRunning(false);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const cancelLoop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
       setRunning(false);
     }
   };
@@ -203,6 +243,14 @@ export default function AgentLoopPanel() {
               >
                 {running ? "Running..." : "Run Loop"}
               </button>
+              {running && (
+                <button
+                  className="agl-cancel-btn"
+                  onClick={cancelLoop}
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </div>
 

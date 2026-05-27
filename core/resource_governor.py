@@ -88,10 +88,33 @@ class ResourceGovernor:
         self._snapshot: Dict[str, Any] = {}
         self._last_log_time: float = 0.0
         self._log_interval: float = 60.0  # write to disk at most once / min
+        
+        # Load state change callbacks (Gap Analysis fix: connect to idle-mind)
+        self._load_callbacks: list[Callable[[bool], None]] = []
+        self._previous_load_state: bool = False
 
     # ------------------------------------------------------------------ #
     #  Public API
     # ------------------------------------------------------------------ #
+    
+    def register_load_callback(self, callback: Callable[[bool], None]) -> None:
+        """Register a callback to be called when load state changes.
+        
+        Args:
+            callback: Function that takes a boolean (True = entering load, False = exiting load)
+        """
+        if callback not in self._load_callbacks:
+            self._load_callbacks.append(callback)
+    
+    def _notify_load_change(self, under_load: bool) -> None:
+        """Notify registered callbacks of load state change."""
+        if under_load != self._previous_load_state:
+            for callback in self._load_callbacks:
+                try:
+                    callback(under_load)
+                except Exception:
+                    logger.exception("Load callback failed")
+            self._previous_load_state = under_load
     def start(self) -> None:
         """Launch the monitor in a daemon thread."""
         if self._running:
@@ -158,6 +181,7 @@ class ResourceGovernor:
                         )
                     SYSTEM_UNDER_LOAD.set()
                     snapshot["under_load"] = True
+                    self._notify_load_change(True)
                 else:
                     # Hysteresis: only *clear* when all metrics are well below
                     cpu_ok = cpu < (self.cpu_threshold - self._hysteresis_margin)
@@ -172,6 +196,7 @@ class ResourceGovernor:
                             )
                         SYSTEM_UNDER_LOAD.clear()
                         snapshot["under_load"] = False
+                        self._notify_load_change(False)
 
                 self._snapshot = snapshot
                 self._maybe_log_to_disk(snapshot)

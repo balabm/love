@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api, { API } from '../api';
 import "./EvolutionPanel.css";
 
@@ -22,12 +22,16 @@ export default function EvolutionPanel() {
   const [statusMessage, setStatusMessage] = useState("");
   const [lastRefreshed, setLastRefreshed] = useState(null);
   const [error, setError] = useState(null);
+  const abortControllerRef = useRef(null);
 
   const restartModule = async (name) => {
     setLoadingAction(`restart-${name}`);
     setStatusMessage("");
+    abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/agi/modules/restart`, { name });
+      const res = await api.post(`${API}/agi/modules/restart`, { name }, {
+        signal: abortControllerRef.current.signal
+      });
       if (res.data.success) {
         setStatusMessage(`Module '${name}' successfully restarted! State: ${res.data.state}`);
       } else {
@@ -35,8 +39,20 @@ export default function EvolutionPanel() {
       }
       await fetchAllTelemetry();
     } catch (err) {
-      setStatusMessage(`Error connecting to restart module API.`);
+      if (err.name === 'CanceledError' || err.message?.includes('cancel')) {
+        setStatusMessage(`Module restart cancelled`);
+      } else {
+        setStatusMessage(`Error connecting to restart module API.`);
+      }
     } finally {
+      setLoadingAction(null);
+      abortControllerRef.current = null;
+    }
+  };
+
+  const cancelOperation = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
       setLoadingAction(null);
     }
   };
@@ -93,8 +109,11 @@ export default function EvolutionPanel() {
   const triggerDnaEvolve = async () => {
     setLoadingAction("evolve");
     setStatusMessage("");
+    abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/agi/dna/evolve`);
+      const res = await api.post(`${API}/agi/dna/evolve`, {}, {
+        signal: abortControllerRef.current.signal
+      });
       if (res.data.error) {
         setStatusMessage(`DNA evolution error: ${res.data.error}`);
       } else {
@@ -102,9 +121,14 @@ export default function EvolutionPanel() {
         await fetchAllTelemetry();
       }
     } catch (err) {
-      setStatusMessage("Failed to connect to DNA Evolution endpoint.");
+      if (err.name === 'CanceledError' || err.message?.includes('cancel')) {
+        setStatusMessage("DNA evolution cancelled");
+      } else {
+        setStatusMessage("Failed to connect to DNA Evolution endpoint.");
+      }
     } finally {
       setLoadingAction(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -112,8 +136,11 @@ export default function EvolutionPanel() {
   const triggerSelfEvolutionCycle = async () => {
     setLoadingAction("cycle");
     setStatusMessage("");
+    abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/evolution/trigger-cycle`);
+      const res = await api.post(`${API}/evolution/trigger-cycle`, {}, {
+        signal: abortControllerRef.current.signal
+      });
       if (res.data.status === "error" || res.data.error) {
         setStatusMessage(`Cycle error: ${res.data.error || res.data.status}`);
       } else {
@@ -121,9 +148,14 @@ export default function EvolutionPanel() {
         await fetchAllTelemetry();
       }
     } catch (err) {
-      setStatusMessage("Failed to trigger self-evolution cycle.");
+      if (err.name === 'CanceledError' || err.message?.includes('cancel')) {
+        setStatusMessage("Self-evolution cycle cancelled");
+      } else {
+        setStatusMessage("Failed to trigger self-evolution cycle.");
+      }
     } finally {
       setLoadingAction(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -132,15 +164,23 @@ export default function EvolutionPanel() {
     if (!daemonStatus) return;
     setLoadingAction("daemon");
     setStatusMessage("");
+    abortControllerRef.current = new AbortController();
     const endpoint = daemonStatus.running ? "stop" : "start";
     try {
-      await api.post(`${API}/agi/daemon/${endpoint}`);
+      await api.post(`${API}/agi/daemon/${endpoint}`, {}, {
+        signal: abortControllerRef.current.signal
+      });
       setStatusMessage(`Self-improvement daemon ${endpoint === "start" ? "started" : "stopped"}.`);
       await fetchAllTelemetry();
     } catch (err) {
-      setStatusMessage(`Failed to ${endpoint} daemon.`);
+      if (err.name === 'CanceledError' || err.message?.includes('cancel')) {
+        setStatusMessage(`Daemon ${endpoint} cancelled`);
+      } else {
+        setStatusMessage(`Failed to ${endpoint} daemon.`);
+      }
     } finally {
       setLoadingAction(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -347,13 +387,23 @@ export default function EvolutionPanel() {
           <div className="evo-card-header">
             <h3>🛡️ Self-Improvement Daemon</h3>
             {daemonStatus && (
-              <button 
-                className={`evo-action-btn ${daemonStatus.running ? "btn-stop" : "btn-start"}`}
-                onClick={toggleDaemon}
-                disabled={loadingAction === "daemon"}
-              >
-                {daemonStatus.running ? "⏹ Stop Daemon" : "▶ Start Daemon"}
-              </button>
+              <>
+                <button 
+                  className={`evo-action-btn ${daemonStatus.running ? "btn-stop" : "btn-start"}`}
+                  onClick={toggleDaemon}
+                  disabled={loadingAction === "daemon"}
+                >
+                  {daemonStatus.running ? "⏹ Stop Daemon" : "▶ Start Daemon"}
+                </button>
+                {loadingAction === "daemon" && (
+                  <button 
+                    className="evo-action-btn btn-cancel"
+                    onClick={cancelOperation}
+                  >
+                    Cancel
+                  </button>
+                )}
+              </>
             )}
           </div>
           <div className="evo-card-body">
@@ -586,6 +636,15 @@ export default function EvolutionPanel() {
                             >
                               {loadingAction === `restart-${name}` ? "Restarting..." : "🛠️ Restart"}
                             </button>
+                            {loadingAction === `restart-${name}` && (
+                              <button
+                                className="evo-action-btn btn-cancel"
+                                onClick={cancelOperation}
+                                style={{ padding: "4px 8px", fontSize: "10px", marginLeft: "4px" }}
+                              >
+                                Cancel
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -609,6 +668,14 @@ export default function EvolutionPanel() {
               >
                 {loadingAction === "cycle" ? "Running Evolution..." : "🧬 Trigger Behavior Evolution Cycle"}
               </button>
+              {loadingAction === "cycle" && (
+                <button 
+                  className="evo-action-btn btn-cancel"
+                  onClick={cancelOperation}
+                >
+                  Cancel
+                </button>
+              )}
               <button 
                 className="evo-action-btn btn-prim"
                 onClick={triggerDnaEvolve}
@@ -616,6 +683,14 @@ export default function EvolutionPanel() {
               >
                 {loadingAction === "evolve" ? "Evolving genes..." : "🧬 Force Prompt DNA Mutation"}
               </button>
+              {loadingAction === "evolve" && (
+                <button 
+                  className="evo-action-btn btn-cancel"
+                  onClick={cancelOperation}
+                >
+                  Cancel
+                </button>
+              )}
             </div>
           </div>
           <div className="evo-card-body scroll-body">

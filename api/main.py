@@ -944,29 +944,51 @@ def register_all_modules(lm, _loop=None):
         description="Pure Python state conflict reconciler — fixes sleeping+device_active, work_hours>24, stress clamping"
     ))
     lm.register(ModuleDescriptor(
-        name="tts_interventions", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="tts_interventions", wave=5, start_fn=start_tts_interventions, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Audio intervention wrapper — TTS for 9-hour limit and high-stress alerts"
     ))
 
+
+    # ── WAVE 5: START FUNCTIONS ──
+    def start_tts_interventions():
+        from voice.tts_interventions import trigger_hype_intervention
+        print("[TTSInterventions] Initialized")
+
+    def start_sandbox():
+        from evolution.sandbox import run_in_sandbox
+        print("[Sandbox] Initialized")
+
+    def start_tool_forge():
+        from evolution.tool_forge import forge_new_tool
+        print("[ToolForge] Initialized")
+
+    def start_dna():
+        from core.dna import get_dynamic_instructions
+        print("[DNA] Initialized")
+
+    def start_hot_swapper():
+        from evolution.hot_swapper import reload_module
+        print("[HotSwapper] Initialized")
+
     # ── WAVE 5: EVOLUTION MODULES (Prompts 25-28) ──
     lm.register(ModuleDescriptor(
-        name="sandbox", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="sandbox", wave=5, start_fn=start_sandbox, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Sandbox compiler — isolated subprocess code execution for LLM-generated tools"
     ))
     lm.register(ModuleDescriptor(
-        name="tool_forge", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="tool_forge", wave=5, start_fn=start_tool_forge, stop_fn=lambda: None,
         depends_on=["sandbox"], optional=True,
         description="Tool forge — LLM generates tools, sandbox tests, saves if valid"
     ))
     lm.register(ModuleDescriptor(
-        name="dna", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="dna", wave=5, start_fn=start_dna, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Personality DNA — trait mutation and dynamic prompt instructions"
     ))
     lm.register(ModuleDescriptor(
-        name="hot_swapper", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="hot_swapper", wave=5, start_fn=start_hot_swapper, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Hot-swapper — dynamic module reloading without server restart"
     ))
@@ -2090,6 +2112,23 @@ fetch('/agi/sync/register', {{
   method:'POST', headers:{{'Content-Type':'application/json'}},
   body: JSON.stringify({{device_id: deviceId, device_name: name, device_type: navigator.userAgent.includes('Mobile') ? 'mobile' : 'browser'}})
 }});
+
+
+// Register push token if supported (Gap Analysis fix)
+if ('serviceWorker' in navigator && 'PushManager' in window) {{
+  Notification.requestPermission().then(permission => {{
+    if (permission === 'granted') {{
+      console.log('Push notification permission granted');
+      // In production with Expo/React Native, this would use Expo's push token API
+      // For web PWA, this would use PushManager subscription
+      // Sending placeholder registration for now
+      fetch('/devices/push-register', {{
+        method:'POST', headers:{{'Content-Type':'application/json'}},
+        body: JSON.stringify({{device_id: deviceId, token: 'web_push_placeholder', platform: 'web'}})
+      }});
+    }}
+  }});
+}}
 </script>
 </body></html>"""
     return __import__('fastapi.responses', fromlist=['HTMLResponse']).HTMLResponse(html)

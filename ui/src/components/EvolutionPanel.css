@@ -95,6 +95,14 @@
 .btn-stop:hover {
   background: rgba(239, 68, 68, 0.25);
 }
+.btn-cancel {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+.btn-cancel:hover {
+  background: rgba(245, 158, 11, 0.25);
+}
 .evo-action-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
