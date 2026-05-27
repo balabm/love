@@ -1,5 +1,7 @@
 import logging
 
+from core.central_logger import get_logger
+
 # Neural Bus integration
 try:
     from core.neural_bus import get_neural_bus, EventPriority
@@ -7,11 +9,13 @@ try:
 except ImportError:
     NEURAL_BUS_AVAILABLE = False
 
+logger = get_logger(__name__)
+
 def evaluate_utility(task_priority: int, compute_cost: int, user_energy: int, user_stress: int) -> bool:
     utility = (task_priority * 2) - compute_cost - (user_stress / 2)
     threshold = 10 if user_energy < 4 else 5
     if utility >= threshold:
-        logging.info(f"Task allowed: Utility {utility:.1f} >= Threshold {threshold}")
+        logger.info(f"Task allowed: Utility {utility:.1f} >= Threshold {threshold}")
         
         # Publish to neural bus
         if NEURAL_BUS_AVAILABLE:
@@ -32,11 +36,11 @@ def evaluate_utility(task_priority: int, compute_cost: int, user_energy: int, us
                     priority=EventPriority.NORMAL
                 )
             except Exception as e:
-                logging.error(f"Neural bus publish error: {e}")
+                logger.error(f"Neural bus publish error: {e}")
         
         return True
     else:
-        logging.info(f"Task aborted: Utility {utility:.1f} < Threshold {threshold}")
+        logger.info(f"Task aborted: Utility {utility:.1f} < Threshold {threshold}")
         
         # Publish to neural bus
         if NEURAL_BUS_AVAILABLE:
@@ -57,6 +61,12 @@ def evaluate_utility(task_priority: int, compute_cost: int, user_energy: int, us
                     priority=EventPriority.NORMAL
                 )
             except Exception as e:
-                logging.error(f"Neural bus publish error: {e}")
+                logger.error(f"Neural bus publish error: {e}")
         
         return False
+
+
+def start_axiological_engine():
+    """Start the axiological engine system."""
+    logger.info("Axiological Engine system initialized")
+    return True

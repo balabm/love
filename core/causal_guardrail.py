@@ -2,7 +2,9 @@ import asyncio
 import functools
 import logging
 
-logger = logging.getLogger(__name__)
+from core.central_logger import get_logger
+
+logger = get_logger(__name__)
 
 
 async def simulate_outcome(action_description: str, current_context: dict) -> bool:
@@ -45,3 +47,9 @@ def requires_causal_check(action_name: str):
             return async_wrapper
         return sync_wrapper
     return decorator
+
+
+def start_guardrail():
+    """Start the causal guardrail system."""
+    logger.info("Causal Guardrail system initialized")
+    return True

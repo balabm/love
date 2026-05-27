@@ -84,7 +84,7 @@ class ProactivePushEngine:
             priority=priority,
             metadata=metadata or {},
         )
-                self._queue.append(msg)
+        self._queue.append(msg)
         # Log it
         try:
             with open(PUSH_LOG, "a") as f:
