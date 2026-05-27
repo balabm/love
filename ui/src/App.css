@@ -166,6 +166,22 @@ body {
 }
 .msg-meta { font-size: 10px; color: var(--muted); padding: 0 2px; }
 
+/* Proactive push indicator */
+.push-indicator {
+  font-size: 9px;
+  letter-spacing: 0.8px;
+  color: #c084fc;
+  opacity: 0.7;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 0 2px;
+  animation: fadeInDown 0.3s ease;
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 0.7; transform: translateY(0); }
+}
+
 /* Typing dots */
 .bubble.typing { display: flex; align-items: center; gap: 5px; padding: 14px 18px; }
 .bubble.typing span {

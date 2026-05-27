@@ -68,6 +68,7 @@ export default function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState("checking");
+  const [wsStatus, setWsStatus] = useState("disconnected"); // connected | disconnected
   const [lifeScore, setLifeScore] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [ctx, setCtx] = useState(null);
@@ -75,11 +76,47 @@ export default function App() {
   const inputRef = useRef(null);
   const textareaRef = useRef(null);
 
+  const wsRef = useRef(null);
+
+  const connectWS = useCallback(() => {
+    const wsUrl = API.replace(/^http/, "ws") + "/agi/companion/ws";
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        // Proactive push — inject into chat as a LOVE message
+        if (msg.type === "THOUGHT" || msg.type === "PUSH" || msg.type === "NUDGE" || msg.type === "nudge" || msg.message) {
+          const text = msg.message || msg.body || msg.content || JSON.stringify(msg);
+          setMessages(p => [...p, { role: "love", text, time: ts(), push: true, thinking: "" }]);
+        }
+        // Alerts / interventions refresh
+        if (msg.type === "alert" || msg.type === "device_update") {
+          loadLive();
+        }
+      } catch {}
+    };
+
+    ws.onopen = () => setWsStatus("connected");
+    ws.onclose = () => {
+      setWsStatus("disconnected");
+      // Auto-reconnect after 5s
+      setTimeout(() => { if (wsRef.current === ws) connectWS(); }, 5000);
+    };
+
+    ws.onerror = () => ws.close();
+  }, []);
+
   useEffect(() => {
     ping();
     loadLive();
+    connectWS();
     const t = setInterval(loadLive, 30000);
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      if (wsRef.current) wsRef.current.close();
+    };
   }, []);
 
   useEffect(() => {
@@ -267,6 +304,7 @@ export default function App() {
                 <div key={i} className={`msg-row ${m.role}`}>
                   {m.role === "love" && <div className="avatar">♥</div>}
                   <div className="bubble-wrap">
+                    {m.push && <div className="push-indicator">◉ proactive</div>}
                     <div className="bubble">{m.text}</div>
                     <div className="msg-meta">{m.time}</div>
                     <ThinkingDot thinking={m.thinking} />
