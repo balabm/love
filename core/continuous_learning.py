@@ -104,6 +104,44 @@ class ContinuousLearningEngine:
         self.psych_model = get_psychological_model()
         self.world_model = get_world_model()
         self.meta_cognition = get_meta_cognition_engine()
+        
+        # Neural bus integration
+        self._bus = None
+        self._neural_bus_available = False
+        self._init_neural_bus()
+    
+    def _init_neural_bus(self):
+        """Initialize neural bus connection for learning events."""
+        try:
+            from core.neural_bus import get_neural_bus, EventPriority, EventDomain
+            self._bus = get_neural_bus()
+            self._neural_bus_available = True
+        except Exception as e:
+            print(f"[ContinuousLearning] Neural bus unavailable: {e}")
+            self._neural_bus_available = False
+    
+    def _publish_learning_event(self, event_type: str, payload: dict, priority: str = "NORMAL"):
+        """Publish learning events to neural bus."""
+        if not self._neural_bus_available or not self._bus:
+            return
+        
+        try:
+            from core.neural_bus import EventPriority, EventDomain
+            priority_map = {
+                "CRITICAL": EventPriority.CRITICAL,
+                "HIGH": EventPriority.HIGH,
+                "NORMAL": EventPriority.NORMAL,
+                "LOW": EventPriority.LOW,
+            }
+            
+            self._bus.publish(
+                domain=EventDomain.LEARNING,
+                event_type=event_type,
+                payload=payload,
+                priority=priority_map.get(priority, EventPriority.NORMAL)
+            )
+        except Exception as e:
+            print(f"[ContinuousLearning] Failed to publish event: {e}")
     
     def _load_data(self):
         """Load learning data from storage"""
@@ -244,6 +282,17 @@ class ContinuousLearningEngine:
         # Integrate with other systems
         self._integrate_experience(experience)
         
+        # Publish to neural bus
+        self._publish_learning_event("experience_recorded", {
+            "experience_id": exp_id,
+            "source_type": source_type.value,
+            "learning_type": learning_type.value,
+            "description": description,
+            "lesson": lesson,
+            "confidence": confidence,
+            "total_experiences": self.learning_stats["total_experiences"]
+        }, priority="NORMAL")
+        
         print(f"[ContinuousLearning] Recorded experience: {description}")
         return exp_id
     
@@ -312,6 +361,15 @@ class ContinuousLearningEngine:
         
         self.patterns.append(pattern)
         self._save_data()
+        
+        # Publish to neural bus
+        self._publish_learning_event("pattern_discovered", {
+            "pattern_id": pattern_id,
+            "pattern": pattern.pattern,
+            "conditions": pattern.conditions,
+            "confidence": pattern.confidence,
+            "total_patterns": len(self.patterns)
+        }, priority="HIGH")
     
     def apply_learning(self, experience_id: str, context: Dict[str, Any]) -> bool:
         """
@@ -490,6 +548,15 @@ Extract what LOVE should learn from this feedback. Return JSON:
         
         self.adaptations.append(adaptation)
         self._save_data()
+        
+        # Publish to neural bus
+        self._publish_learning_event("adaptation_made", {
+            "adaptation_id": adaptation_id,
+            "description": adaptation.description,
+            "reason": reason,
+            "effectiveness": effectiveness,
+            "total_adaptations": len(self.adaptations)
+        }, priority="HIGH")
         
         return adaptation_id
     

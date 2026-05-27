@@ -653,6 +653,15 @@ class MetacognitiveMonitor:
 
         self._current_load = load
         logger.info(f"[MetaCog] Cognitive load: {level} ({score:.3f})")
+        
+        # Publish regular cognitive load updates to neural bus
+        self._publish("cognitive_load_assessed", {
+            "level": level,
+            "score": score,
+            "factors": factors,
+            "recommendations": recommendations
+        }, priority="NORMAL" if score < 0.55 else "HIGH")
+        
         return load
 
     def get_current_load(self) -> Optional[CognitiveLoad]:

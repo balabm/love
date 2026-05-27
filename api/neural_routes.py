@@ -161,6 +161,64 @@ async def get_telemetry_stats():
         return {"error": str(e)}
 
 
+# ── Monitoring Endpoints ───────────────────────────────────────────────────
+
+@router.get("/monitoring/status")
+async def get_monitoring_status():
+    """Get current monitoring status from metacognitive monitor."""
+    try:
+        from core.metacognitive_monitor import get_metacognitive_monitor
+        monitor = get_metacognitive_monitor()
+        
+        # Get current cognitive load
+        current_load = monitor.get_current_load()
+        
+        # Get recent anomalies
+        anomalies = monitor.get_recent_anomalies(limit=5)
+        
+        return {
+            "cognitive_load": {
+                "level": current_load.level if current_load else "unknown",
+                "score": current_load.score if current_load else 0.0,
+                "factors": current_load.factors if current_load else {}
+            },
+            "anomalies": [
+                {
+                    "type": a.type,
+                    "severity": a.severity,
+                    "description": a.description,
+                    "timestamp": a.timestamp
+                }
+                for a in anomalies
+            ],
+            "system_health": "healthy" if not anomalies or all(a.severity < 0.7 for a in anomalies) else "degraded"
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ── Learning Endpoints ─────────────────────────────────────────────────────
+
+@router.get("/learning/status")
+async def get_learning_status():
+    """Get current learning status from continuous learning engine."""
+    try:
+        from core.continuous_learning import ContinuousLearningEngine
+        engine = ContinuousLearningEngine()
+        
+        summary = engine.get_learning_summary()
+        
+        return {
+            "experiences": summary.get("total_experiences", 0),
+            "patterns": len(engine.patterns),
+            "adaptations": len(engine.adaptations),
+            "by_type": summary.get("by_type", {}),
+            "recent_learning": summary.get("recent_lessons", [])[:3]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Research Engine Endpoints ────────────────────────────────────────────────
 
 @router.get("/research/status")

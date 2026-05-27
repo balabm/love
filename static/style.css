@@ -521,3 +521,124 @@ body {
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Active Monitoring Panel ─────────────────────────────────────── */
+.monitoring-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.monitor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid rgba(0,200,255,0.06);
+  font-size: 0.75rem;
+}
+
+.monitor-label {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-family: var(--font-hud);
+  letter-spacing: 0.5px;
+}
+
+.monitor-value {
+  color: var(--cyan);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.monitor-alerts {
+  max-height: 80px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.monitor-alerts::-webkit-scrollbar { display: none; }
+
+.alert-item {
+  padding: 6px 8px;
+  background: rgba(255,106,0,0.1);
+  border-left: 2px solid var(--orange);
+  border-radius: 2px;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  color: var(--text);
+}
+
+.alert-item.warning {
+  background: rgba(255,106,0,0.1);
+  border-left-color: var(--orange);
+}
+
+.alert-item.critical {
+  background: rgba(255,0,0,0.1);
+  border-left-color: #ff0000;
+}
+
+.alert-item.info {
+  background: rgba(0,200,255,0.1);
+  border-left-color: var(--cyan);
+}
+
+/* ── Learning Insights Panel ─────────────────────────────────────── */
+.learning-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.learning-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid rgba(0,200,255,0.06);
+}
+
+.learning-label {
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  font-family: var(--font-hud);
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.learning-value {
+  color: var(--green);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.learning-feed {
+  max-height: 100px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.learning-feed::-webkit-scrollbar { display: none; }
+
+.learning-flash {
+  padding: 6px 8px;
+  background: rgba(0,255,136,0.05);
+  border-left: 2px solid var(--green);
+  border-radius: 2px;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  color: var(--text);
+  animation: fade-in 0.3s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to { opacity: 1; transform: translateX(0); }
+}

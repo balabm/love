@@ -55,6 +55,17 @@ const memoryFeed    = $('memory-feed');
 const deviceCount   = $('device-count');
 const memoryCount   = $('memory-count');
 
+/* ── Monitoring & Learning ───────────────────────────────────────── */
+const monitorCognitive = $('monitor-cognitive');
+const monitorConfidence = $('monitor-confidence');
+const monitorHealth = $('monitor-health');
+const monitorErrors = $('monitor-errors');
+const monitorAlerts = $('monitor-alerts');
+const learnExperiences = $('learn-experiences');
+const learnPatterns = $('learn-patterns');
+const learnAdaptations = $('learn-adaptations');
+const learningFeed = $('learning-feed');
+
 /* ── Consciousness Stats ───────────────────────────────────────── */
 const valMaturity    = $('val-maturity');
 const valEmotion     = $('val-emotion');
@@ -105,6 +116,8 @@ function handleEvent(data) {
     case 'memory_flash':    handleMemoryFlash(data);    break;
     case 'device_update':   handleDeviceUpdate(data);   break;
     case 'agent_status':    handleAgentStatus(data);    break;
+    case 'monitoring_update': handleMonitoringUpdate(data); break;
+    case 'learning_update': handleLearningUpdate(data); break;
   }
 }
 
@@ -208,6 +221,54 @@ function handleAgentStatus(data) {
   if (!badge) return;
   badge.className = `agent-state ${data.status}`;
   badge.textContent = data.status.toUpperCase();
+}
+
+/* ── Monitoring Update ──────────────────────────────────────────── */
+function handleMonitoringUpdate(data) {
+  if (data.cognitive_load != null) {
+    monitorCognitive.textContent = data.cognitive_load;
+  }
+  if (data.confidence != null) {
+    monitorConfidence.textContent = `${(data.confidence * 100).toFixed(0)}%`;
+  }
+  if (data.system_health != null) {
+    monitorHealth.textContent = data.system_health;
+  }
+  if (data.error_rate != null) {
+    monitorErrors.textContent = `${(data.error_rate * 100).toFixed(1)}%`;
+  }
+  if (data.alerts && data.alerts.length > 0) {
+    monitorAlerts.innerHTML = '';
+    data.alerts.forEach(alert => {
+      const div = document.createElement('div');
+      div.className = `alert-item ${alert.severity || 'info'}`;
+      div.textContent = alert.message;
+      monitorAlerts.appendChild(div);
+    });
+  }
+}
+
+/* ── Learning Update ────────────────────────────────────────────── */
+function handleLearningUpdate(data) {
+  if (data.experiences != null) {
+    learnExperiences.textContent = data.experiences;
+  }
+  if (data.patterns != null) {
+    learnPatterns.textContent = data.patterns;
+  }
+  if (data.adaptations != null) {
+    learnAdaptations.textContent = data.adaptations;
+  }
+  if (data.recent_learning) {
+    const div = document.createElement('div');
+    div.className = 'learning-flash';
+    const ts = new Date().toLocaleTimeString('en-GB', { hour12: false });
+    div.innerHTML = `<div>${escapeHtml(data.recent_learning.slice(0, 100))}${data.recent_learning.length > 100 ? '…' : ''}</div><div class="mf-ts">${ts}</div>`;
+    learningFeed.insertBefore(div, learningFeed.firstChild);
+    // Limit to 5 items
+    const items = learningFeed.querySelectorAll('.learning-flash');
+    if (items.length >= 5) items[items.length - 1].remove();
+  }
 }
 
 /* ── Chat ──────────────────────────────────────────────────────── */
@@ -369,6 +430,18 @@ async function fetchInitialState() {
     const data = await res.json();
     if (data.count != null) memoryCount.textContent = data.count.toLocaleString();
   } catch { /* non-blocking */ }
+
+  try {
+    const res = await fetch(`${API_BASE}/neural/monitoring/status`);
+    const data = await res.json();
+    if (!data.error) handleMonitoringUpdate(data);
+  } catch { /* non-blocking */ }
+
+  try {
+    const res = await fetch(`${API_BASE}/neural/learning/status`);
+    const data = await res.json();
+    if (!data.error) handleLearningUpdate(data);
+  } catch { /* non-blocking */ }
 }
 
 /* ── Voice Input (Web Speech API) ─────────────────────────────── */
@@ -411,3 +484,18 @@ function escapeHtml(str = '') {
 
 /* ── Boot ──────────────────────────────────────────────────────── */
 wsConnect();
+
+// Periodic polling for monitoring and learning updates (every 30 seconds)
+setInterval(async () => {
+  try {
+    const res = await fetch(`${API_BASE}/neural/monitoring/status`);
+    const data = await res.json();
+    if (!data.error) handleMonitoringUpdate(data);
+  } catch { /* non-blocking */ }
+
+  try {
+    const res = await fetch(`${API_BASE}/neural/learning/status`);
+    const data = await res.json();
+    if (!data.error) handleLearningUpdate(data);
+  } catch { /* non-blocking */ }
+}, 30000);

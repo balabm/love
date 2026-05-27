@@ -353,6 +353,16 @@ class TelemetryManager:
             EventDomain.ACTION.value: "action_update",
         }
         
+        # Event-specific mapping for monitoring
+        if event.domain == EventDomain.SELF_EVOLUTION.value:
+            if event.event_type == "cognitive_load_assessed":
+                return "monitoring_update"
+            if event.event_type == "anomaly_detected":
+                return "monitoring_alert"
+            EventDomain.PREDICTION.value: "prediction_update",
+            EventDomain.ACTION.value: "action_update",
+        }
+        
         # Event type specific overrides
         event_type_map = {
             "intervention": "intervention",
