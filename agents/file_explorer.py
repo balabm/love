@@ -5,8 +5,14 @@ When LOVE has free time, it explores Karthi's files to learn about him.
 Reads resumes, configs, notes, project files — builds a rich profile.
 
 This is how LOVE becomes a true companion: it KNOWS you.
+
+Trickle Scan approach: uses os.scandir() one directory at a time with asyncio
+yields between levels, and gates heavy processing on idle state — so LOVE
+learns about Karthi without hammering the disk while he's actively working.
 """
 
+import asyncio
+import concurrent.futures
 import json
 import os
 import re
@@ -47,6 +53,10 @@ SAFE_HOME_SUBDIRS = [
     "Workspace", "Work", "Notes", "Learning", "Career",
 ]
 
+
+# ---------------------------------------------------------------------------
+# Helper functions (all preserved from original)
+# ---------------------------------------------------------------------------
 
 def _log_discovery(entry: Dict[str, Any]):
     entry["ts"] = datetime.now().isoformat()
@@ -230,37 +240,109 @@ def _extract_profile_insights(text: str, category: str) -> Dict[str, Any]:
     return insights
 
 
-def explore_files(max_files: int = 20) -> Dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Idle state gate
+# ---------------------------------------------------------------------------
+
+def _get_idle_state() -> str:
+    """Get current idle state — ACTIVE / RESTING / DEEP_SLEEP."""
+    try:
+        from core.idle_mind import get_idle_state
+        return get_idle_state()
+    except Exception:
+        try:
+            from core.idle_mind import is_idle
+            return "resting" if is_idle() else "active"
+        except Exception:
+            return "resting"  # default to permissive if unavailable
+
+
+# ---------------------------------------------------------------------------
+# Trickle scan — one directory level at a time, yielding between levels
+# ---------------------------------------------------------------------------
+
+async def _trickle_scan_dir(directory: Path, depth: int = 0, max_depth: int = 3) -> List[tuple]:
+    """Scan one directory level at a time, yielding between levels."""
+    candidates = []
+    if depth > max_depth:
+        return candidates
+    try:
+        with os.scandir(directory) as it:
+            entries = list(it)
+        await asyncio.sleep(0.5)  # yield after each directory scan
+        for entry in entries:
+            try:
+                p = Path(entry.path)
+                if entry.is_file(follow_symlinks=False) and _is_safe_path(p):
+                    cat = _categorize_file(p)
+                    if cat or p.suffix.lower() in READABLE_EXTENSIONS:
+                        candidates.append((p, cat))
+                elif entry.is_dir(follow_symlinks=False) and _is_safe_path(p) and depth < max_depth:
+                    sub = await _trickle_scan_dir(p, depth + 1, max_depth)
+                    candidates.extend(sub)
+                    await asyncio.sleep(0.1)  # brief yield between subdirs
+            except (PermissionError, OSError):
+                continue
+    except (PermissionError, OSError):
+        pass
+    return candidates
+
+
+# ---------------------------------------------------------------------------
+# Primary implementation: trickle_explore_files (async)
+# ---------------------------------------------------------------------------
+
+async def trickle_explore_files(max_files: int = 20) -> Dict[str, Any]:
     """
-    Main exploration function. Scans safe home directories, reads files,
-    extracts profile data, populates knowledge graph.
+    Trickle scan implementation — the real workhorse.
+
+    Reads one directory at a time via os.scandir(), yields control between
+    each level, and gates file reading on LOVE's idle state so disk I/O
+    never spikes while Karthi is actively working.
+
+    Idle gates:
+      active     → deferred entirely (returns immediately)
+      resting    → light scan, up to min(max_files, 5) files
+      deep_sleep → full scan, up to max_files files
     """
+    # 1. Check idle state gate
+    idle_state = _get_idle_state()
+    if idle_state == "active":
+        return {
+            "status": "deferred",
+            "reason": "user_active",
+            "files_read": 0,
+            "idle_state": idle_state,
+        }
+
+    effective_max = min(max_files, 5) if idle_state == "resting" else max_files
+
+    # 2. Collect candidates via trickle scan
     home = Path.home()
     profile = _load_profile()
-    files_read = 0
-    discoveries = []
+    candidates: List[tuple] = []
 
-    # Collect candidate paths
-    candidates = []
     for subdir in SAFE_HOME_SUBDIRS:
         p = home / subdir
         if p.exists():
-            try:
-                for item in p.rglob("*"):
-                    if item.is_file() and _is_safe_path(item):
-                        cat = _categorize_file(item)
-                        if cat or item.suffix.lower() in READABLE_EXTENSIONS:
-                            candidates.append((item, cat))
-            except Exception:
-                pass
+            sub_candidates = await _trickle_scan_dir(p)
+            candidates.extend(sub_candidates)
+            await asyncio.sleep(0.2)  # yield between top-level dirs
 
-    # Prioritize: personal files first, then recent, then by size
+    # 3. Sort + limit — personal/categorised files first, then most recent
     candidates.sort(key=lambda x: (
-        0 if x[1] else 1,  # Categorized first
-        -x[0].stat().st_mtime if x[0].exists() else 0,  # Recent first
+        0 if x[1] else 1,  # categorised files first
+        -x[0].stat().st_mtime if x[0].exists() else 0,  # most recent first
     ))
+    candidates = candidates[:effective_max]
 
-    for path, category in candidates[:max_files]:
+    # 4. Process files
+    files_read = 0
+    discoveries = []
+
+    for path, category in candidates:
+        await asyncio.sleep(0.05)  # tiny yield between file reads
+
         text = _read_file_safe(path)
         if not text:
             continue
@@ -294,27 +376,57 @@ def explore_files(max_files: int = 20) -> Dict[str, Any]:
         # Add to knowledge graph
         try:
             from core.knowledge_graph import add_entity, add_relation
-            # Add file as entity
             file_name = path.name
             add_entity(file_name, "document", {"path": rel_path, "category": category or "file"})
-            # Add discovered technologies
             for tech in entities["technologies"]:
                 add_entity(tech, "tool", {})
                 add_relation("Karthi", "uses", tech, strength=1.0, context=f"found in {rel_path}")
         except Exception:
             pass
 
-    # Save enriched profile
+    # 5. Save enriched profile
     _save_profile(profile)
 
     return {
+        "status": "complete",
+        "idle_state": idle_state,
         "files_read": files_read,
         "discoveries": len(discoveries),
-        "profile_keys": list(profile.keys()),
+        "profile_updated": True,
         "top_skills": profile.get("skills", [])[:10],
         "technologies": profile.get("technologies", [])[:10],
     }
 
+
+# ---------------------------------------------------------------------------
+# Backward-compatible sync wrapper
+# ---------------------------------------------------------------------------
+
+def explore_files(max_files: int = 20) -> Dict[str, Any]:
+    """
+    Backward-compatible sync wrapper — runs trickle_explore_files in an event loop.
+
+    Other modules that import and call explore_files() synchronously continue
+    to work without modification.  The real logic lives in trickle_explore_files().
+    """
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # Already inside an async context (e.g. called from a coroutine via
+            # run_in_executor or a test harness) — spin up a fresh thread so we
+            # can create a new event loop without conflicting with the running one.
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, trickle_explore_files(max_files))
+                return future.result(timeout=60)
+        else:
+            return loop.run_until_complete(trickle_explore_files(max_files))
+    except Exception as e:
+        return {"status": "error", "error": str(e), "files_read": 0}
+
+
+# ---------------------------------------------------------------------------
+# Profile accessors (preserved)
+# ---------------------------------------------------------------------------
 
 def get_user_profile() -> Dict[str, Any]:
     """Get what LOVE has learned about the user."""

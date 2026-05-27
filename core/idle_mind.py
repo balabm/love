@@ -18,7 +18,37 @@ import subprocess
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Callable
+
+
+# ── Windows idle-time detection ──────────────────────────────────────────────
+
+class IdleState:
+    """Idle-state constants based on actual OS idle time."""
+    ACTIVE = "active"          # < 60s idle
+    RESTING = "resting"        # 60s - 300s idle
+    DEEP_SLEEP = "deep_sleep"  # > 300s idle
+
+
+# ── Task-weight decorators ───────────────────────────────────────────────────
+
+def light_task(fn: Callable) -> Callable:
+    """Mark a callable as lightweight — allowed in any idle state."""
+    fn.task_weight = "light"
+    return fn
+
+
+def medium_task(fn: Callable) -> Callable:
+    """Mark a callable as medium weight — allowed in RESTING or DEEP_SLEEP."""
+    fn.task_weight = "medium"
+    return fn
+
+
+def heavy_task(fn: Callable) -> Callable:
+    """Mark a callable as heavy — only allowed in DEEP_SLEEP."""
+    fn.task_weight = "heavy"
+    return fn
+
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -38,6 +68,9 @@ _idle_status: Dict[str, Any] = {
     "features_drafted": 0,
     "improvements_found": 0,
     "current_task": None,
+    "idle_state": "active",
+    "idle_seconds": 0,
+    "heavy_tasks_cancelled": 0,
 }
 
 IDLE_THRESHOLD_SECONDS = 300   # 5 min of no chat → start idle exploration
@@ -60,6 +93,144 @@ def get_adaptive_interval() -> int:
     else:
         # Normal idle — think every 10 minutes
         return CYCLE_INTERVAL_SECONDS
+
+
+
+# ── OS-level idle duration ───────────────────────────────────────────────────
+
+def get_idle_duration() -> float:
+    """
+    Returns seconds since the user last touched mouse/keyboard (Windows only).
+    Falls back to time-since-last-chat on non-Windows or if ctypes fails.
+    """
+    try:
+        import ctypes
+        import ctypes.wintypes
+
+        class LASTINPUTINFO(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", ctypes.wintypes.UINT),
+                ("dwTime", ctypes.wintypes.DWORD),
+            ]
+
+        lii = LASTINPUTINFO()
+        lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
+        if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(lii)):
+            millis = ctypes.windll.kernel32.GetTickCount() - lii.dwTime
+            return millis / 1000.0
+    except Exception:
+        pass
+    # Fallback: time since last chat interaction
+    return time.time() - _last_active
+
+
+def get_idle_state() -> str:
+    """Return current IdleState based on actual OS idle time."""
+    secs = get_idle_duration()
+    if secs < 60:
+        return IdleState.ACTIVE
+    elif secs < 300:
+        return IdleState.RESTING
+    else:
+        return IdleState.DEEP_SLEEP
+
+
+# ── Cancellation tokens ─────────────────────────────────────────────────────
+
+_cancellation_tokens: Dict[str, threading.Event] = {}
+
+
+def get_cancellation_token(task_name: str) -> threading.Event:
+    """Return (or create) a cancellation event for *task_name*."""
+    if task_name not in _cancellation_tokens:
+        _cancellation_tokens[task_name] = threading.Event()
+    return _cancellation_tokens[task_name]
+
+
+def cancel_all_heavy_tasks() -> None:
+    """Signal every registered cancellation token and reset idle state to ACTIVE."""
+    cancelled = 0
+    for name, evt in list(_cancellation_tokens.items()):
+        if not evt.is_set():
+            evt.set()
+            cancelled += 1
+    _idle_status["heavy_tasks_cancelled"] = (
+        _idle_status.get("heavy_tasks_cancelled", 0) + cancelled
+    )
+    _idle_status["idle_state"] = IdleState.ACTIVE
+    _log({"event": "cancel_all_heavy_tasks", "cancelled": cancelled})
+
+
+# ── Task dispatching ────────────────────────────────────────────────────────
+
+_WEIGHT_GATE = {
+    IdleState.ACTIVE:     {"light"},
+    IdleState.RESTING:    {"light", "medium"},
+    IdleState.DEEP_SLEEP: {"light", "medium", "heavy"},
+}
+
+
+def dispatch_task(task_name: str, fn: Callable, *args, **kwargs) -> bool:
+    """
+    Gate *fn* based on the current idle state and its ``task_weight`` attribute.
+
+    Returns True if the task was dispatched (called), False if it was blocked.
+    """
+    state = get_idle_state()
+    weight = getattr(fn, "task_weight", "heavy")  # default conservative
+    allowed = _WEIGHT_GATE.get(state, set())
+
+    if weight not in allowed:
+        _log({"event": "task_blocked", "task": task_name, "weight": weight, "state": state})
+        return False
+
+    # Ensure a cancellation token exists for the task
+    token = get_cancellation_token(task_name)
+    token.clear()  # reset before dispatch
+
+    try:
+        fn(*args, **kwargs)
+    except Exception as e:
+        _log({"event": "dispatch_task_error", "task": task_name, "error": str(e)})
+    return True
+
+
+# ── Idle-state monitor thread ───────────────────────────────────────────────
+
+_monitor_thread: Optional[threading.Thread] = None
+_previous_idle_state: str = IdleState.ACTIVE
+
+
+def _idle_state_monitor() -> None:
+    """Background loop: polls OS idle time every 10 s, fires transitions."""
+    global _previous_idle_state
+
+    while _running:
+        try:
+            current = get_idle_state()
+            secs = get_idle_duration()
+
+            _idle_status["idle_state"] = current
+            _idle_status["idle_seconds"] = round(secs, 1)
+
+            # Transition: coming back from deep sleep
+            if _previous_idle_state == IdleState.DEEP_SLEEP and current == IdleState.ACTIVE:
+                cancel_all_heavy_tasks()
+                # Try to nudge Karthi via WebSocket
+                try:
+                    from core.proactive_push import push_nudge
+                    push_nudge("welcome_back", {
+                        "message": "Welcome back! I paused all heavy background work.",
+                        "previous_state": _previous_idle_state,
+                    })
+                except Exception:
+                    pass
+
+            _previous_idle_state = current
+        except Exception as e:
+            _log({"event": "idle_monitor_error", "error": str(e)})
+
+        time.sleep(10)
 
 
 def ping_active():
@@ -920,13 +1091,20 @@ def _idle_loop():
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def start_idle_mind():
-    global _idle_thread, _running
+    global _idle_thread, _monitor_thread, _running
     if _idle_thread and _idle_thread.is_alive():
         return
 
     _running = True
     _idle_thread = threading.Thread(target=_idle_loop, daemon=True, name="LOVE-IdleMind")
     _idle_thread.start()
+
+    # Start the OS-level idle-state monitor
+    if _monitor_thread is None or not _monitor_thread.is_alive():
+        _monitor_thread = threading.Thread(
+            target=_idle_state_monitor, daemon=True, name="LOVE-IdleMonitor"
+        )
+        _monitor_thread.start()
 
 
 def stop_idle_mind():
@@ -938,7 +1116,9 @@ def get_idle_status() -> Dict[str, Any]:
     return {
         **_idle_status,
         "is_idle": is_idle(),
-        "idle_seconds": int(time.time() - _last_active),
+        "idle_seconds": round(get_idle_duration(), 1),
+        "idle_state": get_idle_state(),
+        "active_cancellation_tokens": list(_cancellation_tokens.keys()),
         "drafts": _list_drafts(),
         "recent_thoughts": get_recent_thoughts(5),
     }

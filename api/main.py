@@ -911,6 +911,21 @@ def register_all_modules(lm, _loop=None):
         description="Proactively delivers life domain nudges (hydration, sleep, nutrition, skincare) every 30min — respects quiet hours + focus mode"
     ))
 
+    # ── WAVE 4: RESOURCE GOVERNOR — HOST RESOURCE MONITOR + LOAD FLAG ──
+    def start_resource_governor():
+        from core.resource_governor import get_resource_governor
+        get_resource_governor().start()
+
+    def stop_resource_governor():
+        from core.resource_governor import get_resource_governor
+        get_resource_governor().stop()
+
+    lm.register(ModuleDescriptor(
+        name="resource_governor", wave=4, start_fn=start_resource_governor, stop_fn=stop_resource_governor,
+        depends_on=[], optional=True,
+        description="Monitors CPU/RAM/GPU every 5s — sets SYSTEM_UNDER_LOAD flag when threshold exceeded, triggering model hot-swap"
+    ))
+
     # ── WAVE 5: TERMINAL MONITOR — REAL-TIME ERROR WATCHER + LLM AUTO-FIX ──
     def start_terminal_monitor():
         from core.terminal_monitor import get_terminal_monitor
@@ -3838,7 +3853,15 @@ async def idle_mind_status():
     """Get LOVE's current idle mind state and recent thoughts."""
     if not IDLE_MIND_AVAILABLE:
         return {"error": "Idle mind not available"}
-    return get_idle_status()
+    status = get_idle_status()
+    # Prompt 17: augment with OS-level idle detection
+    try:
+        from core.idle_mind import get_idle_state, get_idle_duration
+        status["idle_state"] = get_idle_state()
+        status["idle_seconds"] = round(get_idle_duration(), 1)
+    except Exception:
+        pass
+    return status
 
 
 @app.post("/love/idle/trigger")
@@ -5697,6 +5720,58 @@ async def homeostasis_drives_history(hours: int = 6):
                 except Exception:
                     pass
         return {"entries": entries[-200:]}  # cap at 200 data points
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ========== RESOURCE GOVERNOR (Prompt 16) ==========
+
+@app.get("/system/resources")
+async def system_resources():
+    """Current CPU/RAM/GPU snapshot + load state."""
+    try:
+        from core.resource_governor import get_resource_governor
+        gov = get_resource_governor()
+        snap = gov.get_snapshot()
+        return {"under_load": gov.is_under_load(), **snap}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/system/load")
+async def system_load():
+    """Is the system currently under heavy load?"""
+    try:
+        from core.resource_governor import get_resource_governor, SYSTEM_UNDER_LOAD
+        gov = get_resource_governor()
+        return {
+            "under_load": SYSTEM_UNDER_LOAD.is_set(),
+            "reason": gov.get_snapshot().get("load_reason"),
+            "snapshot": gov.get_snapshot(),
+        }
+    except Exception as e:
+        return {"under_load": False, "error": str(e)}
+
+
+@app.get("/system/idle")
+async def system_idle():
+    """Current idle state: ACTIVE / RESTING / DEEP_SLEEP + idle seconds."""
+    try:
+        from core.idle_mind import get_idle_state, get_idle_duration
+        return {
+            "idle_state": get_idle_state(),
+            "idle_seconds": round(get_idle_duration(), 1),
+        }
+    except Exception as e:
+        return {"idle_state": "unknown", "error": str(e)}
+
+
+@app.get("/system/model-info")
+async def system_model_info():
+    """Which LLM models are active right now — normal or fallback under load."""
+    try:
+        from core.llm import get_current_model_info
+        return get_current_model_info()
     except Exception as e:
         return {"error": str(e)}
 

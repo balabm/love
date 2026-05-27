@@ -15,14 +15,33 @@ SETTINGS = get_settings()
 import requests
 import json
 
+FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "qwen2.5:0.5b")   # tiny quantized fallback
+FALLBACK_SYSTEM_PREFIX = "[SYSTEM UNDER LOAD — keep answer to 1-2 sentences, no deep reasoning] "
+
+
+def _is_system_under_load() -> bool:
+    """Check if host system is under heavy load — resource governor or heavy process."""
+    try:
+        from core.resource_governor import get_resource_governor
+        if get_resource_governor().is_under_load():
+            return True
+    except Exception:
+        pass
+    return False
+
+
 class DirectOllama:
-    def __init__(self, base_url, model, temperature=0.4, timeout=300, **kwargs):
+    def __init__(self, base_url, model, temperature=0.4, timeout=300, system_prefix: str = "", **kwargs):
         self.base_url = base_url.rstrip('/')
         self.model = model
         self.temperature = temperature
         self.timeout = timeout
-        
+        self.system_prefix = system_prefix
+
     def invoke(self, prompt: str) -> str:
+        if self.system_prefix:
+            prompt = self.system_prefix + prompt
+
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.model,
@@ -32,11 +51,11 @@ class DirectOllama:
                 "temperature": self.temperature
             }
         }
-        
+
         # Auto-detect if the prompt is asking for JSON and enforce it
         if "Return a JSON" in prompt or "JSON response" in prompt or "JSON structure" in prompt:
             payload["format"] = "json"
-            
+
         print(f"[DirectOllama] Sending POST to {url} with model {self.model} (timeout={self.timeout})")
         try:
             import requests
@@ -52,20 +71,30 @@ def get_reasoning_llm(temperature: float = None, max_tokens: int = None):
     """Get reasoning LLM with optional override parameters."""
     base_url = os.getenv("OLLAMA_BASE_URL", SETTINGS.models.base_url)
     model = os.getenv("REASONING_MODEL", SETTINGS.models.reasoning)
-    
+
     if temperature is None:
         temperature = SETTINGS.devices.power_profiles.get(
             SETTINGS.devices.primary_device_type or 'desktop',
             type('obj', (object,), {'llm_temperature': 0.4})()
         ).llm_temperature if SETTINGS.devices.power_profiles else 0.4
-    
-    return DirectOllama(base_url=base_url, model=model, temperature=temperature)
+
+    system_prefix = ""
+    if _is_system_under_load():
+        model = FALLBACK_MODEL
+        system_prefix = FALLBACK_SYSTEM_PREFIX
+        print(f"[LLM] System under load — downgrading to {model}")
+    return DirectOllama(base_url=base_url, model=model, temperature=temperature, system_prefix=system_prefix)
 
 def get_coding_llm(temperature: float = 0.3, max_tokens: int = None):
     """Get coding LLM with optional parameters."""
     base_url = os.getenv("OLLAMA_BASE_URL", SETTINGS.models.base_url)
     model = os.getenv("CODING_MODEL", SETTINGS.models.coding)
-    return DirectOllama(base_url=base_url, model=model, temperature=temperature)
+    system_prefix = ""
+    if _is_system_under_load():
+        model = FALLBACK_MODEL
+        system_prefix = FALLBACK_SYSTEM_PREFIX
+        print(f"[LLM] System under load — downgrading coding model to {model}")
+    return DirectOllama(base_url=base_url, model=model, temperature=temperature, system_prefix=system_prefix)
 
 def get_embedding_model():
     """Get embedding model for vector search."""
@@ -80,14 +109,26 @@ def route_llm(user_input: str):
         "javascript", "program", "debug", "build", "fix", "refactor",
         "class", "method", "api", "endpoint", "database", "sql"
     ]
-    
+
     device_type = SETTINGS.devices.primary_device_type
     power_profile = SETTINGS.devices.power_profiles.get(device_type) if device_type else None
-    
+
     if power_profile and power_profile.use_quantized:
         return get_reasoning_llm(temperature=0.5)
-    
+
     if any(word in user_input.lower() for word in coding_keywords):
         return get_coding_llm()
-    
+
     return get_reasoning_llm()
+
+def get_current_model_info() -> dict:
+    """Return which models are currently active and whether we're in fallback mode."""
+    under_load = _is_system_under_load()
+    base_url = os.getenv("OLLAMA_BASE_URL", SETTINGS.models.base_url)
+    return {
+        "under_load": under_load,
+        "reasoning_model": FALLBACK_MODEL if under_load else os.getenv("REASONING_MODEL", SETTINGS.models.reasoning),
+        "coding_model": FALLBACK_MODEL if under_load else os.getenv("CODING_MODEL", SETTINGS.models.coding),
+        "fallback_model": FALLBACK_MODEL,
+        "base_url": base_url,
+    }
