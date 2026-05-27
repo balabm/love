@@ -866,6 +866,51 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True, description="Loads user settings into memory"
     ))
 
+    # ── WAVE 5: HOMEOSTASIS — BIOLOGICAL DRIVES + ENERGY BUDGETING ──
+    def start_homeostasis_module():
+        from core.homeostasis import get_homeostasis
+        get_homeostasis().start()
+
+    def stop_homeostasis_module():
+        from core.homeostasis import get_homeostasis
+        get_homeostasis().stop()
+
+    lm.register(ModuleDescriptor(
+        name="homeostasis", wave=5, start_fn=start_homeostasis_module, stop_fn=stop_homeostasis_module,
+        depends_on=["neural_bus"], optional=True,
+        description="Biological drives (hunger/fatigue/boredom/curiosity/loneliness/dissatisfaction), circadian rhythm, autophagy, energy budgeting"
+    ))
+
+    # ── WAVE 5: WAVE ENGINE — AUTONOMOUS SELF-DIRECTED GROWTH LOOP ──
+    def start_wave_engine_module():
+        from core.wave_engine import get_wave_engine
+        get_wave_engine().start_daemon(interval_hours=24)
+
+    def stop_wave_engine_module():
+        from core.wave_engine import get_wave_engine
+        get_wave_engine().stop_daemon()
+
+    lm.register(ModuleDescriptor(
+        name="wave_engine", wave=5, start_fn=start_wave_engine_module, stop_fn=stop_wave_engine_module,
+        depends_on=["consciousness"], optional=True,
+        description="24h gap scan + autonomous Wave proposal generation — LOVE's self-directed evolution loop"
+    ))
+
+    # ── WAVE 5: LIFE NUDGE SCHEDULER — PROACTIVE PHYSICAL WELLBEING NUDGES ──
+    def start_life_nudge_scheduler():
+        from core.life_nudge_scheduler import start_scheduler
+        start_scheduler()
+
+    def stop_life_nudge_scheduler():
+        from core.life_nudge_scheduler import stop_scheduler
+        stop_scheduler()
+
+    lm.register(ModuleDescriptor(
+        name="life_nudge_scheduler", wave=5, start_fn=start_life_nudge_scheduler, stop_fn=stop_life_nudge_scheduler,
+        depends_on=["proactive_push"], optional=True,
+        description="Proactively delivers life domain nudges (hydration, sleep, nutrition, skincare) every 30min — respects quiet hours + focus mode"
+    ))
+
     # ── WAVE 6: SENTINEL — ALWAYS-ON SELF-MONITORING PROTOCOL ──
     def start_sentinel_module():
         from core.sentinel import start_sentinel
@@ -5259,6 +5304,23 @@ async def life_report(days: int = 7):
     return get_life_report(days)
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Wave 25: Proactive Life Coach API
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/life/coach/nudges")
+async def life_coach_nudges():
+    """Time-aware, focus-aware nudges for right now."""
+    from core.life_coach import get_life_coach
+    nudges = get_life_coach().get_nudges()
+    return {"nudges": nudges, "count": len(nudges), "timestamp": __import__("datetime").datetime.now().isoformat()}
+
+@app.get("/life/coach/goals")
+async def life_coach_goals():
+    """Adaptive daily goals based on recent performance."""
+    from core.life_coach import get_life_coach
+    return get_life_coach().get_adaptive_goals()
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Wave 23: Autonomous Wave Evolution Engine API
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -5299,6 +5361,164 @@ async def wave_gaps():
     """Run a gap scan only (no wave proposal)."""
     from core.wave_engine import GapScanner
     return GapScanner().scan()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HOMEOSTASIS — Biological Drives, Circadian Rhythm, Energy, Autophagy
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/homeostasis/snapshot")
+async def homeostasis_snapshot():
+    """Full homeostasis state: drives, circadian phase, energy, autophagy candidates."""
+    try:
+        from core.homeostasis import get_homeostasis
+        from dataclasses import asdict
+        h = get_homeostasis()
+        return {
+            "drives": h._drives.as_dict(),
+            "dominant_drive": h._drives.dominant(),
+            "circadian_phase": h._state.circadian_phase,
+            "last_tick": h._state.last_tick,
+            "energy_accounts": {k: asdict(v) for k, v in h._accounts.items()},
+            "autophagy_candidates": list(h._autophagy.keys()),
+            "autophagy_ready": h.autophagy_ready_to_remove(),
+            "running": h._running,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/homeostasis/drives")
+async def homeostasis_drives():
+    """Current biological drive values [0..1] and dominant drive."""
+    try:
+        from core.homeostasis import get_homeostasis
+        h = get_homeostasis()
+        drives = h._drives.as_dict()
+        return {"drives": drives, "dominant": h._drives.dominant(), "phase": h._state.circadian_phase}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/homeostasis/circadian")
+async def homeostasis_circadian():
+    """Current circadian phase (wake / focus / wind_down / sleep)."""
+    try:
+        from core.homeostasis import get_homeostasis
+        h = get_homeostasis()
+        return {
+            "phase": h._state.circadian_phase,
+            "started_at": h._state.started_at,
+            "last_sleep": h._state.last_sleep,
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+class CircadianOverrideRequest(BaseModel):
+    phase: str  # wake / focus / wind_down / sleep
+
+
+@app.post("/homeostasis/circadian/override")
+async def homeostasis_circadian_override(req: CircadianOverrideRequest):
+    """Manually override the circadian phase."""
+    valid = {"wake", "focus", "wind_down", "sleep"}
+    if req.phase not in valid:
+        return {"error": f"Invalid phase. Must be one of: {', '.join(valid)}"}
+    try:
+        from core.homeostasis import get_homeostasis
+        h = get_homeostasis()
+        h._state.circadian_phase = req.phase
+        h._save()
+        return {"ok": True, "phase": req.phase}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/homeostasis/energy")
+async def homeostasis_energy():
+    """Per-module energy budgets, spending, fat reserves, throttle status."""
+    try:
+        from core.homeostasis import get_homeostasis
+        from dataclasses import asdict
+        h = get_homeostasis()
+        return {"accounts": {k: asdict(v) for k, v in h._accounts.items()}}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+class EnergyAdjustRequest(BaseModel):
+    budget_seconds_per_day: float
+
+
+@app.post("/homeostasis/energy/{module_name}")
+async def homeostasis_energy_adjust(module_name: str, req: EnergyAdjustRequest):
+    """Adjust a module's daily energy budget."""
+    try:
+        from core.homeostasis import get_homeostasis
+        h = get_homeostasis()
+        if module_name not in h._accounts:
+            h.register_module(module_name, req.budget_seconds_per_day)
+        else:
+            h._accounts[module_name].budget_seconds_per_day = req.budget_seconds_per_day
+        h._save()
+        return {"ok": True, "module": module_name, "budget": req.budget_seconds_per_day}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/homeostasis/autophagy")
+async def homeostasis_autophagy():
+    """Modules flagged for potential deprecation (autophagy candidates)."""
+    try:
+        from core.homeostasis import get_homeostasis
+        h = get_homeostasis()
+        return {
+            "candidates": h._autophagy,
+            "ready_to_archive": h.autophagy_ready_to_remove(),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.delete("/homeostasis/autophagy/{module_name}")
+async def homeostasis_autophagy_preserve(module_name: str):
+    """Remove a module from the autophagy list (preserve it)."""
+    try:
+        from core.homeostasis import get_homeostasis
+        h = get_homeostasis()
+        if module_name in h._autophagy:
+            del h._autophagy[module_name]
+            h._save()
+            return {"ok": True, "message": f"{module_name} preserved — removed from autophagy list"}
+        return {"ok": False, "message": f"{module_name} not in autophagy list"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/homeostasis/drives/history")
+async def homeostasis_drives_history(hours: int = 6):
+    """Recent drive log entries for sparkline charts."""
+    try:
+        from pathlib import Path
+        import json
+        from datetime import datetime, timedelta
+        log_path = Path("data/homeostasis/drives.jsonl")
+        if not log_path.exists():
+            return {"entries": []}
+        cutoff = datetime.now() - timedelta(hours=hours)
+        entries = []
+        with open(log_path, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    e = json.loads(line)
+                    if datetime.fromisoformat(e["t"]) >= cutoff:
+                        entries.append(e)
+                except Exception:
+                    pass
+        return {"entries": entries[-200:]}  # cap at 200 data points
+    except Exception as e:
+        return {"error": str(e)}
+
 
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

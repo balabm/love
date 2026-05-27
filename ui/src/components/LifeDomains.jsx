@@ -492,9 +492,13 @@ export default function LifeDomains() {
 
 function WeeklyInsights() {
   const [insights, setInsights] = useState(null);
+  const [correlations, setCorrelations] = useState(null);
+  const [goals, setGoals] = useState(null);
 
   useEffect(() => {
     api.get("/life/insights").then(r => setInsights(r.data)).catch(() => {});
+    api.get("/life/correlations").then(r => setCorrelations(r.data)).catch(() => {});
+    api.get("/life/coach/goals").then(r => setGoals(r.data)).catch(() => {});
   }, []);
 
   if (!insights) return <div className="ld-loading">Loading insights...</div>;
@@ -549,6 +553,41 @@ function WeeklyInsights() {
         barMax={100}
         color="#f9a8d4"
       />
+
+      {/* Cross-domain intelligence */}
+      {correlations && (correlations.correlations?.length > 0 || correlations.warnings?.length > 0 || correlations.positives?.length > 0) && (
+        <div className="ld-insight-card ld-correlations-card">
+          <div className="ld-insight-header">
+            <span>⚡</span>
+            <span className="ld-insight-title">Cross-Domain Patterns</span>
+          </div>
+          {correlations.positives?.map((p, i) => (
+            <div key={`p${i}`} className="ld-corr-item ld-corr-positive">◉ {p}</div>
+          ))}
+          {correlations.correlations?.map((c, i) => (
+            <div key={`c${i}`} className="ld-corr-item ld-corr-insight">◈ {c}</div>
+          ))}
+          {correlations.warnings?.map((w, i) => (
+            <div key={`w${i}`} className="ld-corr-item ld-corr-warning">△ {w}</div>
+          ))}
+        </div>
+      )}
+
+      {/* Adaptive goals */}
+      {goals && !goals.error && (
+        <div className="ld-insight-card ld-goals-card">
+          <div className="ld-insight-header">
+            <span>◎</span>
+            <span className="ld-insight-title">Today’s Adaptive Goals</span>
+          </div>
+          {Object.entries(goals).filter(([k]) => k !== "error").map(([domain, g]) => (
+            <div key={domain} className="ld-goal-item">
+              <span className="ld-goal-domain">{domain}</span>
+              <span className="ld-goal-msg">{g.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

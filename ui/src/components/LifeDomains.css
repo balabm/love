@@ -553,3 +553,53 @@
   padding: 2rem;
   text-align: center;
 }
+
+/* Cross-domain correlations */
+.ld-correlations-card {
+  grid-column: 1 / -1;
+  border-top: 2px solid #fbbf24;
+}
+
+.ld-corr-item {
+  font-size: 0.78rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 0.3rem;
+}
+
+.ld-corr-positive { color: #34d399; background: rgba(52, 211, 153, 0.08); }
+.ld-corr-insight  { color: #60a5fa; background: rgba(96, 165, 250, 0.08); }
+.ld-corr-warning  { color: #fbbf24; background: rgba(251, 191, 36, 0.08); }
+
+/* Adaptive goals */
+.ld-goals-card {
+  grid-column: 1 / -1;
+  border-top: 2px solid #818cf8;
+}
+
+.ld-goal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #0f172a;
+}
+
+.ld-goal-item:last-child { border-bottom: none; }
+
+.ld-goal-domain {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #818cf8;
+  background: rgba(129, 140, 248, 0.1);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  min-width: 65px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.ld-goal-msg {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
