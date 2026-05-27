@@ -19,6 +19,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from threading import Lock
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 def get_creds_path():
     return Path(os.getenv("GOOGLE_CREDENTIALS_PATH", "./credentials.json"))
@@ -206,6 +213,24 @@ class GoogleServices:
                     "attendees": len(item.get("attendees", []))
                 })
 
+            # Publish to neural bus for cross-module awareness
+            if NEURAL_BUS_AVAILABLE and events:
+                try:
+                    bus = get_neural_bus()
+                    bus.publish(
+                        domain="calendar",
+                        event_type="events_fetched",
+                        payload={
+                            "event_count": len(events),
+                            "events": events[:5],  # First 5 events
+                            "timestamp": datetime.now().isoformat()
+                        },
+                        source_module="google_services",
+                        priority=EventPriority.NORMAL
+                    )
+                except Exception as e:
+                    print(f"[GoogleServices] Neural bus publish error: {e}")
+
             return events
         except Exception as e:
             self._last_error = str(e)
@@ -363,6 +388,24 @@ class GoogleServices:
                     "from": headers.get("From", "")[:60],
                     "snippet": detail.get("snippet", "")[:120]
                 })
+
+            # Publish to neural bus for cross-module awareness
+            if NEURAL_BUS_AVAILABLE:
+                try:
+                    bus = get_neural_bus()
+                    bus.publish(
+                        domain="email",
+                        event_type="email_summary",
+                        payload={
+                            "unread_important": unread_important,
+                            "urgent": urgent,
+                            "timestamp": datetime.now().isoformat()
+                        },
+                        source_module="google_services",
+                        priority=EventPriority.HIGH if unread_important > 0 else EventPriority.NORMAL
+                    )
+                except Exception as e:
+                    print(f"[GoogleServices] Neural bus publish error: {e}")
 
             return {"unread_important": unread_important, "urgent": urgent}
         except Exception as e:

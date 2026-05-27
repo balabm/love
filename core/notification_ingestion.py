@@ -14,6 +14,13 @@ from core import knowledge_graph
 from integrations.phone_bridge import PhoneBridge
 from integrations.microsoft_bridge import MicrosoftBridge
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 
 class NotificationIngestionEngine:
     _instance = None
@@ -72,6 +79,20 @@ class NotificationIngestionEngine:
                     try:
                         # Extract and ingest
                         knowledge_graph.ingest_text(n, source="phone_notification")
+                        
+                        # Publish to neural bus
+                        if NEURAL_BUS_AVAILABLE:
+                            try:
+                                bus = get_neural_bus()
+                                bus.publish(
+                                    domain="notifications",
+                                    event_type="phone_notification",
+                                    payload={"notification": n, "source": "phone"},
+                                    source_module="notification_ingestion",
+                                    priority=EventPriority.NORMAL
+                                )
+                            except Exception as e:
+                                print(f"[Ingestion] Neural bus publish error: {e}")
                     except Exception as e:
                         print(f"[Ingestion] KG ingest error for phone: {e}")
 
@@ -91,6 +112,20 @@ class NotificationIngestionEngine:
                     if h not in self._seen_hashes:
                         self._seen_hashes.add(h)
                         knowledge_graph.ingest_text(full_text, source="teams_message")
+                        
+                        # Publish to neural bus
+                        if NEURAL_BUS_AVAILABLE:
+                            try:
+                                bus = get_neural_bus()
+                                bus.publish(
+                                    domain="notifications",
+                                    event_type="teams_message",
+                                    payload={"message": full_text, "sender": sender, "chat": chat},
+                                    source_module="notification_ingestion",
+                                    priority=EventPriority.NORMAL
+                                )
+                            except Exception as e:
+                                print(f"[Ingestion] Neural bus publish error: {e}")
             except Exception as e:
                 pass
 

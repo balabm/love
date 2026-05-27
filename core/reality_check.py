@@ -1,5 +1,12 @@
 import logging
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 def reconcile_state_conflicts(current_state: dict) -> dict:
     """Detect and fix obvious paradoxes in user state JSON."""
     state = current_state.copy()
@@ -25,5 +32,19 @@ def reconcile_state_conflicts(current_state: dict) -> dict:
     elif stress < 0:
         state["stress_level"] = 0
         logging.info(f"Clamped stress_level from {stress} to 0")
+    
+    # Publish to neural bus
+    if NEURAL_BUS_AVAILABLE:
+        try:
+            bus = get_neural_bus()
+            bus.publish(
+                domain="reality",
+                event_type="state_reconciled",
+                payload={"state": state, "conflicts_fixed": True},
+                source_module="reality_check",
+                priority=EventPriority.NORMAL
+            )
+        except Exception as e:
+            logging.error(f"Neural bus publish error: {e}")
     
     return state

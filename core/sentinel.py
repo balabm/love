@@ -44,6 +44,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 DATA_DIR = Path(__file__).parent.parent / "data"
 SENTINEL_DIR = DATA_DIR / "sentinel"
 SENTINEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -702,6 +709,32 @@ class Sentinel:
             engine.push(push_cat, decision.get("message", ""), decision.get("priority", "normal"))
         except Exception:
             pass
+        
+        # Publish to neural bus for cross-module awareness
+        if NEURAL_BUS_AVAILABLE:
+            try:
+                bus = get_neural_bus()
+                priority_map = {
+                    "critical": EventPriority.CRITICAL,
+                    "high": EventPriority.HIGH,
+                    "normal": EventPriority.NORMAL,
+                    "low": EventPriority.LOW
+                }
+                bus.publish(
+                    domain="sentinel",
+                    event_type="decision_executed",
+                    payload={
+                        "category": category,
+                        "title": title,
+                        "message": decision.get("message", ""),
+                        "priority": decision.get("priority", "normal"),
+                        "autonomous": decision.get("autonomous", False)
+                    },
+                    source_module="sentinel",
+                    priority=priority_map.get(decision.get("priority", "normal"), EventPriority.NORMAL)
+                )
+            except Exception as e:
+                print(f"[Sentinel] Neural bus publish error: {e}")
 
     # ── Event Emission ─────────────────────────────────────────────────────────
 

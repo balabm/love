@@ -16,6 +16,13 @@ from core.llm import route_llm
 from core.context_engine import get_live_context, get_prompt_context
 from core.voice_loop import speak_proactive_alert
 
+# Neural Bus integration
+try:
+    from core.neural_bus import get_neural_bus, EventPriority
+    NEURAL_BUS_AVAILABLE = True
+except ImportError:
+    NEURAL_BUS_AVAILABLE = False
+
 SETTINGS = get_settings()
 
 class NeuralCortex:
@@ -226,6 +233,20 @@ Return ONLY valid JSON:
                         print(f"\n[Jarvis] 🗣️ Proactive Speech: {speech}")
                         speak_proactive_alert(speech, severity="info")
                         self.last_speech_time = now
+                        
+                        # Publish to neural bus
+                        if NEURAL_BUS_AVAILABLE:
+                            try:
+                                bus = get_neural_bus()
+                                bus.publish(
+                                    domain="speech",
+                                    event_type="proactive_speech",
+                                    payload={"speech": speech, "timestamp": datetime.now().isoformat()},
+                                    source_module="jarvis_protocol",
+                                    priority=EventPriority.HIGH
+                                )
+                            except Exception as e:
+                                print(f"[Jarvis] Neural bus publish error: {e}")
                 
                 # Background Action (Future hook to Swarm/Ghost Dev)
                 if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
@@ -240,6 +261,20 @@ Return ONLY valid JSON:
                         get_action_engine().execute_action_plan(action_plan)
                     except Exception as ae:
                         print(f"[Jarvis] Action Engine failed: {ae}")
+                    
+                    # Publish action plan to neural bus
+                    if NEURAL_BUS_AVAILABLE:
+                        try:
+                            bus = get_neural_bus()
+                            bus.publish(
+                                domain="action",
+                                event_type="autonomous_action",
+                                payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat()},
+                                source_module="jarvis_protocol",
+                                priority=EventPriority.HIGH
+                            )
+                        except Exception as e:
+                            print(f"[Jarvis] Neural bus publish error: {e}")
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
