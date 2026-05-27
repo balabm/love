@@ -1,9 +1,12 @@
 """
-LOVE Rollout Planner — Look-ahead planning via world model rollouts.
+LOVE Rollout Planner — Active MPC planning via world model rollouts.
 
-Instead of responding immediately, LOVE simulates what happens to its
-predicted state under different response strategies, then picks the one
-that minimises predicted free energy (surprise) over a 4-step horizon.
+Wave 27 upgrade: Active Planning Loop.
+
+Before:  Planner injected a passive hint into the prompt; LLM could ignore it.
+After:   Planner selects the response style as a *directive*, the prompt
+         enforces it, and post-response verification compares predicted vs
+         actual free energy to improve future planning.
 
 Architecture:
   1. Get current world model state (last embedding in history)
@@ -12,15 +15,20 @@ Architecture:
   3. For each candidate: roll out MLP for ROLLOUT_STEPS steps
   4. Compute cumulative predicted free energy across all steps
   5. Return the candidate with lowest total predicted error
+  6. NEW: After response, embed it and compare actual FE vs predicted FE
+  7. NEW: Feed prediction delta back to calibrate planning confidence
 
 This is Model Predictive Control (MPC) applied to language.
 """
 from __future__ import annotations
 
+import json
 import threading
 import time
+from collections import deque
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Deque, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -37,6 +45,13 @@ ROLLOUT_STEPS = 4          # default horizon (matches world_model_latent.ROLLOUT
 BLEND_ALPHA = 0.7          # weight on current state vs candidate direction
 DISCOUNT = 0.9             # recency discount per step
 MAX_PLANNING_MS = 200      # timeout for get_planning_context()
+
+# Outcome learning
+DATA_DIR = Path(__file__).parent.parent / "data" / "planner"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+OUTCOMES_FILE = DATA_DIR / "outcomes.jsonl"
+CALIBRATION_FILE = DATA_DIR / "calibration.json"
+OUTCOME_WINDOW = 50        # keep last N outcomes for calibration
 
 DEFAULT_STYLES: List[str] = [
     "direct factual answer",
@@ -81,6 +96,12 @@ class RolloutPlanner:
         self._sum_winner_fe: float = 0.0
         self._last_winner: str = ""
         self._last_plan_ts: Optional[str] = None
+
+        # Outcome learning (Wave 27)
+        self._pending_plan: Optional[Dict[str, Any]] = None  # plan awaiting verification
+        self._outcomes: Deque[Dict[str, Any]] = deque(maxlen=OUTCOME_WINDOW)
+        self._calibration = self._load_calibration()
+        self._style_accuracy: Dict[str, List[float]] = {}  # style -> recent prediction errors
 
     # ── Internal helpers ─────────────────────────────────────────────────────
 
@@ -250,37 +271,242 @@ class RolloutPlanner:
 
         return self.plan(q_emb, style_list)
 
+    # ── Active planning (Wave 27) ──────────────────────────────────────────
+
+    def plan_active(self, query: str) -> Dict[str, Any]:
+        """
+        Active planning: select style, store pending plan for verification.
+
+        Returns dict with:
+          - winner_style: the selected response style string
+          - directive: prompt directive enforcing the style
+          - plan_id: unique ID for outcome tracking
+          - all_scores: full ranking for transparency
+        """
+        result = self.plan_response_style(query)
+        winner = result["winner_candidate"]
+        plan_id = f"plan_{int(time.time() * 1000)}"
+
+        # Store pending plan for post-response verification
+        pending = {
+            "plan_id": plan_id,
+            "query": query[:200],
+            "winner_style": winner,
+            "predicted_fe": result["winner_fe"],
+            "all_scores": result["all_scores"],
+            "timestamp": time.time(),
+        }
+        with self._mu:
+            self._pending_plan = pending
+
+        # Build directive — this is injected as a REQUIREMENT, not a hint
+        directive = self._build_directive(winner, result)
+
+        return {
+            "winner_style": winner,
+            "directive": directive,
+            "plan_id": plan_id,
+            "all_scores": result["all_scores"],
+            "predicted_fe": result["winner_fe"],
+        }
+
+    def _build_directive(self, winner: str, result: Dict) -> str:
+        """Build a prompt directive from the planning result."""
+        # Get calibration confidence for this style
+        confidence = self._calibration.get("confidence", 0.5)
+        style_acc = self._get_style_accuracy(winner)
+
+        # Strong directive when confidence is high, softer when uncertain
+        if confidence > 0.6 and style_acc > 0.4:
+            strength = "RESPOND IN THIS STYLE"
+        elif confidence > 0.3:
+            strength = "Prefer this response style"
+        else:
+            strength = "Consider this response style"
+
+        fe = result["winner_fe"]
+        runner_up = ""
+        scores = result.get("all_scores", [])
+        ranked = sorted(scores, key=lambda s: s.get("rank", 99))
+        if len(ranked) >= 2:
+            runner_up = f" (runner-up: {ranked[1]['candidate']})"
+
+        return (
+            f"\n\n=== PLANNED RESPONSE STYLE (world model MPC, 4-step lookahead) ===\n"
+            f"{strength}: **{winner}**{runner_up}\n"
+            f"Predicted surprise: {fe:.3f} | Planning confidence: {confidence:.0%}\n"
+        )
+
+    # ── Outcome verification (Wave 27C) ──────────────────────────────────
+
+    def verify_outcome(self, response_text: str) -> Optional[Dict[str, Any]]:
+        """
+        After LLM responds, embed the response and compare predicted vs actual FE.
+        Feeds the prediction delta back to calibrate future planning.
+
+        Returns outcome record, or None if no pending plan.
+        """
+        with self._mu:
+            pending = self._pending_plan
+            self._pending_plan = None
+
+        if pending is None:
+            return None
+
+        # Embed the actual response
+        response_emb = embed(response_text)
+        if response_emb is None:
+            return None
+
+        # Compute actual free energy of the response trajectory
+        m = self._get_world_model()
+        with m._mu:
+            W1 = m._W1.copy()
+            b1 = m._b1.copy()
+            W2 = m._W2.copy()
+            b2 = m._b2.copy()
+
+        actual_fe = self._rollout_fe(response_emb, ROLLOUT_STEPS, W1, b1, W2, b2)
+        predicted_fe = pending["predicted_fe"]
+
+        # Prediction error: how far off were we?
+        prediction_delta = actual_fe - predicted_fe
+        abs_delta = abs(prediction_delta)
+
+        # Was our prediction accurate? (within 20% is "good")
+        prediction_accurate = abs_delta < max(0.1, predicted_fe * 0.2)
+
+        outcome = {
+            "plan_id": pending["plan_id"],
+            "query": pending["query"],
+            "winner_style": pending["winner_style"],
+            "predicted_fe": round(predicted_fe, 5),
+            "actual_fe": round(actual_fe, 5),
+            "prediction_delta": round(prediction_delta, 5),
+            "prediction_accurate": prediction_accurate,
+            "timestamp": time.time(),
+        }
+
+        # Update calibration
+        self._update_calibration(outcome)
+
+        # Persist
+        self._persist_outcome(outcome)
+
+        with self._mu:
+            self._outcomes.append(outcome)
+
+        return outcome
+
+    def _update_calibration(self, outcome: Dict[str, Any]) -> None:
+        """Update planning confidence based on prediction accuracy."""
+        style = outcome["winner_style"]
+        accurate = outcome["prediction_accurate"]
+        delta = abs(outcome["prediction_delta"])
+
+        # Update global confidence (EMA)
+        current_conf = self._calibration.get("confidence", 0.5)
+        signal = 1.0 if accurate else max(0.0, 1.0 - delta)
+        new_conf = 0.9 * current_conf + 0.1 * signal
+        self._calibration["confidence"] = round(new_conf, 4)
+
+        # Update per-style accuracy
+        if style not in self._style_accuracy:
+            self._style_accuracy[style] = []
+        self._style_accuracy[style].append(1.0 if accurate else 0.0)
+        # Keep last 20 per style
+        if len(self._style_accuracy[style]) > 20:
+            self._style_accuracy[style] = self._style_accuracy[style][-20:]
+
+        # Update total outcomes count
+        self._calibration["total_outcomes"] = self._calibration.get("total_outcomes", 0) + 1
+        self._calibration["last_outcome_ts"] = datetime.utcnow().isoformat()
+
+        # Persist calibration
+        self._save_calibration()
+
+    def _get_style_accuracy(self, style: str) -> float:
+        """Get recent prediction accuracy for a specific style."""
+        history = self._style_accuracy.get(style, [])
+        if not history:
+            return 0.5  # default: uncertain
+        return sum(history) / len(history)
+
+    # ── Calibration persistence ──────────────────────────────────────────
+
+    def _load_calibration(self) -> Dict[str, Any]:
+        try:
+            if CALIBRATION_FILE.exists():
+                return json.loads(CALIBRATION_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+        return {"confidence": 0.5, "total_outcomes": 0}
+
+    def _save_calibration(self) -> None:
+        try:
+            CALIBRATION_FILE.write_text(
+                json.dumps(self._calibration, indent=2), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+    def _persist_outcome(self, outcome: Dict[str, Any]) -> None:
+        try:
+            with OUTCOMES_FILE.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(outcome) + "\n")
+        except Exception:
+            pass
+
+    # ── Active planning context (replaces passive hint) ──────────────────
+
     def get_planning_context(self, query: str) -> str:
         """
-        Convenience method for agent.py prompt injection.
+        Active planning for agent.py prompt injection (Wave 27 upgrade).
 
-        Returns a 1-line hint string if planning completes within 200 ms,
-        otherwise returns an empty string.
+        Instead of a passive hint, this returns a directive that instructs
+        the LLM to adopt the planned response style. Also stores the pending
+        plan for post-response verification via verify_outcome().
         """
         t0 = time.monotonic()
         try:
-            result = self.plan_response_style(query)
+            result = self.plan_active(query)
             elapsed_ms = (time.monotonic() - t0) * 1000.0
             if elapsed_ms > MAX_PLANNING_MS:
+                # Timed out — fall back to no directive
+                with self._mu:
+                    self._pending_plan = None
                 return ""
-            w = result["winner_candidate"]
-            fe = result["winner_fe"]
-            return f"[planner: {w} predicted lowest surprise over 4 steps (FE={fe:.3f})]"
+            return result["directive"]
         except Exception:
             return ""
 
     def snapshot(self) -> Dict[str, Any]:
-        """Return planner telemetry."""
+        """Return planner telemetry (expanded for Wave 27)."""
         with self._mu:
             total = self._total_plans
             avg_fe = (
                 self._sum_winner_fe / total if total > 0 else 0.0
             )
+
+            # Outcome learning stats
+            outcomes = list(self._outcomes)
+            n_outcomes = len(outcomes)
+            accurate_count = sum(1 for o in outcomes if o.get("prediction_accurate"))
+            avg_delta = (
+                sum(abs(o.get("prediction_delta", 0)) for o in outcomes) / n_outcomes
+                if n_outcomes > 0 else 0.0
+            )
+
             return {
                 "total_plans": total,
                 "avg_winner_fe": round(avg_fe, 5),
                 "last_plan_winner": self._last_winner,
                 "last_plan_timestamp": self._last_plan_ts,
+                "calibration_confidence": self._calibration.get("confidence", 0.5),
+                "total_outcomes": n_outcomes,
+                "outcome_accuracy": round(accurate_count / n_outcomes, 3) if n_outcomes else 0.0,
+                "avg_prediction_delta": round(avg_delta, 5),
+                "has_pending_plan": self._pending_plan is not None,
             }
 
 

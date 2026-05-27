@@ -6,6 +6,33 @@ For honest capability assessment, see [GAP_TO_AGI.md](GAP_TO_AGI.md).
 
 ---
 
+## Wave 27 (May 2026) — Active Planning + Focus-Aware Heartbeat
+
+### 27A: Active Model Predictive Control
+- `core/rollout_planner.py` upgraded: passive hint → active directive
+- `plan_active()` samples 6 response styles, simulates 4-step MLP rollout each
+- Graduated enforcement based on calibration confidence (strong/prefer/consider)
+- Wired into `core/agent.py` via `get_planning_context()`
+
+### 27B: Focus-Aware Heartbeat Gating
+- `core/heartbeat.py` `_filter_triggers()` now checks `_is_focus_mode()`
+- During focus: only critical/warning triggers pass; info/celebration queued
+- Queued nudges stored in `data/suppressed_nudges.json`, delivered post-focus
+- Reads from `focus_session.json` and `work_tracker` for focus state
+
+### 27C: Planning Outcome Learning
+- `verify_outcome()` embeds LLM response, computes actual FE trajectory
+- Compares predicted vs actual FE → calibration confidence (EMA-updated)
+- Per-style accuracy tracked (last 20 outcomes per style)
+- Outcomes persisted to `data/planner/outcomes.jsonl`
+- Wired into `core/agent.py` post-response pipeline
+
+### New API endpoints
+- `GET /planner/snapshot` — full planner telemetry + outcome stats
+- `POST /planner/plan_active` — run active planning for a query
+- `GET /planner/calibration` — planning confidence and accuracy
+- `GET /heartbeat/focus-status` — focus mode state + suppressed nudge queue
+
 ## Wave 26 (May 2026) — Ritual Integration + Push
 
 - `RitualView.jsx` enhanced with body status sections (morning + evening)

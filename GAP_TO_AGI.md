@@ -3,11 +3,70 @@
 This file is the antidote to marketing-speak inside LOVE. It is updated whenever
 substantive capability lands. Read it before claiming "AGI" or "living computer".
 
-Last updated: 2026-05-27 (Wave 26 — Life Domains + Cross-Domain Intelligence + Life Coach).
+Last updated: 2026-05-27 (Wave 27 — Active Planning + Focus-Aware Heartbeat).
 
 ---
 
-## What just landed (Waves 22-26)
+## What just landed (Wave 27)
+
+### Wave 27: Active Planning Loop + Focus-Aware Heartbeat
+
+Three changes that close real gaps:
+
+#### 27A: Active Model Predictive Control (`core/rollout_planner.py`)
+
+The rollout planner existed since Wave 21 but only injected a *passive hint* into the
+prompt — "planner: empathetic supportive response predicted lowest surprise". The LLM
+could (and often did) ignore it.
+
+**Now**: The planner selects the response style as a **directive** with graduated
+enforcement based on calibration confidence:
+- High confidence (>60%) + good style accuracy (>40%): "RESPOND IN THIS STYLE"
+- Medium confidence: "Prefer this response style"
+- Low confidence: "Consider this response style"
+
+This is genuine Model Predictive Control over language — the world model simulates 6
+candidate response strategies for 4 steps each, picks the one with lowest predicted
+free energy, and tells the LLM to follow it.
+
+#### 27B: Focus-Aware Heartbeat Gating (`core/heartbeat.py`)
+
+Previously, the heartbeat's `_filter_triggers()` only checked cooldowns. If the user
+was in a focus/deep work session, every 15-minute heartbeat could still fire info-level
+nudges (hydration reminders, learning suggestions, etc.).
+
+**Now**: `_filter_triggers()` checks focus mode via `_is_focus_mode()` (reads
+`focus_session.json` + `work_tracker`). During focus:
+- Only `critical` and `warning` triggers pass through
+- `info` and `celebration` triggers are queued to `suppressed_nudges.json`
+- When focus mode ends, queued triggers are delivered in the next scan cycle
+
+This means deep work is *actually protected* — LOVE won't nudge you about water when
+you're in flow state, but will still warn about work hour limits.
+
+#### 27C: Planning Outcome Learning
+
+After each LLM response, `verify_outcome()` embeds the response and compares its
+actual free energy trajectory against the planner's prediction:
+- Prediction delta tracked per outcome
+- Calibration confidence updated via EMA (accurate predictions → higher confidence →
+  stronger directives → better style adherence)
+- Per-style accuracy tracked (styles that consistently mismatch get softer enforcement)
+- All outcomes persisted to `data/planner/outcomes.jsonl`
+
+This is the first closed-loop learning signal between the world model and actual
+response quality. Over time, the planner should become more accurate and more
+assertive with styles that work well.
+
+**API endpoints**:
+- `GET /planner/snapshot` — full planner telemetry + outcome stats
+- `POST /planner/plan_active` — run active planning for a query
+- `GET /planner/calibration` — planning confidence and accuracy
+- `GET /heartbeat/focus-status` — focus mode state + suppressed nudge queue
+
+---
+
+## What landed (Waves 22-26)
 
 ### Wave 22: Life Domains Engine (`core/life_domains.py`)
 
@@ -190,9 +249,11 @@ world model rollouts).
 | LoRA behavioral evolution scaffold | ✅ |
 | **LoRA fitness from user satisfaction** | ✅ NEW |
 | **Implicit feedback detection per turn** | ✅ NEW |
+| **Active MPC planning (world model → directive → verify)** | ✅ NEW |
+| **Focus-aware heartbeat gating (suppress during deep work)** | ✅ NEW |
+| **Planning outcome learning (predicted vs actual FE)** | ✅ NEW |
 | Real LoRA with torch/peft weights | ❌ |
 | Fork/parallel selection | ❌ |
-| LLM-generated planning via world model rollouts | ❌ |
 | Multi-agent coordination | ❌ |
 
 ---
@@ -208,18 +269,24 @@ arrives — but until then this is embedding-space simulation, not true model ad
 LOVE can mutate and revert but can't run two instances simultaneously under selection
 pressure. The ASI A/B comparison is sequential (before → after), not parallel.
 
-### 3. World model rollout not yet used for planning
-`train_rollout()` improves the MLP's multi-step prediction quality but nothing yet
-*uses* those rollouts for look-ahead planning. The next step: a simple Monte Carlo
-policy that samples possible action sequences from the world model and picks the one
-with lowest predicted free energy.
+### ~~3. World model rollout not yet used for planning~~ RESOLVED (Wave 27)
+~~`train_rollout()` improves the MLP's multi-step prediction quality but nothing yet
+*uses* those rollouts for look-ahead planning.~~
 
-### 4. Implicit feedback is turn-level, not episode-level
-`detect_implicit()` fires on each turn independently. It doesn't yet model an episode
-arc (e.g. "user asked 5 questions, got helpful answers, came back next day" = strong
-positive). Longer-horizon satisfaction would require session-level analysis.
+**Now**: `plan_active()` samples 6 response styles, simulates each through 4-step
+MLP rollout, picks lowest free energy, injects as directive into LLM prompt. After
+response, `verify_outcome()` compares predicted vs actual FE and updates calibration
+confidence. This is genuine Model Predictive Control with closed-loop learning.
 
-### 5. No causal attribution for self-modification outcomes
+### ~~4. Implicit feedback is turn-level, not episode-level~~ RESOLVED (pre-Wave 27)
+~~`detect_implicit()` fires on each turn independently.~~
+
+Episode-level aggregation already exists in `feedback_collector.py`:
+`close_episode()` computes arc slope + recency-weighted mean + peak satisfaction →
+episode fitness propagated to LoRA evolution at 0.85 confidence. Auto-closes after
+30 minutes of silence.
+
+### 3. No causal attribution for self-modification outcomes
 When quality improves after an ASI cycle, LOVE records "improved" but doesn't know
 *which* code change caused the improvement (there may be confounds from other systems
 also improving simultaneously). True attribution requires controlled A/B with a
@@ -229,23 +296,18 @@ held-out quality metric.
 
 ## Concrete next moves
 
-1. **World model rollout → planning** — use `train_rollout()` outputs to do a simple
-   lookahead: sample 4 candidate "next response styles" from MoE, simulate each
-   through 4 rollout steps, pick the one with lowest predicted free energy. First
-   genuine look-ahead planning.
-
-2. **Episode-level satisfaction** — aggregate per-turn satisfaction signals into a
-   session-level score (weighted by turn recency). Use this as the primary LoRA
-   fitness signal rather than per-turn EMA.
-
-3. **torch + peft LoRA** — `pip install torch peft` as optional dep. If available,
+1. **torch + peft LoRA** — `pip install torch peft` as optional dep. If available,
    generate real LoRA checkpoint files (delta weights) as mutations. A/B test via
    separate Ollama Modelfile. This is the biggest remaining gap.
 
-4. **Monte Carlo self-improvement targeting** — instead of random module selection,
+2. **Monte Carlo self-improvement targeting** — instead of random module selection,
    ASI should simulate "if I improve module X, which quality metric is predicted to
    improve?" using the world model rollout. Closes the loop between prediction and
    action.
+
+3. **Planning calibration depth** — right now calibration is global + per-style.
+   Next: condition calibration on query category (casual vs technical vs emotional)
+   so the planner learns which styles work for which types of conversation.
 
 ---
 

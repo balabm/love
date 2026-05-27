@@ -115,8 +115,15 @@ class ProactiveHeartbeat:
         except Exception:
             pass
 
-        # Deduplicate and filter
+        # Deduplicate and filter (focus-aware, Wave 27)
         active_triggers = self._filter_triggers(triggers)
+
+        # Deliver previously-suppressed triggers if focus mode ended
+        if not self._is_focus_mode():
+            queued = self._deliver_suppressed()
+            if queued:
+                print(f"[Heartbeat] Delivering {len(queued)} queued trigger(s) from focus mode")
+                active_triggers.extend(queued)
 
         # Notify for each trigger
         for trigger in active_triggers:
@@ -653,21 +660,102 @@ class ProactiveHeartbeat:
         elapsed = (datetime.now() - self.last_triggers[key]).total_seconds() / 60
         return elapsed < cooldown_minutes
     
+    def _is_focus_mode(self) -> bool:
+        """Check if user is currently in a focus/deep work session (Wave 27)."""
+        try:
+            from pathlib import Path as _P
+            import json as _json
+            focus_file = _P(__file__).parent.parent / "data" / "focus_session.json"
+            if focus_file.exists():
+                data = _json.loads(focus_file.read_text(encoding="utf-8"))
+                if data.get("active", False):
+                    started = data.get("started_at", 0)
+                    if time.time() - started < 4 * 3600:
+                        return True
+        except Exception:
+            pass
+        try:
+            from core.work_tracker import get_work_tracker
+            tracker = get_work_tracker()
+            status = tracker.get_status()
+            if status.get("focus_active", False):
+                return True
+        except Exception:
+            pass
+        return False
+
     def _filter_triggers(self, triggers: List[TriggerEvent]) -> List[TriggerEvent]:
-        """Filter triggers to avoid duplicates and respect cooldowns."""
+        """Filter triggers: respect cooldowns + suppress non-critical during focus (Wave 27)."""
+        in_focus = self._is_focus_mode()
+        suppressed = []
         active = []
         for trigger in triggers:
             key = f"{trigger.source}_{trigger.trigger_type}"
-            
-            # Skip if recently triggered (within cooldown)
+
             if self._recently_triggered(key):
                 continue
-            
-            # Update last triggered time
+
+            # Focus mode gating: only critical/warning pass through
+            if in_focus and trigger.severity not in ("critical", "warning"):
+                suppressed.append(trigger)
+                continue
+
             self.last_triggers[key] = datetime.now()
             active.append(trigger)
-        
+
+        if suppressed:
+            self._queue_suppressed(suppressed)
+            print(f"[Heartbeat] Focus mode: suppressed {len(suppressed)} non-critical trigger(s)")
+
         return active
+
+    def _queue_suppressed(self, triggers: List[TriggerEvent]) -> None:
+        """Store suppressed triggers for delivery after focus mode ends."""
+        try:
+            from pathlib import Path as _P
+            import json as _json
+            queue_file = _P(__file__).parent.parent / "data" / "suppressed_nudges.json"
+            existing = []
+            if queue_file.exists():
+                try:
+                    existing = _json.loads(queue_file.read_text(encoding="utf-8"))
+                except Exception:
+                    existing = []
+            for t in triggers:
+                existing.append({
+                    "source": t.source, "trigger_type": t.trigger_type,
+                    "severity": t.severity, "message": t.message,
+                    "action_suggestion": t.action_suggestion,
+                    "suppressed_at": datetime.now().isoformat(),
+                })
+            existing = existing[-20:]
+            queue_file.write_text(_json.dumps(existing, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _deliver_suppressed(self) -> List[TriggerEvent]:
+        """Deliver queued triggers when focus mode ends."""
+        try:
+            from pathlib import Path as _P
+            import json as _json
+            queue_file = _P(__file__).parent.parent / "data" / "suppressed_nudges.json"
+            if not queue_file.exists():
+                return []
+            queued = _json.loads(queue_file.read_text(encoding="utf-8"))
+            if not queued:
+                return []
+            triggers = []
+            for item in queued:
+                triggers.append(TriggerEvent(
+                    source=item["source"], trigger_type=item["trigger_type"],
+                    severity=item["severity"],
+                    message=f"[queued] {item['message']}",
+                    action_suggestion=item.get("action_suggestion"),
+                ))
+            queue_file.write_text("[]", encoding="utf-8")
+            return triggers
+        except Exception:
+            return []
     
     def _notify(self, trigger: TriggerEvent):
         """Send notification through all registered channels."""
