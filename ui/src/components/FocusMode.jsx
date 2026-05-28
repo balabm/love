@@ -75,7 +75,7 @@ export default function FocusMode() {
 
     // Wave 29: log focus session to backend (Guardian sees it, real-time tracker counts it)
     try {
-      await api.post(`${API}/work/focus/log`, {
+      await api.post(`/work/focus/log`, {
         preset: preset.label,
         duration_minutes: preset.duration,
         task: task || "",
@@ -85,7 +85,7 @@ export default function FocusMode() {
     // Ask LOVE for a note
     setNoteLoading(true);
     try {
-      const res = await api.post(`${API}/chat`, {
+      const res = await api.post(`/chat`, {
         text: `I just completed a ${preset.duration}-minute ${preset.label} session${task ? ` working on: ${task}` : ""}. Give me a one-sentence acknowledgement — sharp, real, no fluff.`,
         mode: "general",
       });

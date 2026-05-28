@@ -260,6 +260,70 @@ class SelfImprovementDaemon:
             scores.append(0.5)
             print(f"[SelfImprovementDaemon] Subsystem health check error: {e}")
 
+        # 8. Activity Log Health — learn from recent behavior patterns
+        try:
+            from core.activity_log import get_recent_activity, get_activity_stats
+            stats = get_activity_stats(hours=24)
+            recent = get_recent_activity(hours=6, limit=20)
+
+            total_actions = stats.get("total", 0)
+            trend = stats.get("trend", "idle")
+
+            if total_actions == 0:
+                issues.append({
+                    "subsystem": "autonomy",
+                    "severity": "high",
+                    "issue": "No autonomous activity in the last 24 hours — system may be stalled",
+                    "recommendation": "Check if supervisor and subsystems are running",
+                })
+                improvements.append({
+                    "category": "capability_gap",
+                    "action": "restart_autonomy_loops",
+                    "priority": 0.9,
+                    "auto_execute": False,
+                    "context": "No recent activity detected"
+                })
+            elif trend == "idle":
+                issues.append({
+                    "subsystem": "autonomy",
+                    "severity": "medium",
+                    "issue": "Autonomy trend is idle — LOVE was active but has slowed down",
+                    "recommendation": "Reduce loop intervals or increase trigger sensitivity",
+                })
+
+            # Check for repeated failures
+            failed = [a for a in recent if a.get("action", "").startswith("failed") or a.get("action", "").endswith("_failed")]
+            if len(failed) >= 3:
+                issues.append({
+                    "subsystem": "autonomy",
+                    "severity": "high",
+                    "issue": f"{len(failed)} recent failures detected in autonomous actions",
+                    "recommendation": "Investigate and fix root causes — may need Ghost Dev intervention",
+                })
+                improvements.append({
+                    "category": "capability_gap",
+                    "action": "auto_fix_failures",
+                    "priority": 0.85,
+                    "auto_execute": True,
+                    "context": f"{len(failed)} failures detected"
+                })
+
+            # Check for over-researching (too many research tasks, no execution)
+            research_count = sum(1 for a in recent if a.get("component") == "research_engine")
+            execute_count = sum(1 for a in recent if a.get("component") == "goal_engine" and a.get("action") == "execute")
+            if research_count > 5 and execute_count == 0:
+                issues.append({
+                    "subsystem": "autonomy",
+                    "severity": "low",
+                    "issue": "High research activity but no goal execution — may be stuck in analysis paralysis",
+                    "recommendation": "Force goal execution to convert knowledge into action",
+                })
+
+            scores.append(0.7 if total_actions > 10 else (0.5 if total_actions > 0 else 0.2))
+        except Exception as e:
+            scores.append(0.5)
+            print(f"[SelfImprovementDaemon] Activity log health check error: {e}")
+
         health_score = sum(scores) / len(scores) if scores else 0.5
 
         report = DiagnosticReport(
@@ -284,16 +348,16 @@ class SelfImprovementDaemon:
     def execute_improvements(self, report: DiagnosticReport) -> Dict[str, Any]:
         """
         Execute auto-approved improvements from a diagnostic report.
+        Now handles more categories with real autonomous actions.
         """
+        from core.activity_log import log_activity
         executed = 0
         failed = 0
 
         for imp in report.improvements:
-            if not imp.get("auto_execute", False):
-                continue
-
             category = imp.get("category", "")
             action = imp.get("action", "")
+            auto_execute = imp.get("auto_execute", False)
 
             try:
                 if category == "prompt_evolution" and action == "evolve_weak_genes":
@@ -303,6 +367,7 @@ class SelfImprovementDaemon:
                     self._log("improvement_executed", {
                         "category": category, "action": action, "result": result
                     })
+                    log_activity("self_improvement_daemon", "prompt_evolved", f"Evolved prompt DNA: {result}", {"result": str(result)[:200]}, importance="high")
                     executed += 1
 
                 elif category == "memory_optimization" and action == "consolidate_memories":
@@ -312,6 +377,7 @@ class SelfImprovementDaemon:
                     self._log("improvement_executed", {
                         "category": category, "action": action, "result": result
                     })
+                    log_activity("self_improvement_daemon", "memory_consolidated", f"Consolidated temporal memories: {result}", {"result": str(result)[:200]}, importance="normal")
                     executed += 1
 
                 elif category == "evolution_cycle":
@@ -320,7 +386,77 @@ class SelfImprovementDaemon:
                     self._log("improvement_executed", {
                         "category": category, "action": action, "result": str(result)[:200]
                     })
+                    log_activity("self_improvement_daemon", "evolution_cycle", f"Ran self-evolution cycle", {"result": str(result)[:200]}, importance="high")
                     executed += 1
+
+                elif category == "causal_learning" and action == "expand_causal_model":
+                    # Queue research on causal reasoning to expand world model
+                    try:
+                        from core.research_engine import get_research_engine, ResearchPriority
+                        re = get_research_engine()
+                        re.add_research_task(
+                            topic="causal reasoning in AI assistants",
+                            question="How can an AI assistant build and maintain an accurate causal model of user behavior and system state?",
+                            priority=ResearchPriority.MEDIUM,
+                            source="self_improvement",
+                            max_depth=1,
+                            teach_user=False,
+                        )
+                        log_activity("self_improvement_daemon", "causal_research_queued", "Queued research to expand causal model", importance="normal")
+                        executed += 1
+                    except Exception as e:
+                        failed += 1
+                        self._log("improvement_failed", {"category": category, "action": action, "error": str(e)})
+
+                elif category == "capability_gap" or (auto_execute and "gap" in action):
+                    if action == "auto_fix_failures":
+                        # Try to fix recent failures by queuing research on common failure patterns
+                        try:
+                            from core.research_engine import get_research_engine, ResearchPriority
+                            from core.ghost_dev import get_ghost_dev
+                            re = get_research_engine()
+                            re.add_research_task(
+                                topic="LOVE system failure patterns",
+                                question="What are common failure patterns in autonomous AI systems and how can they be made self-healing?",
+                                priority=ResearchPriority.HIGH,
+                                source="self_healing",
+                                max_depth=1,
+                                teach_user=False,
+                            )
+                            log_activity("self_improvement_daemon", "auto_fix_triggered", "Queued research to fix repeated failures", importance="high")
+                            executed += 1
+                        except Exception as e:
+                            failed += 1
+                            self._log("improvement_failed", {"category": category, "action": action, "error": str(e)})
+                    else:
+                        # Trigger wave engine to propose a wave for this gap
+                        try:
+                            from core.wave_engine import get_wave_engine
+                            wave = get_wave_engine()
+                            wave.run_cycle()
+                            log_activity("self_improvement_daemon", "wave_triggered", "Triggered wave engine for capability gap", importance="high")
+                            executed += 1
+                        except Exception as e:
+                            failed += 1
+                            self._log("improvement_failed", {"category": category, "action": action, "error": str(e)})
+
+                elif category == "goal_refinement" and "stale" in str(imp.get("context", "")).lower():
+                    # Decompose stale goals via goal engine
+                    try:
+                        from core.autonomous_goal_engine import get_goals, update_goal_progress
+                        stale = [g for g in get_goals("active") if g.progress_pct == 0]
+                        for g in stale[:1]:
+                            update_goal_progress(g.id, 1, "Auto-decomposed by self-improvement daemon to prevent stagnation")
+                        log_activity("self_improvement_daemon", "goals_decomposed", f"Decomposed {len(stale[:1])} stale goal(s)", importance="normal")
+                        executed += 1
+                    except Exception as e:
+                        failed += 1
+                        self._log("improvement_failed", {"category": category, "action": action, "error": str(e)})
+
+                else:
+                    # Log proposals that couldn't be auto-executed
+                    if not auto_execute:
+                        log_activity("self_improvement_daemon", "improvement_proposed", f"Proposed: {category}/{action} — needs review", {"category": category, "action": action}, importance="normal")
 
             except Exception as e:
                 self._log("improvement_failed", {
@@ -352,7 +488,9 @@ class SelfImprovementDaemon:
 
     def _daemon_loop(self, interval_minutes: int = 30):
         """Background loop that runs diagnostics and improvements."""
+        from core.activity_log import log_activity
         print(f"[SelfImprovementDaemon] Started. Running every {interval_minutes} minutes.")
+        log_activity("self_improvement_daemon", "started", f"Daemon started, interval={interval_minutes}min", importance="normal")
 
         while self._running:
             try:
@@ -368,6 +506,12 @@ class SelfImprovementDaemon:
                 self.state["total_runs"] = self.state.get("total_runs", 0) + 1
                 self.state["total_improvements"] = self.state.get("total_improvements", 0) + results["executed"]
                 self._save_state()
+
+                # Log to activity log
+                log_activity("self_improvement_daemon", "diagnostics_complete",
+                    f"Health={report.health_score:.2f}, issues={len(report.issues)}, improvements={results['executed']}",
+                    {"health_score": report.health_score, "issues": len(report.issues), "executed": results["executed"]},
+                    importance="high" if report.health_score < 0.5 else "normal")
 
                 # Log to consciousness
                 try:
@@ -385,6 +529,7 @@ class SelfImprovementDaemon:
 
             except Exception as e:
                 self._log("daemon_error", {"error": str(e)})
+                log_activity("self_improvement_daemon", "error", f"Daemon error: {str(e)[:100]}", {"error": str(e)[:200]}, importance="critical")
                 print(f"[SelfImprovementDaemon] Error: {e}")
 
             # Sleep for interval
@@ -393,6 +538,7 @@ class SelfImprovementDaemon:
                     break
                 time.sleep(1)
 
+        log_activity("self_improvement_daemon", "stopped", "Daemon stopped", importance="normal")
         print("[SelfImprovementDaemon] Stopped.")
 
     def start(self, interval_minutes: int = 30):
@@ -419,14 +565,23 @@ class SelfImprovementDaemon:
             return {"status": "stopped"}
 
     def get_status(self) -> Dict[str, Any]:
-        """Get daemon status."""
-        return {
+        """Get daemon status with activity summary."""
+        status = {
             "running": self._running,
             "last_run": self.state.get("last_run"),
             "last_health_score": self.state.get("last_health_score"),
             "total_runs": self.state.get("total_runs", 0),
             "total_improvements": self.state.get("total_improvements", 0),
         }
+        try:
+            from core.activity_log import get_activity_stats
+            stats = get_activity_stats(hours=24)
+            status["activity_today"] = stats.get("total", 0)
+            status["activity_trend"] = stats.get("trend", "idle")
+            status["activity_by_component"] = stats.get("by_component", {})
+        except Exception:
+            pass
+        return status
 
     # ── Persistence ──────────────────────────────────────────────────────────
 

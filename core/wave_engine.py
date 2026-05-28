@@ -300,6 +300,16 @@ class WaveProposer:
         existing_waves = _load_waves()
         wave_number = len(existing_waves) + 22  # Start Wave numbering from current Wave 22
 
+        # Map category to likely target files for Ghost Dev
+        target_map = {
+            "physical_wellbeing": ["core/context_engine.py", "core/homeostasis.py", "ui/src/components/Dashboard.jsx"],
+            "mental_wellbeing": ["core/consciousness.py", "core/emotional_state.py", "ui/src/components/EmotionalPanel.jsx"],
+            "productivity_balance": ["core/work_tracker.py", "core/jarvis_protocol.py", "ui/src/components/Dashboard.jsx"],
+            "intelligence": ["core/temporal_memory.py", "core/memory_architect.py", "core/consciousness.py"],
+            "capability": ["core/autonomy_supervisor.py", "core/autonomous_mission_queue.py"],
+            "system_health": ["core/autonomy_supervisor.py", "core/module_lifecycle.py", "ui/src/components/SupervisorPanel.jsx"],
+        }
+
         return {
             "wave_number": wave_number,
             "title": f"Wave {wave_number}: {template['title']}",
@@ -313,6 +323,7 @@ class WaveProposer:
             "proposed_at": datetime.now().isoformat(),
             "executed_at": None,
             "outcome": None,
+            "target_files": target_map.get(trigger_category, ["core/autonomy_supervisor.py"]),
         }
 
 
@@ -334,6 +345,7 @@ class WaveEngine:
 
     def run_cycle(self) -> Dict:
         """Run one full scan-propose cycle. Returns the new wave proposal."""
+        from core.activity_log import log_activity
         print("[WaveEngine] Running gap scan...", flush=True)
         scan = self.scanner.scan()
         proposal = self.proposer.propose(scan)
@@ -342,6 +354,7 @@ class WaveEngine:
         waves.append(proposal)
         _save_waves(waves)
         _log("wave_proposed", {"wave": proposal["title"], "trigger": proposal["trigger_category"]})
+        log_activity("wave_engine", "wave_proposed", f"Proposed {proposal['title']}", {"wave": proposal["title"], "trigger": proposal["trigger_category"], "gaps": len(scan.get("gaps", []))}, importance="high")
 
         # Update status
         self._update_status({
@@ -404,6 +417,7 @@ class WaveEngine:
         self._running = False
 
     def _loop(self, interval_hours: int):
+        from core.activity_log import log_activity
         # Run immediately on start if no recent cycle
         try:
             status = self.get_status()
@@ -412,7 +426,9 @@ class WaveEngine:
                 self.run_cycle()
         except Exception as e:
             print(f"[WaveEngine] Initial cycle error: {e}", flush=True)
+            log_activity("wave_engine", "cycle_error", f"Initial cycle error: {str(e)[:100]}", {"error": str(e)[:200]}, importance="high")
 
+        log_activity("wave_engine", "daemon_started", f"Wave daemon running every {interval_hours}h", importance="normal")
         while self._running:
             sleep_secs = interval_hours * 3600
             for _ in range(int(sleep_secs / 60)):
@@ -424,6 +440,7 @@ class WaveEngine:
                     self.run_cycle()
                 except Exception as e:
                     print(f"[WaveEngine] Cycle error: {e}", flush=True)
+                    log_activity("wave_engine", "cycle_error", f"Cycle error: {str(e)[:100]}", {"error": str(e)[:200]}, importance="high")
 
 
 # Singleton

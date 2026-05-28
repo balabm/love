@@ -166,39 +166,46 @@ class TelemetryManager:
     async def broadcast_event(self, payload: Dict[str, Any]):
         """
         Broadcast an event payload to all connected WebSocket clients.
-        
+
         Args:
             payload: The event payload to broadcast
         """
         if not self.active_connections:
             return
-        
-        # Gather all send operations
+
+        # Snapshot current clients to avoid dict-mutation races
+        clients_snapshot = list(self.active_connections.items())
         disconnected_clients = []
         send_tasks = []
-        
-        for client_id, websocket in self.active_connections.items():
+        task_to_client: dict = {}
+
+        for client_id, websocket in clients_snapshot:
             try:
-                send_tasks.append(self._send_to_client(client_id, payload))
+                task = asyncio.create_task(self._send_to_client(client_id, payload))
+                send_tasks.append(task)
+                task_to_client[id(task)] = client_id
             except Exception as e:
-                logger.error(f"[TelemetryManager] Error preparing send to {client_id}: {e}")
+                logger.warning(f"[TelemetryManager] Error preparing send to {client_id}: {e}")
                 disconnected_clients.append(client_id)
-        
+
         # Execute all sends concurrently
         if send_tasks:
             results = await asyncio.gather(*send_tasks, return_exceptions=True)
-            
+
             # Track successful broadcasts
             success_count = sum(1 for r in results if not isinstance(r, Exception))
             self._stats["events_broadcast"] += success_count
-            
+
             # Log errors
-            for i, result in enumerate(results):
+            for task, result in zip(send_tasks, results):
                 if isinstance(result, Exception):
-                    client_id = list(self.active_connections.keys())[i]
-                    logger.error(f"[TelemetryManager] Broadcast error to {client_id}: {result}")
+                    client_id = task_to_client.get(id(task), "unknown")
+                    if isinstance(result, (ConnectionResetError, BrokenPipeError)):
+                        logger.info(f"[TelemetryManager] Client {client_id} disconnected during broadcast")
+                    else:
+                        logger.warning(f"[TelemetryManager] Broadcast error to {client_id}: {type(result).__name__}")
                     self._stats["errors"] += 1
-        
+
         # Clean up disconnected clients
         for client_id in disconnected_clients:
             self.disconnect(client_id)
@@ -206,27 +213,34 @@ class TelemetryManager:
     async def _send_to_client(self, client_id: str, payload: Dict[str, Any]) -> bool:
         """
         Send a payload to a specific client.
-        
+
         Args:
             client_id: The connection ID
             payload: The payload to send
-            
+
         Returns:
             True if successful, False otherwise
         """
         if client_id not in self.active_connections:
             return False
-        
+
         try:
             websocket = self.active_connections[client_id]
+            # Fast pre-check: skip if socket already closing/closed
+            if hasattr(websocket, "client_state") and str(websocket.client_state) not in ("CONNECTED", "<State.CONNECTED: 1>"):
+                self.disconnect(client_id)
+                return False
             await websocket.send_json(payload)
             return True
         except WebSocketDisconnect:
-            logger.info(f"[TelemetryManager] WebSocket disconnected during send: {client_id}")
+            self.disconnect(client_id)
+            return False
+        except (ConnectionResetError, BrokenPipeError, RuntimeError):
+            # Socket closed by client — clean disconnect, no error log needed
             self.disconnect(client_id)
             return False
         except Exception as e:
-            logger.error(f"[TelemetryManager] Error sending to {client_id}: {e}")
+            logger.warning(f"[TelemetryManager] Error sending to {client_id}: {type(e).__name__}")
             self.disconnect(client_id)
             return False
 
@@ -359,10 +373,7 @@ class TelemetryManager:
                 return "monitoring_update"
             if event.event_type == "anomaly_detected":
                 return "monitoring_alert"
-            EventDomain.PREDICTION.value: "prediction_update",
-            EventDomain.ACTION.value: "action_update",
-        }
-        
+
         # Event type specific overrides
         event_type_map = {
             "intervention": "intervention",

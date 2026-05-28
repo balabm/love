@@ -1,51 +1,99 @@
-# LOVE LLM configuration - updated for efficient model switching
-# langchain_ollama import removed -- DirectOllama handles all LLM calls
 from core.settings import get_settings
 from dotenv import load_dotenv
 import os
-
-load_dotenv()
-
-# Load settings for model configuration
-SETTINGS = get_settings()
-
 import requests
 import json
+import re
 
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "qwen2.5:0.5b")   # tiny quantized fallback
-FALLBACK_SYSTEM_PREFIX = "[SYSTEM UNDER LOAD — keep answer to 1-2 sentences, no deep reasoning] "
+load_dotenv()
+SETTINGS = get_settings()
+
+FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "qwen2.5-coder:1.5b")
+FALLBACK_SYSTEM_PREFIX = "[SYSTEM UNDER LOAD - keep answer to 1-2 sentences, no deep reasoning] "
+OLLAMA_AUTO_FALLBACK = os.getenv("OLLAMA_AUTO_FALLBACK", "false").lower() in ("1", "true", "yes")
+OLLAMA_FORCE_HIGH_QUALITY = os.getenv("OLLAMA_FORCE_HIGH_QUALITY", "false").lower() in ("1", "true", "yes")
+
+# Safety limits to prevent local hangs while preserving rich context.
+MAX_PROMPT_CHARS = int(os.getenv("MAX_PROMPT_CHARS", "42000"))
+OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "90"))
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "4096"))
+OLLAMA_NUM_PREDICT = int(os.getenv("OLLAMA_NUM_PREDICT", "512"))
 
 
 def _is_system_under_load() -> bool:
-    """Check if host system is under heavy load — resource governor or heavy process."""
+    """Check if host system is under heavy load via resource governor."""
     try:
         from core.resource_governor import get_resource_governor
-        if get_resource_governor().is_under_load():
-            return True
+        return get_resource_governor().is_under_load()
     except Exception:
-        pass
-    return False
+        return False
+
+
+def _should_use_fallback() -> bool:
+    """Decide whether fallback model switching is allowed."""
+    if OLLAMA_FORCE_HIGH_QUALITY:
+        print("[LLM] OLLAMA_FORCE_HIGH_QUALITY enabled - bypassing fallback and quantized profiles.")
+        return False
+    return OLLAMA_AUTO_FALLBACK and _is_system_under_load()
+
+
+def _effective_prompt_limit() -> int:
+    """
+    Cap prompt chars using both explicit override and ctx window approximation.
+    Approximation: ~4 chars/token with a little headroom.
+    """
+    ctx_limit = max(12000, int(OLLAMA_NUM_CTX * 3.8))
+    return max(12000, min(MAX_PROMPT_CHARS, ctx_limit))
 
 
 class DirectOllama:
-    def __init__(self, base_url, model, temperature=0.4, timeout=300, system_prefix: str = "", **kwargs):
+    def __init__(self, base_url, model, temperature=0.4, timeout=None, system_prefix: str = "", **kwargs):
         self.base_url = base_url.rstrip('/')
         self.model = model
         self.temperature = temperature
-        self.timeout = timeout
+        self.timeout = timeout if timeout is not None else OLLAMA_TIMEOUT
         self.system_prefix = system_prefix
 
     def invoke(self, prompt: str) -> str:
         if self.system_prefix:
             prompt = self.system_prefix + prompt
 
+        # Split system prompt and user prompt
+        match = re.search(r"\n\n[^\n]{1,50}:\s", prompt)
+        if match:
+            system_prompt = prompt[:match.start()].rstrip()
+            conversation = prompt[match.start():].strip()
+        else:
+            system_prompt = prompt[:4000].rstrip()
+            conversation = prompt[4000:].strip()
+
+        prompt_limit = _effective_prompt_limit()
+        if len(prompt) > prompt_limit:
+            separator = "\n\n[... prior context trimmed to fit model window ...]\n\n"
+            available = prompt_limit - len(system_prompt) - len(separator)
+            tail_length = max(2000, available)
+            if tail_length < 2000:
+                tail_length = 2000
+                if len(system_prompt) + tail_length + len(separator) > prompt_limit:
+                    system_prompt = system_prompt[: max(0, prompt_limit - tail_length - len(separator))].rstrip()
+
+            conversation = separator + conversation[-tail_length:]
+            prompt = system_prompt + conversation
+            print(f"[DirectOllama] Prompt truncated to {len(prompt)} chars (limit {prompt_limit})")
+
+        with open('data/last_prompt.txt', 'w', encoding='utf-8') as f:
+            f.write(f"SYSTEM:\n{system_prompt}\n\nUSER:\n{conversation}")
+
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.model,
-            "prompt": prompt,
+            "system": system_prompt,
+            "prompt": conversation,
             "stream": False,
             "options": {
-                "temperature": self.temperature
+                "temperature": self.temperature,
+                "num_ctx": OLLAMA_NUM_CTX,
+                "num_predict": OLLAMA_NUM_PREDICT,
             }
         }
 
@@ -76,10 +124,12 @@ def get_reasoning_llm(temperature: float = None, max_tokens: int = None):
         ).llm_temperature if SETTINGS.devices.power_profiles else 0.4
 
     system_prefix = ""
-    if _is_system_under_load():
+    if _should_use_fallback():
         model = FALLBACK_MODEL
         system_prefix = FALLBACK_SYSTEM_PREFIX
-        print(f"[LLM] System under load — downgrading to {model}")
+        print(f"[LLM] System under load - downgrading to {model}")
+    else:
+        print(f"[LLM] Selected reasoning model: {model}")
     return DirectOllama(base_url=base_url, model=model, temperature=temperature, system_prefix=system_prefix)
 
 def get_coding_llm(temperature: float = 0.3, max_tokens: int = None):
@@ -87,10 +137,12 @@ def get_coding_llm(temperature: float = 0.3, max_tokens: int = None):
     base_url = os.getenv("OLLAMA_BASE_URL", SETTINGS.models.base_url)
     model = os.getenv("CODING_MODEL", SETTINGS.models.coding)
     system_prefix = ""
-    if _is_system_under_load():
+    if _should_use_fallback():
         model = FALLBACK_MODEL
         system_prefix = FALLBACK_SYSTEM_PREFIX
-        print(f"[LLM] System under load — downgrading coding model to {model}")
+        print(f"[LLM] System under load - downgrading coding model to {model}")
+    else:
+        print(f"[LLM] Selected coding model: {model}")
     return DirectOllama(base_url=base_url, model=model, temperature=temperature, system_prefix=system_prefix)
 
 def get_embedding_model():
@@ -110,7 +162,8 @@ def route_llm(user_input: str):
     device_type = SETTINGS.devices.primary_device_type
     power_profile = SETTINGS.devices.power_profiles.get(device_type) if device_type else None
 
-    if power_profile and power_profile.use_quantized:
+    if power_profile and power_profile.use_quantized and not OLLAMA_FORCE_HIGH_QUALITY:
+        print("[LLM] Using quantized-mode profile for lower-cost reasoning.")
         return get_reasoning_llm(temperature=0.5)
 
     if any(word in user_input.lower() for word in coding_keywords):
@@ -124,8 +177,12 @@ def get_current_model_info() -> dict:
     base_url = os.getenv("OLLAMA_BASE_URL", SETTINGS.models.base_url)
     return {
         "under_load": under_load,
+        "auto_fallback": OLLAMA_AUTO_FALLBACK,
+        "force_high_quality": OLLAMA_FORCE_HIGH_QUALITY,
         "reasoning_model": FALLBACK_MODEL if under_load else os.getenv("REASONING_MODEL", SETTINGS.models.reasoning),
         "coding_model": FALLBACK_MODEL if under_load else os.getenv("CODING_MODEL", SETTINGS.models.coding),
         "fallback_model": FALLBACK_MODEL,
         "base_url": base_url,
     }
+
+

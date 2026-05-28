@@ -14,7 +14,7 @@ export default function GuardianWidget() {
 
   const fetch = async () => {
     try {
-      const res = await api.get(`${API}/guardian/work-status`);
+      const res = await api.get(`/guardian/work-status`);
       setStatus(res.data);
     } catch (e) { console.error("[Guardian] fetch failed:", e); }
   };
@@ -22,7 +22,7 @@ export default function GuardianWidget() {
   const hardStop = async () => {
     if (!window.confirm("Hard stop — LOVE will save and lock. Sure?")) return;
     try {
-      await api.post(`${API}/guardian/hard-stop`);
+      await api.post(`/guardian/hard-stop`);
       setStatus(s => s ? { ...s, message: "Hard stop triggered. Good call." } : s);
     } catch (e) { console.error("[Guardian] hard-stop failed:", e); }
   };

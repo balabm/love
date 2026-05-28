@@ -2,28 +2,60 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import api, { API } from "./api";
 import Dashboard from "./components/Dashboard";
 import ContextPanel from "./components/ContextPanel";
-import IntelligenceDashboard from "./components/IntelligenceDashboard";
 import GuardianWidget from "./components/GuardianWidget";
 import EmotionalPanel from "./components/EmotionalPanel";
-import RitualView from "./components/RitualView";
-import FocusMode from "./components/FocusMode";
-import NeuralMesh from "./components/NeuralMesh";
-import IntegrationsPanel from "./components/IntegrationsPanel";
-import AgentLoopPanel from "./components/AgentLoopPanel";
-import BriefingPanel from "./components/BriefingPanel";
-import SetupWizard from "./components/SetupWizard";
 import ErrorBoundary from "./components/ErrorBoundary";
+import FleetStatusWidget from "./components/FleetStatusWidget";
+import MindPanel from "./components/MindPanel";
 import SentinelPanel from "./components/SentinelPanel";
+import SupervisorPanel from "./components/SupervisorPanel";
 import TerminalPanel from "./components/TerminalPanel";
-import EvolutionPanel from "./components/EvolutionPanel";
-import LifeDomains from "./components/LifeDomains";
-import WaveEngine from "./components/WaveEngine";
-import HomeostasisPanel from "./components/HomeostasisPanel";
 
 
 
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDuration(ms) {
+  const sec = Math.floor(ms / 1000);
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function UptimeDisplay() {
+  const [uptime, setUptime] = useState(0);
+  const start = useRef(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setUptime(Date.now() - start.current), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return <span className="uptime-pill">⏱ {formatDuration(uptime)}</span>;
+}
+
+function buildContextOverride(ctx) {
+  if (!ctx) return "";
+  const lines = [
+    `Local time: ${ctx.local_time || "unknown"} (${ctx.time_of_day || "unknown"})`,
+    `Activity: ${ctx.activity || "unknown"}`,
+    `Active app: ${ctx.active_app || "unknown"}`,
+    `Window: ${ctx.active_window || "unknown"}`,
+    `Battery: ${ctx.battery != null ? `${Math.round(ctx.battery)}%` : "unknown"}`,
+    `Work hours today: ${ctx.hours_worked ?? 0}`,
+    `Overdue tasks: ${ctx.tasks_overdue ?? 0}`,
+    `Tasks due today: ${ctx.tasks_due_today ?? 0}`,
+    `Important unread emails: ${ctx.unread_important ?? 0}`,
+    `In meeting: ${Boolean(ctx.is_in_meeting)}`,
+    `Suggested action: ${ctx.suggested_action || "none"}`,
+  ];
+  if (ctx.alerts?.length) {
+    lines.push(`Alerts: ${ctx.alerts.slice(0, 5).join(" | ")}`);
+  }
+  return `UI LIVE SNAPSHOT:\n${lines.join("\n")}`;
 }
 
 function ThinkingDot({ thinking }) {
@@ -58,7 +90,7 @@ const QUICK = [
 ];
 
 export default function App() {
-  const [view, setView] = useState("chat"); // chat | mind | dashboard | ritual | focus | neural | integrations | agent | briefing | life
+  const [view, setView] = useState("chat"); // chat | mind | dashboard | terminal | sentinel | supervisor
   const [messages, setMessages] = useState([{
     role: "love",
     text: "Hey Karthi. I'm watching everything — your PC, your schedule, your patterns. Just talk to me.",
@@ -157,7 +189,13 @@ export default function App() {
     setLoading(true);
     setView("chat");
     try {
-      const res = await api.post(`${API}/chat`, { text: msg, mode: "general" });
+      const contextOverride = buildContextOverride(ctx);
+      const res = await api.post(`${API}/chat`, {
+        text: msg,
+        mode: "general",
+        context_override: contextOverride,
+        include_live_context: true,
+      });
       setMessages(p => [...p, {
         role: "love",
         text: res.data.response,
@@ -170,7 +208,7 @@ export default function App() {
       setLoading(false);
       inputRef.current?.focus();
     }
-  }, [input, loading]);
+  }, [input, loading, ctx]);
 
   const handleKey = (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
@@ -202,6 +240,10 @@ export default function App() {
           <div className={`dot dot-${status}`} title={status} />
         </div>
 
+        <div className="sidebar-meta">
+          <UptimeDisplay />
+        </div>
+
         <ScorePill score={lifeScore} />
 
         {/* Proactive alerts — LOVE speaks up */}
@@ -220,32 +262,11 @@ export default function App() {
           <button className={`nav-btn${view === "chat" ? " active" : ""}`} onClick={() => setView("chat")}>
             <span>◈</span> Chat
           </button>
-          <button className={`nav-btn${view === "ritual" ? " active" : ""}`} onClick={() => setView("ritual")}>
-            <span>◎</span> Ritual
-          </button>
-          <button className={`nav-btn${view === "focus" ? " active" : ""}`} onClick={() => setView("focus")}>
-            <span>▶</span> Focus
-          </button>
           <button className={`nav-btn${view === "mind" ? " active" : ""}`} onClick={() => setView("mind")}>
-            <span>◉</span> Mind
-          </button>
-          <button className={`nav-btn${view === "neural" ? " active" : ""}`} onClick={() => setView("neural")}>
-            <span>⬡</span> Neural
+            <span>🧠</span> Mind
           </button>
           <button className={`nav-btn${view === "dashboard" ? " active" : ""}`} onClick={() => setView("dashboard")}>
-            <span>⊞</span> Dashboard
-          </button>
-          <button className={`nav-btn${view === "integrations" ? " active" : ""}`} onClick={() => setView("integrations")}>
-            <span>⬡</span> Integrations
-          </button>
-          <button className={`nav-btn${view === "agent" ? " active" : ""}`} onClick={() => setView("agent")}>
-            <span>◈</span> Agent
-          </button>
-          <button className={`nav-btn${view === "briefing" ? " active" : ""}`} onClick={() => setView("briefing")}>
-            <span>◷</span> Brief
-          </button>
-          <button className={`nav-btn${view === "evolution" ? " active" : ""}`} onClick={() => setView("evolution")}>
-            <span>🧬</span> Evolution
+            <span>⊞</span> Pulse
           </button>
           <button className={`nav-btn${view === "terminal" ? " active" : ""}`} onClick={() => setView("terminal")}>
             <span>📟</span> Terminal
@@ -253,17 +274,8 @@ export default function App() {
           <button className={`nav-btn${view === "sentinel" ? " active" : ""}`} onClick={() => setView("sentinel")}>
             <span>◉</span> Sentinel
           </button>
-          <button className={`nav-btn${view === "life" ? " active" : ""}`} onClick={() => setView("life")}>
-            <span>◎</span> Life
-          </button>
-          <button className={`nav-btn${view === "waves" ? " active" : ""}`} onClick={() => setView("waves")}>
-            <span>◈</span> Waves
-          </button>
-          <button className={`nav-btn${view === "homeostasis" ? " active" : ""}`} onClick={() => setView("homeostasis")}>
-            <span>◎</span> Body
-          </button>
-          <button className={`nav-btn${view === "setup" ? " active" : ""}`} onClick={() => setView("setup")}>
-            <span>⚙</span> Setup
+          <button className={`nav-btn${view === "supervisor" ? " active" : ""}`} onClick={() => setView("supervisor")}>
+            <span>🛡️</span> Supervisor
           </button>
         </nav>
 
@@ -275,6 +287,9 @@ export default function App() {
             {ctx.activity && <span className="ctx-chip">◉ {ctx.activity}</span>}
           </div>
         )}
+
+        {/* Fleet status mini-widget */}
+        <FleetStatusWidget onOpenSupervisor={() => setView("supervisor")} />
 
         {/* Work Guardian widget */}
         <GuardianWidget />
@@ -333,6 +348,10 @@ export default function App() {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 rows={1}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+                data-gramm="false"
               />
               <button className="send-btn" onClick={() => send()} disabled={loading || !input.trim()}>↑</button>
             </div>
@@ -340,59 +359,23 @@ export default function App() {
         )}
 
         {view === "mind" && (
-          <ErrorBoundary name="Mind"><div className="view-scroll"><IntelligenceDashboard /></div></ErrorBoundary>
-        )}
-        {view === "neural" && (
-          <ErrorBoundary name="Neural"><div className="view-scroll"><NeuralMesh /></div></ErrorBoundary>
+          <ErrorBoundary name="Mind"><div className="view-scroll"><MindPanel /></div></ErrorBoundary>
         )}
 
         {view === "dashboard" && (
           <ErrorBoundary name="Dashboard"><div className="view-scroll"><Dashboard /></div></ErrorBoundary>
         )}
 
-        {view === "ritual" && (
-          <ErrorBoundary name="Ritual"><div className="view-scroll view-ritual"><RitualView /></div></ErrorBoundary>
-        )}
-
-        {view === "focus" && (
-          <ErrorBoundary name="Focus"><div className="view-scroll view-focus"><FocusMode /></div></ErrorBoundary>
-        )}
-
-        {view === "integrations" && (
-          <ErrorBoundary name="Integrations"><div className="view-scroll"><IntegrationsPanel /></div></ErrorBoundary>
-        )}
-
-        {view === "agent" && (
-          <ErrorBoundary name="Agent"><div className="view-scroll"><AgentLoopPanel /></div></ErrorBoundary>
-        )}
-
-        {view === "briefing" && (
-          <ErrorBoundary name="Briefing"><div className="view-scroll"><BriefingPanel /></div></ErrorBoundary>
-        )}
-
         {view === "sentinel" && (
           <ErrorBoundary name="Sentinel"><div className="view-scroll"><SentinelPanel /></div></ErrorBoundary>
-        )}
-
-        {view === "setup" && (
-          <ErrorBoundary name="Setup"><div className="view-scroll"><SetupWizard /></div></ErrorBoundary>
         )}
 
         {view === "terminal" && (
           <ErrorBoundary name="Terminal"><div className="view-scroll"><TerminalPanel /></div></ErrorBoundary>
         )}
 
-        {view === "evolution" && (
-          <ErrorBoundary name="Evolution"><div className="view-scroll"><EvolutionPanel /></div></ErrorBoundary>
-        )}
-        {view === "life" && (
-          <ErrorBoundary name="Life"><div className="view-scroll"><LifeDomains /></div></ErrorBoundary>
-        )}
-        {view === "waves" && (
-          <ErrorBoundary name="Waves"><div className="view-scroll"><WaveEngine /></div></ErrorBoundary>
-        )}
-        {view === "homeostasis" && (
-          <ErrorBoundary name="Body"><div className="view-scroll"><HomeostasisPanel /></div></ErrorBoundary>
+        {view === "supervisor" && (
+          <ErrorBoundary name="Supervisor"><div className="view-scroll"><SupervisorPanel /></div></ErrorBoundary>
         )}
       </main>
     </div>

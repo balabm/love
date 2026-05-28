@@ -36,6 +36,26 @@
   letter-spacing: 0.05em;
 }
 
+.neural-ws-badge {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+.neural-ws-badge.connected {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.neural-ws-badge.disconnected {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.12);
+}
+
 .neural-pulse-dot {
   width: 8px;
   height: 8px;

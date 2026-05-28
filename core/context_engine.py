@@ -127,7 +127,26 @@ class ContextEngine:
 
     def get(self) -> LiveContext:
         with self._lock:
-            return self._ctx
+            ctx = self._ctx
+            # Ensure basic time fields are always populated even before first scan
+            now = datetime.now()
+            if not ctx.local_time:
+                ctx.local_time = now.strftime("%I:%M %p")
+            if not ctx.time_of_day:
+                hour = now.hour
+                if 5 <= hour < 12:
+                    ctx.time_of_day = "morning"
+                elif 12 <= hour < 17:
+                    ctx.time_of_day = "afternoon"
+                elif 17 <= hour < 21:
+                    ctx.time_of_day = "evening"
+                else:
+                    ctx.time_of_day = "night"
+            if not ctx.day_type:
+                ctx.day_type = "weekday" if now.weekday() < 5 else "weekend"
+            if not ctx.context_summary:
+                ctx.context_summary = f"{ctx.time_of_day.capitalize()} on a {ctx.day_type}. Monitoring your activity and systems."
+            return ctx
 
     def get_dict(self) -> Dict[str, Any]:
         with self._lock:
@@ -349,7 +368,7 @@ class ContextEngine:
                 return
             events = gs.get_todays_events()
             ctx.events_today = events
-            now = datetime.now()
+            now = datetime.now().astimezone()
             upcoming = [
                 e for e in events
                 if e.get("start_dt") and e["start_dt"] > now
@@ -399,6 +418,13 @@ class ContextEngine:
             from integrations.phone_bridge import PhoneBridge
             bridge = PhoneBridge.get_instance()
             if not bridge.is_connected():
+                # Reset phone fields so stale data doesn't leak into alerts
+                ctx.phone_connected = False
+                ctx.phone_battery = None
+                ctx.phone_location = None
+                ctx.missed_calls = 0
+                ctx.unread_messages = 0
+                ctx.phone_notifications = []
                 return
             state = bridge.get_state()
             ctx.phone_connected = True

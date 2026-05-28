@@ -37,7 +37,7 @@ export default function TerminalPanel() {
     abortControllerRef.current = new AbortController();
 
     try {
-      const res = await api.post(`${API}/neural/terminal/run`, { command: trimmed }, {
+      const res = await api.post(`/neural/terminal/run`, { command: trimmed }, {
         signal: abortControllerRef.current.signal
       });
       const output = res.data.output || '[No output returned]';

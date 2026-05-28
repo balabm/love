@@ -81,11 +81,13 @@ class GhostDeveloper:
                 pass
 
     def assign_task(self, description: str, target_files: List[str]) -> str:
+        from core.activity_log import log_activity
         task_id = f"task_{int(time.time())}"
         task = GhostDevTask(task_id, description, target_files)
         self.tasks[task_id] = task
         self._save_tasks()
-        
+        log_activity("ghost_dev", "task_assigned", f"New coding task: {description}", {"task_id": task_id, "files": target_files}, importance="high")
+
         try:
             get_consciousness().think(f"Received new Ghost Dev task: {description}")
         except Exception:
@@ -203,7 +205,8 @@ Provide the FULL updated content for {fpath}. Output ONLY the code, nothing else
             task.status = "review"
             task.completed_at = time.time()
             task.logs.append(f"[{time.time()}] Task moved to review phase.")
-            
+            log_activity("ghost_dev", "task_completed", f"Completed coding task: {task.description}", {"task_id": task.task_id, "files": task.target_files}, importance="high")
+
             try:
                 get_consciousness().think(f"Ghost Dev finished task: {task.description}. Waiting for user review.")
             except Exception:
@@ -212,7 +215,8 @@ Provide the FULL updated content for {fpath}. Output ONLY the code, nothing else
         except Exception as e:
             task.status = "failed"
             task.logs.append(f"[{time.time()}] Error: {str(e)}")
-            
+            log_activity("ghost_dev", "task_failed", f"Failed coding task: {task.description}: {str(e)[:100]}", {"task_id": task.task_id, "error": str(e)[:200]}, importance="high")
+
         self._save_tasks()
 
     def _daemon_loop(self):

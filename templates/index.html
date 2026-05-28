@@ -226,6 +226,19 @@
       <!-- RIGHT PANEL: Agents + Visualizer + Memory -->
       <aside class="panel right-panel">
 
+        <!-- Coordinated Swarm Execution -->
+        <div class="panel-box" id="swarm-panel">
+          <div class="box-header">Coordinated Swarm</div>
+          <div class="swarm-controls">
+            <input type="text" id="swarm-input" placeholder="Describe a complex task…" autocomplete="off">
+            <button id="swarm-launch" class="btn-swarm">Launch Swarm</button>
+          </div>
+          <div class="swarm-status" id="swarm-status"></div>
+          <div class="swarm-agents" id="swarm-active-agents"></div>
+          <div class="swarm-synthesis" id="swarm-synthesis"></div>
+          <div class="swarm-conflicts" id="swarm-conflicts"></div>
+        </div>
+
         <!-- Swarm Agents -->
         <div class="panel-box">
           <div class="box-header">Swarm Agents</div>

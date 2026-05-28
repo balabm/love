@@ -65,7 +65,7 @@ export default function SentinelPanel() {
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get(`${API}/neural/sentinel/status`);
+      const res = await api.get(`/neural/sentinel/status`);
       setStatus(res.data);
       setError(null);
     } catch (e) {
@@ -85,7 +85,7 @@ export default function SentinelPanel() {
   const forceScan = async () => {
     setScanning(true);
     try {
-      const res = await api.post(`${API}/neural/sentinel/scan`);
+      const res = await api.post(`/neural/sentinel/scan`);
       setStatus(res.data);
     } catch (e) {
       console.error("[Sentinel] scan failed:", e);
@@ -95,14 +95,14 @@ export default function SentinelPanel() {
 
   const markAway = async () => {
     try {
-      await api.post(`${API}/neural/sentinel/away`, { reason: "manual" });
+      await api.post(`/neural/sentinel/away`, { reason: "manual" });
       load();
     } catch (e) { console.error("[Sentinel] mark away failed:", e); }
   };
 
   const markBack = async () => {
     try {
-      await api.post(`${API}/neural/sentinel/back`);
+      await api.post(`/neural/sentinel/back`);
       load();
     } catch (e) { console.error("[Sentinel] mark back failed:", e); }
   };

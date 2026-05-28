@@ -5,7 +5,9 @@
  */
 import axios from "axios";
 
-export const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Use explicit env var if set; otherwise auto-detect based on hostname
+const isLocalhost = typeof window !== "undefined" && window.location.hostname === "localhost";
+export const API = import.meta.env.VITE_API_URL || (isLocalhost ? "http://localhost:8000" : "");
 const API_KEY = import.meta.env.VITE_API_KEY || "love-dev-key";
 
 const api = axios.create({

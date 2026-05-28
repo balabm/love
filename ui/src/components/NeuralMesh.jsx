@@ -160,6 +160,7 @@ export default function NeuralMesh() {
   const [liveFeed, setLiveFeed] = useState([]);
   const [toastNotification, setToastNotification] = useState({ message: '', visible: false, priority: 'normal' });
   const [goals, setGoals] = useState([]);
+  const [wsConnected, setWsConnected] = useState(false);
   const wsRef = useRef(null);
   const feedEndRef = useRef(null);
 
@@ -167,19 +168,19 @@ export default function NeuralMesh() {
     try {
       const [eventsRes, researchRes, growthRes, ecoRes, teachRes, patternsRes, statsRes,
              intelRes, evoRes, metaRes, constRes, memRes] = await Promise.allSettled([
-        api.get(`${API}/neural/events?limit=20`),
-        api.get(`${API}/neural/research/status`),
-        api.get(`${API}/neural/growth?days=7`),
-        api.get(`${API}/neural/ecosystem`),
-        api.get(`${API}/neural/teaching/status`),
-        api.get(`${API}/neural/patterns`),
-        api.get(`${API}/neural/bus/stats`),
+        api.get(`/neural/events?limit=20`),
+        api.get(`/neural/research/status`),
+        api.get(`/neural/growth?days=7`),
+        api.get(`/neural/ecosystem`),
+        api.get(`/neural/teaching/status`),
+        api.get(`/neural/patterns`),
+        api.get(`/neural/bus/stats`),
         // Wave 17
-        api.get(`${API}/neural/intelligence`),
-        api.get(`${API}/neural/evolution`),
-        api.get(`${API}/neural/metacognition`),
-        api.get(`${API}/neural/constitution`),
-        api.get(`${API}/neural/memory`),
+        api.get(`/neural/intelligence`),
+        api.get(`/neural/evolution`),
+        api.get(`/neural/metacognition`),
+        api.get(`/neural/constitution`),
+        api.get(`/neural/memory`),
       ]);
 
       if (eventsRes.status === "fulfilled") setEvents(eventsRes.value.data.events || []);
@@ -209,7 +210,7 @@ export default function NeuralMesh() {
   // WebSocket for proactive pushes
   useEffect(() => {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//localhost:8000/agi/companion/ws`;
+    const wsUrl = `${wsProtocol}//${window.location.host}/agi/companion/ws`;
     let ws = null;
     let reconnectTimer = null;
 
@@ -220,13 +221,14 @@ export default function NeuralMesh() {
 
         ws.onopen = () => {
           console.log('[NeuralMesh] WebSocket connected');
+          setWsConnected(true);
         };
 
         ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
+            // Proactive pushes from companion WS
             if (data.type === 'proactive_push') {
-              // Add to live feed
               setLiveFeed(prev => [{
                 id: Date.now(),
                 category: data.category || 'THOUGHT',
@@ -235,13 +237,36 @@ export default function NeuralMesh() {
                 timestamp: new Date().toISOString()
               }, ...prev].slice(0, 50));
 
-              // Show toast notification
               setToastNotification({
                 message: `[${data.category || 'LOVE'}] ${data.message || data.content || ''}`,
                 priority: data.priority || 'normal',
                 visible: true
               });
               setTimeout(() => setToastNotification(n => ({...n, visible: false})), 5000);
+            }
+            // Neural bus events bridged from backend
+            if (data.type === 'neural_event') {
+              const domain = data.domain || 'system';
+              const evType = data.event_type || 'event';
+              const msg = data.data?.message || data.data?.insight || data.data?.what_changed || data.data?.monologue || `${domain}:${evType}`;
+              setLiveFeed(prev => [{
+                id: data.event_id || Date.now(),
+                category: domain.toUpperCase(),
+                message: msg,
+                priority: data.priority <= 1 ? 'high' : 'normal',
+                timestamp: data.timestamp || new Date().toISOString()
+              }, ...prev].slice(0, 50));
+              // Also inject into events stream for Activity tab
+              setEvents(prev => [{
+                domain: domain,
+                event_type: evType,
+                iso_time: data.timestamp,
+                payload: data.data
+              }, ...prev].slice(0, 50));
+            }
+            // State sync events
+            if (data.type === 'state_sync' && data.consciousness) {
+              setIntelligence(prev => prev || { systems_online: 0, systems_total: 0, overall_health: 'initializing' });
             }
           } catch (e) {
             // Non-JSON message (like "pong"), ignore
@@ -250,10 +275,12 @@ export default function NeuralMesh() {
 
         ws.onclose = () => {
           console.log('[NeuralMesh] WebSocket disconnected, reconnecting...');
+          setWsConnected(false);
           reconnectTimer = setTimeout(connect, 5000);
         };
 
         ws.onerror = () => {
+          setWsConnected(false);
           ws.close();
         };
       } catch (e) {
@@ -273,7 +300,7 @@ export default function NeuralMesh() {
   useEffect(() => {
     const fetchGoals = async () => {
       try {
-        const res = await api.get(`${API}/agi/goals/tree`);
+        const res = await api.get(`/agi/goals/tree`);
         if (res.data && !res.data.error) {
           // Parse goal tree into flat list with progress
           const goalList = [];
@@ -320,6 +347,9 @@ export default function NeuralMesh() {
           <h2>Neural Mesh</h2>
           <span className="neural-subtitle">
             {intelligence ? `${intelligence.systems_online}/${intelligence.systems_total} systems | ${intelligence.overall_health}` : "Living Brain Activity"}
+          </span>
+          <span className={`neural-ws-badge ${wsConnected ? 'connected' : 'disconnected'}`} title={wsConnected ? 'Live events connected' : 'Reconnecting...'}>
+            {wsConnected ? '● live' : '○ offline'}
           </span>
         </div>
         <div className="neural-stats-bar">

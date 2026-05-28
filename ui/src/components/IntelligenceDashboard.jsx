@@ -72,11 +72,11 @@ export default function IntelligenceDashboard() {
   const fetchAll = async () => {
     try {
       const [predRes, dreamRes, curiousRes, emoRes, evoRes] = await Promise.all([
-        api.get(`${API}/intelligence/predictions`).catch(() => ({ data: {} })),
-        api.get(`${API}/intelligence/dream-insights`).catch(() => ({ data: {} })),
-        api.get(`${API}/intelligence/curiosity-gaps`).catch(() => ({ data: {} })),
-        api.get(`${API}/emotional/state`).catch(() => ({ data: {} })),
-        api.get(`${API}/intelligence/self-evolution`).catch(() => ({ data: {} })),
+        api.get(`/intelligence/predictions`).catch(() => ({ data: {} })),
+        api.get(`/intelligence/dream-insights`).catch(() => ({ data: {} })),
+        api.get(`/intelligence/curiosity-gaps`).catch(() => ({ data: {} })),
+        api.get(`/emotional/state`).catch(() => ({ data: {} })),
+        api.get(`/intelligence/self-evolution`).catch(() => ({ data: {} })),
       ]);
       if (predRes.data?.active) setPredictions(p => ({ ...p, ...predRes.data }));
       if (dreamRes.data?.insights) setDreamInsights(p => ({ ...p, ...dreamRes.data }));

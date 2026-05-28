@@ -65,7 +65,7 @@ function IntegrationCard({ integration, onSave }) {
       }
     }
     try {
-      await api.post(`${API}/neural/setup/save`, { updates });
+      await api.post(`/neural/setup/save`, { updates });
       setSaved(true);
       setValues({});
       onSave();
@@ -79,7 +79,7 @@ function IntegrationCard({ integration, onSave }) {
     setAuthing(true);
     setAuthResult(null);
     try {
-      const res = await api.post(`${API}${integration.auth_endpoint}`);
+      const res = await api.post(integration.auth_endpoint);
       setAuthResult(res.data);
     } catch (e) {
       console.error("[Setup] auth trigger failed:", e);
@@ -183,7 +183,7 @@ export default function SetupWizard() {
 
   const loadIntegrations = async () => {
     try {
-      const res = await api.get(`${API}/neural/setup/integrations`);
+      const res = await api.get(`/neural/setup/integrations`);
       setIntegrations(res.data.integrations || []);
       setError(null);
     } catch (e) {

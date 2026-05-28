@@ -9,7 +9,7 @@ export default function ConstellationMap() {
 
   const fetchIntegrations = async () => {
     try {
-      const res = await api.get(`${API}/neural/setup/integrations`);
+      const res = await api.get(`/neural/setup/integrations`);
       const mapped = [
         { id: "core", label: "LOVE NEURAL CORE", type: "core", status: "online", x: 50, y: 50 }
       ];

@@ -65,6 +65,7 @@ class ProactivePushEngine:
         self._last_push_time: float = 0.0
         self._async_loop: Optional[asyncio.AbstractEventLoop] = None
         self._push_counts: Dict[str, int] = {}  # category → count today
+        self._recent_messages: Dict[str, float] = {}  # message_hash → timestamp for dedup
 
     def set_async_loop(self, loop: asyncio.AbstractEventLoop):
         """Set the event loop for async callbacks."""
@@ -74,9 +75,29 @@ class ProactivePushEngine:
         """Register an async callback to receive push messages."""
         self._callbacks.append(callback)
 
+    def unregister_callback(self, callback: Callable):
+        """Remove a previously registered callback."""
+        try:
+            self._callbacks.remove(callback)
+        except ValueError:
+            pass
+
     def push(self, category: str, message: str, priority: str = "normal", metadata: Dict = None):
-        """Add a message to the push queue."""
+        """Add a message to the push queue. Skip if identical message was pushed recently."""
         import uuid
+        import hashlib
+        # Deduplication: same message within 30 minutes = suppressed
+        msg_hash = hashlib.sha256(f"{category}:{message}".encode()).hexdigest()[:16]
+        now = time.time()
+        if msg_hash in self._recent_messages:
+            last_time = self._recent_messages[msg_hash]
+            if now - last_time < 1800:  # 30 minutes
+                print(f"[ProactivePush] Duplicate suppressed: {message[:60]}")
+                return
+        self._recent_messages[msg_hash] = now
+        # Prune old entries to prevent memory growth
+        self._recent_messages = {k: v for k, v in self._recent_messages.items() if now - v < 1800}
+
         msg = PushMessage(
             id=uuid.uuid4().hex[:8],
             category=category,
@@ -85,7 +106,13 @@ class ProactivePushEngine:
             metadata=metadata or {},
         )
         self._queue.append(msg)
-        # Log it
+        # Log to centralized activity log
+        try:
+            from core.activity_log import log_activity
+            log_activity("proactive_push", "message_queued", f"[{category}] {message}", {"category": category, "priority": priority}, importance=priority if priority in ("high", "critical") else "normal")
+        except Exception:
+            pass
+        # Log it locally
         try:
             with open(PUSH_LOG, "a") as f:
                 f.write(json.dumps(asdict(msg)) + "\n")
@@ -165,12 +192,15 @@ class ProactivePushEngine:
 
     def _scan_loop(self):
         """Background loop: scan all systems, push insights."""
+        from core.activity_log import log_activity
         time.sleep(60)  # Let systems initialize first
+        log_activity("proactive_push", "daemon_started", "Proactive push daemon started", importance="normal")
         while self._running:
             try:
                 self._run_scan()
             except Exception as e:
                 print(f"[ProactivePush] Scan error: {e}")
+                log_activity("proactive_push", "scan_error", f"Scan error: {str(e)[:100]}", {"error": str(e)[:200]}, importance="high")
             time.sleep(PUSH_INTERVAL_SECONDS)
 
     def _run_scan(self):

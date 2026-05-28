@@ -2,7 +2,7 @@
 
 > *Not a chatbot. A local-first, self-evolving AI companion that tracks your body, protects your energy, manages your work, and builds itself while you sleep.*
 
-**91,000+ lines of Python | 120 core modules | 443 API endpoints | 20 UI panels**
+**95,000+ lines of Python | 128 core modules | 450+ API endpoints | 22 UI panels**
 
 ---
 
@@ -71,12 +71,19 @@ love/
 │   │   └── daily_briefing.py      # LLM-generated morning brief
 │   │
 │   ├── Autonomous Evolution
-│   │   ├── wave_engine.py         # Gap scan → Wave proposal → execution
+│   │   ├── autonomy_supervisor.py       # 5-phase AGI intelligence tick loop
+│   │   ├── wave_engine.py               # Gap scan → Wave proposal → execution
+│   │   ├── self_improvement_daemon.py   # Self-diagnostic + auto-improvement
+│   │   ├── autonomous_goal_engine.py    # Context-aware goal execution
+│   │   ├── research_engine.py           # Multi-hop web research + synthesis
+│   │   ├── ghost_dev.py               # Autonomous background coder
+│   │   ├── proactive_push.py          # Proactive insight delivery
+│   │   ├── activity_log.py            # Centralized action recorder
 │   │   ├── autonomous_self_improvement.py  # A/B tested self-modification
-│   │   ├── self_coder.py          # Writes and applies its own code patches
-│   │   ├── evolution_engine.py    # Multi-strategy evolution with fitness
+│   │   ├── self_coder.py              # Writes and applies its own code patches
+│   │   ├── evolution_engine.py        # Multi-strategy evolution with fitness
 │   │   ├── capability_gap_detector.py  # Cross-domain gap detection
-│   │   └── self_healing.py        # Auto-detect and fix crashes
+│   │   └── self_healing.py            # Auto-detect and fix crashes
 │   │
 │   ├── Neural Substrate
 │   │   ├── neural_bus.py          # Event-driven inter-module communication
@@ -132,7 +139,8 @@ love/
 │
 └── ui/                   # React frontend — 20 panels
     └── src/components/
-        ├── Dashboard.jsx            # System overview
+        ├── Dashboard.jsx            # System overview + AGI activity
+        ├── MindPanel.jsx            # 🧠 Real-time AGI thought stream + activity log
         ├── LifeDomains.jsx          # Body tracking (4 domains)
         ├── WaveEngine.jsx           # Self-evolution status
         ├── RitualView.jsx           # Morning/evening rituals
@@ -143,6 +151,7 @@ love/
         ├── NeuralMesh.jsx           # Neural bus visualization
         ├── EvolutionPanel.jsx       # Evolution system dashboard
         ├── SentinelPanel.jsx        # System health monitor
+        ├── SupervisorPanel.jsx      # Autonomy supervisor control
         ├── IntegrationsPanel.jsx    # Google/Microsoft/GitHub status
         ├── AgentLoopPanel.jsx       # Agent execution viewer
         ├── IntelligenceDashboard.jsx # Intelligence hub
@@ -187,6 +196,41 @@ GET  /life/coach/nudges       # What LOVE should say right now
 GET  /life/coach/goals        # Adaptive daily goals
 ```
 
+### AGI Intelligence & Action (Wave 27)
+LOVE doesn't just monitor — it thinks, plans, and acts. A 5-phase intelligence tick runs every 5 minutes:
+1. **Special systems** — restarts failed daemons (heartbeat, self-improvement, goal engine, wave engine)
+2. **Lifecycle scan** — full module health check with auto-heal
+3. **Self-diagnostics** — runs improvement daemon diagnostics
+4. **Mission queue** — processes blocked missions
+5. **Intelligence loop** — gathers context, triggers real actions:
+   - **Self-build** — auto-assigns Ghost Dev to blocked missions
+   - **Goal execution** — deep work on active goals (research, plan, execute, monitor)
+   - **Proactive research** — queues web research on failed modules
+   - **Proactive insights** — pushes contextual alerts to user
+   - **Wave execution** — auto-builds proposed waves via Ghost Dev
+
+All actions are logged to a centralized **Activity Log** — fully observable.
+
+```
+POST /agi/autonomy-supervisor/tick           # Run one tick
+POST /agi/autonomy-supervisor/intelligence   # Force-run intelligence loop
+GET  /agi/autonomy-supervisor/status          # Supervisor status
+GET  /agi/activity                            # Recent activity log
+GET  /agi/activity/stats                      # Activity statistics
+GET  /agi/activity/daily-report               # Today's action summary
+```
+
+### Mind Panel — Watch LOVE Think
+Real-time dashboard showing LOVE's internal monologue, autonomous actions, system health, and a **🧠 Run AGI** button to force intelligence immediately.
+
+Navigate to the **🧠 Mind** tab in the UI to see:
+- Activity stats bar (actions today, per-component, trend)
+- Activity log feed (everything LOVE does, color-coded by importance)
+- Internal monologue stream (consciousness thoughts)
+- Intelligence actions (ghost dev, research, goals, waves)
+- System health (self-improvement daemon, wave engine, AGI goals, supervisor)
+- Ghost Developer tasks, research queue, missions
+
 ### Wave Evolution Engine (Wave 23)
 LOVE detects its own capability gaps and proposes what to build next.
 
@@ -224,11 +268,11 @@ GET  /modes                   # Available personality modes
 
 ### Full API Reference
 
-443 endpoints across 42 prefixes. Key groups:
+450+ endpoints across 42 prefixes. Key groups:
 
 | Prefix | Endpoints | Purpose |
 |--------|-----------|---------|
-| `/agi` | 45 | AGI substrate (world model, SSM, MoE, homeostasis) |
+| `/agi` | 55 | AGI substrate (supervisor, goals, research, ghost dev, activity log) |
 | `/neural` | 107 | Neural mesh (bus, memory, cognition, evolution, integrations) |
 | `/life` | 20+ | Life domains, coaching, correlations |
 | `/love` | 23 | Core companion features |
@@ -245,7 +289,21 @@ GET  /modes                   # Available personality modes
 
 ## Configuration
 
-Edit `settings.yaml`:
+### Environment Variables
+
+Control LOVE's autonomous behavior with these environment variables (set in `.env`):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LOVE_SUPERVISOR_INTERVAL_SEC` | 300 | Supervisor tick interval in seconds (5 min) |
+| `LOVE_INTELLIGENCE_TICKS` | 2 | Run intelligence loop every N ticks |
+| `LOVE_DAEMON_INTERVAL_MIN` | 10 | Self-improvement daemon interval (minutes) |
+| `LOVE_GOAL_INTERVAL_SEC` | 600 | Goal engine cycle interval (seconds) |
+| `LOVE_WAVE_INTERVAL_H` | 4 | Wave engine cycle interval (hours) |
+| `LOVE_SELF_WORK_ON_TICK` | true | Enable self-diagnostics on each tick |
+| `LOVE_RESEARCH_INTERVAL_MIN` | 10 | Research engine cycle interval (minutes) |
+
+### settings.yaml
 
 ```yaml
 user:
@@ -289,6 +347,7 @@ finance:
 | **24** | **Cross-domain intelligence (pattern correlation)** |
 | **25** | **Proactive Life Coach (time-aware nudges, adaptive goals)** |
 | **26** | **Ritual integration + push notifications via Life Coach** |
+| **27** | **AGI Intelligence & Action (5-phase tick, activity log, MindPanel, self-improvement daemon learns from its own behavior)** |
 
 ---
 

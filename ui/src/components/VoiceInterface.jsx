@@ -32,7 +32,7 @@ export default function VoiceInterface({ onTranscript, compact = false }) {
 
   const checkVoiceStatus = async () => {
     try {
-      const res = await api.get(`${API}/voice/status`);
+      const res = await api.get(`/voice/status`);
       setVoiceStatus(res.data);
     } catch {
       setVoiceStatus({ stt: false, tts: false });
@@ -44,7 +44,7 @@ export default function VoiceInterface({ onTranscript, compact = false }) {
     setStatus('listening');
     
     try {
-      const res = await api.get(`${API}/voice/listen`);
+      const res = await api.get(`/voice/listen`);
       const { transcription, available, error, command_recognized } = res.data;
       
       if (!available) {
@@ -79,7 +79,7 @@ export default function VoiceInterface({ onTranscript, compact = false }) {
     setStatus('speaking');
     
     try {
-      await api.post(`${API}/voice/speak`, { 
+      await api.post(`/voice/speak`, { 
         text: text.slice(0, 500), // Limit length
         engine: 'auto'
       });

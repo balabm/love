@@ -495,8 +495,8 @@ class ProactiveHeartbeat:
                     metadata={"battery": ctx.battery},
                 ))
             
-            # Phone battery critical
-            if ctx.phone_battery is not None and ctx.phone_battery < 20:
+            # Phone battery critical (only if phone is actually connected)
+            if ctx.phone_connected and ctx.phone_battery is not None and ctx.phone_battery < 20:
                 triggers.append(TriggerEvent(
                     source="context",
                     trigger_type="phone_battery_critical",

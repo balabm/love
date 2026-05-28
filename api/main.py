@@ -2,8 +2,6 @@
 # Do not install packages during server boot unless explicitly enabled.
 import sys, subprocess, os as _os
 import builtins
-# Add parent directory to path for core module imports
-sys.path.insert(0, str(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))))
 
 _original_print = builtins.print
 
@@ -497,20 +495,6 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True, description="Proactive periodic triggers"
     ))
 
-    # -- MASTER ORCHESTRATOR --
-    def start_master_orchestrator_module():
-        from core.master_orchestrator import start_master_orchestrator
-        start_master_orchestrator()
-
-    def stop_master_orchestrator_module():
-        from core.master_orchestrator import stop_master_orchestrator
-        stop_master_orchestrator()
-
-    lm.register(ModuleDescriptor(
-        name="master_orchestrator", wave=0, start_fn=start_master_orchestrator_module, stop_fn=stop_master_orchestrator_module,
-        depends_on=["neural_bus"], optional=True, description="Executive function -- coordinates all modules via neural bus"
-    ))
-
     # ── WAVE 1: AWARENESS ──
     def start_awareness_module():
         from core.awareness import start_awareness
@@ -545,10 +529,6 @@ def register_all_modules(lm, _loop=None):
         if not bridge.is_connected():
             return {"status": "degraded", "error": "Phone Bridge not connected"}
 
-    def start_notification_ingestion_module():
-        from core.notification_ingestion import start_ingestion
-        start_ingestion()
-
     lm.register(ModuleDescriptor(
         name="awareness", wave=1, start_fn=start_awareness_module, stop_fn=stop_awareness_module,
         depends_on=["neural_bus"], optional=False, description="Real-time system/app context monitoring"
@@ -569,9 +549,45 @@ def register_all_modules(lm, _loop=None):
         name="phone_bridge", wave=1, start_fn=start_phone_bridge_module,
         depends_on=[], optional=True, description="Mobile companion connection"
     ))
+
+    def start_notification_ingestion_module():
+        from core.notification_ingestion import start_ingestion
+        engine = start_ingestion()
+        return {"status": "ready", "message": f"Ingestion engine started"}
+
+    def stop_notification_ingestion_module():
+        from core.notification_ingestion import NotificationIngestionEngine
+        NotificationIngestionEngine.get_instance().stop()
+
     lm.register(ModuleDescriptor(
-        name="notification_ingestion", wave=1, start_fn=start_notification_ingestion_module,
-        depends_on=["phone_bridge"], optional=True, description="Ingest phone and teams notifications"
+        name="notification_ingestion", wave=1, start_fn=start_notification_ingestion_module, stop_fn=stop_notification_ingestion_module,
+        depends_on=["phone_bridge"], optional=True, description="Smart notification ingestion from phone, email, and apps"
+    ))
+
+    def start_tunnel_agent_module():
+        from core.tunnel_agent import start_tunnel_agent
+        start_tunnel_agent()
+
+    def stop_tunnel_agent_module():
+        from core.tunnel_agent import stop_tunnel_agent
+        stop_tunnel_agent()
+
+    lm.register(ModuleDescriptor(
+        name="tunnel_agent", wave=1, start_fn=start_tunnel_agent_module, stop_fn=stop_tunnel_agent_module,
+        depends_on=["neural_bus"], optional=True, description="Cloudflare tunnel subagent for zero-touch phone access"
+    ))
+
+    def start_device_bridge_module():
+        from integrations.device_bridge import start_device_bridge
+        start_device_bridge()
+
+    def stop_device_bridge_module():
+        from integrations.device_bridge import stop_device_bridge
+        stop_device_bridge()
+
+    lm.register(ModuleDescriptor(
+        name="device_bridge", wave=1, start_fn=start_device_bridge_module, stop_fn=stop_device_bridge_module,
+        depends_on=["neural_bus"], optional=True, description="Unified device bridge across Telegram, MQTT, Discord, folder sync"
     ))
 
     # ── WAVE 2: COGNITION ──
@@ -666,6 +682,32 @@ def register_all_modules(lm, _loop=None):
         depends_on=["context_engine", "consciousness"], optional=False, description="Continuous environment reasoning loop"
     ))
 
+    def start_master_orchestrator_module():
+        from core.master_orchestrator import start_master_orchestrator
+        start_master_orchestrator()
+
+    def stop_master_orchestrator_module():
+        from core.master_orchestrator import stop_master_orchestrator
+        stop_master_orchestrator()
+
+    lm.register(ModuleDescriptor(
+        name="master_orchestrator", wave=2, start_fn=start_master_orchestrator_module, stop_fn=stop_master_orchestrator_module,
+        depends_on=["neural_bus", "awareness"], optional=True, description="Executive function — coordinates all modules via neural bus"
+    ))
+
+    def start_finance_guardian_module():
+        from core.finance_guardian import start_finance_guardian
+        start_finance_guardian()
+
+    def stop_finance_guardian_module():
+        from core.finance_guardian import stop_finance_guardian
+        stop_finance_guardian()
+
+    lm.register(ModuleDescriptor(
+        name="finance_guardian", wave=2, start_fn=start_finance_guardian_module, stop_fn=stop_finance_guardian_module,
+        depends_on=["neural_bus", "notification_ingestion"], optional=True, description="Financial monitoring, anomaly detection, and trading safety"
+    ))
+
     # ── WAVE 3: NEURAL MESH ──
     def start_research_engine_module():
         from core.research_engine import get_research_engine
@@ -710,6 +752,19 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="neural_connectors", wave=3, start_fn=start_neural_connectors_module,
         depends_on=["neural_bus", "awareness", "context_engine", "jarvis_protocol"], optional=False, description="Cross-module RPC connectors"
+    ))
+
+    def start_autonomous_trading_module():
+        from core.autonomous_trading_engine import start_autonomous_trading_engine
+        start_autonomous_trading_engine()
+
+    def stop_autonomous_trading_module():
+        from core.autonomous_trading_engine import stop_autonomous_trading_engine
+        stop_autonomous_trading_engine()
+
+    lm.register(ModuleDescriptor(
+        name="autonomous_trading", wave=3, start_fn=start_autonomous_trading_module, stop_fn=stop_autonomous_trading_module,
+        depends_on=["finance_guardian", "neural_bus"], optional=True, description="Autonomous strategy generation, backtesting, and paper trading"
     ))
 
     # ── WAVE 4: COGNITIVE EVOLUTION ──
@@ -982,30 +1037,18 @@ def register_all_modules(lm, _loop=None):
 
     # ── WAVE 5: UTILITY MODULES (Prompts 21-24) ──
     # These are library modules, not daemons — registered for visibility in lifecycle
-    def start_causal_guardrail():
-        from core.causal_guardrail import start_guardrail
-        return start_guardrail()
-        
-    def start_axiological_engine():
-        from core.axiological_engine import start_axiological_engine
-        return start_axiological_engine()
-        
-    def start_reality_check():
-        from core.reality_check import start_reality_check
-        return start_reality_check()
-
     lm.register(ModuleDescriptor(
-        name="causal_guardrail", wave=5, start_fn=start_causal_guardrail, stop_fn=lambda: None,
+        name="causal_guardrail", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="LLM-based sanity check decorator for high-risk actions (trades, commits, emails)"
     ))
     lm.register(ModuleDescriptor(
-        name="axiological_engine", wave=5, start_fn=start_axiological_engine, stop_fn=lambda: None,
+        name="axiological_engine", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Utility formula gating: (priority*2) - cost - (stress/2) vs threshold based on energy"
     ))
     lm.register(ModuleDescriptor(
-        name="reality_check", wave=5, start_fn=start_reality_check, stop_fn=lambda: None,
+        name="reality_check", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
         depends_on=[], optional=True,
         description="Pure Python state conflict reconciler — fixes sleeping+device_active, work_hours>24, stress clamping"
     ))
@@ -1078,7 +1121,7 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="mock_reality", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
         depends_on=["neural_bus"], optional=True,
-        description="Mock reality injector — disabled to prevent fake data injection"
+        description="Mock reality injector — fake sensor data for E2E testing"
     ))
     lm.register(ModuleDescriptor(
         name="integration_inspector", wave=6, start_fn=lambda: None, stop_fn=lambda: None,
@@ -1142,6 +1185,20 @@ async def lifespan(app: FastAPI):
     register_all_modules(lm, _loop=_loop)
 
     await lm.start_all()
+
+    # ── Post-startup AGI notification ───────────────────────────────────────
+    try:
+        from core.proactive_push import get_push_engine
+        pe = get_push_engine()
+        pe.push(
+            "AGI",
+            "Autonomous AGI loop is now active. Watch me think and act in real-time at /mind.",
+            priority="normal",
+        )
+    except Exception:
+        pass
+
+    print("[AGI] Autonomous intelligence loop active. Visit http://localhost:8000 and click '🧠 Mind' to watch LOVE think.")
 
     # ── Print access URLs so you know where to connect from ──────────────────
     try:
@@ -1498,6 +1555,29 @@ async def get_next_actions_endpoint():
         for a in actions[:10]
     ]}
 
+@app.get("/agi/goals/active")
+async def get_active_autonomous_goals():
+    """Get active goals from the autonomous goal engine."""
+    try:
+        from core.autonomous_goal_engine import get_goals
+        goals = get_goals(status="active")
+        return {
+            "goals": [
+                {
+                    "id": g.id,
+                    "title": g.title,
+                    "description": g.description,
+                    "category": g.category,
+                    "priority": g.priority,
+                    "progress_pct": g.progress_pct,
+                    "actions_taken": g.autonomous_actions_taken,
+                }
+                for g in goals
+            ]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 # ── Prompt DNA (Self-Modifying Prompt) ───────────────────────────────────
 
 try:
@@ -1685,6 +1765,17 @@ async def autonomy_supervisor_tick():
     if not AUTONOMY_SUPERVISOR_AVAILABLE:
         return {"error": "Autonomy supervisor not available"}
     return await asyncio.to_thread(get_autonomy_supervisor().run_tick)
+
+
+@app.post("/agi/autonomy-supervisor/intelligence")
+async def autonomy_supervisor_intelligence():
+    """Force-run the AGI intelligence loop immediately (bypasses tick interval)."""
+    if not AUTONOMY_SUPERVISOR_AVAILABLE:
+        return {"error": "Autonomy supervisor not available"}
+    from core.autonomy_policy import load_policy
+    policy = load_policy()
+    actions = await asyncio.to_thread(get_autonomy_supervisor()._tick_intelligence, policy, policy.get("mode", "balanced"))
+    return {"intelligence_ran": True, "actions": actions}
 
 
 @app.get("/agi/autonomy-policy")
@@ -1959,6 +2050,60 @@ async def get_ghost_task_status(task_id: str):
         return {"error": "Task not found"}
     except Exception as e:
         return {"error": str(e)}
+
+
+@app.get("/agi/ghost-dev/tasks")
+async def get_ghost_all_tasks():
+    """Get all Ghost Dev tasks."""
+    try:
+        from core.ghost_dev import get_ghost_dev
+        dev = get_ghost_dev()
+        tasks = [t.to_dict() for t in dev.tasks.values()]
+        return {"tasks": tasks, "count": len(tasks)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/research/status")
+async def get_research_status():
+    """Get research engine status and queue."""
+    try:
+        from core.research_engine import get_research_engine
+        re = get_research_engine()
+        return re.get_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/activity")
+async def get_activity_log(hours: int = 24, limit: int = 100):
+    """Get LOVE's recent autonomous activity log."""
+    try:
+        from core.activity_log import get_recent_activity
+        return {"activities": get_recent_activity(hours=hours, limit=limit)}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/activity/daily-report")
+async def get_activity_daily_report():
+    """Get today's daily activity report."""
+    try:
+        from core.activity_log import get_daily_report
+        return get_daily_report()
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/agi/activity/stats")
+async def get_activity_stats():
+    """Get activity stats for the dashboard."""
+    try:
+        from core.activity_log import get_activity_stats
+        return get_activity_stats(hours=24)
+    except Exception as e:
+        return {"error": str(e)}
+
 
 # ── Wave 6: Jarvis Protocol ──────────────────────────────────────────────
 
@@ -5406,7 +5551,7 @@ def get_predictions():
 def get_curiosity_gaps():
     """Get knowledge gaps LOVE is working to fill."""
     try:
-        from core.curiosity_engine import _load_gaps
+        from core.curiosity_engine import get_gap_count, _load_gaps
         gaps = _load_gaps()
         open_gaps = [g for g in gaps if g.get("status") == "open"]
         return {

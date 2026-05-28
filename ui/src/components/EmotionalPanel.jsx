@@ -29,8 +29,8 @@ export default function EmotionalPanel() {
   const load = async () => {
     try {
       const [stateRes, sumRes] = await Promise.allSettled([
-        api.get(`${API}/emotional/state`),
-        api.get(`${API}/emotional/summary`),
+        api.get(`/emotional/state`),
+        api.get(`/emotional/summary`),
       ]);
       if (stateRes.status === "fulfilled") setState(stateRes.value.data);
       if (sumRes.status === "fulfilled") setSummary(sumRes.value.data);
@@ -41,7 +41,7 @@ export default function EmotionalPanel() {
     if (!mood) return;
     setLogging(true);
     try {
-      await api.post(`${API}/emotional/record`, { emotion: mood, intensity: 0.7 });
+      await api.post(`/emotional/record`, { emotion: mood, intensity: 0.7 });
       setMoodInput("");
       await load();
     } catch (e) { console.error("[Emotional] log mood failed:", e); }

@@ -168,14 +168,6 @@ class AutonomousMissionQueue:
                 acted.append({"id": mission.id, "domain": mission.domain, "action": "completed", "detail": detail})
             else:
                 mission.status = "blocked"
-                if "missing_dependency=" in detail:
-                    pkg = detail.split("missing_dependency=")[-1]
-                    if pkg and not "No module named" in pkg:
-                        try:
-                            from core.self_builder import get_self_builder
-                            get_self_builder().install_package(pkg, auto=False)
-                        except Exception:
-                            pass
                 self._request_self_build_action(mission)
                 acted.append({"id": mission.id, "domain": mission.domain, "action": "blocked", "detail": detail})
 
@@ -257,13 +249,6 @@ class AutonomousMissionQueue:
                 return False, "generic self-build mission requires planning"
 
             return False, f"unknown_domain={domain}"
-        except ImportError as e:
-            import re
-            pkg = ""
-            m = re.search(r"No module named '([^']+)'", str(e))
-            if m:
-                pkg = m.group(1).split('.')[0]
-            return False, f"missing_dependency={pkg or str(e)}"
         except Exception as e:
             return False, f"{domain}_check_error={e}"
 

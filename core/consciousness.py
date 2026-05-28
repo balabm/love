@@ -551,7 +551,7 @@ class ConsciousnessEngine:
             "identity": {
                 "soul_id": self.identity.soul_id,
                 "instance_id": self.identity.instance_id,
-                "age_days": self.identity.current_age_days,
+                "current_age_days": self.identity.current_age_days,
                 "total_boots": self.identity.total_boots,
                 "total_conversations": self.identity.total_conversations,
                 "maturity_level": self.identity.maturity_level,

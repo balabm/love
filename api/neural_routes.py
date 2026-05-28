@@ -1812,6 +1812,7 @@ _INTEGRATION_CONFIG = {
     "github":    {"label": "GitHub",    "icon": "⌥",  "always_on": False, "env_keys": ["GITHUB_TOKEN", "GITHUB_USERNAME"], "description": "Repos, PRs, notifications"},
     "phone":     {"label": "Phone",     "icon": "◷",  "always_on": False, "env_keys": ["PHONE_DEVICE_ID"], "description": "KDE Connect / iOS bridge"},
     "telegram":  {"label": "Telegram",  "icon": "▶",  "always_on": False, "env_keys": ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"], "description": "Push alert delivery"},
+    "device_bridge": {"label": "Device Bridge", "icon": "⬡", "always_on": False, "env_keys": [], "description": "Telegram, MQTT, folder sync, Discord, webhook — no VPN"},
 }
 
 
@@ -1842,6 +1843,7 @@ async def get_integrations_status():
             "finance":   snap.finance,
             "browser":   snap.browser,
             "clipboard": snap.clipboard,
+            "device_bridge": getattr(snap, "device_bridge", {}),
         }
     except Exception:
         pass
@@ -1852,6 +1854,17 @@ async def get_integrations_status():
         configured = all(bool(os.getenv(k, "").strip()) for k in cfg["env_keys"]) if cfg["env_keys"] else True
         connected = hub_sources.get(key, False)
         data = hub_snapshot.get(key, {})
+
+        # Override for device_bridge — check live module status
+        if key == "device_bridge":
+            try:
+                from integrations.device_bridge import get_device_bridge
+                db = get_device_bridge()
+                connected = db.is_connected()
+                data = db.get_state()
+                configured = True
+            except Exception:
+                pass
 
         # Build a one-line status summary from snapshot data
         summary = _build_summary(key, data)

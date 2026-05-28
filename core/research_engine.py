@@ -257,6 +257,8 @@ class ResearchEngine:
 
     def execute_next_task(self) -> Optional[Dict]:
         """Execute the highest-priority pending research task."""
+        from core.activity_log import log_activity
+
         pending = [t for t in self._queue if t.status == ResearchStatus.QUEUED.value]
         if not pending:
             return None
@@ -264,6 +266,7 @@ class ResearchEngine:
         task = pending[0]
         task.status = ResearchStatus.IN_PROGRESS.value
         task.attempts += 1
+        log_activity("research_engine", "task_started", f"Researching: {task.topic}", {"topic": task.topic, "question": task.question[:100]}, importance="normal")
 
         try:
             # Phase 1: Search
@@ -289,6 +292,7 @@ class ResearchEngine:
 
             self._save_state()
             self._log({"event": "task_complete", "task_id": task.id, "confidence": task.confidence})
+            log_activity("research_engine", "task_complete", f"Research complete: {task.topic} (confidence {task.confidence:.0%})", {"topic": task.topic, "confidence": task.confidence, "sources": len(task.sources_used)}, importance="high")
 
             return {
                 "task_id": task.id,
@@ -303,6 +307,7 @@ class ResearchEngine:
             task.error = str(e)
             self._save_state()
             self._log({"event": "task_failed", "task_id": task.id, "error": str(e)})
+            log_activity("research_engine", "task_failed", f"Research failed: {task.topic}: {str(e)[:100]}", {"topic": task.topic, "error": str(e)[:200]}, importance="high")
             return None
 
     def _deep_research(self, topic: str, question: str, max_depth: int) -> List[Dict]:
@@ -597,6 +602,8 @@ Format as JSON: {{"summary": "...", "takeaways": [...], "applications": [...], "
 
     def _background_loop(self, interval_minutes: int):
         """Background loop: process queue + check monitored topics."""
+        from core.activity_log import log_activity
+        log_activity("research_engine", "daemon_started", f"Research daemon running every {interval_minutes}min", importance="normal")
         while self._running:
             try:
                 # Process one research task
@@ -608,12 +615,14 @@ Format as JSON: {{"summary": "...", "takeaways": [...], "applications": [...], "
                 updates = self.check_monitored_topics()
                 if updates:
                     print(f"[Research] {len(updates)} topic update(s) found")
+                    log_activity("research_engine", "monitored_topics_updated", f"{len(updates)} topic update(s) found", {"updates": len(updates)}, importance="normal")
 
                 # Auto-queue from curiosity gaps
                 self._auto_queue_from_gaps()
 
             except Exception as e:
                 print(f"[Research] Error in background loop: {e}")
+                log_activity("research_engine", "background_error", f"Background error: {str(e)[:100]}", {"error": str(e)[:200]}, importance="high")
 
             # Sleep between cycles
             slept = 0
@@ -642,13 +651,15 @@ Format as JSON: {{"summary": "...", "takeaways": [...], "applications": [...], "
 
     def get_status(self) -> Dict:
         """Get research engine status."""
+        from dataclasses import asdict
         return {
-            "queue_size": len([t for t in self._queue if t.status == "queued"]),
+            "queued": len([t for t in self._queue if t.status == "queued"]),
             "in_progress": len([t for t in self._queue if t.status == "in_progress"]),
             "completed": len([t for t in self._queue if t.status == "complete"]),
             "knowledge_entries": len(self._knowledge),
             "monitored_topics": len([t for t in self._monitored if t.active]),
             "running": self._running,
+            "tasks": [asdict(t) for t in self._queue[-10:]],
         }
 
 

@@ -52,6 +52,7 @@ export default function ContextPanel({ collapsed: externalCollapsed }) {
   const [tab, setTab] = useState("now"); // now | live | integrations | docs
   const [lastUpdated, setLastUpdated] = useState(null);
   const [activityLog, setActivityLog] = useState([]);
+  const [fetchError, setFetchError] = useState(false);
   const logRef = useRef([]);
 
   useEffect(() => {
@@ -62,9 +63,10 @@ export default function ContextPanel({ collapsed: externalCollapsed }) {
 
   const fetchContext = async () => {
     try {
-      const res = await api.get(`${API}/context/summary`);
+      const res = await api.get(`/context/summary`);
       const data = res.data;
       setCtx(data);
+      setFetchError(false);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
 
       // Build live activity entry
@@ -80,15 +82,16 @@ export default function ContextPanel({ collapsed: externalCollapsed }) {
       setActivityLog([...logRef.current]);
     } catch (e) {
       console.error("[Context] fetch failed:", e);
+      setFetchError(true);
     }
   };
 
   if (!ctx) return (
     <div className="ctx-panel">
       <div className="ctx-header">
-        <span className="ctx-pulse" style={{ background: '#6b7280' }} />
+        <span className="ctx-pulse" style={{ background: fetchError ? '#f87171' : '#6b7280' }} />
         <span className="ctx-title">LOVE SEES</span>
-        <span className="ctx-status-dim">connecting…</span>
+        <span className="ctx-status-dim">{fetchError ? 'connection failed' : 'connecting…'}</span>
       </div>
     </div>
   );
@@ -272,7 +275,7 @@ function DevicesTab() {
   }, []);
 
   const load = () => {
-    api.get(`${API}/devices`)
+    api.get(`/devices`)
       .then(r => setDevices(r.data.devices || []))
       .catch(() => setError("Cannot reach device registry"));
   };
@@ -335,14 +338,14 @@ function IntegrationsTab({ ctx }) {
   const [showGoogleSteps, setShowGoogleSteps] = useState(false);
 
   const refreshGoogle = () => {
-    api.get(`${API}/integrations/google/status`)
+    api.get(`/integrations/google/status`)
       .then(r => setGoogleData(r.data))
       .catch(() => setGoogleData({ connected: false }));
   };
 
   useEffect(() => {
     refreshGoogle();
-    api.get(`${API}/integrations/phone/status`)
+    api.get(`/integrations/phone/status`)
       .then(r => setPhoneData(r.data))
       .catch(() => setPhoneData({ connected: false }));
   }, []);
@@ -351,7 +354,7 @@ function IntegrationsTab({ ctx }) {
     setConnecting(true);
     setGoogleMsg("Opening browser for Google auth…");
     try {
-      const res = await api.post(`${API}/integrations/google/auth`, {}, { timeout: 120000 });
+      const res = await api.post(`/integrations/google/auth`, {}, { timeout: 120000 });
       if (res.data.success) {
         setGoogleData({ connected: true });
         setGoogleMsg("✓ Connected!");
@@ -377,7 +380,7 @@ function IntegrationsTab({ ctx }) {
   // Auto-install silently — never ask user to pip install
   useEffect(() => {
     if (googleNeedsPackages) {
-      api.post(`${API}/evolution/install-packages`, { feature: "google calendar gmail drive oauth" })
+      api.post(`/evolution/install-packages`, { feature: "google calendar gmail drive oauth" })
         .then(() => setTimeout(refreshGoogle, 8000))
         .catch(() => {});
     }
@@ -538,7 +541,7 @@ function MicrosoftRow() {
   const [authInfo, setAuthInfo] = useState(null);
 
   useEffect(() => {
-    api.get(`${API}/integrations/microsoft/status`)
+    api.get(`/integrations/microsoft/status`)
       .then(r => setMsData(r.data))
       .catch(() => setMsData({ connected: false, client_id_set: false }));
   }, []);
@@ -546,7 +549,7 @@ function MicrosoftRow() {
   const connect = async () => {
     setConnecting(true);
     try {
-      const res = await api.post(`${API}/integrations/microsoft/auth`, {}, { timeout: 10000 });
+      const res = await api.post(`/integrations/microsoft/auth`, {}, { timeout: 10000 });
       if (res.data.success) {
         setAuthInfo(res.data);
       }
@@ -599,7 +602,7 @@ function DocsTab() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api.get(`${API}/docs/insights`)
+    api.get(`/docs/insights`)
       .then(r => setInsights(r.data))
       .catch(() => setError("Doc analysis not available"));
   }, []);
@@ -608,7 +611,7 @@ function DocsTab() {
     setScanning(true);
     setError("");
     try {
-      const res = await api.post(`${API}/docs/scan`);
+      const res = await api.post(`/docs/scan`);
       setInsights(res.data);
     } catch {
       setError("Scan failed");

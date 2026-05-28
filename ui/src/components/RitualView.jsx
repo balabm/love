@@ -38,10 +38,10 @@ export default function RitualView() {
   const loadAll = async () => {
     setLoading(true);
     const calls = [
-      api.get(`${API}/guardian/check-in`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
-      api.get(`${API}/day-summary`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
-      api.get(`${API}/guardian/work-status`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
-      api.get(`${API}/wellness/checkin`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
+      api.get(`/guardian/check-in`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
+      api.get(`/day-summary`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
+      api.get(`/guardian/work-status`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
+      api.get(`/wellness/checkin`).catch(e => { console.error("[Ritual] load failed:", e); return null; }),
     ];
     const [b, d, g, c] = await Promise.all(calls);
     if (b) setBrief(b.data);

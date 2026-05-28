@@ -20,12 +20,32 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 DEFAULT_POLICY: Dict[str, Any] = {
     "mode": "balanced",  # safe | balanced | aggressive
     "components": {
+        # Core autonomous loops
         "heartbeat": True,
         "self_improvement_daemon": True,
         "autonomous_goal_engine": True,
         "wave_engine": True,
         "self_diagnostics": True,
         "mission_queue": True,
+        # Infrastructure & bridges
+        "tunnel_agent": True,
+        "device_bridge": True,
+        "notification_ingestion": True,
+        # Finance & trading
+        "finance_guardian": True,
+        "autonomous_trading": True,
+        # Coordination
+        "master_orchestrator": True,
+        # Wave 5 autonomous modules
+        "ghost_dev": True,
+        "research_engine": True,
+        "proactive_push": True,
+        "daily_briefing": True,
+        "idle_mind": True,
+        "homeostasis": True,
+        "life_nudge_scheduler": True,
+        "terminal_monitor": True,
+        "sentinel": True,
     },
     "flap_protection": {
         "window_sec": 900,

@@ -75,7 +75,7 @@ function ToolCard({ tool }) {
     setResult(null);
     abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/neural/agent/tool/run`, {
+      const res = await api.post(`/neural/agent/tool/run`, {
         tool_name: tool.name,
         params,
       }, {
@@ -154,7 +154,7 @@ export default function AgentLoopPanel() {
 
   useEffect(() => {
     if (tab === "tools" && tools.length === 0) {
-      api.get(`${API}/neural/agent/tools`)
+      api.get(`/neural/agent/tools`)
         .then(r => setTools(r.data.tools || []))
         .catch(e => { console.error("[Agent] tools load failed:", e); });
     }
@@ -170,7 +170,7 @@ export default function AgentLoopPanel() {
     setResult(null);
     abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/neural/agent/run`, {
+      const res = await api.post(`/neural/agent/run`, {
         query: query.trim(),
         max_steps: maxSteps,
       }, {

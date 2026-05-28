@@ -12,7 +12,34 @@ const ACCENT = {
   github:    "orange",
   phone:     "pink",
   telegram:  "purple",
+  device_bridge: "teal",
 };
+
+function CopyButton({ text, label }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    }
+  };
+  return (
+    <button className="int-copy-btn" onClick={handleCopy} title="Copy">
+      {copied ? "Copied!" : label || "Copy"}
+    </button>
+  );
+}
 
 function StatusDot({ connected, configured }) {
   const state = connected ? "connected" : configured ? "configured" : "missing";
@@ -87,14 +114,23 @@ function AlertBanner({ alerts }) {
 
 export default function IntegrationsPanel() {
   const [data, setData] = useState(null);
+  const [tunnel, setTunnel] = useState(null);
   const [polling, setPolling] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
   const [error, setError] = useState(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await api.get(`${API}/neural/integrations/status`);
-      setData(res.data);
+      const [intRes, tunRes] = await Promise.allSettled([
+        api.get("/neural/integrations/status"),
+        api.get("/tunnel/status"),
+      ]);
+      if (intRes.status === "fulfilled") {
+        setData(intRes.value.data);
+      }
+      if (tunRes.status === "fulfilled") {
+        setTunnel(tunRes.value.data);
+      }
       setLastFetch(new Date());
       setError(null);
     } catch (e) {
@@ -112,7 +148,7 @@ export default function IntegrationsPanel() {
   const triggerPoll = async () => {
     setPolling(true);
     try {
-      await api.post(`${API}/neural/integrations/poll`);
+      await api.post(`/neural/integrations/poll`);
       await fetchStatus();
     } catch (e) {
       console.error("[Integrations] poll failed:", e);
@@ -203,12 +239,133 @@ export default function IntegrationsPanel() {
         ))}
       </div>
 
+      {/* Phone Connection Section */}
+      <div className="int-section-label">Phone Connection</div>
+      <PhoneConnectCard tunnel={tunnel} />
+
       {/* Setup hint */}
       {optional.some(i => !i.configured) && (
         <div className="int-setup-hint">
           Some integrations need credentials. Open the <strong>Setup</strong> tab in the sidebar to connect them.
         </div>
       )}
+    </div>
+  );
+}
+
+function PhoneConnectCard({ tunnel }) {
+  const [zeroTouch, setZeroTouch] = useState(null);
+  const [qr, setQr] = useState(null);
+
+  useEffect(() => {
+    const fetchExtras = async () => {
+      try {
+        const [ztRes, qrRes] = await Promise.allSettled([
+          api.get("/learning/zero-touch"),
+          api.get("/tunnel/qr"),
+        ]);
+        if (ztRes.status === "fulfilled") setZeroTouch(ztRes.value.data);
+        if (qrRes.status === "fulfilled") setQr(qrRes.value.data);
+      } catch (e) {
+        console.error("[PhoneConnect] extras fetch failed:", e);
+      }
+    };
+    fetchExtras();
+  }, []);
+
+  if (!tunnel) {
+    return (
+      <div className="int-phone-card int-phone-loading">
+        Checking tunnel agent...
+      </div>
+    );
+  }
+
+  const url = tunnel.url;
+  const webhook = url ? `${url}/device/webhook` : null;
+  const binaryOk = tunnel.binary_found;
+  const running = tunnel.status === "running";
+
+  return (
+    <div className={`int-phone-card ${running ? "int-phone-live" : binaryOk ? "int-phone-ready" : "int-phone-missing"}`}>
+      <div className="int-phone-header">
+        <span className="int-phone-icon">📱</span>
+        <div className="int-phone-title">
+          <strong>Zero-Touch Phone Bridge</strong>
+          <span className="int-phone-sub">
+            {running ? "Tunnel active — phone can connect now" : binaryOk ? "Tunnel starting..." : "cloudflared not installed"}
+          </span>
+        </div>
+        <span className={`int-phone-status int-phone-status-${running ? "live" : binaryOk ? "ready" : "missing"}`}>
+          {running ? "LIVE" : binaryOk ? "READY" : "MISSING"}
+        </span>
+      </div>
+
+      {/* URL row */}
+      {webhook && (
+        <div className="int-phone-row">
+          <span className="int-phone-label">Webhook URL</span>
+          <code className="int-phone-url">{webhook}</code>
+          <CopyButton text={webhook} label="Copy" />
+        </div>
+      )}
+
+      {/* QR code */}
+      {qr?.qr_data && (
+        <div className="int-phone-row">
+          <span className="int-phone-label">QR Setup</span>
+          <code className="int-phone-url int-phone-qr">{qr.qr_data}</code>
+          <CopyButton text={qr.qr_data} label="Copy QR" />
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="int-phone-actions">
+        {zeroTouch?.tasker_profile_xml && (
+          <a
+            className="int-phone-btn"
+            href={`data:text/xml;charset=utf-8,${encodeURIComponent(zeroTouch.tasker_profile_xml)}`}
+            download="love_tasker_profile.xml"
+          >
+            Download Tasker XML
+          </a>
+        )}
+        {webhook && (
+          <a
+            className="int-phone-btn int-phone-btn-secondary"
+            href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(zeroTouch || {}, null, 2))}`}
+            download="love_zero_touch.json"
+          >
+            Download Config JSON
+          </a>
+        )}
+        {!binaryOk && (
+          <div className="int-phone-missing-msg">
+            Install cloudflared: <code>winget install Cloudflare.cloudflared</code>
+            then restart LOVE.
+          </div>
+        )}
+      </div>
+
+      {/* Setup instructions */}
+      <div className="int-phone-steps">
+        <details>
+          <summary>Setup steps</summary>
+          <ol>
+            <li>Install <strong>cloudflared</strong> (see button above)</li>
+            <li>Restart LOVE — tunnel auto-starts</li>
+            <li>Install <strong>Tasker</strong> on Android</li>
+            <li>Import the downloaded XML profile, OR create:
+              <ul>
+                <li>Event → UI → Notification (all apps)</li>
+                <li>Action → Net → HTTP Request</li>
+                <li>Method: POST | URL: <code>{webhook || "(tunnel not ready)"}</code></li>
+                <li>Body: <code>{`{"text":"%ntext","app":"%napp","title":"%ntitle","source":"phone_auto"}`}</code></li>
+              </ul>
+            </li>
+          </ol>
+        </details>
+      </div>
     </div>
   );
 }

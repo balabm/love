@@ -29,7 +29,7 @@ export default function EvolutionPanel() {
     setStatusMessage("");
     abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/agi/modules/restart`, { name }, {
+      const res = await api.post(`/agi/modules/restart`, { name }, {
         signal: abortControllerRef.current.signal
       });
       if (res.data.success) {
@@ -71,15 +71,15 @@ export default function EvolutionPanel() {
         nowRes,
         modulesRes
       ] = await Promise.allSettled([
-        api.get(`${API}/neural/evolution`),
-        api.get(`${API}/agi/dna`),
-        api.get(`${API}/agi/self-improvement/performance`),
-        api.get(`${API}/agi/meta-cognition/improvement-suggestions`),
-        api.get(`${API}/agi/daemon/status`),
-        api.get(`${API}/context/summary`),
-        api.get(`${API}/love/awareness/fusion`),
-        api.get(`${API}/love/awareness/now`),
-        api.get(`${API}/agi/modules/status`)
+        api.get(`/neural/evolution`),
+        api.get(`/agi/dna`),
+        api.get(`/agi/self-improvement/performance`),
+        api.get(`/agi/meta-cognition/improvement-suggestions`),
+        api.get(`/agi/daemon/status`),
+        api.get(`/context/summary`),
+        api.get(`/love/awareness/fusion`),
+        api.get(`/love/awareness/now`),
+        api.get(`/agi/modules/status`)
       ]);
 
       if (evoRes.status === "fulfilled") setEvolutionStatus(evoRes.value.data);
@@ -111,7 +111,7 @@ export default function EvolutionPanel() {
     setStatusMessage("");
     abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/agi/dna/evolve`, {}, {
+      const res = await api.post(`/agi/dna/evolve`, {}, {
         signal: abortControllerRef.current.signal
       });
       if (res.data.error) {
@@ -138,7 +138,7 @@ export default function EvolutionPanel() {
     setStatusMessage("");
     abortControllerRef.current = new AbortController();
     try {
-      const res = await api.post(`${API}/evolution/trigger-cycle`, {}, {
+      const res = await api.post(`/evolution/trigger-cycle`, {}, {
         signal: abortControllerRef.current.signal
       });
       if (res.data.status === "error" || res.data.error) {
@@ -167,7 +167,7 @@ export default function EvolutionPanel() {
     abortControllerRef.current = new AbortController();
     const endpoint = daemonStatus.running ? "stop" : "start";
     try {
-      await api.post(`${API}/agi/daemon/${endpoint}`, {}, {
+      await api.post(`/agi/daemon/${endpoint}`, {}, {
         signal: abortControllerRef.current.signal
       });
       setStatusMessage(`Self-improvement daemon ${endpoint === "start" ? "started" : "stopped"}.`);
@@ -189,7 +189,7 @@ export default function EvolutionPanel() {
     setLoadingAction("diagnose");
     setStatusMessage("");
     try {
-      const res = await api.post(`${API}/agi/daemon/diagnose`);
+      const res = await api.post(`/agi/daemon/diagnose`);
       if (res.data.error) {
         setStatusMessage(`Diagnostics failed: ${res.data.error}`);
       } else {
@@ -210,7 +210,7 @@ export default function EvolutionPanel() {
     setLoadingAction("plasticity");
     setPlasticityResult(null);
     try {
-      const res = await api.post(`${API}/agi/plasticity/trigger`, {
+      const res = await api.post(`/agi/plasticity/trigger`, {
         insight: insight
       });
       if (res.data.status === "success") {
@@ -241,7 +241,7 @@ export default function EvolutionPanel() {
   const captureSensoryScan = async () => {
     setLoadingAction("vision");
     try {
-      const res = await api.get(`${API}/vision/desktop`);
+      const res = await api.get(`/vision/desktop`);
       setVisionContext(res.data);
       setStatusMessage("Sensory screenshot analyzed and OCR processed.");
     } catch (err) {
@@ -492,22 +492,16 @@ export default function EvolutionPanel() {
               </div>
             ) : (
               <div className="perf-summary-placeholder">
-                <div className="perf-radial-placeholder">
-                  <span className="radial-val">82%</span>
-                  <span className="radial-lbl">Simulated Performance</span>
+                <div className="perf-radial-placeholder" style={{ opacity: 0.4 }}>
+                  <span className="radial-val">—</span>
+                  <span className="radial-lbl">No data yet</span>
                 </div>
                 <div className="decision-performance-table">
-                  <h4>Simulated Decision Performance</h4>
-                  <div className="decision-perf-row">
-                    <span>Goal Setting</span>
-                    <div className="progress-bar-wrap"><div className="progress-bar-fill" style={{ width: "90%" }} /></div>
-                    <strong>90%</strong>
-                  </div>
-                  <div className="decision-perf-row">
-                    <span>Communication Style</span>
-                    <div className="progress-bar-wrap"><div className="progress-bar-fill" style={{ width: "75%" }} /></div>
-                    <strong>75%</strong>
-                  </div>
+                  <h4>Decision Performance</h4>
+                  <p className="evo-empty-text" style={{ textAlign: 'center', padding: '20px 0' }}>
+                    LOVE needs to complete a few decision cycles before performance metrics appear.<br />
+                    <span style={{ opacity: 0.6, fontSize: '0.8rem' }}>Use the chat to ask LOVE to make decisions, or wait for the autonomous reasoning loop to run.</span>
+                  </p>
                 </div>
               </div>
             )}

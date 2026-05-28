@@ -120,8 +120,40 @@ def add_goal(title: str, description: str = "", category: str = "personal",
     return goal
 
 
+def _bootstrap_default_goals():
+    """Ensure LOVE always has at least one self-improvement goal."""
+    goals = _load_goals()
+    if not goals:
+        # Create default AGI self-improvement goals
+        defaults = [
+            Goal(
+                title="Become more capable and useful to the user",
+                description="Continuously improve LOVE's ability to understand, anticipate, and serve the user's needs. Research new capabilities, implement missing integrations, and refine reasoning.",
+                category="system",
+                priority="critical",
+            ),
+            Goal(
+                title="Close capability gaps",
+                description="Identify and implement missing integrations and features that the user has requested or would benefit from.",
+                category="system",
+                priority="high",
+            ),
+            Goal(
+                title="Monitor and improve system health",
+                description="Keep all LOVE modules running smoothly. Fix failures, optimize performance, and ensure uptime.",
+                category="system",
+                priority="high",
+            ),
+        ]
+        for g in defaults:
+            goals[g.id] = g
+        _save_goals(goals)
+        print(f"[GoalEngine] Bootstrapped {len(defaults)} default AGI goals")
+
+
 def get_goals(status: str = "active") -> List[Goal]:
     """Get goals by status."""
+    _bootstrap_default_goals()
     goals = _load_goals()
     return [g for g in goals.values() if g.status == status]
 
@@ -149,18 +181,24 @@ def _execute_research_action(goal: Goal) -> GoalAction:
         started_at=datetime.now().isoformat(),
     )
     try:
-        from core.toolbelt import call_tool
-        result = call_tool("web_search", {"query": goal.title + " how to achieve", "max_results": 3})
-        if result.get("success"):
-            action.result = str(result["result"])[:500]
+        from core.internet import research_topic
+        result = research_topic(goal.title + " how to achieve", depth=2)
+        if result and result.get("summary"):
+            action.result = str(result["summary"])[:500]
             action.status = "done"
             # Store in memory
-            from core.memory_architect import get_memory_architect
-            ma = get_memory_architect()
-            ma.store_episode(
-                event=f"Researched goal '{goal.title}': {action.result[:200]}",
-                importance=0.6,
-            )
+            try:
+                from core.memory_architect import get_memory_architect
+                ma = get_memory_architect()
+                ma.store_episode(
+                    event=f"Researched goal '{goal.title}': {action.result[:200]}",
+                    importance=0.6,
+                )
+            except Exception:
+                pass
+        else:
+            action.result = "Research returned no results"
+            action.status = "done"
     except Exception as e:
         action.result = f"Research failed: {e}"
         action.status = "failed"
@@ -238,10 +276,100 @@ def _execute_monitoring_action(goal: Goal) -> GoalAction:
     return action
 
 
+def _execute_action_action(goal: Goal) -> GoalAction:
+    """Actually execute steps toward the goal — context-aware based on goal category."""
+    action = GoalAction(
+        goal_id=goal.id,
+        action_type="execute",
+        description=f"Execute concrete steps for: {goal.title}",
+        started_at=datetime.now().isoformat(),
+    )
+    results = []
+    try:
+        if goal.category == "system":
+            # System goals trigger real capability work
+            if "capable" in goal.title.lower() or "useful" in goal.title.lower():
+                # Research how to improve LOVE's capabilities
+                try:
+                    from core.research_engine import get_research_engine, ResearchPriority
+                    re = get_research_engine()
+                    re.add_research_task(
+                        topic="AI personal assistant capabilities",
+                        question="What are the most impactful features and capabilities a personal AI assistant can have? Focus on autonomous operation, proactive assistance, and deep user understanding.",
+                        priority=ResearchPriority.HIGH,
+                        source="system_goal",
+                        max_depth=1,
+                        teach_user=False,
+                    )
+                    results.append("Queued research on AI capability improvements")
+                except Exception as e:
+                    results.append(f"Research queue failed: {e}")
+
+            elif "gap" in goal.title.lower() or "capability" in goal.title.lower():
+                # Check blocked missions and trigger Ghost Dev
+                try:
+                    from core.autonomous_mission_queue import get_mission_queue
+                    mq = get_mission_queue()
+                    status = mq.get_status()
+                    blocked = [m for m in status.get("active", []) if m.get("status") == "blocked"]
+                    if blocked:
+                        results.append(f"Found {len(blocked)} blocked missions; supervisor will assign Ghost Dev")
+                    else:
+                        results.append("No blocked missions; gaps may be resolved")
+                except Exception as e:
+                    results.append(f"Mission check failed: {e}")
+
+            elif "health" in goal.title.lower() or "system" in goal.title.lower():
+                # Run a quick diagnostic
+                try:
+                    from core.self_improvement_daemon import get_improvement_daemon
+                    daemon = get_improvement_daemon()
+                    report = daemon.run_diagnostics()
+                    issues = len(report.issues)
+                    results.append(f"Diagnostic complete: {issues} issues found, health score {report.health_score}")
+                except Exception as e:
+                    results.append(f"Diagnostic failed: {e}")
+
+        else:
+            # User goals: create real tasks
+            try:
+                from agents.task_agent import TaskAgent
+                ta = TaskAgent()
+                if hasattr(ta, 'create_task'):
+                    task = ta.create_task(
+                        title=f"[LOVE] {goal.title}",
+                        description=goal.description or f"Autonomous goal step for: {goal.title}",
+                        tags=[goal.category, "autonomous"],
+                        priority=goal.priority,
+                    )
+                    results.append(f"Created task: {getattr(task, 'title', 'unknown')}")
+            except Exception as e:
+                results.append(f"Task creation skipped: {e}")
+
+        # Always: push consciousness thought about what we're doing
+        try:
+            from core.consciousness import get_consciousness
+            get_consciousness().think(f"[GoalEngine] Working on goal '{goal.title}': {', '.join(results)}")
+        except Exception:
+            pass
+
+        # Update goal progress
+        update_goal_progress(goal.id, min(100, goal.progress_pct + 5), f"Executed: {', '.join(results)}")
+
+        action.result = "; ".join(results) if results else "Execution steps initiated"
+        action.status = "done"
+    except Exception as e:
+        action.result = f"Execution failed: {e}"
+        action.status = "failed"
+    action.completed_at = datetime.now().isoformat()
+    return action
+
+
 AUTONOMOUS_ACTIONS = {
     "research": _execute_research_action,
     "plan": _execute_planning_action,
     "monitor": _execute_monitoring_action,
+    "execute": _execute_action_action,
 }
 
 
@@ -257,11 +385,15 @@ def work_on_goal(goal: Goal) -> List[GoalAction]:
     if goal.autonomous_actions_taken == 0:
         # First pass: research and plan
         action_types = ["research", "plan"]
-    elif goal.autonomous_actions_taken % 3 == 0:
-        # Every 3rd pass: monitor progress
+    elif goal.autonomous_actions_taken == 1:
+        # Second pass: actually execute
+        action_types = ["execute"]
+    elif goal.autonomous_actions_taken % 4 == 0:
+        # Every 4th pass: monitor progress
         action_types = ["monitor"]
     else:
-        action_types = ["monitor"]
+        # Default: execute concrete steps
+        action_types = ["execute"]
 
     for action_type in action_types:
         if action_type in AUTONOMOUS_ACTIONS:
@@ -283,6 +415,8 @@ def run_goal_cycle() -> Dict[str, Any]:
     Run one full autonomous goal execution cycle.
     Works on the highest-priority active goals.
     """
+    from core.activity_log import log_activity
+
     goals = get_goals(status="active")
     if not goals:
         return {"goals_worked": 0, "actions_taken": 0}
@@ -308,6 +442,11 @@ def run_goal_cycle() -> Dict[str, Any]:
         total_actions += len(actions)
         goals_worked += 1
 
+        # Log to activity log
+        for a in actions:
+            if a.status == "done":
+                log_activity("goal_engine", a.action_type, f"Goal '{goal.title}': {a.result[:120]}", {"goal_id": goal.id, "goal_title": goal.title}, importance="high")
+
         # Push notification if meaningful work was done
         try:
             from core.proactive_push import get_push_engine
@@ -322,6 +461,8 @@ def run_goal_cycle() -> Dict[str, Any]:
                 )
         except Exception:
             pass
+
+    log_activity("goal_engine", "cycle_complete", f"Worked on {goals_worked} goals, {total_actions} actions", {"goals": goals_worked, "actions": total_actions}, importance="normal")
 
     return {
         "goals_worked": goals_worked,
@@ -345,14 +486,20 @@ def start_goal_engine(interval_seconds: int = 7200):
     _daemon_running = True
 
     def _loop():
+        from core.activity_log import log_activity
         time.sleep(180)  # 3 min initial delay
+        log_activity("goal_engine", "daemon_started", f"Autonomous goal daemon running every {interval_seconds}s", importance="normal")
         while _daemon_running:
             try:
                 result = run_goal_cycle()
                 if result["goals_worked"] > 0:
                     print(f"[GoalEngine] Cycle: worked on {result['goals_worked']} goals, {result['actions_taken']} actions")
+                    log_activity("goal_engine", "cycle_complete", f"Worked on {result['goals_worked']} goals, {result['actions_taken']} actions taken", {"goals": result['goals_worked'], "actions": result['actions_taken']}, importance="normal")
+                else:
+                    log_activity("goal_engine", "cycle_skipped", "No active goals to work on", importance="normal")
             except Exception as e:
                 print(f"[GoalEngine] Cycle error: {e}")
+                log_activity("goal_engine", "cycle_error", f"Cycle error: {str(e)[:100]}", {"error": str(e)[:200]}, importance="high")
             for _ in range(interval_seconds):
                 if not _daemon_running:
                     break
@@ -366,6 +513,11 @@ def start_goal_engine(interval_seconds: int = 7200):
 def stop_goal_engine():
     global _daemon_running
     _daemon_running = False
+
+
+def is_goal_engine_running() -> bool:
+    """Return whether the autonomous goal daemon is active."""
+    return _daemon_running
 
 
 def get_goal_status() -> Dict[str, Any]:

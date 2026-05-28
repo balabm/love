@@ -591,7 +591,36 @@ def handle_fix_command(user_input: str) -> str:
     return "I've got crashes logged but no fixes ready yet. Let me analyze them first."
 
 
-def chat(user_input: str, mode: str = "general") -> dict:
+def _maybe_ingest_feature_request(user_input: str) -> str:
+    """
+    If user asks LOVE to build/integrate a capability, enqueue autonomous missions.
+    Returns a short system note for the LLM context.
+    """
+    text = (user_input or "").lower()
+    triggers = [
+        "add feature",
+        "build",
+        "integrate",
+        "connect",
+        "set up",
+        "setup",
+        "enable",
+        "make love",
+    ]
+    if not any(t in text for t in triggers):
+        return ""
+    try:
+        from core.autonomous_mission_queue import get_mission_queue
+        result = get_mission_queue().add_feature_request(user_input, requested_by="chat")
+        if result.get("count", 0) > 0:
+            domains = [m.get("domain") for m in result.get("created", [])][:6]
+            return f"[AUTONOMY NOTE: queued {result.get('count')} autonomous mission(s): {domains}]"
+    except Exception:
+        pass
+    return ""
+
+
+def chat(user_input: str, mode: str = "general", injected_context: str | None = None) -> dict:
     """Returns dict with 'response' and 'thinking' keys."""
     import time
     t_start = time.time()
@@ -733,6 +762,10 @@ def chat(user_input: str, mode: str = "general") -> dict:
     else:
         extra_context = ""
 
+    autonomy_note = _maybe_ingest_feature_request(user_input)
+    if autonomy_note:
+        extra_context = f"{extra_context}\n\n{autonomy_note}".strip()
+
     memory_context = recall_memory(user_input, mode=mode)
 
     # Long-term memory — episodic, semantic, procedural
@@ -754,6 +787,8 @@ def chat(user_input: str, mode: str = "general") -> dict:
 
     # Live Jarvis context — what's happening RIGHT NOW
     live_context = get_prompt_context()
+    if injected_context:
+        live_context = f"{injected_context}\n\n{live_context}".strip() if live_context else injected_context.strip()
     live_block = f"\n\n=== WHAT I CURRENTLY KNOW (USE THIS DATA — DO NOT MAKE UP INFORMATION) ===\n{live_context}" if live_context else ""
 
     # User profile — what LOVE has learned about Karthi from files
@@ -1102,7 +1137,6 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 _cog_trace = cog.think_deeply(
                     query=user_input,
                     budget=budget,
-                    strategy=strategy,
                     context={"mode": mode, "category": category},
                 )
                 if _cog_trace and hasattr(_cog_trace, 'steps') and _cog_trace.steps:
@@ -1149,43 +1183,29 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
 {USER_NAME}: {user_input}
 {LOVE_NAME}:"""
 
+    print(f"[Agent] Final prompt size: {len(prompt):,} chars — invoking LLM")
     llm = route_llm(user_input)
     raw = llm.invoke(prompt)
 
     thinking, response = extract_thinking(raw)
     response = clean_response(response)
 
-    # ═══ WAVE 17: POST-RESPONSE — Constitutional review & quality assessment ═══
+    # ═══ WAVE 17: POST-RESPONSE — Constitutional review (score only, no LLM revision) ═══
     try:
         from core.constitution import get_constitution
         constitution = get_constitution()
         critique = constitution.critique_response(response, user_input, "")
-        if critique:
-            # critique_response() already appends to _recent_critiques for drift tracking
-            # Revise if score < 0.75 (not just 0.5) and there are suggestions
-            if critique.score < 0.75 and getattr(critique, 'suggestions', []):
-                revised = constitution.revise_response(response, critique, user_input, "")
-                if revised and revised != response and len(revised) > 20:
-                    response = revised
-                    thinking = (thinking or "") + f" [Constitutional revision applied, score was {critique.score:.2f}]"
+        # NOTE: Skipping revise_response() — it's an extra LLM call that hangs small models.
+        # Score is still logged for monitoring; we only revise if score is critically low (<0.3).
+        if critique and critique.score < 0.3 and getattr(critique, 'suggestions', []):
+            revised = constitution.revise_response(response, critique, user_input, "")
+            if revised and revised != response and len(revised) > 20:
+                response = revised
+                thinking = (thinking or "") + f" [Constitutional revision applied, score was {critique.score:.2f}]"
     except Exception:
         pass
 
     # Wave 27: PLANNING OUTCOME VERIFICATION
-    try:
-        from core.rollout_planner import get_rollout_planner
-        _planner_v = get_rollout_planner()
-        _outcome = _planner_v.verify_outcome(response)
-        if _outcome:
-            _delta = _outcome.get("prediction_delta", 0)
-            _accurate = _outcome.get("prediction_accurate", False)
-            if thinking is None:
-                thinking = ""
-            thinking += f" [Planning: predicted FE={_outcome['predicted_fe']:.3f}, actual={_outcome['actual_fe']:.3f}, delta={_delta:+.3f}, accurate={_accurate}]"
-    except Exception:
-        pass
-
-    # ═══ WAVE 27: PLANNING OUTCOME VERIFICATION ═══
     try:
         from core.rollout_planner import get_rollout_planner
         _planner_v = get_rollout_planner()
@@ -1343,44 +1363,6 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 "thinking_length": len(thinking) if thinking else 0,
             },
         )
-    except Exception:
-        pass
-
-    # Feed metacognitive monitor + act on quality
-    try:
-        from core.metacognitive_monitor import get_metacognitive_monitor
-        meta = get_metacognitive_monitor()
-        quality = meta.assess_response_quality(user_input, response)
-        if quality:
-            overall = getattr(quality, 'overall_score', getattr(quality, 'score', 0.5))
-            meta.record_strategy_outcome("general", mode, overall)
-            # If quality is very low, attempt improvement via LLM
-            if overall < 0.4 and len(response) > 20:
-                try:
-                    from core.llm import get_reasoning_llm
-                    improve_llm = get_reasoning_llm(temperature=0.3, max_tokens=600)
-                    issues = getattr(quality, 'issues', getattr(quality, 'weaknesses', []))
-                    issues_str = ", ".join(str(i) for i in (issues or [])[:3]) or "unclear or incomplete"
-                    improve_prompt = f"""The following response to the user had quality issues ({issues_str}):
-
-USER: {user_input[:200]}
-RESPONSE: {response[:400]}
-
-Rewrite the response to address the issues. Be direct, warm, and genuinely helpful.
-Keep the same intent but make it better. Output only the improved response."""
-                    improved = str(improve_llm.invoke(improve_prompt)).strip()
-                    if improved and len(improved) > 20 and improved != response:
-                        response = improved
-                        thinking = (thinking or "") + f" [Metacognitive improvement: score was {overall:.2f}]"
-                except Exception:
-                    pass
-            # Log cognitive load state
-            try:
-                load_state = meta.get_current_load()
-                if load_state and getattr(load_state, 'needs_intervention', False):
-                    print(f"[Metacognition] Cognitive overload detected — load level: {getattr(load_state, 'level', 'unknown')}")
-            except Exception:
-                pass
     except Exception:
         pass
 

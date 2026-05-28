@@ -147,131 +147,155 @@ Return ONLY valid JSON:
             print(f"[NeuralCortex] Monologue LLM invocation failed: {llm_e}")
             return
 
+        # Skip if LLM returned an error string instead of JSON
+        if isinstance(response, str) and response.startswith("[") and response.endswith("]"):
+            print(f"[NeuralCortex] LLM error, skipping monologue: {response[:100]}")
+            return
+
         # 2. Main processing - If this fails due to a local bug, self-healing is triggered
         try:
             # Parse JSON
             start = response.find("{")
             end = response.rfind("}")
-            if start != -1 and end != -1:
+            if start == -1 or end == -1 or end <= start:
+                print("[NeuralCortex] No JSON object found in response")
+                return
+            json_str = response[start:end+1]
+            data = None
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError:
+                # Try to fix common LLM JSON issues: trailing commas, unescaped quotes
+                import re
+                # Remove trailing commas before } or ]
+                fixed = re.sub(r',(\s*[}\]])', r'\1', json_str)
                 try:
-                    data = json.loads(response[start:end+1])
-                except json.JSONDecodeError as jde:
-                    print(f"[NeuralCortex] Failed to parse JSON response: {jde}")
-                    return
-                
-                monologue = data.get("internal_monologue", "")
-                speech = data.get("proactive_speech")
-                action = data.get("background_action")
-                action_plan = data.get("action_plan")
-                
-                self.last_thought = monologue
-                
-                # We could log the internal monologue to a file to track her "mind"
-                with open(SETTINGS.data_dir / "internal_monologue.log", "a", encoding="utf-8") as f:
-                    f.write(f"[{datetime.now().isoformat()}] {monologue}\n")
-                    
-                # 🚀 Wave 12: Infinite Memory Integration
-                try:
-                    from core.infinite_memory import get_infinite_memory
-                    memory = get_infinite_memory()
-                    memory.store_memory(
-                        content=monologue,
-                        memory_type="episodic",
-                        metadata={"source": "jarvis_monologue"}
-                    )
-                except Exception as e:
-                    print(f"[Jarvis] Failed to store thought in infinite memory: {e}")
-                
-                
-                # 🚀 Broadcast to Companion UI WebSockets
-                try:
-                    import asyncio
-                    from api.main import manager
-                    
-                    # Create a new event loop or use existing to run async broadcast
-                    try:
-                        loop = asyncio.get_event_loop()
-                    except RuntimeError:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-                    
-                    # Broadcast Thought
-                    if loop.is_running():
-                        asyncio.create_task(manager.broadcast({"type": "monologue", "thought": monologue}))
+                    data = json.loads(fixed)
+                    print("[NeuralCortex] Recovered JSON after fixing trailing commas")
+                except json.JSONDecodeError:
+                    # Last resort: extract fields with regex
+                    monologue_match = re.search(r'"internal_monologue"\s*:\s*"([^"]*)"', fixed)
+                    if monologue_match:
+                        data = {"internal_monologue": monologue_match.group(1)}
+                        print("[NeuralCortex] Extracted monologue via regex fallback")
                     else:
-                        loop.run_until_complete(manager.broadcast({"type": "monologue", "thought": monologue}))
-                        
-                    # Broadcast State Sync
-                    try:
-                        from core.consciousness import get_consciousness
-                        c = get_consciousness()
-                        state = {
-                            "type": "state_sync",
-                            "consciousness": c.get_full_state() if c else None,
-                            "context": {
-                                "activity": ctx.activity,
-                                "active_window": ctx.active_window,
-                                "cpu_percent": ctx.system_cpu,
-                                "stress_score": ctx.stress_score
-                            }
+                        print(f"[NeuralCortex] Failed to parse JSON response, skipping monologue")
+                        return
+            if not data:
+                return
+
+            monologue = data.get("internal_monologue", "")
+            speech = data.get("proactive_speech")
+            action = data.get("background_action")
+            action_plan = data.get("action_plan")
+
+            self.last_thought = monologue
+
+            # We could log the internal monologue to a file to track her "mind"
+            with open(SETTINGS.data_dir / "internal_monologue.log", "a", encoding="utf-8") as f:
+                f.write(f"[{datetime.now().isoformat()}] {monologue}\n")
+
+            # 🚀 Wave 12: Infinite Memory Integration
+            try:
+                from core.infinite_memory import get_infinite_memory
+                memory = get_infinite_memory()
+                memory.store_memory(
+                    content=monologue,
+                    memory_type="episodic",
+                    metadata={"source": "jarvis_monologue"}
+                )
+            except Exception as e:
+                print(f"[Jarvis] Failed to store thought in infinite memory: {e}")
+
+            # 🚀 Broadcast to Companion UI WebSockets
+            try:
+                import asyncio
+                from api.main import manager
+
+                # Create a new event loop or use existing to run async broadcast
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+
+                # Broadcast Thought
+                if loop.is_running():
+                    asyncio.create_task(manager.broadcast({"type": "monologue", "thought": monologue}))
+                else:
+                    loop.run_until_complete(manager.broadcast({"type": "monologue", "thought": monologue}))
+
+                # Broadcast State Sync
+                try:
+                    from core.consciousness import get_consciousness
+                    c = get_consciousness()
+                    state = {
+                        "type": "state_sync",
+                        "consciousness": c.get_full_state() if c else None,
+                        "context": {
+                            "activity": ctx.activity,
+                            "active_window": ctx.active_window,
+                            "cpu_percent": ctx.system_cpu,
+                            "stress_score": ctx.stress_score
                         }
-                        if loop.is_running():
-                            asyncio.create_task(manager.broadcast(state))
-                        else:
-                            loop.run_until_complete(manager.broadcast(state))
-                    except Exception as inner_e:
-                        print(f"WS State Sync Error: {inner_e}")
-                        
-                except Exception as e:
-                    print(f"WS Broadcast Error: {e}")
-                
-                # Proactive Speech
-                if speech and isinstance(speech, str) and len(speech) > 5 and speech.lower() not in ("null", "none"):
-                    now = time.time()
-                    # 5 minute global cooldown for unprompted speech (unless critical)
-                    if now - self.last_speech_time > 300 or "critical" in speech.lower():
-                        print(f"\n[Jarvis] 🗣️ Proactive Speech: {speech}")
-                        speak_proactive_alert(speech, severity="info")
-                        self.last_speech_time = now
-                        
-                        # Publish to neural bus
-                        if NEURAL_BUS_AVAILABLE:
-                            try:
-                                bus = get_neural_bus()
-                                bus.publish(
-                                    domain="speech",
-                                    event_type="proactive_speech",
-                                    payload={"speech": speech, "timestamp": datetime.now().isoformat()},
-                                    source_module="jarvis_protocol",
-                                    priority=EventPriority.HIGH
-                                )
-                            except Exception as e:
-                                print(f"[Jarvis] Neural bus publish error: {e}")
-                
-                # Background Action (Future hook to Swarm/Ghost Dev)
-                if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
-                    print(f"[Jarvis] ⚙️ Triggering background action: {action}")
-                    self._trigger_action(action)
-                    
-                # 🚀 Wave 9: Action Engine Computer Use - DISABLED FOR SAFETY
-                # Autonomous computer control has been disabled to prevent unauthorized actions
-                if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
-                    print(f"[Jarvis] ⚠️ Autonomous Computer Action Plan BLOCKED: {len(action_plan)} steps.")
-                    print(f"[Jarvis] SAFETY: Autonomous computer control disabled. User approval required.")
-                    
-                    # Publish action plan to neural bus for user review instead
+                    }
+                    if loop.is_running():
+                        asyncio.create_task(manager.broadcast(state))
+                    else:
+                        loop.run_until_complete(manager.broadcast(state))
+                except Exception as inner_e:
+                    print(f"WS State Sync Error: {inner_e}")
+
+            except Exception as e:
+                print(f"WS Broadcast Error: {e}")
+
+            # Proactive Speech
+            if speech and isinstance(speech, str) and len(speech) > 5 and speech.lower() not in ("null", "none"):
+                now = time.time()
+                # 5 minute global cooldown for unprompted speech (unless critical)
+                if now - self.last_speech_time > 300 or "critical" in speech.lower():
+                    print(f"\n[Jarvis] 🗣️ Proactive Speech: {speech}")
+                    speak_proactive_alert(speech, severity="info")
+                    self.last_speech_time = now
+
+                    # Publish to neural bus
                     if NEURAL_BUS_AVAILABLE:
                         try:
                             bus = get_neural_bus()
                             bus.publish(
-                                domain="action",
-                                event_type="autonomous_action_blocked",
-                                payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat(), "reason": "Safety block - user approval required"},
+                                domain="speech",
+                                event_type="proactive_speech",
+                                payload={"speech": speech, "timestamp": datetime.now().isoformat()},
                                 source_module="jarvis_protocol",
                                 priority=EventPriority.HIGH
                             )
                         except Exception as e:
                             print(f"[Jarvis] Neural bus publish error: {e}")
+
+            # Background Action (Future hook to Swarm/Ghost Dev)
+            if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
+                print(f"[Jarvis] ⚙️ Triggering background action: {action}")
+                self._trigger_action(action)
+
+            # 🚀 Wave 9: Action Engine Computer Use - DISABLED FOR SAFETY
+            # Autonomous computer control has been disabled to prevent unauthorized actions
+            if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
+                print(f"[Jarvis] ⚠️ Autonomous Computer Action Plan BLOCKED: {len(action_plan)} steps.")
+                print(f"[Jarvis] SAFETY: Autonomous computer control disabled. User approval required.")
+
+                # Publish action plan to neural bus for user review instead
+                if NEURAL_BUS_AVAILABLE:
+                    try:
+                        bus = get_neural_bus()
+                        bus.publish(
+                            domain="action",
+                            event_type="autonomous_action_blocked",
+                            payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat(), "reason": "Safety block - user approval required"},
+                            source_module="jarvis_protocol",
+                            priority=EventPriority.HIGH
+                        )
+                    except Exception as e:
+                        print(f"[Jarvis] Neural bus publish error: {e}")
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()

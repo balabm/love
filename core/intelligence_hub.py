@@ -253,10 +253,11 @@ class IntelligenceHub:
         if snap.github.get("unread_notifications", 0) > 5:
             alerts.append(f"GitHub: {snap.github['unread_notifications']} unread notifications")
 
-        # Phone battery
-        battery = snap.phone.get("battery", snap.phone.get("battery_level", 100))
-        if battery and int(battery) < 20:
-            alerts.append(f"Phone battery low: {battery}%")
+        # Phone battery (only alert if phone is actually connected)
+        if self._sources.get("phone"):
+            battery = snap.phone.get("battery", snap.phone.get("battery_level", 100))
+            if battery and int(battery) < 20:
+                alerts.append(f"Phone battery low: {battery}%")
 
         # Work pattern: active window is IDE + late hour
         hour = datetime.now().hour

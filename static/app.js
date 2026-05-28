@@ -146,9 +146,10 @@ function handleStateSync(data) {
     contextList.innerHTML = '';
     if (ctx.activity)       addCtx(`Activity: ${ctx.activity}`);
     if (ctx.active_window)  addCtx(`Focus: ${ctx.active_window}`);
-    if (ctx.stress_score != null) addCtx(`Stress: ${(ctx.stress_score * 100).toFixed(0)}%`);
-    if (ctx.cpu_percent != null)  addCtx(`CPU: ${ctx.cpu_percent}%`);
+    if (ctx.active_app)     addCtx(`App: ${ctx.active_app}`);
     if (ctx.time_of_day)    addCtx(`Time: ${ctx.time_of_day}`);
+    if (ctx.battery != null) addCtx(`Battery: ${ctx.battery}%`);
+    if (ctx.summary)        addCtx(`${ctx.summary}`);
   }
   if (data.devices) handleDeviceRoster(data.devices);
 }
@@ -231,20 +232,24 @@ function handleAgentStatus(data) {
 /* ── Monitoring Update ──────────────────────────────────────────── */
 function handleMonitoringUpdate(data) {
   if (data.cognitive_load != null) {
-    monitorCognitive.textContent = data.cognitive_load;
-  }
-  if (data.confidence != null) {
-    monitorConfidence.textContent = `${(data.confidence * 100).toFixed(0)}%`;
+    const load = typeof data.cognitive_load === 'object' ? data.cognitive_load.level : data.cognitive_load;
+    monitorCognitive.textContent = load ?? '—';
+    const score = typeof data.cognitive_load === 'object' ? data.cognitive_load.score : null;
+    if (score != null) {
+      monitorConfidence.textContent = `${(score * 100).toFixed(0)}%`;
+    }
   }
   if (data.system_health != null) {
     monitorHealth.textContent = data.system_health;
   }
-  if (data.error_rate != null) {
-    monitorErrors.textContent = `${(data.error_rate * 100).toFixed(1)}%`;
-  }
-  if (data.alerts && data.alerts.length > 0) {
+  // Map anomalies to alerts if present
+  const alerts = data.alerts || (data.anomalies ? data.anomalies.map(a => ({
+    severity: a.severity >= 0.7 ? 'error' : a.severity >= 0.5 ? 'warning' : 'info',
+    message: a.description || a.type || 'Anomaly detected'
+  })) : []);
+  if (alerts.length > 0) {
     monitorAlerts.innerHTML = '';
-    data.alerts.forEach(alert => {
+    alerts.forEach(alert => {
       const div = document.createElement('div');
       div.className = `alert-item ${alert.severity || 'info'}`;
       div.textContent = alert.message;
@@ -312,19 +317,25 @@ async function sendMessage() {
     const task = text.substring(7).trim();
     const typing = addTypingIndicator();
     try {
-      const res = await fetch(`${API_BASE}/agi/swarm/delegate`, {
+      const res = await fetch(`${API_BASE}/agi/swarm/coordinate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task, required_agents: ['BrowserAgent', 'ResearchAgent', 'CodeAgent', 'TerminalAgent'] })
+        body: JSON.stringify({ task, required_agents: [], context: '' })
       });
       const data = await res.json();
       typing.remove();
-      if (data.success && data.results?.FINAL_SYNTHESIS) {
-        addMsg(`🐝 Swarm Complete:\n${data.results.FINAL_SYNTHESIS}`, 'love');
+      if (data.success && data.synthesis) {
+        let msg = `🤖 Coordinated Swarm Complete\n`;
+        msg += `Agents: ${data.selected_agents.join(', ')}\n`;
+        if (data.conflicts && data.conflicts.length > 0) {
+          msg += `⚠️ ${data.conflicts.length} conflict(s) resolved\n`;
+        }
+        msg += `\n${data.synthesis}`;
+        addMsg(msg, 'love');
       } else {
-        addMsg('Swarm completed but no synthesis returned.', 'love');
+        addMsg('Swarm coordination completed but no synthesis returned.', 'love');
       }
-    } catch { typing.remove(); addMsg('⚠️ Swarm link severed.', 'love'); }
+    } catch (e) { console.error('[UI] swarm failed:', e); typing.remove(); addMsg('⚠️ Swarm link severed.', 'love'); }
     return;
   }
 
@@ -377,7 +388,7 @@ async function sendMessage() {
   if (lower === '/help') {
     addMsg(
 `🤖 LOVE Command Reference:
-/swarm <task>   — Spin up multi-agent swarm
+/swarm <task>   — Coordinated multi-agent swarm (dynamic selection, parallel execution)
 /recall <query> — Search infinite memory
 /vision         — Capture + analyse screen
 /devices        — List connected devices
@@ -422,31 +433,37 @@ async function fetchInitialState() {
     const res = await fetch(`${API_BASE}/agi/consciousness`);
     const data = await res.json();
     if (!data.error) handleStateSync({ consciousness: data });
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] consciousness fetch failed:', e); }
+
+  try {
+    const res = await fetch(`${API_BASE}/context/summary`);
+    const data = await res.json();
+    if (!data.error) handleStateSync({ context: data });
+  } catch (e) { console.error('[UI] context summary fetch failed:', e); }
 
   try {
     const res = await fetch(`${API_BASE}/agi/sync/devices`);
     const data = await res.json();
     if (data.devices) handleDeviceRoster(data.devices);
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] devices fetch failed:', e); }
 
   try {
     const res = await fetch(`${API_BASE}/agi/memory/count`);
     const data = await res.json();
     if (data.count != null) memoryCount.textContent = data.count.toLocaleString();
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] memory count fetch failed:', e); }
 
   try {
     const res = await fetch(`${API_BASE}/neural/monitoring/status`);
     const data = await res.json();
     if (!data.error) handleMonitoringUpdate(data);
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] monitoring fetch failed:', e); }
 
   try {
     const res = await fetch(`${API_BASE}/neural/learning/status`);
     const data = await res.json();
     if (!data.error) handleLearningUpdate(data);
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] learning fetch failed:', e); }
 }
 
 /* ── Voice Input (Web Speech API) ─────────────────────────────── */
@@ -493,17 +510,112 @@ wsConnect();
 // Periodic polling for monitoring and learning updates (every 30 seconds)
 setInterval(async () => {
   try {
+    const res = await fetch(`${API_BASE}/context/summary`);
+    const data = await res.json();
+    if (!data.error) handleStateSync({ context: data });
+  } catch (e) { console.error('[UI] context poll failed:', e); }
+
+  try {
     const res = await fetch(`${API_BASE}/neural/monitoring/status`);
     const data = await res.json();
     if (!data.error) handleMonitoringUpdate(data);
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] monitoring poll failed:', e); }
 
   try {
     const res = await fetch(`${API_BASE}/neural/learning/status`);
     const data = await res.json();
     if (!data.error) handleLearningUpdate(data);
-  } catch { /* non-blocking */ }
+  } catch (e) { console.error('[UI] learning poll failed:', e); }
 }, 30000);
+
+/* ── Coordinated Swarm Panel ───────────────────────────────────── */
+const swarmInput = $('swarm-input');
+const swarmLaunchBtn = $('swarm-launch');
+const swarmStatus = $('swarm-status');
+const swarmActiveAgents = $('swarm-active-agents');
+const swarmSynthesis = $('swarm-synthesis');
+const swarmConflicts = $('swarm-conflicts');
+
+async function launchCoordinatedSwarm() {
+  const task = swarmInput.value.trim();
+  if (!task) return;
+
+  swarmLaunchBtn.disabled = true;
+  swarmStatus.textContent = 'COORDINATOR: Analyzing task & selecting agents…';
+  swarmActiveAgents.innerHTML = '';
+  swarmSynthesis.classList.remove('visible');
+  swarmSynthesis.textContent = '';
+  swarmConflicts.innerHTML = '';
+
+  try {
+    const res = await fetch(`${API_BASE}/agi/swarm/coordinate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task, required_agents: [], context: '' })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      swarmStatus.textContent = `ERROR: ${data.error || 'Unknown error'}`;
+      swarmLaunchBtn.disabled = false;
+      return;
+    }
+
+    swarmStatus.textContent = `COORDINATOR: Selected ${data.selected_agents.join(', ')} — ${data.coordinator_reasoning}`;
+
+    // Render agent result cards
+    const results = data.agent_results || {};
+    Object.entries(results).forEach(([name, r]) => {
+      const card = document.createElement('div');
+      card.className = `swarm-agent-card ${r.status}`;
+      card.innerHTML = `
+        <div class="swarm-agent-header">
+          <div>
+            <span class="swarm-agent-name">${escapeHtml(r.agent_name)}</span>
+            <span class="swarm-agent-role">${escapeHtml(r.agent_role)}</span>
+          </div>
+          <span class="swarm-agent-dur">${r.duration_sec ? r.duration_sec.toFixed(1) + 's' : ''}</span>
+        </div>
+        <div class="swarm-agent-output">${escapeHtml(r.output).substring(0, 300)}</div>
+      `;
+      swarmActiveAgents.appendChild(card);
+    });
+
+    // Show synthesis
+    if (data.synthesis) {
+      swarmSynthesis.textContent = data.synthesis;
+      swarmSynthesis.classList.add('visible');
+    }
+
+    // Show conflicts if any
+    if (data.conflicts && data.conflicts.length > 0) {
+      data.conflicts.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'swarm-conflict-item';
+        div.innerHTML = `<span class="swarm-conflict-sev">[SEV ${(c.severity * 100).toFixed(0)}%]</span> ${escapeHtml(c.topic)} — ${escapeHtml(c.summary)}`;
+        swarmConflicts.appendChild(div);
+      });
+      swarmStatus.textContent += ` | ${data.conflicts.length} conflict(s) detected & resolved`;
+    } else {
+      swarmStatus.textContent += ' | No conflicts — full consensus';
+    }
+
+    // Also post to chat
+    addToChat('system', `🤖 Swarm completed: ${task.substring(0, 60)}…\n\n${escapeHtml(data.synthesis).substring(0, 500)}`);
+
+  } catch (e) {
+    console.error('[UI] swarm launch failed:', e);
+    swarmStatus.textContent = 'ERROR: Swarm coordination failed. Check console.';
+  } finally {
+    swarmLaunchBtn.disabled = false;
+  }
+}
+
+if (swarmLaunchBtn && swarmInput) {
+  swarmLaunchBtn.addEventListener('click', launchCoordinatedSwarm);
+  swarmInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') launchCoordinatedSwarm();
+  });
+}
 
 /* ── Onboarding Overlay ───────────────────────────────────────────── */
 const onboardingOverlay = $('onboarding-overlay');
