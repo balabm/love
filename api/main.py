@@ -2417,6 +2417,155 @@ async def health():
         "lifecycle": get_lifecycle().get_status()
     }
 
+# ── Settings & Ecosystem Management ────────────────────────────────────────
+
+@app.get("/settings")
+async def get_settings_endpoint():
+    """Get current LOVE settings from settings.yaml."""
+    try:
+        from core.settings import SettingsManager
+        sm = SettingsManager()
+        settings = sm.get_settings()
+        return {
+            "user": {"name": settings.user.name, "timezone": settings.user.timezone, "language": settings.user.language},
+            "companion": {"name": settings.companion.name, "personality_preset": settings.companion.personality_preset, "custom_traits": settings.companion.custom_traits},
+            "work": {"daily_limit_hours": settings.work.daily_limit_hours, "warning_threshold": settings.work.warning_threshold, "hard_stop_enabled": settings.work.hard_stop_enabled, "auto_commit_message": settings.work.auto_commit_message, "dev_folders": settings.work.dev_folders},
+            "finance": {"watchlist": settings.finance.watchlist, "risk_profile": settings.finance.risk_profile, "max_position_size": settings.finance.max_position_size, "default_currency": settings.finance.default_currency},
+            "development": {"work_project": settings.development.work_project, "dotnet_project": settings.development.dotnet_project, "flutter_project": settings.development.flutter_project, "docs_url": settings.development.docs_url, "auto_tests": settings.development.auto_tests, "suggest_architecture": settings.development.suggest_architecture},
+            "models": {"reasoning": settings.models.reasoning, "coding": settings.models.coding, "embedding": settings.models.embedding, "base_url": settings.models.base_url},
+            "voice": {"wake_word": settings.voice.wake_word, "stt_enabled": settings.voice.stt_enabled, "tts_enabled": settings.voice.tts_enabled, "tts_engine": settings.voice.tts_engine},
+            "evolution": {"auto_heal_enabled": settings.evolution.auto_heal_enabled, "weekly_optimization": settings.evolution.weekly_optimization, "auto_install_deps": settings.evolution.auto_install_deps},
+            "privacy": {"local_only": settings.privacy.local_only, "cloud_sync": settings.privacy.cloud_sync, "anonymize_logs": settings.privacy.anonymize_logs},
+            "devices": {"primary_device_id": settings.devices.primary_device_id, "primary_device_type": settings.devices.primary_device_type},
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+class UpdateSettingsRequest(BaseModel):
+    section: str
+    values: dict
+
+@app.put("/settings")
+async def update_settings_endpoint(req: UpdateSettingsRequest):
+    """Update a section of LOVE settings and persist to settings.yaml."""
+    try:
+        from core.settings import SettingsManager, LoveSettings, UserConfig, CompanionConfig, WorkConfig, FinanceConfig, DevelopmentConfig, ModelsConfig, VoiceConfig, EvolutionConfig, PrivacyConfig, DevicesConfig
+        sm = SettingsManager()
+        settings = sm.get_settings()
+
+        section_map = {
+            "user": (UserConfig, settings.user),
+            "companion": (CompanionConfig, settings.companion),
+            "work": (WorkConfig, settings.work),
+            "finance": (FinanceConfig, settings.finance),
+            "development": (DevelopmentConfig, settings.development),
+            "models": (ModelsConfig, settings.models),
+            "voice": (VoiceConfig, settings.voice),
+            "evolution": (EvolutionConfig, settings.evolution),
+            "privacy": (PrivacyConfig, settings.privacy),
+            "devices": (DevicesConfig, settings.devices),
+        }
+
+        if req.section not in section_map:
+            return {"error": f"Unknown section: {req.section}"}
+
+        ConfigClass, target = section_map[req.section]
+        current = {k: v for k, v in vars(target).items() if not k.startswith("_")}
+        current.update(req.values)
+        # Remove fields not in dataclass to avoid errors
+        valid_fields = {f.name for f in ConfigClass.__dataclass_fields__.values()}
+        filtered = {k: v for k, v in current.items() if k in valid_fields}
+        new_obj = ConfigClass(**filtered)
+        setattr(settings, req.section, new_obj)
+        sm.save_settings(settings)
+        return {"success": True, "section": req.section}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/settings/reload")
+async def reload_settings_endpoint():
+    """Reload settings from settings.yaml."""
+    try:
+        from core.settings import SettingsManager
+        SettingsManager().reload()
+        return {"success": True}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ── Ecosystem Device Management ────────────────────────────────────────────
+
+@app.get("/ecosystem/status")
+async def ecosystem_status_endpoint():
+    """Get full ecosystem status including all devices."""
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ctrl = get_ecosystem_controller()
+        return ctrl.get_ecosystem_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/ecosystem/devices")
+async def ecosystem_devices_endpoint():
+    """List all registered ecosystem devices."""
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ctrl = get_ecosystem_controller()
+        return {"devices": ctrl.get_ecosystem_status().get("devices", [])}
+    except Exception as e:
+        return {"devices": [], "error": str(e)}
+
+@app.get("/ecosystem/devices/health")
+async def ecosystem_device_health_endpoint():
+    """Get health status of all ecosystem devices."""
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ctrl = get_ecosystem_controller()
+        return {"health": ctrl.get_device_health()}
+    except Exception as e:
+        return {"health": [], "error": str(e)}
+
+class EcosystemRegisterRequest(BaseModel):
+    device_id: str
+    name: str
+    role: str
+    capabilities: list = []
+    ip_address: str = ""
+    os_type: str = ""
+
+@app.post("/ecosystem/devices/register")
+async def ecosystem_register_endpoint(req: EcosystemRegisterRequest):
+    """Register a new device in the LOVE ecosystem."""
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ctrl = get_ecosystem_controller()
+        return ctrl.register_device(req.device_id, req.name, req.role, req.capabilities, req.ip_address, req.os_type)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+class EcosystemHeartbeatRequest(BaseModel):
+    device_id: str
+    state_update: dict = {}
+
+@app.post("/ecosystem/devices/heartbeat")
+async def ecosystem_heartbeat_endpoint(req: EcosystemHeartbeatRequest):
+    """Send a heartbeat from a device to keep it marked online."""
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ctrl = get_ecosystem_controller()
+        return ctrl.heartbeat(req.device_id, req.state_update)
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.get("/ecosystem/presence")
+async def ecosystem_presence_endpoint():
+    """Get user presence detection (which devices are active)."""
+    try:
+        from core.ecosystem_controller import get_ecosystem_controller
+        ctrl = get_ecosystem_controller()
+        return ctrl.detect_presence()
+    except Exception as e:
+        return {"error": str(e)}
+
 class TerminalCommandRequest(BaseModel):
     command: str
 

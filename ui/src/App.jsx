@@ -8,6 +8,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import FleetStatusWidget from "./components/FleetStatusWidget";
 import MindPanel from "./components/MindPanel";
 import SentinelPanel from "./components/SentinelPanel";
+import SettingsManager from "./components/SettingsManager";
 import SupervisorPanel from "./components/SupervisorPanel";
 import TerminalPanel from "./components/TerminalPanel";
 
@@ -277,6 +278,9 @@ export default function App() {
           <button className={`nav-btn${view === "supervisor" ? " active" : ""}`} onClick={() => setView("supervisor")}>
             <span>🛡️</span> Supervisor
           </button>
+          <button className={`nav-btn${view === "settings" ? " active" : ""}`} onClick={() => setView("settings")}>
+            <span>⚙️</span> Settings
+          </button>
         </nav>
 
         {/* Live context digest */}
@@ -376,6 +380,10 @@ export default function App() {
 
         {view === "supervisor" && (
           <ErrorBoundary name="Supervisor"><div className="view-scroll"><SupervisorPanel /></div></ErrorBoundary>
+        )}
+
+        {view === "settings" && (
+          <ErrorBoundary name="Settings"><div className="view-scroll"><SettingsManager /></div></ErrorBoundary>
         )}
       </main>
     </div>
