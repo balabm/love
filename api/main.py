@@ -2408,15 +2408,18 @@ async def chat_endpoint(msg: Message):
     text_lower = msg.text.lower().strip().rstrip("!?.") if msg.text else ""
     is_greeting = text_lower in ("hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hola", "heyy")
     is_trivial = len(msg.text.strip()) < 10 if msg.text else False and not any(c in msg.text for c in "?")
-    if is_greeting or is_trivial:
+    is_common = text_lower in ("how are you", "how r u", "how are u", "what's up", "whats up", "how is it going", "hows it going", "hows your day", "how is your day", "are you there", "u there")
+    if is_greeting or is_trivial or is_common:
         import random
         fallbacks = [
-            f"Hey! I'm here. What's on your mind?",
-            f"Yo, what's up?",
-            f"Hey! How's it going?",
-            f"Hi! What's happening?",
-            f"Hey! How's your day looking?",
-            f"What's up?",
+            "Hey! I'm here. What's on your mind?",
+            "Yo, what's up?",
+            "Hey! How's it going?",
+            "Hi! What's happening?",
+            "Hey! How's your day looking?",
+            "What's up?",
+            "Doing great, thanks for asking! What's up with you?",
+            "I'm here and ready to help. What's on your mind?",
         ]
         return {"response": random.choice(fallbacks), "thinking": "(instant)"}
 
