@@ -142,6 +142,28 @@ def get_live_context() -> LiveContext:
     return _ctx
 
 
+def get_prompt_context() -> str:
+    """Get a rich human-readable context summary for LLM prompt injection.
+
+    This is consumed by jarvis_protocol, agent.py, and tool_registry.
+    """
+    _ctx.refresh()
+    parts = []
+    if _ctx.context_summary:
+        parts.append(_ctx.context_summary)
+    if _ctx.active_app:
+        parts.append(f"Currently using: {_ctx.active_app}")
+    if _ctx.work_hours_today:
+        parts.append(f"Work today: {_ctx.work_hours_today:.1f} hours")
+    if _ctx.sleep_hours_last_night:
+        parts.append(f"Sleep last night: {_ctx.sleep_hours_last_night:.1f} hours")
+    if _ctx.stress_level:
+        parts.append(f"Stress level: {_ctx.stress_level}")
+    if _ctx.energy_level:
+        parts.append(f"Energy level: {_ctx.energy_level}")
+    return "\n".join(parts) if parts else "No live context available."
+
+
 def get_context_dict() -> Dict:
     _ctx.refresh()
     return {

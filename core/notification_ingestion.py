@@ -22,7 +22,21 @@ from collections import defaultdict, deque
 
 from core import knowledge_graph
 from integrations.phone_bridge import PhoneBridge
-from integrations.microsoft_bridge import MicrosoftBridge
+
+# Microsoft Teams integration (optional — only if azure is installed)
+try:
+    from integrations.microsoft_bridge import MicrosoftBridge
+    MICROSOFT_AVAILABLE = True
+except ImportError:
+    MICROSOFT_AVAILABLE = False
+    class MicrosoftBridge:
+        @staticmethod
+        def get_instance():
+            return None
+        def is_connected(self):
+            return False
+        def poll_notifications(self):
+            return []
 
 # Neural Bus integration
 try:

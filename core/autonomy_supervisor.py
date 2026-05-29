@@ -738,6 +738,7 @@ Generate 3 concrete, actionable next steps they (or you) can take TODAY. Be spec
 
         if insights:
             try:
+                from core.activity_log import log_activity
                 from core.proactive_push import get_push_engine
                 msg = " ".join(insights[:2])
                 get_push_engine().push("AGI", msg, priority="normal")
