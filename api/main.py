@@ -2402,6 +2402,24 @@ async def chat_endpoint(msg: Message):
         except Exception:
             pass
 
+    # INSTANT PATH: greetings bypass asyncio.to_thread entirely.
+    # Background tasks saturate the thread pool with blocking Ollama calls,
+    # so we must run the fast path directly in the event loop.
+    text_lower = msg.text.lower().strip().rstrip("!?.") if msg.text else ""
+    is_greeting = text_lower in ("hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hola", "heyy")
+    is_trivial = len(msg.text.strip()) < 10 if msg.text else False and not any(c in msg.text for c in "?")
+    if is_greeting or is_trivial:
+        import random
+        fallbacks = [
+            f"Hey! I'm here. What's on your mind?",
+            f"Yo, what's up?",
+            f"Hey! How's it going?",
+            f"Hi! What's happening?",
+            f"Hey! How's your day looking?",
+            f"What's up?",
+        ]
+        return {"response": random.choice(fallbacks), "thinking": "(instant)"}
+
     result = await asyncio.to_thread(chat, msg.text, msg.mode, injected_context)
     return {
         "response": result["response"],
