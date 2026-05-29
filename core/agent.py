@@ -643,6 +643,25 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
     except Exception:
         pass
 
+    # FAST PATH: greetings and very short queries don't need the full context dump
+    # This prevents small models (llama3.2:1b) from hanging on trivial inputs.
+    simple_greetings = ["hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hola", "heyy"]
+    is_greeting = user_input.lower().strip().rstrip("!?.") in simple_greetings
+    is_trivial = len(user_input.strip()) < 10 and not any(c in user_input for c in "?")
+
+    if is_greeting or is_trivial:
+        system = SYSTEM_PROMPT.replace("{{memory}}", f"First few messages with {USER_NAME}. Still learning.")
+        mini_prompt = f"""{system}\n\n{USER_NAME}: {user_input}\n{LOVE_NAME}:"""
+        llm = route_llm(user_input)
+        raw = llm.invoke(mini_prompt)
+        thinking, response = extract_thinking(raw)
+        response = clean_response(response)
+        if not response or len(response) < 2:
+            response = f"Hey {USER_NAME}! I'm here. What's on your mind?"
+        save_memory(user_input, response, mode=mode)
+        record_interaction(user_input, response, mode=mode, response_time_ms=int((time.time()-t_start)*1000))
+        return {"response": response, "thinking": "(fast path — minimal context)"}
+
     # Check if this is a fix command
     fix_response = handle_fix_command(user_input)
     if fix_response:
@@ -1183,9 +1202,30 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
 {USER_NAME}: {user_input}
 {LOVE_NAME}:"""
 
+    # Hard cap: truncate if prompt exceeds what the model can handle
+    max_chars = int(os.getenv("MAX_PROMPT_CHARS", "12000"))
+    if len(prompt) > max_chars:
+        print(f"[Agent] Prompt too long ({len(prompt):,} chars), truncating to {max_chars:,}")
+        prompt = prompt[:max_chars] + "\n\n[Context truncated due to length]\n\n" + f"{USER_NAME}: {user_input}\n{LOVE_NAME}:"
+
     print(f"[Agent] Final prompt size: {len(prompt):,} chars — invoking LLM")
     llm = route_llm(user_input)
-    raw = llm.invoke(prompt)
+
+    # Timeout wrapper to prevent indefinite hangs on small models
+    def _invoke_with_timeout(_llm, _prompt, _timeout):
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(_llm.invoke, _prompt)
+            try:
+                return future.result(timeout=_timeout)
+            except concurrent.futures.TimeoutError:
+                print(f"[Agent] LLM invoke timed out after {_timeout}s")
+                return None
+
+    timeout_sec = int(os.getenv("CHAT_LLM_TIMEOUT_SEC", "30"))
+    raw = _invoke_with_timeout(llm, prompt, timeout_sec)
+    if raw is None:
+        return {"response": "I'm thinking a bit slowly right now. Can you repeat that?", "thinking": "LLM timeout"}
 
     thinking, response = extract_thinking(raw)
     response = clean_response(response)
