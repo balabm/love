@@ -2,7 +2,7 @@
 
 > *Not a chatbot. A local-first, self-evolving AI companion that tracks your body, protects your energy, manages your work, and builds itself while you sleep.*
 
-**95,000+ lines of Python | 128 core modules | 450+ API endpoints | 22 UI panels**
+**95,000+ lines of Python | 128 core modules | 460+ API endpoints | 23 UI panels**
 
 ---
 
@@ -137,7 +137,7 @@ love/
 │   ├── neural_routes.py           # 107 neural mesh routes
 │   └── evolution_routes.py        # 9 evolution dashboard routes
 │
-└── ui/                   # React frontend — 20 panels
+└── ui/                   # React frontend — 23 panels
     └── src/components/
         ├── Dashboard.jsx            # System overview + AGI activity
         ├── MindPanel.jsx            # 🧠 Real-time AGI thought stream + activity log
@@ -154,6 +154,7 @@ love/
         ├── SupervisorPanel.jsx      # Autonomy supervisor control
         ├── IntegrationsPanel.jsx    # Google/Microsoft/GitHub status
         ├── AgentLoopPanel.jsx       # Agent execution viewer
+        ├── SettingsManager.jsx      # ⚙️ Unified settings + device management
         ├── IntelligenceDashboard.jsx # Intelligence hub
         ├── ContextPanel.jsx         # Real-time context
         ├── TerminalPanel.jsx        # In-browser terminal
@@ -258,6 +259,23 @@ GET  /neural/briefing/today   # Today's AI-written brief
 POST /neural/briefing/generate # Force regenerate
 ```
 
+### Settings & Ecosystem Management
+Centralized preference editing with live persistence to `settings.yaml`. Manage user profile, companion personality, work limits, finance watchlists, AI models, voice, evolution, and privacy — all in one place.
+
+Device ecosystem management: register phones, tablets, workstations, and edge devices. Real-time presence detection shows which device you're actively using. Health monitoring tracks battery, CPU, and connectivity per device.
+
+```
+GET  /settings                 # Full settings from settings.yaml
+PUT  /settings                 # Update any section
+POST /settings/reload          # Reload from disk
+GET  /ecosystem/status         # Full ecosystem overview
+GET  /ecosystem/devices        # All registered devices
+GET  /ecosystem/devices/health # Device health check
+POST /ecosystem/devices/register # Add new device
+POST /ecosystem/devices/heartbeat # Keep device online
+GET  /ecosystem/presence       # User presence detection
+```
+
 ### Companion Chat
 Memory-aware, personality-driven conversation with reasoning transparency.
 
@@ -268,12 +286,14 @@ GET  /modes                   # Available personality modes
 
 ### Full API Reference
 
-450+ endpoints across 42 prefixes. Key groups:
+460+ endpoints across 44 prefixes. Key groups:
 
 | Prefix | Endpoints | Purpose |
 |--------|-----------|---------|
 | `/agi` | 55 | AGI substrate (supervisor, goals, research, ghost dev, activity log) |
 | `/neural` | 107 | Neural mesh (bus, memory, cognition, evolution, integrations) |
+| `/settings` | 3 | Centralized preference management (read, write, reload) |
+| `/ecosystem` | 6 | Multi-device ecosystem (register, heartbeat, health, presence) |
 | `/life` | 20+ | Life domains, coaching, correlations |
 | `/love` | 23 | Core companion features |
 | `/integrations` | 15 | Google, Microsoft, GitHub, finance |
