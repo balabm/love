@@ -296,7 +296,7 @@ class CapabilityGapDetector:
             rel_state = get_relationship_state()
             
             # Check for low interaction frequency
-            interaction_freq = rel_state.get("interaction_frequency", 0.5)
+            interaction_freq = float(rel_state.get("interaction_frequency", 0.5))
             if interaction_freq < 0.3:
                 gap = CapabilityGap(
                     domain="relationships",

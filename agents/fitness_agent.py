@@ -280,6 +280,42 @@ def log_workout(workout_type: str, duration: int, exercises: List[Dict],
     return agent.log_workout(workout_type, duration, exercises, intensity, notes)
 
 
+def get_fitness_overview() -> Dict[str, Any]:
+    """Get fitness overview for gap detection and meta-evolution pressure."""
+    agent = FitnessAgent()
+    data = agent._load_data()
+    workouts = data.get('workouts', [])
+    metrics = data.get('body_metrics', [])
+    
+    # Recent activity level: workouts in last 7 days / 7
+    from datetime import datetime, timedelta
+    cutoff = datetime.now() - timedelta(days=7)
+    recent_workouts = [w for w in workouts if datetime.fromisoformat(w['date']) > cutoff] if workouts else []
+    activity_level = min(1.0, len(recent_workouts) / 7.0)
+    
+    # Sleep quality from latest metric
+    sleep_quality = 0.5
+    if metrics:
+        latest = metrics[-1]
+        sleep_hours = latest.get('sleep_hours', 0)
+        if sleep_hours >= 7.5:
+            sleep_quality = 0.9
+        elif sleep_hours >= 6:
+            sleep_quality = 0.6
+        elif sleep_hours >= 4:
+            sleep_quality = 0.3
+        else:
+            sleep_quality = 0.1
+    
+    return {
+        "recent_activity_level": activity_level,
+        "sleep_quality": sleep_quality,
+        "total_workouts": len(workouts),
+        "total_metrics": len(metrics),
+        "streak": data.get('streak', {}).get('current', 0),
+    }
+
+
 def suggest_next_workout() -> str:
     """Get suggestion for next workout."""
     agent = FitnessAgent()
