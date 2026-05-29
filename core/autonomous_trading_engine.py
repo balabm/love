@@ -244,11 +244,31 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
         if not text:
             return None
 
+        def _try_parse(candidate: str):
+            """Try to parse JSON, with aggressive repair for small-model output."""
+            if not candidate:
+                return None
+            # Strip common LLM artifacts
+            candidate = candidate.strip()
+            # 1. Direct parse
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError:
+                pass
+            # 2. Remove trailing commas before } or ]
+            repaired = re.sub(r',(\s*[}\]])', r'\1', candidate)
+            # 3. Replace single-quoted string keys/values with double quotes (simple cases)
+            repaired = re.sub(r"(?<=[{\s,])([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*:)", r'"\1"', repaired)
+            try:
+                return json.loads(repaired)
+            except json.JSONDecodeError:
+                pass
+            return None
+
         # 1. Direct parse
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
+        direct = _try_parse(text)
+        if direct:
+            return direct
 
         # 2. Markdown code block
         patterns = [
@@ -258,11 +278,9 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
         for pattern in patterns:
             match = re.search(pattern, text)
             if match:
-                candidate = match.group(1).strip()
-                try:
-                    return json.loads(candidate)
-                except json.JSONDecodeError:
-                    pass
+                parsed = _try_parse(match.group(1).strip())
+                if parsed:
+                    return parsed
 
         # 3. Find outermost braces by balancing
         brace_depth = 0
@@ -277,20 +295,17 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                 brace_depth -= 1
                 if brace_depth == 0 and best_start != -1:
                     best_end = i
-                    try:
-                        candidate = text[best_start:best_end + 1]
-                        return json.loads(candidate)
-                    except json.JSONDecodeError:
-                        continue
+                    parsed = _try_parse(text[best_start:best_end + 1])
+                    if parsed:
+                        return parsed
 
         # 4. Fallback: first-to-last braces
         start = text.find('{')
         end = text.rfind('}')
         if start != -1 and end > start:
-            try:
-                return json.loads(text[start:end + 1])
-            except json.JSONDecodeError:
-                pass
+            parsed = _try_parse(text[start:end + 1])
+            if parsed:
+                return parsed
 
         return None
 

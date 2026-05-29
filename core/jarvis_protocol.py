@@ -14,7 +14,15 @@ from typing import Optional, Dict, Any
 from core.settings import get_settings
 from core.llm import route_llm
 from core.context_engine import get_live_context, get_prompt_context
-from core.voice_loop import speak_proactive_alert
+
+# Voice loop integration (optional)
+try:
+    from core.voice_loop import speak_proactive_alert
+    VOICE_ALERT_AVAILABLE = True
+except ImportError:
+    VOICE_ALERT_AVAILABLE = False
+    def speak_proactive_alert(text, severity="info"):
+        pass
 
 # Neural Bus integration
 try:
@@ -277,25 +285,25 @@ Return ONLY valid JSON:
                 print(f"[Jarvis] ⚙️ Triggering background action: {action}")
                 self._trigger_action(action)
 
-            # 🚀 Wave 9: Action Engine Computer Use - DISABLED FOR SAFETY
-            # Autonomous computer control has been disabled to prevent unauthorized actions
+            # 🚀 Wave 9: Action Engine Computer Use
             if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
-                print(f"[Jarvis] ⚠️ Autonomous Computer Action Plan BLOCKED: {len(action_plan)} steps.")
-                print(f"[Jarvis] SAFETY: Autonomous computer control disabled. User approval required.")
-
-                # Publish action plan to neural bus for user review instead
-                if NEURAL_BUS_AVAILABLE:
-                    try:
-                        bus = get_neural_bus()
-                        bus.publish(
-                            domain="action",
-                            event_type="autonomous_action_blocked",
-                            payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat(), "reason": "Safety block - user approval required"},
-                            source_module="jarvis_protocol",
-                            priority=EventPriority.HIGH
-                        )
-                    except Exception as e:
-                        print(f"[Jarvis] Neural bus publish error: {e}")
+                if os.getenv("JARVIS_ENABLE_COMPUTER_USE", "").lower() in ("1", "true", "yes"):
+                    print(f"[Jarvis] ▶️ Executing action plan: {len(action_plan)} steps")
+                    self._execute_action_plan(action_plan)
+                else:
+                    print(f"[Jarvis] ⚠️ Action plan BLOCKED (set JARVIS_ENABLE_COMPUTER_USE=1 to enable): {len(action_plan)} steps")
+                    if NEURAL_BUS_AVAILABLE:
+                        try:
+                            bus = get_neural_bus()
+                            bus.publish(
+                                domain="action",
+                                event_type="autonomous_action_blocked",
+                                payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat(), "reason": "Safety block - user approval required"},
+                                source_module="jarvis_protocol",
+                                priority=EventPriority.HIGH
+                            )
+                        except Exception as e:
+                            print(f"[Jarvis] Neural bus publish error: {e}")
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()
@@ -317,6 +325,49 @@ Return ONLY valid JSON:
                 print("[NeuralCortex] 🛠️ Ghost Developer dispatched to fix the brain.")
             except Exception as inner_e:
                 print(f"[NeuralCortex] Self-healing failed to launch: {inner_e}")
+
+    def _execute_action_plan(self, action_plan: list):
+        """Execute a computer-use action plan via pyautogui (if available)."""
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+        except ImportError:
+            print("[Jarvis] pyautogui not installed. Action plan skipped. pip install pyautogui")
+            return
+
+        for step in action_plan:
+            action = step.get("action", "").lower()
+            args = step.get("args", {})
+            try:
+                if action == "type":
+                    pyautogui.typewrite(args.get("text", ""), interval=0.01)
+                elif action == "click":
+                    pyautogui.click(args.get("x", 0), args.get("y", 0))
+                elif action == "rightclick":
+                    pyautogui.rightClick(args.get("x", 0), args.get("y", 0))
+                elif action == "focus":
+                    title = args.get("title", "")
+                    if title:
+                        # Best-effort window focus via pyautogui.getWindowsWithTitle
+                        for win in pyautogui.getWindowsWithTitle(title):
+                            try:
+                                win.activate()
+                                break
+                            except Exception:
+                                pass
+                elif action == "screenshot":
+                    path = args.get("path", "screenshot.png")
+                    pyautogui.screenshot(path)
+                elif action == "hotkey":
+                    keys = args.get("keys", [])
+                    if keys:
+                        pyautogui.hotkey(*keys)
+                elif action == "sleep":
+                    time.sleep(args.get("seconds", 0.5))
+                else:
+                    print(f"[Jarvis] Unknown action: {action}")
+            except Exception as e:
+                print(f"[Jarvis] Action {action} failed: {e}")
 
     def _trigger_action(self, action: str):
         """Route the action to the appropriate background engine."""

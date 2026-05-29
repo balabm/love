@@ -29,14 +29,25 @@ try:
     MICROSOFT_AVAILABLE = True
 except ImportError:
     MICROSOFT_AVAILABLE = False
+    _ms_bridge_instance = None
     class MicrosoftBridge:
         @staticmethod
         def get_instance():
-            return None
+            if _ms_bridge_instance is None:
+                _ms_bridge_instance = MicrosoftBridge()
+            return _ms_bridge_instance
         def is_connected(self):
             return False
         def poll_notifications(self):
             return []
+        def get_teams_messages(self, limit=5):
+            return []
+        def get_unread_count(self):
+            return 0
+        def get_next_event(self):
+            return None
+        def get_context_summary(self):
+            return None
 
 # Neural Bus integration
 try:

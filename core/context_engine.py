@@ -44,6 +44,12 @@ class LiveContext:
         self.tasks_overdue = 0
         self.tasks_due_today = 0
         self.hours_worked_today = 0.0
+        self.stress_score = None
+        self.mood_score = None
+        self.energy_score = None
+        self.learning_streak = 0
+        self.active_project = ''
+        self.phone_battery = None
 
     def refresh(self):
         now = datetime.now()

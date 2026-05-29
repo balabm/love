@@ -88,6 +88,16 @@ def _check_dependencies() -> Dict[str, bool]:
     return deps
 
 
+# Module-level availability check: if core deps are missing, fail import gracefully
+# so api/main.py sets VOICE_LOOP_AVAILABLE = False instead of registering a degraded module.
+_core_deps = _check_dependencies()
+if not (_core_deps["sounddevice"] and _core_deps["numpy"] and _core_deps["stt"]):
+    raise ImportError(
+        "Voice loop dependencies missing (sounddevice, numpy, stt). "
+        "Install with: pip install sounddevice numpy"
+    )
+
+
 def _has_wake_word(text: str) -> Optional[str]:
     """Check if transcript contains a wake word. Returns the part after wake word."""
     text_lower = text.lower().strip()
