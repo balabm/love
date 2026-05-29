@@ -50,6 +50,7 @@ class LiveContext:
         self.learning_streak = 0
         self.active_project = ''
         self.phone_battery = None
+        self.pc_battery = None
 
     def refresh(self):
         now = datetime.now()
@@ -73,6 +74,7 @@ class LiveContext:
                 bat = psutil.sensors_battery()
                 if bat:
                     self.battery = int(bat.percent)
+                    self.pc_battery = int(bat.percent)
                     self.battery_charging = bat.power_plugged
         except Exception:
             pass
