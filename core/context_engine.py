@@ -33,6 +33,17 @@ class LiveContext:
         self.focus_mode_active = False
         self.last_interaction = ''
         self.context_summary = ''
+        self.proactive_alerts = []
+        self.suggested_action = ''
+        self.is_in_meeting = False
+        self.next_event = None
+        self.events_today = []
+        self.urgent_emails = []
+        self.unread_important = 0
+        self.phone_connected = False
+        self.tasks_overdue = 0
+        self.tasks_due_today = 0
+        self.hours_worked_today = 0.0
 
     def refresh(self):
         now = datetime.now()

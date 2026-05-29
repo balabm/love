@@ -137,7 +137,11 @@ class IntelligenceHub:
 
     def _collect_microsoft(self) -> Dict:
         try:
-            from integrations.microsoft_bridge import MicrosoftBridge
+            try:
+                from integrations.microsoft_bridge import MicrosoftBridge
+            except ImportError:
+                self._sources["microsoft"] = False
+                return {"connected": False}
             ms = MicrosoftBridge.get_instance()
             if not ms.is_connected() if hasattr(ms, 'is_connected') else not ms._connected:
                 self._sources["microsoft"] = False
@@ -310,8 +314,9 @@ class IntelligenceHub:
             ctx = ms.get_context_summary()
             if ctx:
                 parts.append(ctx)
-        except Exception as e:
-            logger.error(f"Error in get_context_for_prompt (Microsoft): {e}", exc_info=True)
+        except (ImportError, Exception) as e:
+            if not isinstance(e, ImportError):
+                logger.error(f"Error in get_context_for_prompt (Microsoft): {e}", exc_info=True)
 
         # Phone
         try:
