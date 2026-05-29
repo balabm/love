@@ -650,14 +650,39 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
     is_trivial = len(user_input.strip()) < 10 and not any(c in user_input for c in "?")
 
     if is_greeting or is_trivial:
-        system = SYSTEM_PROMPT.replace("{{memory}}", f"First few messages with {USER_NAME}. Still learning.")
-        mini_prompt = f"""{system}\n\n{USER_NAME}: {user_input}\n{LOVE_NAME}:"""
+        # Truly minimal prompt — full SYSTEM_PROMPT overwhelms small models
+        mini_system = f"You are {LOVE_NAME}, {USER_NAME}'s companion. Respond briefly and naturally."
+        mini_prompt = f"{mini_system}\n\n{USER_NAME}: {user_input}\n{LOVE_NAME}:"
         llm = route_llm(user_input)
-        raw = llm.invoke(mini_prompt)
-        thinking, response = extract_thinking(raw)
-        response = clean_response(response)
+
+        def _fast_invoke(_llm, _prompt, _timeout=8):
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_llm.invoke, _prompt)
+                try:
+                    return future.result(timeout=_timeout)
+                except concurrent.futures.TimeoutError:
+                    print(f"[Agent] Fast-path LLM timed out after {_timeout}s")
+                    return None
+
+        raw = _fast_invoke(llm, mini_prompt)
+        if raw:
+            _, response = extract_thinking(raw)
+            response = clean_response(response)
+        else:
+            response = ""
+
         if not response or len(response) < 2:
-            response = f"Hey {USER_NAME}! I'm here. What's on your mind?"
+            # Hardcoded fallbacks guarantee a response even if LLM fails
+            fallbacks = [
+                f"Hey {USER_NAME}! I'm here. What's on your mind?",
+                f"Yo {USER_NAME}, what's up?",
+                f"Hey! How's it going?",
+                f"Hi {USER_NAME}! What's happening?",
+            ]
+            import random
+            response = random.choice(fallbacks)
+
         save_memory(user_input, response, mode=mode)
         record_interaction(user_input, response, mode=mode, response_time_ms=int((time.time()-t_start)*1000))
         return {"response": response, "thinking": "(fast path — minimal context)"}

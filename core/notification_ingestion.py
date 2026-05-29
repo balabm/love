@@ -33,6 +33,7 @@ except ImportError:
     class MicrosoftBridge:
         @staticmethod
         def get_instance():
+            global _ms_bridge_instance
             if _ms_bridge_instance is None:
                 _ms_bridge_instance = MicrosoftBridge()
             return _ms_bridge_instance
