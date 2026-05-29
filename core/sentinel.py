@@ -430,6 +430,11 @@ class Sentinel:
 
         try:
             from integrations.microsoft_bridge import MicrosoftBridge
+        except ImportError:
+            # Microsoft integration not available (azure not installed) — skip silently
+            return decisions
+
+        try:
             ms = MicrosoftBridge.get_instance()
             if await asyncio.wait_for(
                 asyncio.to_thread(ms.is_connected),
@@ -601,22 +606,26 @@ class Sentinel:
         # Check for new emails
         try:
             from integrations.microsoft_bridge import MicrosoftBridge
-            ms = MicrosoftBridge.get_instance()
-            if await asyncio.wait_for(
-                asyncio.to_thread(ms.is_connected),
-                timeout=5.0
-            ):
-                count = await asyncio.wait_for(
-                    asyncio.to_thread(ms.get_unread_count),
+        except ImportError:
+            pass  # Microsoft integration not available
+        else:
+            try:
+                ms = MicrosoftBridge.get_instance()
+                if await asyncio.wait_for(
+                    asyncio.to_thread(ms.is_connected),
                     timeout=5.0
-                )
-                if count > 0:
-                    missed.append(f"{count} new emails")
-        except asyncio.TimeoutError:
-            self._subsystem_health["microsoft_bridge"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
-            print("[Sentinel] Microsoft Bridge stalled during away summary")
-        except Exception:
-            pass
+                ):
+                    count = await asyncio.wait_for(
+                        asyncio.to_thread(ms.get_unread_count),
+                        timeout=5.0
+                    )
+                    if count > 0:
+                        missed.append(f"{count} new emails")
+            except asyncio.TimeoutError:
+                self._subsystem_health["microsoft_bridge"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
+                print("[Sentinel] Microsoft Bridge stalled during away summary")
+            except Exception:
+                pass
 
         # Check calendar events that passed
         try:

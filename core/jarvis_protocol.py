@@ -45,6 +45,7 @@ class NeuralCortex:
         self.thread: Optional[threading.Thread] = None
         self.last_thought = ""
         self.last_speech_time = 0
+        self._last_blocked_log = 0  # rate-limit action-plan-blocked noise
         
     def start(self):
         if self.running: return
@@ -291,7 +292,10 @@ Return ONLY valid JSON:
                     print(f"[Jarvis] ▶️ Executing action plan: {len(action_plan)} steps")
                     self._execute_action_plan(action_plan)
                 else:
-                    print(f"[Jarvis] ⚠️ Action plan BLOCKED (set JARVIS_ENABLE_COMPUTER_USE=1 to enable): {len(action_plan)} steps")
+                    now = time.time()
+                    if now - self._last_blocked_log > 300:  # 5 minute rate limit
+                        print(f"[Jarvis] ⚠️ Action plan BLOCKED (set JARVIS_ENABLE_COMPUTER_USE=1 to enable): {len(action_plan)} steps")
+                        self._last_blocked_log = now
                     if NEURAL_BUS_AVAILABLE:
                         try:
                             bus = get_neural_bus()
