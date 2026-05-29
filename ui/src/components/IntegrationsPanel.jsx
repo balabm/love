@@ -281,25 +281,34 @@ function PhoneConnectCard({ tunnel }) {
     );
   }
 
-  const url = tunnel.url;
+  const url = tunnel.public_url || tunnel.url || "";
   const webhook = url ? `${url}/device/webhook` : null;
-  const binaryOk = tunnel.binary_found;
-  const running = tunnel.status === "running";
+  const binaryOk = tunnel.cloudflared_available !== false;
+  const running = tunnel.connected || tunnel.running || tunnel.status === "running";
+  const tunnelName = tunnel.tunnel_name || "love";
 
   return (
     <div className={`int-phone-card ${running ? "int-phone-live" : binaryOk ? "int-phone-ready" : "int-phone-missing"}`}>
       <div className="int-phone-header">
-        <span className="int-phone-icon">📱</span>
+        <span className="int-phone-icon">🌐</span>
         <div className="int-phone-title">
-          <strong>Zero-Touch Phone Bridge</strong>
+          <strong>Cloudflare Tunnel — {tunnelName}</strong>
           <span className="int-phone-sub">
-            {running ? "Tunnel active — phone can connect now" : binaryOk ? "Tunnel starting..." : "cloudflared not installed"}
+            {running ? "Tunnel active — phone can connect anywhere" : binaryOk ? "cloudflared available but tunnel not running" : "cloudflared not installed or not authenticated"}
           </span>
         </div>
         <span className={`int-phone-status int-phone-status-${running ? "live" : binaryOk ? "ready" : "missing"}`}>
           {running ? "LIVE" : binaryOk ? "READY" : "MISSING"}
         </span>
       </div>
+
+      {/* Tunnel details */}
+      {tunnel.last_started && (
+        <div className="int-phone-row">
+          <span className="int-phone-label">Last started</span>
+          <span className="int-phone-url">{new Date(tunnel.last_started).toLocaleString()}</span>
+        </div>
+      )}
 
       {/* URL row */}
       {webhook && (
@@ -341,8 +350,16 @@ function PhoneConnectCard({ tunnel }) {
         )}
         {!binaryOk && (
           <div className="int-phone-missing-msg">
-            Install cloudflared: <code>winget install Cloudflare.cloudflared</code>
-            then restart LOVE.
+            <strong>Install cloudflared:</strong> <code>winget install Cloudflare.cloudflared</code><br/>
+            <strong>Login:</strong> <code>cloudflared tunnel login</code> (browser auth)<br/>
+            <strong>Then restart LOVE.</strong>
+          </div>
+        )}
+        {binaryOk && !running && (
+          <div className="int-phone-missing-msg">
+            Tunnel not running. If using a named tunnel, run:<br/>
+            <code>cloudflared service install &lt;TOKEN&gt;</code> (PowerShell as Admin)<br/>
+            Or quick test: <code>cloudflared tunnel run {tunnelName}</code>
           </div>
         )}
       </div>
@@ -352,7 +369,11 @@ function PhoneConnectCard({ tunnel }) {
         <details>
           <summary>Setup steps</summary>
           <ol>
-            <li>Install <strong>cloudflared</strong> (see button above)</li>
+            <li>Install <strong>cloudflared</strong>: <code>winget install Cloudflare.cloudflared</code></li>
+            <li>Authenticate: <code>cloudflared tunnel login</code> (opens browser)</li>
+            <li>Run <code>setup_tunnel.bat</code> or create tunnel in Cloudflare dashboard</li>
+            <li>Get token from dashboard → <strong>Rotate token</strong></li>
+            <li>Install service: <code>cloudflared service install &lt;TOKEN&gt;</code> (Admin PS)</li>
             <li>Restart LOVE — tunnel auto-starts</li>
             <li>Install <strong>Tasker</strong> on Android</li>
             <li>Import the downloaded XML profile, OR create:

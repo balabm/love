@@ -2417,6 +2417,63 @@ async def health():
         "lifecycle": get_lifecycle().get_status()
     }
 
+@app.get("/tunnel/status")
+async def tunnel_status():
+    """Get Cloudflare tunnel status and public URL."""
+    try:
+        from core.tunnel_agent import get_tunnel_agent
+        agent = get_tunnel_agent()
+        state = agent.get_status()
+        return {
+            "enabled": state.get("enabled", False),
+            "running": state.get("running", False),
+            "connected": state.get("connected", False),
+            "public_url": state.get("public_url", ""),
+            "tunnel_name": state.get("tunnel_name", ""),
+            "last_started": state.get("last_started", ""),
+            "error": state.get("error", ""),
+        }
+    except Exception as e:
+        # Fallback: check if cloudflared process is running
+        import subprocess
+        try:
+            result = subprocess.run(
+                ["cloudflared", "tunnel", "list"],
+                capture_output=True, text=True, timeout=5, check=False
+            )
+            available = result.returncode == 0
+        except Exception:
+            available = False
+        return {
+            "enabled": False,
+            "running": False,
+            "connected": False,
+            "public_url": "",
+            "tunnel_name": os.getenv("CLOUDFLARE_TUNNEL_NAME", ""),
+            "cloudflared_available": available,
+            "error": str(e),
+        }
+
+@app.post("/tunnel/start")
+async def tunnel_start():
+    """Start the Cloudflare tunnel manually."""
+    try:
+        from core.tunnel_agent import start_tunnel_agent
+        start_tunnel_agent()
+        return {"success": True, "message": "Tunnel agent started"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/tunnel/stop")
+async def tunnel_stop():
+    """Stop the Cloudflare tunnel."""
+    try:
+        from core.tunnel_agent import stop_tunnel_agent
+        stop_tunnel_agent()
+        return {"success": True, "message": "Tunnel agent stopped"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 # ── Settings & Ecosystem Management ────────────────────────────────────────
 
 @app.get("/settings")
