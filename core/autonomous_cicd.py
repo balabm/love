@@ -643,11 +643,18 @@ class AutonomousCICD:
             self_coder = get_self_coder()
             
             # Find modifications that are tested but not deployed
-            candidates = [
-                mod_id for mod_id, mod in self_coder._modifications.items()
-                if mod.test_status == "passed" and mod.approval_status == "approved"
-                and not mod.applied_at
-            ]
+            # Auto-approve low-risk pending modifications
+            candidates = []
+            for mod_id, mod in self_coder._modifications.items():
+                if mod.test_status != "passed" or mod.applied_at:
+                    continue
+                if mod.approval_status == "approved":
+                    candidates.append(mod_id)
+                elif mod.approval_status == "pending" and getattr(mod, "risk_level", "medium") == "low":
+                    # Auto-approve low-risk modifications that passed tests
+                    mod.approval_status = "approved"
+                    candidates.append(mod_id)
+                    print(f"[AutonomousCICD] Auto-approved low-risk modification {mod_id}")
             
             if candidates:
                 print(f"[AutonomousCICD] Found {len(candidates)} deployment candidates")
