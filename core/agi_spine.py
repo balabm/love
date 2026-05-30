@@ -372,4 +372,16 @@ def get_agi_system_flags():
         flags["code_sandbox"] = True
     except Exception:
         pass
+    try:
+        from core.observability import get_observability_engine
+        obs = get_observability_engine()
+        flags["observability"] = getattr(obs, '_running', False)
+    except Exception:
+        pass
+    try:
+        from core.guardrails import get_guardrails_engine
+        gr = get_guardrails_engine()
+        flags["guardrails"] = True
+    except Exception:
+        pass
     return flags

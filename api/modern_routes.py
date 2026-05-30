@@ -347,6 +347,111 @@ async def sandbox_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Observability ─────────────────────────────────────────────────────────────
+
+@router.get("/observability/health")
+async def observability_health():
+    """Get health scores for all subsystems."""
+    try:
+        from core.observability import get_observability_engine
+        obs = get_observability_engine()
+        return {"scores": obs.get_all_health_scores()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/observability/metrics")
+async def observability_metrics(name: str, subsystem: str = "", window: int = 60):
+    """Get metric statistics for a subsystem."""
+    try:
+        from core.observability import get_observability_engine
+        obs = get_observability_engine()
+        return obs.get_metric_stats(name, subsystem, window)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/observability/alerts")
+async def observability_alerts(severity: str = "", limit: int = 50):
+    """Get recent anomaly alerts."""
+    try:
+        from core.observability import get_observability_engine
+        obs = get_observability_engine()
+        alerts = [a for a in obs._alerts if not severity or a.severity == severity]
+        return {
+            "alerts": [
+                {
+                    "id": a.id,
+                    "severity": a.severity,
+                    "subsystem": a.subsystem,
+                    "title": a.title,
+                    "description": a.description,
+                    "suggested_action": a.suggested_action,
+                    "created_at": a.created_at,
+                }
+                for a in sorted(alerts, key=lambda x: x.created_at, reverse=True)[:limit]
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Guardrails ────────────────────────────────────────────────────────────────
+
+@router.post("/guardrails/scan")
+async def guardrails_scan(text: str, context: str = ""):
+    """Scan content for safety issues."""
+    try:
+        from core.guardrails import get_guardrails_engine
+        gr = get_guardrails_engine()
+        result = gr.scan(text, context)
+        return {
+            "allowed": result.allowed,
+            "confidence": result.confidence,
+            "flags": result.flags,
+            "pii_detected": result.pii_detected,
+            "redacted_text": result.redacted_text,
+            "suggested_action": result.suggested_action,
+            "block_reason": result.block_reason,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/guardrails/goals")
+async def guardrails_goals(goals: list):
+    """Set user goals for drift detection."""
+    try:
+        from core.guardrails import get_guardrails_engine
+        gr = get_guardrails_engine()
+        gr.set_user_goals(goals)
+        return {"goals_set": len(goals)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/guardrails/rate-limit")
+async def guardrails_rate_limit(resource: str):
+    """Check rate limit for a resource."""
+    try:
+        from core.guardrails import get_guardrails_engine
+        gr = get_guardrails_engine()
+        return gr.check_rate_limit(resource)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/guardrails/stats")
+async def guardrails_stats():
+    """Get guardrails statistics."""
+    try:
+        from core.guardrails import get_guardrails_engine
+        gr = get_guardrails_engine()
+        return gr.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

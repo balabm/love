@@ -172,6 +172,15 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Task Evolution error: {e}')
         
+        # Start Observability Engine
+        try:
+            from core.observability import get_observability_engine
+            obs = get_observability_engine()
+            obs.start()
+            print('[EvolutionIntegration] Observability Engine started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Observability error: {e}')
+        
         # Start Code Sandbox
         try:
             from core.code_sandbox import get_code_sandbox
