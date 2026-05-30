@@ -41,6 +41,7 @@ Plus Modern AI Subsystems:
 - Knowledge Graph Auto-Builder (entity & relationship extraction)
 - Adaptive Learning Rate Engine (dynamic parameter tuning)
 - Conversation Continuity Manager (context persistence across gaps)
+- Memory Compressor (semantic conversation memory compression)
 
 Usage:
     python start_evolution.py

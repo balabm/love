@@ -6483,6 +6483,7 @@ def get_self_evolution_status():
                 "knowledge_graph_builder": {"available": True},
                 "adaptive_learning_rate": {"available": True},
                 "conversation_continuity": {"available": True},
+                "memory_compressor": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

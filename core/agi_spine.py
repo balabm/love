@@ -493,5 +493,11 @@ def get_agi_system_flags():
         flags["conversation_continuity"] = True
     except Exception:
         pass
+    try:
+        from core.memory_compressor import get_memory_compressor
+        mc = get_memory_compressor()
+        flags["memory_compressor"] = True
+    except Exception:
+        pass
 
     return flags

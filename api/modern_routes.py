@@ -1654,6 +1654,41 @@ async def rate_limit_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Memory Compressor ───────────────────────────────────────────────────────
+
+@router.post("/memory/compress")
+async def compress_memory(turns: List[Dict[str, Any]] = []):
+    """Compress conversation turns."""
+    try:
+        from core.memory_compressor import get_memory_compressor
+        compressor = get_memory_compressor()
+        return compressor.compress_conversation(turns)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/memory/compress/stats")
+async def compression_stats():
+    """Get memory compression statistics."""
+    try:
+        from core.memory_compressor import get_memory_compressor
+        compressor = get_memory_compressor()
+        return compressor.get_compression_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/memory/compress/estimate")
+async def estimate_savings(total_turns: int = 100):
+    """Estimate compression savings."""
+    try:
+        from core.memory_compressor import get_memory_compressor
+        compressor = get_memory_compressor()
+        return compressor.estimate_savings(total_turns)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
