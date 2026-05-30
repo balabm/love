@@ -446,3 +446,195 @@ class TestUserPatternDetector:
         detector = get_user_pattern_detector()
         stats = detector.get_pattern_stats()
         assert isinstance(stats, dict)
+
+
+# -- Engines Built in Wave 2025
+
+class TestMemoryCompressor:
+    """Test Memory Compressor."""
+    
+    def test_compress_conversation(self):
+        from core.memory_compressor import get_memory_compressor
+        mc = get_memory_compressor()
+        result = mc.compress_conversation([
+            {"id": "1", "text": "This is a long conversation about work and projects.", "emotion": {"happy": 0.5}}
+        ])
+        assert result.compression_ratio >= 0
+        assert result.original_turns == 1
+    
+    def test_estimate_savings(self):
+        from core.memory_compressor import get_memory_compressor
+        mc = get_memory_compressor()
+        savings = mc.estimate_savings(100)
+        assert savings["total_turns"] == 100
+
+
+class TestSemanticSearchOptimizer:
+    """Test Semantic Search Optimizer."""
+    
+    def test_optimize_query(self):
+        from core.semantic_search_optimizer import get_semantic_search_optimizer
+        sso = get_semantic_search_optimizer()
+        result = sso.optimize_query("happy about work", ["recent context"])
+        assert len(result.variants) >= 1
+        assert result.original == "happy about work"
+    
+    def test_rerank_results(self):
+        from core.semantic_search_optimizer import get_semantic_search_optimizer
+        sso = get_semantic_search_optimizer()
+        results = [{"id": "1", "content": "happy work project", "score": 0.8}]
+        ranked = sso.rerank_results(results, "happy about work")
+        assert len(ranked) == 1
+
+
+class TestEmotionAwareResponse:
+    """Test Emotion-Aware Response Generator."""
+    
+    def test_generate_response(self):
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        ear = get_emotion_aware_response_generator()
+        result = ear.generate_response("I am so happy today!")
+        assert "calibrated_tone" in result
+        assert "detected_emotion" in result
+    
+    def test_detect_emotion(self):
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        ear = get_emotion_aware_response_generator()
+        emotion = ear._detect_emotion("I feel sad and tired")
+        assert emotion["dominant_emotion"] in ("sad", "tired")
+
+
+class TestKnowledgeInjector:
+    """Test Knowledge Injector."""
+    
+    def test_inject_knowledge(self):
+        from core.knowledge_injector import get_knowledge_injector
+        ki = get_knowledge_injector()
+        proposal = ki.inject_knowledge("talking about work projects", ["previous context"])
+        assert proposal.confidence >= 0
+        assert len(proposal.knowledge_items) >= 0
+
+
+class TestConversationSummarizer:
+    """Test Conversation Summarizer."""
+    
+    def test_summarize_conversation(self):
+        from core.conversation_summarizer import get_conversation_summarizer
+        cs = get_conversation_summarizer()
+        summary = cs.summarize_conversation([
+            {"speaker": "user", "text": "We decided to use Python for the project. We need to finish by Friday."},
+            {"speaker": "assistant", "text": "That sounds like a good plan. I will help you."},
+        ])
+        assert summary.turn_count == 2
+        assert summary.compression_ratio >= 0
+        assert len(summary.action_items) >= 0
+
+
+class TestContextAwarePrioritizer:
+    """Test Context-Aware Task Prioritizer."""
+    
+    def test_prioritize_tasks(self):
+        from core.context_aware_prioritizer import get_context_aware_prioritizer, Task
+        cap = get_context_aware_prioritizer()
+        tasks = [
+            Task(id="1", title="Easy task", urgency=0.3, importance=0.3, cognitive_load=0.2, estimated_minutes=10),
+            Task(id="2", title="Urgent task", urgency=0.9, importance=0.8, cognitive_load=0.6, estimated_minutes=30),
+        ]
+        prioritized = cap.prioritize_tasks(tasks)
+        assert len(prioritized) == 2
+        assert prioritized[0].priority_score >= prioritized[1].priority_score
+
+
+class TestWellnessNudger:
+    """Test Wellness Nudger."""
+    
+    def test_detect_patterns(self):
+        from core.wellness_nudger import get_wellness_nudger
+        wn = get_wellness_nudger()
+        patterns = wn._detect_patterns({"hydration_pct": 0.2, "work_hours_today": 10})
+        assert len(patterns) > 0
+        assert any(p.pattern_type == "hydration" for p in patterns)
+    
+    def test_generate_nudge(self):
+        from core.wellness_nudger import get_wellness_nudger, WellnessPattern
+        wn = get_wellness_nudger()
+        pattern = WellnessPattern(pattern_type="hydration", severity="warning")
+        nudge = wn._generate_nudge(pattern)
+        assert nudge.pattern_type == "hydration"
+        assert len(nudge.message) > 0
+
+
+class TestNotificationFilter:
+    """Test Notification Filter."""
+    
+    def test_filter_notifications(self):
+        from core.notification_filter import get_notification_filter, Notification
+        nf = get_notification_filter()
+        notifications = [
+            Notification(id="1", source="work", title="Meeting", priority="normal", category="work"),
+            Notification(id="2", source="social", title="Message", priority="low", category="social"),
+        ]
+        filtered = nf.filter_notifications(notifications, {"focus_mode": True})
+        assert len(filtered) == 2
+        assert any(f.action == "suppress" for f in filtered)
+
+
+class TestDeepWorkProtector:
+    """Test Deep Work Protector."""
+    
+    def test_start_end_session(self):
+        from core.deep_work_protector import get_deep_work_protector
+        dwp = get_deep_work_protector()
+        session = dwp.start_session(25, "coding")
+        assert session.planned_duration_minutes == 25
+        assert dwp.is_focus_mode()
+        ended = dwp.end_session()
+        assert ended is not None
+        assert not dwp.is_focus_mode()
+    
+    def test_handle_interruption(self):
+        from core.deep_work_protector import get_deep_work_protector
+        dwp = get_deep_work_protector()
+        dwp.start_session(25, "coding")
+        result = dwp.handle_interruption("notification", "urgent")
+        assert result["action"] == "deliver"
+        dwp.end_session()
+
+
+class TestEnergyForecaster:
+    """Test Energy Forecaster."""
+    
+    def test_forecast_energy(self):
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        forecasts = ef.forecast_energy(hours_ahead=4)
+        assert len(forecasts) == 4
+        assert all(0 <= f.predicted_level <= 1 for f in forecasts)
+    
+    def test_report_and_insights(self):
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        ef.report_actual_energy(0.7, {"sleep": 0.8}, "morning")
+        insights = ef.get_energy_insights()
+        assert "hourly_avg" in insights
+
+
+class TestSmartBreakSuggester:
+    """Test Smart Break Suggester."""
+    
+    def test_suggest_break(self):
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        suggestion = sbs.suggest_break({"work_minutes_since_break": 120, "cognitive_load": 0.8})
+        assert suggestion is not None
+        assert suggestion.duration_minutes > 0
+    
+    def test_get_optimal_schedule(self):
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        schedule = sbs.get_optimal_schedule([
+            {"title": "Task 1", "estimated_minutes": 30},
+            {"title": "Task 2", "estimated_minutes": 45},
+        ])
+        assert len(schedule) > 2
+        assert any(item["type"] == "break" for item in schedule)

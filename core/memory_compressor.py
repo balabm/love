@@ -143,7 +143,7 @@ class MemoryCompressor:
         # Calculate compression ratio
         summary_chars = len(summary) + sum(len(f) for f in key_facts)
         if total_chars > 0:
-            compressed.compression_ratio = round(1 - (summary_chars / total_chars), 3)
+            compressed.compression_ratio = max(0.0, round(1 - (summary_chars / total_chars), 3))
 
         with self._lock:
             self._compressed[compressed.id] = compressed

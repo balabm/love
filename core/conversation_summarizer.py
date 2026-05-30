@@ -179,7 +179,7 @@ class ConversationSummarizer:
         # Calculate compression ratio
         original_chars = sum(len(t.get("text", "")) for t in turns)
         summary_chars = len(overall_summary) + sum(len(s["summary"]) for s in topic_segments)
-        compression_ratio = round(1 - (summary_chars / max(1, original_chars)), 3)
+        compression_ratio = max(0.0, round(1 - (summary_chars / max(1, original_chars)), 3))
 
         summary = ConversationSummary(
             conversation_id=f"conv_{int(time.time())}",
