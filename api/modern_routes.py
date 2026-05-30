@@ -1910,6 +1910,44 @@ async def nudge_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Notification Filter ───────────────────────────────────────────────────
+
+@router.post("/notifications/filter")
+async def filter_notifications(data: Dict[str, Any] = {}):
+    """Filter notifications by contextual relevance."""
+    try:
+        from core.notification_filter import get_notification_filter
+        nf = get_notification_filter()
+        notifications = data.get("notifications", [])
+        context = data.get("context", {})
+        return {"filtered": nf.filter_notifications(notifications, context)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/notifications/feedback")
+async def notification_feedback(data: Dict[str, Any] = {}):
+    """Record notification interaction feedback."""
+    try:
+        from core.notification_filter import get_notification_filter
+        nf = get_notification_filter()
+        nf.record_interaction(data.get("notif_id", ""), data.get("source", ""), data.get("acted", False))
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/notifications/filter/stats")
+async def notification_filter_stats():
+    """Get notification filter statistics."""
+    try:
+        from core.notification_filter import get_notification_filter
+        nf = get_notification_filter()
+        return nf.get_filter_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

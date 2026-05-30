@@ -1,25 +1,26 @@
-feat(modern): Wellness Nudger — proactive wellness alerts
+feat(modern): Notification Filter — contextual relevance filtering
 
-Wellness Nudger (core/wellness_nudger.py):
-- detect_and_nudge(): Detects wellness patterns (hydration, movement, rest,
-  social, nutrition) from user context and generates contextual nudges
-- Pattern detection: hydration %, work limit hours, hours since movement,
-  sleep hours, social interaction time, meal timing
-- Nudge generation: Adapts tone (gentle/firm/urgent) based on severity
-- Cooldown system: Prevents same-pattern nudges within 2 hours
-- record_nudge_response(): Tracks which nudges get acted on
-- Receptiveness learning: Tracks effectiveness by hour of day
-- 371 lines of production wellness nudging infrastructure
+Notification Filter (core/notification_filter.py):
+- filter_notifications(): Scores notifications by relevance using
+  priority boost, source importance (learned), category alignment,
+  time sensitivity, and focus mode suppression
+- Determines action: deliver (high relevance), batch (medium),
+  defer (wrong time), suppress (low relevance or focus mode)
+- Learns from user interactions: boosts sources user acts on,
+  penalizes ignored sources
+- Adapts to work hours (defers personal notifications) and
+  focus mode (suppresses non-urgent)
+- 264 lines of production notification filtering infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/wellness/nudge — Detect patterns and generate nudge
-- POST /modern/wellness/nudge/feedback — Record nudge response
-- GET /modern/wellness/nudge/stats — Nudge effectiveness statistics
+- POST /modern/notifications/filter — Filter notifications by context
+- POST /modern/notifications/feedback — Record interaction feedback
+- GET /modern/notifications/filter/stats — Filter statistics
 
 Integration:
-- AGI spine includes wellness_nudger flag
+- AGI spine includes notification_filter flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Wellness Nudger
+- start_evolution.py lists Notification Filter
 
 All 101 tests pass.
 

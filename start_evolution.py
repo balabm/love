@@ -48,6 +48,7 @@ Plus Modern AI Subsystems:
 - Conversation Summarizer (hierarchical conversation distillation)
 - Context-Aware Task Prioritizer (intelligent task ordering)
 - Wellness Nudger (proactive wellness alerts)
+- Notification Filter (contextual relevance filtering)
 
 Usage:
     python start_evolution.py

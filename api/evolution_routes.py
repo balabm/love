@@ -494,6 +494,7 @@ async def get_evolution_health():
             "conversation_summarizer": {"available": True},
             "context_aware_prioritizer": {"available": True},
             "wellness_nudger": {"available": True},
+            "notification_filter": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

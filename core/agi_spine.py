@@ -535,5 +535,11 @@ def get_agi_system_flags():
         flags["wellness_nudger"] = True
     except Exception:
         pass
+    try:
+        from core.notification_filter import get_notification_filter
+        nf = get_notification_filter()
+        flags["notification_filter"] = True
+    except Exception:
+        pass
 
     return flags
