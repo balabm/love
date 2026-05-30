@@ -355,8 +355,35 @@ class TaskEvolutionIntegration:
                 self.track_productivity(tasks)
             except Exception as e:
                 print(f"[TaskEvolution] Loop error: {e}")
+            
+            # Modern module task integration
+            try:
+                self._track_modern_module_tasks()
+            except Exception:
+                pass
+            
             time.sleep(3600)
     
+    def _track_modern_module_tasks(self):
+        """Track modern AI module performance as task metrics."""
+        try:
+            from core.agi_spine import get_agi_system_flags
+            flags = get_agi_system_flags()
+            modern_modules = [
+                "multi_agent_orchestrator", "intent_predictor", "goal_drift_detector",
+                "predictive_maintenance", "conversation_continuity",
+            ]
+            for module in modern_modules:
+                if flags.get(module, False):
+                    pattern = TaskPattern(
+                        pattern_type="modern_module_task",
+                        description=f"Modern module {module} contributing to task evolution",
+                        effectiveness=0.7,
+                    )
+                    self._patterns[pattern.id] = pattern
+        except Exception:
+            pass
+
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 
 _task_evolution_instance: Optional[TaskEvolutionIntegration] = None

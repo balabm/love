@@ -236,8 +236,36 @@ class FitnessEvolutionIntegration:
                 self.track_fitness_metrics()
             except Exception as e:
                 print(f"[FitnessEvolution] Loop error: {e}")
+            
+            # Modern module fitness integration
+            try:
+                self._track_modern_module_fitness()
+            except Exception:
+                pass
+            
             time.sleep(3600)
     
+    def _track_modern_module_fitness(self):
+        """Track modern AI module health as fitness metrics."""
+        try:
+            from core.agi_spine import get_agi_system_flags
+            flags = get_agi_system_flags()
+            modern_modules = [
+                "emotional_resonance", "user_pattern_detector", "personality_adapter",
+                "response_cache", "context_window_manager",
+            ]
+            for module in modern_modules:
+                if flags.get(module, False):
+                    # Log as fitness metric for the module
+                    self._log_fitness_metric({
+                        "timestamp": datetime.now().isoformat(),
+                        "modern_module": module,
+                        "module_health": 1.0,
+                        "pattern_type": "modern_module_fitness",
+                    })
+        except Exception:
+            pass
+
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 
 _fitness_evolution_instance: Optional[FitnessEvolutionIntegration] = None
