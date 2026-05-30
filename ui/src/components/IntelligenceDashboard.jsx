@@ -11,6 +11,11 @@ const ICON = {
   world: "◎",
   evolve: "◬",
   clock: "◷",
+  circuit: "◍",
+  pattern: "◇",
+  cache: "◐",
+  context: "⬡",
+  graph: "◯",
 };
 
 function Card({ title, icon, children, accent }) {
@@ -61,12 +66,29 @@ function GapItem({ gap }) {
   );
 }
 
+function ModernModuleItem({ name, stats }) {
+  const isUp = stats && (stats.available || stats.running || stats.total_calls !== undefined || stats.active_agents !== undefined);
+  return (
+    <div className="intel-item">
+      <span className="intel-bullet">{isUp ? "●" : "○"}</span>
+      <span className="intel-item-text">{name.replace(/_/g, " ")}</span>
+      {stats && (
+        <span className={`intel-badge ${isUp ? "intel-badge-high" : "intel-badge-low"}`}>
+          {isUp ? "active" : "offline"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function IntelligenceDashboard() {
   const [predictions, setPredictions] = useState({ active: [], accuracy: {} });
   const [dreamInsights, setDreamInsights] = useState({ insights: [], active_predictions: [] });
   const [curiosity, setCuriosity] = useState({ total: 0, open: 0, top_gaps: [] });
   const [emotional, setEmotional] = useState({ current_stress: 0, trend: "stable", dominant_mood: "neutral" });
   const [evolution, setEvolution] = useState({ behavior_state: {}, experiments: {} });
+  const [modernStats, setModernStats] = useState({});
+  const [patternInsights, setPatternInsights] = useState([]);
   const [lastRefresh, setLastRefresh] = useState(null);
 
   const fetchAll = async () => {
@@ -83,6 +105,23 @@ export default function IntelligenceDashboard() {
       if (curiousRes.data?.top_gaps !== undefined) setCuriosity(p => ({ ...p, ...curiousRes.data }));
       if (emoRes.data?.dominant_mood) setEmotional(p => ({ ...p, ...emoRes.data }));
       if (evoRes.data?.behavior_state) setEvolution(p => ({ ...p, ...evoRes.data }));
+
+      // Fetch modern module stats
+      const modernPromises = [
+        api.get(`/modern/patterns/insights`).catch(() => ({ data: {} })),
+        api.get(`/modern/context/stats`).catch(() => ({ data: {} })),
+        api.get(`/modern/cache/stats`).catch(() => ({ data: {} })),
+        api.get(`/modern/kg/stats`).catch(() => ({ data: {} })),
+      ];
+      const [patRes, ctxRes, cacheRes, kgRes] = await Promise.all(modernPromises);
+      if (patRes.data?.insights) setPatternInsights(patRes.data.insights);
+      setModernStats({
+        context_window: ctxRes.data || {},
+        response_cache: cacheRes.data || {},
+        knowledge_graph: kgRes.data || {},
+        evolution_health: evoRes.data?.health || {},
+      });
+
       setLastRefresh(new Date());
     } catch (e) {
       console.error("Intelligence fetch error:", e);
@@ -91,11 +130,30 @@ export default function IntelligenceDashboard() {
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 30000); // Refresh every 30s
+    const id = setInterval(fetchAll, 30000);
     return () => clearInterval(id);
   }, []);
 
   const stressColor = emotional.current_stress > 70 ? "high" : emotional.current_stress > 40 ? "med" : "low";
+
+  const modernModules = [
+    { name: "llm_manager", stats: modernStats.evolution_health?.llm_manager },
+    { name: "graph_rag", stats: modernStats.evolution_health?.graph_rag },
+    { name: "prompt_optimizer", stats: modernStats.evolution_health?.prompt_optimizer },
+    { name: "self_reflection", stats: modernStats.evolution_health?.self_reflection },
+    { name: "conversation_quality", stats: modernStats.evolution_health?.conversation_quality },
+    { name: "predictive_maintenance", stats: modernStats.evolution_health?.predictive_maintenance },
+    { name: "multi_agent_orchestrator", stats: modernStats.evolution_health?.multi_agent_orchestrator },
+    { name: "intent_predictor", stats: modernStats.evolution_health?.intent_predictor },
+    { name: "personality_adapter", stats: modernStats.evolution_health?.personality_adapter },
+    { name: "response_cache", stats: modernStats.evolution_health?.response_cache },
+    { name: "context_window_manager", stats: modernStats.evolution_health?.context_window_manager },
+    { name: "user_pattern_detector", stats: modernStats.evolution_health?.user_pattern_detector },
+    { name: "goal_drift_detector", stats: modernStats.evolution_health?.goal_drift_detector },
+    { name: "cross_modal_fusion", stats: modernStats.evolution_health?.cross_modal_fusion },
+    { name: "emotional_resonance", stats: modernStats.evolution_health?.emotional_resonance },
+    { name: "knowledge_graph_builder", stats: modernStats.evolution_health?.knowledge_graph_builder },
+  ].filter(m => m.stats);
 
   return (
     <div className="intel-dashboard">
@@ -216,54 +274,76 @@ export default function IntelligenceDashboard() {
               )}
             </div>
           )}
+        </Card>
 
-          {/* Capability Gaps */}
-          {evolution.capability_gaps && (
-            <div className="intel-subsection">
-              <div className="intel-subtitle">Capability Gaps</div>
-              <div className="intel-stat">
-                {evolution.capability_gaps.high_impact || 0} high-impact / {evolution.capability_gaps.total || 0} total
+        {/* Modern Systems */}
+        <Card title="Modern Systems" icon={ICON.circuit} accent="cyan">
+          {modernModules.length === 0 ? (
+            <p className="intel-empty">Loading modern module status...</p>
+          ) : (
+            <>
+              <div className="intel-stat">{modernModules.length} active modern modules</div>
+              <div className="intel-health-grid">
+                {modernModules.map((mod) => (
+                  <span key={mod.name} className="intel-health-chip up">
+                    ● {mod.name.replace(/_/g, " ")}
+                  </span>
+                ))}
               </div>
-              {evolution.capability_gaps.domains?.length > 0 && (
-                <div className="intel-micro-stats">
-                  {evolution.capability_gaps.domains.map((d, i) => (
-                    <span key={i}>{d}</span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Deployments */}
-          {evolution.deployments && evolution.deployments.length > 0 && (
-            <div className="intel-subsection">
-              <div className="intel-subtitle">Deployments</div>
-              {evolution.deployments.slice(-3).map((dep, i) => (
-                <div key={i} className="intel-item">
-                  <span className="intel-bullet">◈</span>
-                  <span className="intel-item-text">{dep.version} — {dep.status}</span>
-                </div>
-              ))}
-            </div>
+            </>
           )}
         </Card>
 
-        {/* World Model */}
-        <Card title="World Model" icon={ICON.world} accent="cyan">
-          <div className="intel-world-stats">
-            <div className="intel-world-stat">
-              <span className="intel-world-num">{dreamInsights.world_model_people || 0}</span>
-              <span className="intel-world-label">People</span>
+        {/* Pattern Insights */}
+        <Card title="Pattern Insights" icon={ICON.pattern} accent="purple">
+          {patternInsights.length === 0 ? (
+            <p className="intel-empty">No patterns detected yet. LOVE is observing your routines.</p>
+          ) : (
+            patternInsights.slice(0, 5).map((insight, i) => (
+              <div key={i} className="intel-item">
+                <span className="intel-bullet">◇</span>
+                <span className="intel-item-text">{insight.insight || insight.description || insight.text}</span>
+                {insight.confidence && (
+                  <span className={`intel-badge intel-badge-${insight.confidence > 0.5 ? "high" : "med"}`}>
+                    {Math.round(insight.confidence * 100)}%
+                  </span>
+                )}
+              </div>
+            ))
+          )}
+        </Card>
+
+        {/* Context & Cache Stats */}
+        <Card title="System Metrics" icon={ICON.cache} accent="blue">
+          {modernStats.context_window?.total_optimizations !== undefined && (
+            <div className="intel-stat">
+              Context optimizations: {modernStats.context_window.total_optimizations}
             </div>
-            <div className="intel-world-stat">
-              <span className="intel-world-num">{dreamInsights.world_model_routines || 0}</span>
-              <span className="intel-world-label">Routines</span>
+          )}
+          {modernStats.response_cache?.total_requests !== undefined && (
+            <div className="intel-stat">
+              Cache hit rate: {Math.round((modernStats.response_cache.cache_hits / Math.max(modernStats.response_cache.total_requests, 1)) * 100)}%
             </div>
-            <div className="intel-world-stat">
-              <span className="intel-world-num">{dreamInsights.active_predictions?.length || 0}</span>
-              <span className="intel-world-label">Patterns</span>
+          )}
+          {modernStats.knowledge_graph?.total_entities !== undefined && (
+            <div className="intel-stat">
+              Knowledge graph: {modernStats.knowledge_graph.total_entities} entities, {modernStats.knowledge_graph.total_relations} relations
             </div>
-          </div>
+          )}
+          {modernStats.context_window?.total_optimizations === undefined &&
+           modernStats.response_cache?.total_requests === undefined &&
+           modernStats.knowledge_graph?.total_entities === undefined && (
+            <p className="intel-empty">Metrics loading...</p>
+          )}
+        </Card>
+
+        {/* Daily Briefing Placeholder */}
+        <Card title="Today" icon={ICON.clock} accent="orange">
+          <p className="intel-empty">
+            {lastRefresh
+              ? `Last updated at ${lastRefresh.toLocaleTimeString()}`
+              : "Loading daily summary..."}
+          </p>
         </Card>
       </div>
     </div>
