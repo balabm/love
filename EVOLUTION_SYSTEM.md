@@ -14,14 +14,32 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐     ┌──────────────────┐     ┌──────────────┐
-│  Cap-Gap-Det.   │────▶│  Autonomous CI/CD│◀────│   (tests)    │
-│  (missions)     │     │  (deployments)   │     └──────────────┘
-└─────────────────┘     └──────────────────┘              │
+│  Cap-Gap-Det.   │────▶│  Autonomous CI/CD│◀────│ Code Sandbox │
+│  (missions)     │     │  (deployments)   │     │  (safe test) │
+└─────────────────┘     └──────────────────┘     └──────────────┘
          │                                                  │
          ▼                                                  ▼
 ┌─────────────────┐     ┌──────────────────┐     ┌──────────────┐
 │  Swarm Evolution│────▶│ Cross-Instance   │────▶│  Orchestrator│
 │  (validation)   │     │   Learning       │     │  (narrative) │
+└─────────────────┘     └──────────────────┘     └──────────────┘
+         │                                                  │
+         ▼                                                  ▼
+┌─────────────────┐     ┌──────────────────┐     ┌──────────────┐
+│ Neural Arch.    │────▶│ Multi-Modal      │────▶│  Reasoning   │
+│   Search        │     │   Evolution      │     │   Engine     │
+└─────────────────┘     └──────────────────┘     └──────────────┘
+         │                                                  │
+         ▼                                                  ▼
+┌─────────────────┐     ┌──────────────────┐     ┌──────────────┐
+│  Task Evolution │────▶│ Fitness Evolution│────▶│ Vector Memory│
+│   (patterns)    │     │   (metrics)      │     │ (semantic)   │
+└─────────────────┘     └──────────────────┘     └──────────────┘
+         │                                                  │
+         ▼                                                  ▼
+┌─────────────────┐     ┌──────────────────┐     ┌──────────────┐
+│   MCP Host      │────▶│ Structured Output│────▶│   AGI Spine  │
+│  (tool protocol)│     │  (JSON schemas)  │     │  (bridges)   │
 └─────────────────┘     └──────────────────┘     └──────────────┘
 ```
 
@@ -36,6 +54,16 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Gap Detector | Creates missions, triggers self-coder | Orchestrator + Mission Queue |
 | CI/CD | Monitors deployments, auto-rollback on failure | Orchestrator |
 | Integration | Runs full cycle, publishes to neural bus | Orchestrator |
+| Neural Architecture Search | Optimizes model architectures for performance | Orchestrator |
+| Multi-Modal Evolution | Coordinates text/vision/voice capability improvement | Orchestrator |
+| Task Evolution | Analyzes task patterns, suggests prioritization | Orchestrator |
+| Fitness Evolution | Tracks fitness metrics, suggests health improvements | Orchestrator |
+| MCP Host | Discovers and connects external tool servers | Neural Bus |
+| Reasoning Engine | Chain-of-thought analysis before significant actions | Orchestrator |
+| Structured Output | Enforces JSON schema for reliable tool use | Internal |
+| Vector Memory | Semantic search across conversation history | Internal |
+| Code Sandbox | Safe execution of generated code before deployment | Self-Coder |
+| AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
 
@@ -67,8 +95,29 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/evolution/experiments` | Active and completed experiments |
 | `/evolution/swarms` | Active swarm intelligence units |
 | `/evolution/history` | Evolution event timeline |
-| `/evolution/health` | Health status of all 7 evolution subsystems |
+| `/evolution/health` | Health status of all 15+ evolution subsystems |
 | `/intelligence/self-evolution` | Integration + gaps + deployments + active experiments |
+| `/modern/reasoning/chain` | Multi-step ReAct reasoning with tool use |
+| `/modern/reasoning/plan` | Task decomposition into executable steps |
+| `/modern/reasoning/reflect` | Reflection on past actions for improvement |
+| `/modern/structured/generate` | Pydantic-schema-enforced JSON generation |
+| `/modern/structured/validate` | Validate JSON against schema with retries |
+| `/modern/mcp/tools` | List connected MCP tool servers |
+| `/modern/mcp/invoke` | Invoke an MCP tool with validation |
+| `/modern/vector/store` | Store text as vector embedding for semantic search |
+| `/modern/vector/search` | Semantic search over stored memories |
+| `/modern/vector/recall` | Contextual + temporal memory recall |
+| `/modern/vector/stats` | Vector memory engine statistics |
+| `/modern/vector/clusters` | Semantic memory cluster analysis |
+| `/modern/nas/status` | Neural Architecture Search engine status |
+| `/modern/nas/create` | Create new architecture configuration |
+| `/modern/nas/profile` | Profile architecture performance |
+| `/modern/multimodal/status` | Multi-modal evolution capabilities |
+| `/modern/multimodal/recommend` | Modality recommendations for tasks |
+| `/modern/sandbox/execute` | Execute code in restricted sandbox |
+| `/modern/sandbox/stats` | Sandbox execution statistics |
+| `/modern/browser/search` | Browser-based web search |
+| `/modern/browser/navigate` | Browser page navigation |
 
 ### Startup
 
