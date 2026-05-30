@@ -77,6 +77,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Response Cache | Intelligent response caching with semantic matching | Internal |
 | Context Window Manager | Intelligent LLM context optimization | Internal |
 | User Pattern Detector | Behavioral pattern recognition | Internal |
+| Goal Drift Detector | Warns when activities drift from stated goals | Orchestrator |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -189,6 +190,13 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/patterns/insights` | Daily insights from detected patterns |
 | `/modern/patterns/predict` | Predict next user activity |
 | `/modern/patterns/stats` | Pattern detector statistics |
+| `/modern/goals/set` | Register a user goal |
+| `/modern/goals/activity` | Log daily activity |
+| `/modern/goals/drift` | Detect goal drift |
+| `/modern/goals/alerts` | Get drift alerts |
+| `/modern/goals/progress` | Get goal progress |
+| `/modern/goals/stats` | Detector statistics |
+
 
 ### Startup
 

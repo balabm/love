@@ -35,6 +35,7 @@ Plus Modern AI Subsystems:
 - Response Cache (intelligent response caching with semantic matching)
 - Context Window Manager (intelligent LLM context optimization)
 - User Pattern Detector (behavioral pattern recognition)
+- Goal Drift Detector (warns when activities drift from goals)
 
 Usage:
     python start_evolution.py

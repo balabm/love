@@ -481,6 +481,7 @@ async def get_evolution_health():
             "response_cache": {"available": True},
             "context_window_manager": {"available": True},
             "user_pattern_detector": {"available": True},
+            "goal_drift_detector": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
