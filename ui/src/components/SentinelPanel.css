@@ -317,3 +317,20 @@
   color: #aaa;
   flex: 1;
 }
+
+/* Modern AI Systems */
+.snt-modern-modules {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(15, 52, 96, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(15, 52, 96, 0.3);
+}
+
+.snt-modern-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+

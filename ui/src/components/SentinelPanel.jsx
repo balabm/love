@@ -175,6 +175,30 @@ export default function SentinelPanel() {
         </div>
       )}
 
+      {/* Modern AI Module Health */}
+      {Object.keys(health).length > 0 && (
+        <div className="snt-modern-modules">
+          <div className="snt-section-label">Modern AI Systems</div>
+          <div className="snt-modern-grid">
+            {Object.entries(health)
+              .filter(([name]) => [
+                "llm_manager", "graph_rag", "prompt_optimizer", "self_reflection",
+                "conversation_quality", "predictive_maintenance", "multi_agent_orchestrator",
+                "intent_predictor", "personality_adapter", "response_cache",
+                "context_window_manager", "user_pattern_detector", "goal_drift_detector",
+                "cross_modal_fusion", "emotional_resonance", "knowledge_graph_builder",
+                "adaptive_learning_rate", "conversation_continuity"
+              ].includes(name))
+              .map(([name, info]) => (
+                <div key={name} className={`snt-health-item snt-health-${info.status}`}>
+                  <span className="snt-health-name">{name.replace(/_/g, " ")}</span>
+                  <span className="snt-health-status">{info.status}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       {/* Hour summary */}
       {status?.state?.last_hour_summary && (
         <div className="snt-hour-summary">
