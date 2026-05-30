@@ -67,6 +67,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Guardrails | Content filtering, PII detection, proactive wellbeing warnings | Sentinel + Orchestrator |
 | LLM Manager | Dynamic model routing, performance tracking, proactive suggestions | Internal |
 | Graph RAG | Hybrid knowledge graph + vector memory retrieval | Internal |
+| Prompt Optimizer | Adaptive prompt engineering with A/B testing | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -136,6 +137,13 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/llm/pull` | Download a new model from Ollama |
 | `/modern/graph-rag/query` | Hybrid knowledge graph + vector memory query |
 | `/modern/graph-rag/stats` | Graph RAG engine statistics |
+| `/modern/prompts/register` | Register prompt template for optimization |
+| `/modern/prompts/record` | Record prompt performance |
+| `/modern/prompts/experiment` | Start A/B test for prompt |
+| `/modern/prompts/experiment/{id}` | Evaluate experiment winner |
+| `/modern/prompts/suggestions` | Get improvement suggestions |
+| `/modern/prompts/stats` | Prompt optimizer statistics |
+| `/modern/prompts/best` | Best prompt for task type |
 
 ### Startup
 
