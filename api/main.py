@@ -6853,6 +6853,7 @@ async def get_agi_status():
         "self_coder": SELF_CODER_AVAILABLE,
         "cross_instance_learning": CROSS_INSTANCE_AVAILABLE,
         "capability_gap_detector": CAPABILITY_GAP_DETECTOR_AVAILABLE,
+        "autonomous_cicd": AUTONOMOUS_CICD_AVAILABLE,
         "autonomy_supervisor": AUTONOMY_SUPERVISOR_AVAILABLE,
     }
     merged = {**core_flags, **spine_flags}

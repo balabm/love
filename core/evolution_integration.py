@@ -126,6 +126,16 @@ class EvolutionIntegration:
         except Exception as e:
             print(f"[EvolutionIntegration] Cross-instance error: {e}")
         
+        # Start autonomous CI/CD
+        try:
+            from core.autonomous_cicd import get_autonomous_cicd
+            cicd = get_autonomous_cicd()
+            cicd.start()
+            self._state.autonomous_cicd_active = True
+            print('[EvolutionIntegration] Autonomous CI/CD started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Autonomous CI/CD error: {e}')
+        
         # Start integration loop
         self._running = True
         self._thread = threading.Thread(
@@ -154,6 +164,12 @@ class EvolutionIntegration:
         
         try:
             get_self_coder().stop()
+        except Exception:
+            pass
+        
+        try:
+            from core.autonomous_cicd import get_autonomous_cicd
+            get_autonomous_cicd().stop()
         except Exception:
             pass
         
