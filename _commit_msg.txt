@@ -1,17 +1,14 @@
-feat(evolution): capability_gap_detector monitors modern AI module health
+feat(evolution): evolution_integration self-heals all 18 modern AI subsystems
 
-capability_gap_detector.py:
-- Added _detect_modern_module_gaps() method that checks AGI spine flags
-  for all 18 modern AI subsystems
-- Detects when modern modules (llm_manager, graph_rag, prompt_optimizer,
+evolution_integration.py:
+- Enhanced _heal_subsystems() to monitor and restart all 18 modern AI
+  subsystems if they crash or stall
+- Added modern module getters: llm_manager, graph_rag, prompt_optimizer,
   self_reflection, conversation_quality, predictive_maintenance,
   multi_agent_orchestrator, intent_predictor, personality_adapter,
   response_cache, context_window_manager, user_pattern_detector,
   goal_drift_detector, cross_modal_fusion, emotional_resonance,
-  knowledge_graph_builder, adaptive_learning_rate, conversation_continuity)
-  are not initialized or have crashed
-- Detects missing modern module integration into the evolution loop
-- Gaps are auto-prioritized and can trigger self-coder missions
+  knowledge_graph_builder, adaptive_learning_rate, conversation_continuity
 
 All 95 tests pass.
 
