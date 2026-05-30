@@ -184,6 +184,67 @@ async def structured_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Vector Memory ─────────────────────────────────────────────────────────────
+
+@router.post("/vector/store")
+async def vector_store(text: str, source: str = "api", tags: str = ""):
+    """Store a memory with vector embedding for semantic search."""
+    try:
+        from core.vector_memory import get_vector_engine
+        engine = get_vector_engine()
+        mem_id = engine.store(text, source=source, tags=tags.split(",") if tags else [])
+        return {"stored": bool(mem_id), "id": mem_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/vector/search")
+async def vector_search(query: str, top_k: int = 5, threshold: float = 0.6):
+    """Semantic search over stored memories."""
+    try:
+        from core.vector_memory import get_vector_engine
+        engine = get_vector_engine()
+        results = engine.search(query, top_k=top_k, threshold=threshold)
+        return {"query": query, "results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/vector/recall")
+async def vector_recall(context: str, days: int = 30):
+    """Contextual recall with temporal filtering."""
+    try:
+        from core.vector_memory import get_vector_engine
+        engine = get_vector_engine()
+        results = engine.recall(context, time_range_days=days)
+        return {"context": context, "results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/vector/stats")
+async def vector_stats():
+    """Get vector memory engine statistics."""
+    try:
+        from core.vector_memory import get_vector_engine
+        engine = get_vector_engine()
+        return engine.get_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/vector/clusters")
+async def vector_clusters(n: int = 5):
+    """Get semantic clusters of stored memories."""
+    try:
+        from core.vector_memory import get_vector_engine
+        engine = get_vector_engine()
+        clusters = engine.cluster_memories(n_clusters=n)
+        return {"clusters": clusters}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
