@@ -478,6 +478,7 @@ async def get_evolution_health():
             "multi_agent": {"available": True},
             "intent_predictor": {"available": True},
             "personality_adapter": {"available": True},
+            "response_cache": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

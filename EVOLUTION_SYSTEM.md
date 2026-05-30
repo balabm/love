@@ -74,6 +74,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Multi-Agent Orchestrator | Coordinated role-based intelligence for complex tasks | Internal |
 | Intent Predictor | Proactive intent prediction + response preparation | Internal |
 | Personality Adapter | Dynamic tone & style calibration based on user context | Internal |
+| Response Cache | Intelligent response caching with semantic matching | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -175,6 +176,9 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/personality/adapt` | Adapt response to detected context |
 | `/modern/personality/profile` | Current personality configuration |
 | `/modern/personality/stats` | Personality adaptation statistics |
+| `/modern/cache/stats` | Response cache statistics |
+| `/modern/cache/invalidate` | Invalidate cache entries |
+| `/modern/cache/cleanup` | Remove expired cache entries |
 
 ### Startup
 

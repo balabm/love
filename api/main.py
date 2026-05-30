@@ -6474,6 +6474,7 @@ def get_self_evolution_status():
                 "multi_agent": {"available": True},
                 "intent_predictor": {"available": True},
                 "personality_adapter": {"available": True},
+                "response_cache": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:
