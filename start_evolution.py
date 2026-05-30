@@ -11,6 +11,21 @@ This script starts all of LOVE's evolution systems:
 - Autonomous CI/CD (self-deployment pipeline)
 - Evolution integration (unified coordination)
 
+Plus Modern AI Subsystems:
+- MCP Host (Model Context Protocol for external tools)
+- Reasoning Engine (ReAct chain-of-thought reasoning)
+- Structured Output Engine (Pydantic schema enforcement)
+- Vector Memory Engine (semantic search with embeddings)
+- Code Sandbox (safe execution of generated code)
+- Neural Architecture Search (self-optimizing model architectures)
+- Multi-Modal Evolution (cross-modal capability improvement)
+- Task Evolution (task pattern analysis)
+- Fitness Evolution (fitness metric tracking)
+- Observability Engine (distributed tracing + anomaly detection)
+- Guardrails Engine (content filtering + proactive warnings)
+- LLM Manager (dynamic model routing + performance tracking)
+- Graph RAG (knowledge graph + vector memory hybrid retrieval)
+
 Usage:
     python start_evolution.py
 """

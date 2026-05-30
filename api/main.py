@@ -6466,6 +6466,7 @@ def get_self_evolution_status():
                 "observability": {"running": get_observability_engine()._running},
                 "guardrails": {"available": True},
                 "llm_manager": {"available": len(get_llm_manager()._models) > 0},
+                "graph_rag": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:
