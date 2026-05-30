@@ -66,6 +66,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Observability | Distributed tracing, anomaly detection, health scoring | Orchestrator |
 | Guardrails | Content filtering, PII detection, proactive wellbeing warnings | Sentinel + Orchestrator |
 | LLM Manager | Dynamic model routing, performance tracking, proactive suggestions | Internal |
+| Graph RAG | Hybrid knowledge graph + vector memory retrieval | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -133,6 +134,8 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/llm/stats` | Per-model performance analytics |
 | `/modern/llm/suggestions` | Proactive model recommendations |
 | `/modern/llm/pull` | Download a new model from Ollama |
+| `/modern/graph-rag/query` | Hybrid knowledge graph + vector memory query |
+| `/modern/graph-rag/stats` | Graph RAG engine statistics |
 
 ### Startup
 
