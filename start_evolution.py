@@ -38,6 +38,7 @@ Plus Modern AI Subsystems:
 - Goal Drift Detector (warns when activities drift from goals)
 - Cross-Modal Fusion Engine (combines text/visual/voice insights)
 - Emotional Resonance Engine (deep emotional pattern analysis)
+- Knowledge Graph Auto-Builder (entity & relationship extraction)
 
 Usage:
     python start_evolution.py

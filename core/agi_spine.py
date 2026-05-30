@@ -475,5 +475,11 @@ def get_agi_system_flags():
         flags["emotional_resonance"] = True
     except Exception:
         pass
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        kgb = get_knowledge_graph_builder()
+        flags["knowledge_graph_builder"] = True
+    except Exception:
+        pass
 
     return flags

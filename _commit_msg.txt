@@ -1,0 +1,30 @@
+feat(modern): Knowledge Graph Auto-Builder — entity & relationship extraction
+
+Knowledge Graph Auto-Builder (core/knowledge_graph_builder.py):
+- extract_entities(): Extract people, places, organizations, concepts from text
+- extract_relations(): Detect works_at, lives_in, likes, created_by, part_of relationships
+- build_graph(): Merge texts into persistent knowledge graph with confidence scoring
+- query_graph(): Traverse graph connections with configurable depth
+- export_graph(): JSON export for visualization tools
+- 433 lines of production knowledge graph infrastructure
+
+API Endpoints (api/modern_routes.py):
+- POST /modern/kg/extract — Extract entities from text
+- POST /modern/kg/relations — Extract relations from text
+- POST /modern/kg/build — Build graph from texts
+- GET /modern/kg/query — Query graph for entity connections
+- GET /modern/kg/stats — Graph statistics
+- GET /modern/kg/export — Export graph as JSON
+
+Integration:
+- AGI spine includes knowledge_graph_builder flag
+- /evolution/health and /intelligence/self-evolution include availability
+- start_evolution.py lists Knowledge Graph Auto-Builder
+
+Tests:
+- All 95 tests pass (39 evolution + 56 modern)
+- Fixed ContextWindowManager singleton bug and SelfReflection missing import
+
+Generated with [Devin](https://cli.devin.ai/docs)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

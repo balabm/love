@@ -1441,6 +1441,75 @@ async def emotion_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ── Knowledge Graph Auto-Builder ──────────────────────────────────────────────
+
+@router.post("/kg/extract")
+async def extract_entities(text: str):
+    """Extract entities from text."""
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        builder = get_knowledge_graph_builder()
+        return {"entities": builder.extract_entities(text)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/kg/relations")
+async def extract_relations(text: str):
+    """Extract relations from text."""
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        builder = get_knowledge_graph_builder()
+        entities = builder.extract_entities(text)
+        return {"relations": builder.extract_relations(text, entities)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/kg/build")
+async def build_graph(texts: List[str] = []):
+    """Build knowledge graph from texts."""
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        builder = get_knowledge_graph_builder()
+        return builder.build_graph(texts)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/kg/query")
+async def query_graph(entity: str, depth: int = 1):
+    """Query graph for entity connections."""
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        builder = get_knowledge_graph_builder()
+        return builder.query_graph(entity, depth)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/kg/stats")
+async def kg_stats():
+    """Get knowledge graph statistics."""
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        builder = get_knowledge_graph_builder()
+        return builder.get_graph_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/kg/export")
+async def export_graph():
+    """Export knowledge graph as JSON."""
+    try:
+        from core.knowledge_graph_builder import get_knowledge_graph_builder
+        builder = get_knowledge_graph_builder()
+        return builder.export_graph()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
