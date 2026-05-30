@@ -552,6 +552,8 @@ class Sentinel:
                         engine.start()
                         self._emit("health", f"Restarted: {name}",
                                    f"Self-healed {name} — was not running.", "normal")
+                # Mark as healthy on successful check
+                self._subsystem_health[name] = {"status": "ok", "last_check": time.time()}
             except asyncio.TimeoutError:
                 self._subsystem_health[name] = {"status": "STALLED", "error": "Timeout after 5.0s"}
                 self._emit("health", f"Subsystem Stalled: {name}",

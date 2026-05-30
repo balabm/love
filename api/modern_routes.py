@@ -883,6 +883,66 @@ async def agent_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Intent Predictor ──────────────────────────────────────────────────────────
+
+@router.post("/intent/classify")
+async def classify_intent(message: str):
+    """Classify the intent of a user message."""
+    try:
+        from core.intent_predictor import get_intent_predictor
+        predictor = get_intent_predictor()
+        return predictor.classify_intent(message)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/intent/predict")
+async def predict_intent(recent_messages: List[str] = []):
+    """Predict the user's next intent based on recent messages."""
+    try:
+        from core.intent_predictor import get_intent_predictor
+        predictor = get_intent_predictor()
+        result = predictor.predict_next_intent(recent_messages)
+        if result:
+            return {
+                "prediction_id": result.prediction_id,
+                "predicted_intent": result.predicted_intent,
+                "confidence": result.confidence,
+                "predicted_message": result.predicted_message,
+                "suggested_response": result.suggested_response,
+                "context_trigger": result.context_trigger,
+            }
+        return {"prediction": None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/intent/prepare")
+async def prepare_response(prediction_id: str):
+    """Prepare a response for a predicted intent."""
+    try:
+        from core.intent_predictor import get_intent_predictor, IntentPrediction
+        predictor = get_intent_predictor()
+        # Find the prediction
+        for pred in predictor._predictions:
+            if pred.prediction_id == prediction_id:
+                return predictor.prepare_response(pred)
+        return {"prepared": False, "reason": "prediction not found"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/intent/stats")
+async def intent_stats():
+    """Get intent predictor statistics."""
+    try:
+        from core.intent_predictor import get_intent_predictor
+        predictor = get_intent_predictor()
+        return predictor.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

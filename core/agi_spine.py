@@ -426,4 +426,10 @@ def get_agi_system_flags():
         flags["multi_agent"] = len(ma._agents) > 0
     except Exception:
         pass
+    try:
+        from core.intent_predictor import get_intent_predictor
+        ip = get_intent_predictor()
+        flags["intent_predictor"] = True
+    except Exception:
+        pass
     return flags
