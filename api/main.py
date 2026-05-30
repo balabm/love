@@ -6427,6 +6427,31 @@ def get_self_evolution_status():
         except Exception:
             pass
         
+        # Augment with evolution health
+        try:
+            from api.evolution_routes import router as evo_router
+            # Directly call the health function
+            from core.evolution_integration import get_evolution_integration
+            from core.meta_evolution import get_meta_evolution
+            from core.swarm_evolution import get_swarm_evolution
+            from core.self_coder import get_self_coder
+            from core.cross_instance_learning import get_cross_instance_learning
+            from core.capability_gap_detector import get_capability_gap_detector
+            from core.autonomous_cicd import get_autonomous_cicd
+            evo_int = get_evolution_integration()
+            result["health"] = {
+                "integration": {"running": evo_int._running},
+                "meta_evolution": {"running": get_meta_evolution()._running},
+                "swarm_evolution": {"running": get_swarm_evolution()._running},
+                "self_coder": {"running": get_self_coder()._running},
+                "cross_instance": {"running": get_cross_instance_learning()._running},
+                "capability_gap_detector": {"running": get_capability_gap_detector()._running},
+                "autonomous_cicd": {"running": get_autonomous_cicd()._running},
+                "overall": "healthy" if evo_int._running else "degraded",
+            }
+        except Exception:
+            pass
+
         # Augment with autonomous CI/CD data
         try:
             from core.autonomous_cicd import get_autonomous_cicd

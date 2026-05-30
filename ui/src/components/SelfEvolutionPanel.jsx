@@ -211,6 +211,26 @@ export default function SelfEvolutionPanel() {
           )}
         </section>
 
+        {/* Subsystem Health */}
+        {health && (
+          <section className="evo-health glass-panel">
+            <h3>Subsystem Health</h3>
+            <div className="health-grid">
+              {Object.entries(health).filter(([k]) => k !== "overall").map(([name, info]) => (
+                <div key={name} className={`health-pill ${info.running ? "healthy" : "stopped"}`}>
+                  <span className="health-dot">{info.running ? "●" : "○"}</span>
+                  <span className="health-name">{name.replace(/_/g, " ")}</span>
+                </div>
+              ))}
+            </div>
+            {health.overall && (
+              <div className={`overall-health ${health.overall}`}>
+                Overall: {health.overall}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Diagnostics controller */}
         <section className="evo-diagnose glass-panel">
           <h3>Self-Correction Diagnostics</h3>
