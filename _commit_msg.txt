@@ -1,24 +1,25 @@
-feat(modern): Memory Compressor — semantic conversation memory compression
+feat(modern): Semantic Search Optimizer — vector query optimization and reranking
 
-Memory Compressor (core/memory_compressor.py):
-- compress_conversation(): Compress conversation turns by extracting key
-  facts, entities, and emotions while preserving semantic meaning
-- compress_by_age(): Compress conversations older than N days
-- get_compression_stats(): Track compression ratios and memory savings
-- estimate_savings(): Estimate potential savings for a given turn count
-- 236 lines of production memory compression infrastructure
+Semantic Search Optimizer (core/semantic_search_optimizer.py):
+- optimize_query(): Expand queries with synonyms, add contextual terms,
+  generate multiple variants for broader coverage
+- rerank_results(): Rerank using vector similarity + keyword matching +
+  temporal decay + diversity penalty
+- search_with_optimization(): Full pipeline from query to optimized results
+- record_feedback(): Learn from user feedback to improve scoring
+- 267 lines of production search optimization infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/memory/compress — Compress conversation turns
-- GET /modern/memory/compress/stats — Compression statistics
-- GET /modern/memory/compress/estimate — Estimate compression savings
+- POST /modern/search/optimize — Optimize a search query
+- POST /modern/search/rerank — Rerank results with multiple signals
+- GET /modern/search/stats — Search optimizer statistics
 
 Integration:
-- AGI spine includes memory_compressor flag
+- AGI spine includes semantic_search_optimizer flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Memory Compressor
+- start_evolution.py lists Semantic Search Optimizer
 
-All 101 tests pass (95 evolution + 56 modern).
+All 101 tests pass.
 
 Generated with [Devin](https://cli.devin.ai/docs)
 

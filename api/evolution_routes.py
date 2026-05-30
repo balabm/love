@@ -488,6 +488,7 @@ async def get_evolution_health():
             "adaptive_learning_rate": {"available": True},
             "conversation_continuity": {"available": True},
             "memory_compressor": {"available": True},
+            "semantic_search_optimizer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -6484,6 +6484,7 @@ def get_self_evolution_status():
                 "adaptive_learning_rate": {"available": True},
                 "conversation_continuity": {"available": True},
                 "memory_compressor": {"available": True},
+                "semantic_search_optimizer": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

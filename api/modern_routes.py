@@ -1689,6 +1689,43 @@ async def estimate_savings(total_turns: int = 100):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Semantic Search Optimizer ───────────────────────────────────────────────
+
+@router.post("/search/optimize")
+async def optimize_search(query: Dict[str, Any] = {}):
+    """Optimize a search query for better retrieval."""
+    try:
+        from core.semantic_search_optimizer import get_semantic_search_optimizer
+        optimizer = get_semantic_search_optimizer()
+        q = query.get("query", "")
+        context = query.get("context", [])
+        return optimizer.search_with_optimization(q, context)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/search/rerank")
+async def rerank_search(results: List[Dict[str, Any]] = [], query: str = ""):
+    """Rerank search results using multiple signals."""
+    try:
+        from core.semantic_search_optimizer import get_semantic_search_optimizer
+        optimizer = get_semantic_search_optimizer()
+        return {"reranked": [r.__dict__ if hasattr(r, '__dict__') else r for r in optimizer.rerank_results(results, query)]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/search/stats")
+async def search_optimizer_stats():
+    """Get search optimizer statistics."""
+    try:
+        from core.semantic_search_optimizer import get_semantic_search_optimizer
+        optimizer = get_semantic_search_optimizer()
+        return optimizer.get_search_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

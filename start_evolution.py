@@ -42,6 +42,7 @@ Plus Modern AI Subsystems:
 - Adaptive Learning Rate Engine (dynamic parameter tuning)
 - Conversation Continuity Manager (context persistence across gaps)
 - Memory Compressor (semantic conversation memory compression)
+- Semantic Search Optimizer (vector query optimization and reranking)
 
 Usage:
     python start_evolution.py

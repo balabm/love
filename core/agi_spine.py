@@ -499,5 +499,11 @@ def get_agi_system_flags():
         flags["memory_compressor"] = True
     except Exception:
         pass
+    try:
+        from core.semantic_search_optimizer import get_semantic_search_optimizer
+        sso = get_semantic_search_optimizer()
+        flags["semantic_search_optimizer"] = True
+    except Exception:
+        pass
 
     return flags
