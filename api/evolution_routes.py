@@ -475,6 +475,7 @@ async def get_evolution_health():
             "self_reflection": {"available": True},
             "conversation_quality": {"available": True},
             "predictive_maintenance": {"available": True},
+            "multi_agent": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
