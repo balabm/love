@@ -321,13 +321,13 @@ def get_agi_system_flags():
     try:
         from core.capability_gap_detector import get_capability_gap_detector
         detector = get_capability_gap_detector()
-        flags["capability_gap"] = True
+        flags["capability_gap"] = getattr(detector, "_running", False)
     except Exception:
         pass
     try:
         from core.autonomous_mission_queue import get_mission_queue
         mq = get_mission_queue()
-        flags["mission_queue"] = True
+        flags["mission_queue"] = getattr(mq, "_running", False)
     except Exception:
         pass
     return flags
