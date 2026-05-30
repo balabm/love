@@ -432,4 +432,10 @@ def get_agi_system_flags():
         flags["intent_predictor"] = True
     except Exception:
         pass
+    try:
+        from core.personality_adapter import get_personality_adapter
+        pa = get_personality_adapter()
+        flags["personality_adapter"] = True
+    except Exception:
+        pass
     return flags

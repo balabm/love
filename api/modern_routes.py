@@ -943,6 +943,53 @@ async def intent_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Personality Adapter ────────────────────────────────────────────────────────
+
+@router.post("/personality/analyze")
+async def analyze_personality_context(messages: List[str] = [], task_type: str = ""):
+    """Analyze conversation context to determine appropriate tone."""
+    try:
+        from core.personality_adapter import get_personality_adapter
+        adapter = get_personality_adapter()
+        return adapter.analyze_context(messages, task_type)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/personality/adapt")
+async def adapt_response(response: str, messages: List[str] = []):
+    """Adapt a response based on conversation context."""
+    try:
+        from core.personality_adapter import get_personality_adapter
+        adapter = get_personality_adapter()
+        context = adapter.analyze_context(messages)
+        return {"adapted_response": adapter.adapt_response(response, context)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/personality/profile")
+async def personality_profile():
+    """Get current personality profile."""
+    try:
+        from core.personality_adapter import get_personality_adapter
+        adapter = get_personality_adapter()
+        return adapter.get_personality_profile()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/personality/stats")
+async def personality_stats():
+    """Get personality adapter statistics."""
+    try:
+        from core.personality_adapter import get_personality_adapter
+        adapter = get_personality_adapter()
+        return adapter.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
