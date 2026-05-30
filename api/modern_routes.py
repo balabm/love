@@ -245,6 +245,76 @@ async def vector_clusters(n: int = 5):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Neural Architecture Search ────────────────────────────────────────────────
+
+@router.get("/nas/status")
+async def nas_status():
+    """Get NAS engine status and best architectures."""
+    try:
+        from core.neural_architecture_search import get_neural_architecture_search
+        nas = get_neural_architecture_search()
+        return {
+            "running": nas._running,
+            "architectures": nas.get_architecture_stats(),
+            "best": nas.get_best_architecture(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/nas/create")
+async def nas_create(config: dict):
+    """Create a new architecture configuration."""
+    try:
+        from core.neural_architecture_search import get_neural_architecture_search
+        nas = get_neural_architecture_search()
+        arch_id = nas.create_architecture(config)
+        return {"architecture_id": arch_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/nas/profile")
+async def nas_profile(architecture_id: str, task_type: str = "general"):
+    """Profile an architecture's performance."""
+    try:
+        from core.neural_architecture_search import get_neural_architecture_search
+        nas = get_neural_architecture_search()
+        profile = nas.profile_architecture(architecture_id, task_type)
+        return {"profile": profile}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Multi-Modal Evolution ─────────────────────────────────────────────────────
+
+@router.get("/multimodal/status")
+async def multimodal_status():
+    """Get multi-modal evolution status."""
+    try:
+        from core.multimodal_evolution import get_multimodal_evolution
+        mme = get_multimodal_evolution()
+        return {
+            "running": mme._running,
+            "capabilities": {k: {"accuracy": v.accuracy, "speed": v.speed} for k, v in mme._capabilities.items()},
+            "patterns": len(mme._cross_modal_patterns),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/multimodal/recommend")
+async def multimodal_recommend(task: str, context: dict = None):
+    """Get modality recommendations for a task."""
+    try:
+        from core.multimodal_evolution import get_multimodal_evolution
+        mme = get_multimodal_evolution()
+        recs = mme.get_modality_recommendations(task, context or {})
+        return {"task": task, "recommendations": recs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

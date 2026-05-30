@@ -354,4 +354,16 @@ def get_agi_system_flags():
         flags["multimodal_evolution"] = getattr(mme, '_running', False)
     except Exception:
         pass
+    try:
+        from agents.task_evolution_integration import get_task_evolution_integration
+        te = get_task_evolution_integration()
+        flags["task_evolution"] = getattr(te, '_running', False)
+    except Exception:
+        pass
+    try:
+        from agents.fitness_evolution_integration import get_fitness_evolution_integration
+        fe = get_fitness_evolution_integration()
+        flags["fitness_evolution"] = getattr(fe, '_running', False)
+    except Exception:
+        pass
     return flags

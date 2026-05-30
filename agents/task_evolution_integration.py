@@ -328,6 +328,35 @@ class TaskEvolutionIntegration:
         self.track_productivity(tasks)
 
 
+    # ── Background Loop ───────────────────────────────────────────────────────
+    
+    def start(self):
+        """Start the task evolution background loop."""
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._main_loop, daemon=True, name="LOVE-TaskEvolution"
+        )
+        self._thread.start()
+        print("[TaskEvolution] Started — task evolution active")
+    
+    def stop(self):
+        self._running = False
+    
+    def _main_loop(self):
+        time.sleep(180)
+        while self._running:
+            try:
+                # Periodic pattern analysis
+                from agents.task_agent import get_task_overview
+                tasks = get_task_overview()
+                self.analyze_task_patterns(tasks)
+                self.track_productivity(tasks)
+            except Exception as e:
+                print(f"[TaskEvolution] Loop error: {e}")
+            time.sleep(3600)
+    
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 
 _task_evolution_instance: Optional[TaskEvolutionIntegration] = None

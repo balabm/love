@@ -163,6 +163,24 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] NAS error: {e}')
         
+        # Start Task Evolution
+        try:
+            from agents.task_evolution_integration import get_task_evolution_integration
+            te = get_task_evolution_integration()
+            te.start()
+            print('[EvolutionIntegration] Task Evolution started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Task Evolution error: {e}')
+        
+        # Start Fitness Evolution
+        try:
+            from agents.fitness_evolution_integration import get_fitness_evolution_integration
+            fe = get_fitness_evolution_integration()
+            fe.start()
+            print('[EvolutionIntegration] Fitness Evolution started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Fitness Evolution error: {e}')
+        
         # Start Multi-Modal Evolution
         try:
             from core.multimodal_evolution import get_multimodal_evolution

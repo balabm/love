@@ -211,6 +211,33 @@ class FitnessEvolutionIntegration:
             pass
 
 
+    # ── Background Loop ───────────────────────────────────────────────────────
+    
+    def start(self):
+        """Start the fitness evolution background loop."""
+        if self._running:
+            return
+        self._running = True
+        self._thread = threading.Thread(
+            target=self._main_loop, daemon=True, name="LOVE-FitnessEvolution"
+        )
+        self._thread.start()
+        print("[FitnessEvolution] Started — fitness evolution active")
+    
+    def stop(self):
+        self._running = False
+    
+    def _main_loop(self):
+        time.sleep(180)
+        while self._running:
+            try:
+                # Periodic fitness pattern analysis
+                self.analyze_fitness_patterns()
+                self.track_fitness_metrics()
+            except Exception as e:
+                print(f"[FitnessEvolution] Loop error: {e}")
+            time.sleep(3600)
+    
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 
 _fitness_evolution_instance: Optional[FitnessEvolutionIntegration] = None
