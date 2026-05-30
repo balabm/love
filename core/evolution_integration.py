@@ -154,6 +154,24 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Reasoning Engine error: {e}')
         
+        # Start Neural Architecture Search
+        try:
+            from core.neural_architecture_search import get_neural_architecture_search
+            nas = get_neural_architecture_search()
+            nas.start()
+            print('[EvolutionIntegration] Neural Architecture Search started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] NAS error: {e}')
+        
+        # Start Multi-Modal Evolution
+        try:
+            from core.multimodal_evolution import get_multimodal_evolution
+            mme = get_multimodal_evolution()
+            mme.start()
+            print('[EvolutionIntegration] Multi-Modal Evolution started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Multi-Modal error: {e}')
+        
         # Start integration loop
         self._running = True
         self._thread = threading.Thread(

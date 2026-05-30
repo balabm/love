@@ -342,4 +342,16 @@ def get_agi_system_flags():
         flags["reasoning_engine"] = True
     except Exception:
         pass
+    try:
+        from core.neural_architecture_search import get_neural_architecture_search
+        nas = get_neural_architecture_search()
+        flags["neural_architecture_search"] = getattr(nas, '_running', False)
+    except Exception:
+        pass
+    try:
+        from core.multimodal_evolution import get_multimodal_evolution
+        mme = get_multimodal_evolution()
+        flags["multimodal_evolution"] = getattr(mme, '_running', False)
+    except Exception:
+        pass
     return flags
