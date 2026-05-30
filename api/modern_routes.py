@@ -759,6 +759,54 @@ async def conversation_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Predictive Maintenance ────────────────────────────────────────────────────
+
+@router.get("/predictive/health/{subsystem}")
+async def health_forecast(subsystem: str, hours: int = 24):
+    """Get health forecast for a subsystem."""
+    try:
+        from core.predictive_maintenance import get_predictive_maintenance_engine
+        engine = get_predictive_maintenance_engine()
+        return engine.get_health_forecast(subsystem, hours)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/predictive/predictions")
+async def all_predictions():
+    """Get all current failure predictions."""
+    try:
+        from core.predictive_maintenance import get_predictive_maintenance_engine
+        engine = get_predictive_maintenance_engine()
+        return {"predictions": engine.get_all_predictions()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/predictive/snapshot")
+async def record_snapshot(subsystem: str, health_score: float, latency_ms: float = 0.0,
+                         error_rate: float = 0.0):
+    """Record a health snapshot for a subsystem."""
+    try:
+        from core.predictive_maintenance import get_predictive_maintenance_engine
+        engine = get_predictive_maintenance_engine()
+        engine.record_snapshot(subsystem, health_score, latency_ms, error_rate)
+        return {"recorded": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/predictive/stats")
+async def predictive_stats():
+    """Get predictive maintenance statistics."""
+    try:
+        from core.predictive_maintenance import get_predictive_maintenance_engine
+        engine = get_predictive_maintenance_engine()
+        return engine.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

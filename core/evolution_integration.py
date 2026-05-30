@@ -207,6 +207,15 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Multi-Modal error: {e}')
         
+        # Start Predictive Maintenance Engine
+        try:
+            from core.predictive_maintenance import get_predictive_maintenance_engine
+            pm = get_predictive_maintenance_engine()
+            pm.start()
+            print('[EvolutionIntegration] Predictive Maintenance Engine started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Predictive Maintenance error: {e}')
+        
         # Start Self-Reflection Engine
         try:
             from core.self_reflection import get_self_reflection_engine

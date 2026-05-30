@@ -414,4 +414,10 @@ def get_agi_system_flags():
         flags["conversation_quality"] = True
     except Exception:
         pass
+    try:
+        from core.predictive_maintenance import get_predictive_maintenance_engine
+        pm = get_predictive_maintenance_engine()
+        flags["predictive_maintenance"] = True
+    except Exception:
+        pass
     return flags
