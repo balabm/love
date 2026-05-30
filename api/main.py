@@ -6467,6 +6467,7 @@ def get_self_evolution_status():
                 "guardrails": {"available": True},
                 "llm_manager": {"available": len(get_llm_manager()._models) > 0},
                 "graph_rag": {"available": True},
+                "prompt_optimizer": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

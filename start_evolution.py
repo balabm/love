@@ -25,6 +25,7 @@ Plus Modern AI Subsystems:
 - Guardrails Engine (content filtering + proactive warnings)
 - LLM Manager (dynamic model routing + performance tracking)
 - Graph RAG (knowledge graph + vector memory hybrid retrieval)
+- Prompt Optimizer (adaptive prompt engineering with A/B testing)
 
 Usage:
     python start_evolution.py
