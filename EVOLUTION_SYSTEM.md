@@ -67,6 +67,7 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/evolution/experiments` | Active and completed experiments |
 | `/evolution/swarms` | Active swarm intelligence units |
 | `/evolution/history` | Evolution event timeline |
+| `/evolution/health` | Health status of all 7 evolution subsystems |
 | `/intelligence/self-evolution` | Integration + gaps + deployments + active experiments |
 
 ### Startup
