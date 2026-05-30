@@ -338,6 +338,81 @@ class CrossInstanceLearning:
             print(f"[CrossInstance] Feedback error: {e}")
             return False
     
+    # ── Internal Loop Methods ─────────────────────────────────────────────────
+
+    def _share_local_mutations(self):
+        """Share locally validated mutations to the knowledge hub."""
+        try:
+            from core.evolution_engine import EvolutionEngine
+            engine = EvolutionEngine()
+
+            # Find locally validated mutations
+            local_validated = [
+                m for m in engine._mutations.values()
+                if getattr(m, "status", "") == "validated" and getattr(m, "fitness", 0) > 0.6
+            ]
+
+            shared_count = 0
+            for mutation in local_validated:
+                # Only share if not already shared
+                already_shared = any(
+                    sm.description == mutation.description
+                    for sm in self._shared_mutations.values()
+                    if sm.source_instance_id == self._instance_id
+                )
+                if not already_shared:
+                    self.share_mutation({
+                        "mutation_type": mutation.mutation_type,
+                        "description": mutation.description,
+                        "prompt_modification": getattr(mutation, "prompt_modification", ""),
+                        "success_rate": getattr(mutation, "fitness", 0.0),
+                        "sample_size": getattr(mutation, "generation", 0),
+                        "domains": [mutation.mutation_type],
+                        "risk_level": "low" if getattr(mutation, "fitness", 0) > 0.8 else "medium",
+                    })
+                    shared_count += 1
+
+            if shared_count > 0:
+                print(f"[CrossInstance] Shared {shared_count} local mutation(s)")
+                try:
+                    bus = get_neural_bus()
+                    bus.publish("cross_instance.mutations_shared", {
+                        "instance_id": self._instance_id,
+                        "count": shared_count,
+                    }, priority=EventPriority.NORMAL)
+                except Exception:
+                    pass
+
+        except Exception as e:
+            print(f"[CrossInstance] Share local mutations error: {e}")
+
+    def adopt_mutations(self) -> List[str]:
+        """Discover and adopt high-quality peer mutations."""
+        adopted = []
+        try:
+            discovered = self.discover_mutations(min_success_rate=0.7)
+            for mutation in discovered[:3]:  # Adopt top 3
+                if self._instance_id not in mutation.adopted_by:
+                    if self.adopt_mutation(mutation.id):
+                        adopted.append(mutation.id)
+
+                        # Publish adoption event to neural bus
+                        try:
+                            bus = get_neural_bus()
+                            bus.publish("cross_instance.mutation_adopted", {
+                                "instance_id": self._instance_id,
+                                "mutation_id": mutation.id,
+                                "source_instance": mutation.source_instance_id,
+                            }, priority=EventPriority.NORMAL)
+                        except Exception:
+                            pass
+
+            return adopted
+
+        except Exception as e:
+            print(f"[CrossInstance] Adopt mutations error: {e}")
+            return adopted
+
     # ── Peer Management ────────────────────────────────────────────────────────
     
     def register_peer(self, peer_id: str, capabilities: List[str]) -> bool:
