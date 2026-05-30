@@ -375,6 +375,66 @@
         .status-deployed { background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid #4ade80; }
         .status-rolled_back { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
         .status-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
+
+        /* Closed Loop Status */
+        .loop-section {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .loop-section h3 { color: #e94560; margin-bottom: 15px; }
+        .loop-status {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        .loop-indicator {
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+            background: rgba(255, 255, 255, 0.1);
+            color: #eaeaea;
+        }
+        .loop-indicator.active {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+            border: 1px solid #4ade80;
+            animation: pulse-green 2s infinite;
+        }
+        .loop-indicator.inactive {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+        .loop-stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .loop-stat {
+            text-align: center;
+            min-width: 80px;
+        }
+        .loop-stat-val {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        .loop-stat-lbl {
+            display: block;
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 4px;
+        }
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
     </style>
 </head>
 <body>
@@ -410,6 +470,32 @@
                 <h3><span class="status-indicator" id="cross-instance-status"></span>Cross-Instance</h3>
                 <div class="status-value" id="shared-mutations">0</div>
                 <div class="status-label">Shared Mutations</div>
+            </div>
+        </div>
+
+        <!-- Closed Loop Status -->
+        <div class="loop-section" id="loop-section">
+            <h3>🔁 Closed Loop Status</h3>
+            <div class="loop-status" id="loop-status">
+                <div class="loop-indicator" id="loop-indicator">Checking...</div>
+                <div class="loop-stats">
+                    <div class="loop-stat">
+                        <span class="loop-stat-val" id="loop-mods">-</span>
+                        <span class="loop-stat-lbl">Code Mods</span>
+                    </div>
+                    <div class="loop-stat">
+                        <span class="loop-stat-val" id="loop-mutations">-</span>
+                        <span class="loop-stat-lbl">Mutations</span>
+                    </div>
+                    <div class="loop-stat">
+                        <span class="loop-stat-val" id="loop-deployments">-</span>
+                        <span class="loop-stat-lbl">Deployments</span>
+                    </div>
+                    <div class="loop-stat">
+                        <span class="loop-stat-val" id="loop-gaps">-</span>
+                        <span class="loop-stat-lbl">Gaps</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -558,6 +644,28 @@
             });
         }
 
+        async function updateClosedLoopStatus(data) {
+            const indicator = document.getElementById('loop-indicator');
+            const mods = document.getElementById('loop-mods');
+            const mutations = document.getElementById('loop-mutations');
+            const deployments = document.getElementById('loop-deployments');
+            const gaps = document.getElementById('loop-gaps');
+            
+            if (!indicator) return;
+            
+            const integration = data.integration || {};
+            const running = integration.running || false;
+            const stats = integration.statistics || {};
+            
+            indicator.textContent = running ? 'Loop Active' : 'Loop Inactive';
+            indicator.className = 'loop-indicator ' + (running ? 'active' : 'inactive');
+            
+            if (mods) mods.textContent = stats.total_code_modifications || 0;
+            if (mutations) mutations.textContent = stats.total_mutations_applied || 0;
+            if (deployments) deployments.textContent = (data.deployments || []).length;
+            if (gaps) gaps.textContent = (data.capability_gaps || {}).total || 0;
+        }
+
         async function loadAllData() {
             try {
                 await Promise.all([
@@ -694,6 +802,8 @@
             try {
                 const response = await fetch(`${API_BASE}/evolution/history?limit=10`);
                 const data = await response.json();
+                
+                updateClosedLoopStatus(data);
                 
                 const container = document.getElementById('timeline');
                 container.innerHTML = '';
