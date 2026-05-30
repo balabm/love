@@ -19,6 +19,7 @@ const OrchestratorPanel = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [command, setCommand] = useState('');
+  const [evolution, setEvolution] = useState(null);
 
   const API_BASE = window.location.origin;
 
@@ -34,6 +35,17 @@ const OrchestratorPanel = () => {
       setNarrative(narrativeRes.narrative || []);
       setComms(commsRes.comms || []);
       setError(null);
+      
+      // Fetch evolution data
+      try {
+        const evoRes = await fetch(`${API_BASE}/intelligence/self-evolution`);
+        if (evoRes.ok) {
+          const evoData = await evoRes.json();
+          setEvolution(evoData);
+        }
+      } catch (e) {
+        // Evolution endpoint may not be available
+      }
     } catch (e) {
       setError('Could not connect to orchestrator');
     } finally {
@@ -127,6 +139,43 @@ const OrchestratorPanel = () => {
               <span className="state-value">{status.system_summary?.consciousness_age_days} days</span>
             </div>
           </div>
+
+          {/* Evolution Activity */}
+          {evolution && (
+            <div className="section evolution-section">
+              <h3>Evolution Activity</h3>
+              <div className="evo-metrics-grid">
+                {evolution.integration && (
+                  <>
+                    <div className="evo-metric">
+                      <span className="evo-metric-val">{evolution.integration.statistics?.total_code_modifications || 0}</span>
+                      <span className="evo-metric-lbl">Code Mods</span>
+                    </div>
+                    <div className="evo-metric">
+                      <span className="evo-metric-val">{evolution.integration.statistics?.total_mutations_applied || 0}</span>
+                      <span className="evo-metric-lbl">Mutations</span>
+                    </div>
+                    <div className="evo-metric">
+                      <span className="evo-metric-val">{evolution.integration.statistics?.successful_cross_adoptions || 0}</span>
+                      <span className="evo-metric-lbl">Adoptions</span>
+                    </div>
+                  </>
+                )}
+                {evolution.capability_gaps && (
+                  <div className="evo-metric">
+                    <span className="evo-metric-val">{evolution.capability_gaps.total || 0}</span>
+                    <span className="evo-metric-lbl">Gaps</span>
+                  </div>
+                )}
+                {evolution.deployments && evolution.deployments.length > 0 && (
+                  <div className="evo-metric">
+                    <span className="evo-metric-val">{evolution.deployments.length}</span>
+                    <span className="evo-metric-lbl">Deployments</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Command Input */}
           <div className="command-section">
