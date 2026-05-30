@@ -6488,6 +6488,7 @@ def get_self_evolution_status():
                 "emotion_aware_response": {"available": True},
                 "knowledge_injector": {"available": True},
                 "conversation_summarizer": {"available": True},
+                "context_aware_prioritizer": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

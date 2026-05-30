@@ -1834,6 +1834,46 @@ async def conversation_summary_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Context-Aware Task Prioritizer ──────────────────────────────────────────
+
+@router.post("/tasks/prioritize")
+async def prioritize_tasks(data: Dict[str, Any] = {}):
+    """Prioritize tasks based on user context."""
+    try:
+        from core.context_aware_prioritizer import get_context_aware_prioritizer
+        prioritizer = get_context_aware_prioritizer()
+        tasks = data.get("tasks", [])
+        context = data.get("context", {})
+        return {"prioritized": prioritizer.prioritize_tasks(tasks, context)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/tasks/suggest-next")
+async def suggest_next_task(data: Dict[str, Any] = {}):
+    """Suggest the best next task."""
+    try:
+        from core.context_aware_prioritizer import get_context_aware_prioritizer
+        prioritizer = get_context_aware_prioritizer()
+        tasks = data.get("tasks", [])
+        context = data.get("context", {})
+        next_task = prioritizer.suggest_next_task(tasks, context)
+        return {"next_task": next_task}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/tasks/prioritize/stats")
+async def prioritization_stats():
+    """Get prioritization statistics."""
+    try:
+        from core.context_aware_prioritizer import get_context_aware_prioritizer
+        prioritizer = get_context_aware_prioritizer()
+        return prioritizer.get_prioritization_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

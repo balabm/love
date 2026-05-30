@@ -46,6 +46,7 @@ Plus Modern AI Subsystems:
 - Emotion-Aware Response Generator (emotional calibration)
 - Knowledge Injector (proactive contextual knowledge delivery)
 - Conversation Summarizer (hierarchical conversation distillation)
+- Context-Aware Task Prioritizer (intelligent task ordering)
 
 Usage:
     python start_evolution.py

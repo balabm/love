@@ -523,5 +523,11 @@ def get_agi_system_flags():
         flags["conversation_summarizer"] = True
     except Exception:
         pass
+    try:
+        from core.context_aware_prioritizer import get_context_aware_prioritizer
+        cap = get_context_aware_prioritizer()
+        flags["context_aware_prioritizer"] = True
+    except Exception:
+        pass
 
     return flags

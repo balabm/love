@@ -1,22 +1,24 @@
-feat(modern): Conversation Summarizer — hierarchical conversation distillation
+feat(modern): Context-Aware Task Prioritizer — intelligent task ordering
 
-Conversation Summarizer (core/conversation_summarizer.py):
-- summarize_conversation(): Hierarchical summary with topic segments,
-  key decisions, action items, and emotional arc
-- extract_action_items(): Detects commitments using action markers
-  ("need to", "should", "will", "plan to", etc.)
-- get_topic_segments(): Splits conversations by topic with per-topic summaries
-- get_summary_stats(): Tracks compression ratios and action item counts
-- 345 lines of production conversation summarization infrastructure
+Context-Aware Task Prioritizer (core/context_aware_prioritizer.py):
+- prioritize_tasks(): Reorders tasks based on user context (energy, time,
+  location, emotion, focus) and task characteristics (urgency, importance,
+  cognitive load, deadline)
+- suggest_next_task(): Recommends the single best next task
+- Context factors: energy alignment, time alignment, emotional alignment,
+  focus alignment, deadline pressure, work limit consideration
+- record_task_completion(): Learns from satisfaction feedback
+- 384 lines of production task prioritization infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/conversation/summarize — Summarize conversation turns
-- GET /modern/conversation/summary/stats — Summarizer statistics
+- POST /modern/tasks/prioritize — Prioritize tasks by context
+- POST /modern/tasks/suggest-next — Suggest best next task
+- GET /modern/tasks/prioritize/stats — Prioritization statistics
 
 Integration:
-- AGI spine includes conversation_summarizer flag
+- AGI spine includes context_aware_prioritizer flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Conversation Summarizer
+- start_evolution.py lists Context-Aware Task Prioritizer
 
 All 101 tests pass.
 
