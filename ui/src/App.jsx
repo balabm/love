@@ -463,6 +463,9 @@ export default function App() {
                   <button className={`sub-nav-btn ${evolutionSubView === "terminal" ? "active" : ""}`} onClick={() => setEvolutionSubView("terminal")}>
                     📟 NEURAL TERMINAL
                   </button>
+                  <a className="sub-nav-btn" href="/static/evolution_dashboard.html" target="_blank" rel="noopener noreferrer">
+                    📊 DASHBOARD
+                  </a>
                 </div>
                 <div className="view-scroll">
                   {evolutionSubView === "matrix" && <SelfEvolutionPanel />}

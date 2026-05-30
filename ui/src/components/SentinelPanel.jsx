@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api, { API } from '../api';
+const API_BASE = window.location.origin;
 import "./SentinelPanel.css";
 
 const STATE_EMOJI = { active: "●", idle: "◐", away: "○", sleeping: "☾", unknown: "?" };
@@ -65,8 +66,17 @@ export default function SentinelPanel() {
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get(`/neural/sentinel/status`);
-      setStatus(res.data);
+      const [sentinelRes, narrativeRes] = await Promise.all([
+        api.get(`/neural/sentinel/status`),
+        fetch(`${API_BASE}/orchestrator/master/narrative?limit=10`).then(r => r.ok ? r.json() : { narrative: [] }).catch(() => ({ narrative: [] })),
+      ]);
+      setStatus(sentinelRes.data);
+      // Filter orchestrator narrative for sentinel-related events
+      const allNarrative = narrativeRes.narrative || [];
+      const sentinelNarrative = allNarrative.filter(n =>
+        n.event && (n.event.includes("sentinel") || n.event.includes("presence") || n.event.includes("system_load"))
+      );
+      setOrchestratorNarrative(sentinelNarrative);
       setError(null);
     } catch (e) {
       console.error("[Sentinel] load failed:", e);
@@ -169,6 +179,24 @@ export default function SentinelPanel() {
         <div className="snt-hour-summary">
           <div className="snt-section-label">This Hour</div>
           <div className="snt-hour-text">{status.state.last_hour_summary.summary}</div>
+        </div>
+      )}
+
+      {/* Orchestrator Response */}
+      {orchestratorNarrative.length > 0 && (
+        <div className="snt-orchestrator-response">
+          <div className="snt-section-label">Orchestrator Response ({orchestratorNarrative.length})</div>
+          <div className="snt-orchestrator-list">
+            {orchestratorNarrative.slice().reverse().map((entry, i) => (
+              <div key={i} className={`snt-orchestrator-item ${entry.importance || 'normal'}`}>
+                <span className="snt-orchestrator-time">
+                  {entry.timestamp ? new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                </span>
+                <span className="snt-orchestrator-event">{entry.event}</span>
+                <span className="snt-orchestrator-detail">{entry.detail}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
