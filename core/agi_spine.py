@@ -541,5 +541,11 @@ def get_agi_system_flags():
         flags["notification_filter"] = True
     except Exception:
         pass
+    try:
+        from core.deep_work_protector import get_deep_work_protector
+        dwp = get_deep_work_protector()
+        flags["deep_work_protector"] = True
+    except Exception:
+        pass
 
     return flags

@@ -1948,6 +1948,60 @@ async def notification_filter_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Deep Work Protector ───────────────────────────────────────────────────
+
+@router.post("/focus/start")
+async def start_focus_session(data: Dict[str, Any] = {}):
+    """Start a protected focus session."""
+    try:
+        from core.deep_work_protector import get_deep_work_protector
+        protector = get_deep_work_protector()
+        session = protector.start_session(
+            data.get("duration_minutes", 25),
+            data.get("context", "")
+        )
+        return {"session": session}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/focus/end")
+async def end_focus_session():
+    """End the current focus session."""
+    try:
+        from core.deep_work_protector import get_deep_work_protector
+        protector = get_deep_work_protector()
+        session = protector.end_session()
+        return {"session": session}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/focus/status")
+async def focus_status():
+    """Get current focus session status."""
+    try:
+        from core.deep_work_protector import get_deep_work_protector
+        protector = get_deep_work_protector()
+        return {
+            "active": protector.is_focus_mode(),
+            "session": protector.get_active_session(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/focus/stats")
+async def focus_stats():
+    """Get focus session statistics."""
+    try:
+        from core.deep_work_protector import get_deep_work_protector
+        protector = get_deep_work_protector()
+        return protector.get_focus_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

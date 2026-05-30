@@ -1,26 +1,24 @@
-feat(modern): Notification Filter — contextual relevance filtering
+feat(modern): Deep Work Protector — focus session guardian
 
-Notification Filter (core/notification_filter.py):
-- filter_notifications(): Scores notifications by relevance using
-  priority boost, source importance (learned), category alignment,
-  time sensitivity, and focus mode suppression
-- Determines action: deliver (high relevance), batch (medium),
-  defer (wrong time), suppress (low relevance or focus mode)
-- Learns from user interactions: boosts sources user acts on,
-  penalizes ignored sources
-- Adapts to work hours (defers personal notifications) and
-  focus mode (suppresses non-urgent)
-- 264 lines of production notification filtering infrastructure
+Deep Work Protector (core/deep_work_protector.py):
+- start_session(): Begins protected focus session with configurable duration
+- end_session(): Ends session, calculates quality score, learns optimal length
+- handle_interruption(): Routes urgent interruptions, suppresses non-urgent
+  during active focus sessions
+- get_focus_stats(): Tracks session quality, interruptions, optimal length
+- Learns optimal session length from successful high-quality sessions
+- 300 lines of production focus protection infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/notifications/filter — Filter notifications by context
-- POST /modern/notifications/feedback — Record interaction feedback
-- GET /modern/notifications/filter/stats — Filter statistics
+- POST /modern/focus/start — Start focus session
+- POST /modern/focus/end — End focus session
+- GET /modern/focus/status — Check if focus session active
+- GET /modern/focus/stats — Focus session statistics
 
 Integration:
-- AGI spine includes notification_filter flag
+- AGI spine includes deep_work_protector flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Notification Filter
+- start_evolution.py lists Deep Work Protector
 
 All 101 tests pass.
 

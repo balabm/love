@@ -49,6 +49,7 @@ Plus Modern AI Subsystems:
 - Context-Aware Task Prioritizer (intelligent task ordering)
 - Wellness Nudger (proactive wellness alerts)
 - Notification Filter (contextual relevance filtering)
+- Deep Work Protector (focus session guardian)
 
 Usage:
     python start_evolution.py

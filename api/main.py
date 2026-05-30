@@ -6491,6 +6491,7 @@ def get_self_evolution_status():
                 "context_aware_prioritizer": {"available": True},
                 "wellness_nudger": {"available": True},
                 "notification_filter": {"available": True},
+                "deep_work_protector": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:
