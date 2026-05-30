@@ -566,6 +566,90 @@ async def graph_rag_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Prompt Optimizer ──────────────────────────────────────────────────────────
+
+@router.post("/prompts/register")
+async def register_prompt(task_type: str, template: str, prompt_id: str = "", tags: str = ""):
+    """Register a new prompt template for optimization."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        pid = opt.register_template(task_type, template, prompt_id, tags.split(",") if tags else [])
+        return {"prompt_id": pid, "registered": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/prompts/record")
+async def record_prompt(prompt_id: str, latency_ms: float, success: bool, quality: float = 0.0):
+    """Record prompt performance."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        opt.record_prompt(prompt_id, "", latency_ms, success, quality)
+        return {"recorded": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/prompts/experiment")
+async def start_experiment(task_type: str, base_prompt_id: str, min_samples: int = 50):
+    """Start an A/B test for a prompt."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        exp_id = opt.start_experiment(task_type, base_prompt_id, min_samples)
+        return {"experiment_id": exp_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/prompts/experiment/{exp_id}")
+async def evaluate_experiment(exp_id: str):
+    """Evaluate an experiment and determine winner."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        result = opt.evaluate_experiment(exp_id)
+        return result or {"status": "not_found"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/prompts/suggestions")
+async def prompt_suggestions():
+    """Get proactive prompt improvement suggestions."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        return {"suggestions": opt.suggest_improvements()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/prompts/stats")
+async def prompt_stats():
+    """Get prompt optimizer statistics."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        return opt.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/prompts/best")
+async def best_prompt(task_type: str):
+    """Get the best performing prompt for a task type."""
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        opt = get_prompt_optimizer()
+        template = opt.get_best_prompt(task_type)
+        return {"task_type": task_type, "template": template}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

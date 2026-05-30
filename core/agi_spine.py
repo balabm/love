@@ -396,4 +396,10 @@ def get_agi_system_flags():
         flags["graph_rag"] = True
     except Exception:
         pass
+    try:
+        from core.prompt_optimizer import get_prompt_optimizer
+        po = get_prompt_optimizer()
+        flags["prompt_optimizer"] = len(po._templates) > 0
+    except Exception:
+        pass
     return flags
