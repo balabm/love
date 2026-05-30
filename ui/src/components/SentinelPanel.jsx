@@ -63,6 +63,7 @@ export default function SentinelPanel() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState(null);
+  const [orchestratorNarrative, setOrchestratorNarrative] = useState([]);
 
   const load = useCallback(async () => {
     try {
