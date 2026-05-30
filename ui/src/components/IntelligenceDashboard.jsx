@@ -180,7 +180,11 @@ export default function IntelligenceDashboard() {
             <div className="intel-subsection">
               <div className="intel-subtitle">Integration</div>
               <div className="intel-stat">
-                {evolution.integration.running ? "Running" : "Stopped"}
+                {evolution.integration.running ? (
+                  <span className="intel-loop-active">Loop Active</span>
+                ) : (
+                  "Stopped"
+                )}
                 {evolution.integration.last_full_cycle && ` — ${new Date(evolution.integration.last_full_cycle).toLocaleTimeString()}`}
               </div>
               {evolution.integration.statistics && (
