@@ -254,6 +254,12 @@ class EvolutionIntegration:
         except Exception as e:
             print(f"[EvolutionIntegration] Code generation error: {e}")
         
+        # 7. Self-heal: check and restart crashed subsystems
+        try:
+            self._heal_subsystems()
+        except Exception as e:
+            print(f"[EvolutionIntegration] Self-heal error: {e}")
+        
         # Update state
         self._state.last_full_cycle = datetime.now().isoformat()
         self._save_state()
@@ -291,6 +297,30 @@ class EvolutionIntegration:
         except Exception:
             pass
     
+    def _heal_subsystems(self):
+        """Check subsystem health and restart any that have crashed."""
+        subsystems = [
+            ("meta_evolution", get_meta_evolution, "start"),
+            ("swarm_evolution", get_swarm_evolution, "start"),
+            ("self_coder", get_self_coder, "start"),
+            ("cross_instance", get_cross_instance_learning, "start"),
+        ]
+        restarted = 0
+        for name, getter, method in subsystems:
+            try:
+                instance = getter()
+                if not getattr(instance, '_running', False):
+                    getattr(instance, method)()
+                    restarted += 1
+                    print(f"[EvolutionIntegration] Self-healed: restarted {name}")
+            except Exception as e:
+                print(f"[EvolutionIntegration] Could not heal {name}: {e}")
+        if restarted > 0:
+            self._log_integration({
+                "event": "subsystems_healed",
+                "restarted_count": restarted,
+            })
+
     def _get_current_state(self) -> Dict[str, Any]:
         """Get current state for predictive trigger checking."""
         state = {}
