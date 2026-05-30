@@ -652,3 +652,47 @@ class TestEvolutionPerformance:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])
+
+# -- Modern AI Module Integration Tests ------------------------------------------
+
+class TestModernModuleIntegration:
+    """Test modern AI module integration into evolution systems."""
+    
+    def test_capability_gap_detector_monitors_modern_modules(self):
+        """Test that gap detector detects modern module gaps."""
+        detector = CapabilityGapDetector()
+        gaps = detector._detect_modern_module_gaps()
+        assert isinstance(gaps, list)
+    
+    def test_evolution_integration_has_modern_getters(self):
+        """Test that evolution integration includes modern modules in self-heal."""
+        integration = EvolutionIntegration()
+        assert hasattr(integration, '_heal_subsystems')
+    
+    def test_cross_instance_discovers_modern_mutations(self):
+        """Test that cross-instance learning discovers modern module mutations."""
+        cil = CrossInstanceLearning()
+        mutations = cil.discover_modern_module_mutations()
+        assert isinstance(mutations, list)
+    
+    def test_autonomous_cicd_has_modern_checks(self):
+        """Test that CI/CD includes modern module health checks."""
+        cicd = AutonomousCICD()
+        assert hasattr(cicd, '_check_rollback_triggers')
+    
+    def test_meta_evolution_has_modern_strategies(self):
+        """Test that meta-evolution includes modern module strategies."""
+        meta = MetaEvolutionEngine()
+        meta.initialize_strategies()
+        strategies = meta._strategies
+        assert any('modern' in s.name for s in strategies.values())
+    
+    def test_swarm_evolution_evaluates_modern_swarms(self):
+        """Test that swarm evolution can evaluate modern module swarms."""
+        swarm_engine = SwarmEvolutionEngine()
+        swarm_id = swarm_engine.spawn_swarms([
+            {"hypothesis": "modern_module:llm_manager", "mutation": "test"}
+        ])[0]
+        swarm_engine.update_swarm_performance(swarm_id, 0.7, {})
+        assert swarm_engine._swarms[swarm_id].interactions_count >= 1
+
