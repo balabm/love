@@ -6472,6 +6472,7 @@ def get_self_evolution_status():
                 "conversation_quality": {"available": True},
                 "predictive_maintenance": {"available": True},
                 "multi_agent": {"available": True},
+                "intent_predictor": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

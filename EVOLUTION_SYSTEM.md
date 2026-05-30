@@ -72,6 +72,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Conversation Quality | Real-time engagement, clarity, relevance, emotion analysis | Internal |
 | Predictive Maintenance | Proactive failure prediction + maintenance scheduling | Internal |
 | Multi-Agent Orchestrator | Coordinated role-based intelligence for complex tasks | Internal |
+| Intent Predictor | Proactive intent prediction + response preparation | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -165,6 +166,10 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/agents/tasks` | All task statuses |
 | `/modern/agents/messages` | Recent inter-agent messages |
 | `/modern/agents/stats` | Multi-agent orchestrator statistics |
+| `/modern/intent/classify` | Classify message intent |
+| `/modern/intent/predict` | Predict next user intent |
+| `/modern/intent/prepare` | Prepare response for predicted intent |
+| `/modern/intent/stats` | Intent predictor statistics |
 
 ### Startup
 

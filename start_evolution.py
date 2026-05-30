@@ -30,6 +30,7 @@ Plus Modern AI Subsystems:
 - Conversation Quality Analyzer (real-time interaction assessment)
 - Predictive Maintenance Engine (proactive system health forecasting)
 - Multi-Agent Orchestrator (coordinated role-based intelligence)
+- Intent Predictor (proactive user intent prediction + response preparation)
 
 Usage:
     python start_evolution.py

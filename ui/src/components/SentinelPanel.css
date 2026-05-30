@@ -177,6 +177,11 @@
 .snt-health-status { opacity: 0.6; }
 .snt-health-ready .snt-health-status { color: #4ade80; }
 .snt-health-dead .snt-health-status { color: #f87171; }
+.snt-health-ok .snt-health-status,
+.snt-health-ready .snt-health-status { color: #4ade80; }
+.snt-health-dead .snt-health-status { color: #f87171; }
+.snt-health-error .snt-health-status { color: #f87171; }
+.snt-health-STALLED .snt-health-status { color: #fbbf24; }
 .snt-health-degraded .snt-health-status { color: #fbbf24; }
 
 /* Hour summary */
