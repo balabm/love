@@ -650,6 +650,51 @@ async def best_prompt(task_type: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Self-Reflection ───────────────────────────────────────────────────────────
+
+@router.post("/self-reflection/reflect")
+async def self_reflect():
+    """Trigger a self-reflection cycle."""
+    try:
+        from core.self_reflection import get_self_reflection_engine
+        engine = get_self_reflection_engine()
+        result = engine.reflect()
+        return {
+            "patterns_found": len(result["behavioral_patterns"]),
+            "capabilities_assessed": len(result["capability_assessment"]),
+            "decisions_audited": len(result["decision_quality"]),
+            "insights_generated": len(result["new_insights"]),
+            "insights": [
+                {"category": i.category, "observation": i.observation, "severity": i.severity}
+                for i in result["new_insights"]
+            ],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/self-reflection/insights")
+async def self_reflection_insights(limit: int = 10):
+    """Get recent self-reflection insights."""
+    try:
+        from core.self_reflection import get_self_reflection_engine
+        engine = get_self_reflection_engine()
+        return {"insights": engine.get_recent_insights(limit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/self-reflection/stats")
+async def self_reflection_stats():
+    """Get self-reflection engine statistics."""
+    try:
+        from core.self_reflection import get_self_reflection_engine
+        engine = get_self_reflection_engine()
+        return engine.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

@@ -207,6 +207,15 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Multi-Modal error: {e}')
         
+        # Start Self-Reflection Engine
+        try:
+            from core.self_reflection import get_self_reflection_engine
+            sr = get_self_reflection_engine()
+            sr.start()
+            print('[EvolutionIntegration] Self-Reflection Engine started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Self-Reflection error: {e}')
+        
         # Start integration loop
         self._running = True
         self._thread = threading.Thread(

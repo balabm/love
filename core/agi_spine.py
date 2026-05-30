@@ -402,4 +402,10 @@ def get_agi_system_flags():
         flags["prompt_optimizer"] = len(po._templates) > 0
     except Exception:
         pass
+    try:
+        from core.self_reflection import get_self_reflection_engine
+        sr = get_self_reflection_engine()
+        flags["self_reflection"] = getattr(sr, '_running', False)
+    except Exception:
+        pass
     return flags
