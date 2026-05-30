@@ -63,6 +63,9 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Structured Output | Enforces JSON schema for reliable tool use | Internal |
 | Vector Memory | Semantic search across conversation history | Internal |
 | Code Sandbox | Safe execution of generated code before deployment | Self-Coder |
+| Observability | Distributed tracing, anomaly detection, health scoring | Orchestrator |
+| Guardrails | Content filtering, PII detection, proactive wellbeing warnings | Sentinel + Orchestrator |
+| LLM Manager | Dynamic model routing, performance tracking, proactive suggestions | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
