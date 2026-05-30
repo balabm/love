@@ -485,6 +485,7 @@ async def get_evolution_health():
             "cross_modal_fusion": {"available": True},
             "emotional_resonance": {"available": True},
             "knowledge_graph_builder": {"available": True},
+            "adaptive_learning_rate": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

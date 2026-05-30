@@ -481,5 +481,11 @@ def get_agi_system_flags():
         flags["knowledge_graph_builder"] = True
     except Exception:
         pass
+    try:
+        from core.adaptive_learning_rate import get_adaptive_learning_engine
+        alr = get_adaptive_learning_engine()
+        flags["adaptive_learning_rate"] = True
+    except Exception:
+        pass
 
     return flags

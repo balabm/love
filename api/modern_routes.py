@@ -1510,6 +1510,52 @@ async def export_graph():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Adaptive Learning Rate Engine ─────────────────────────────────────────────
+
+@router.post("/learning/adjust")
+async def adjust_parameters(feedback: Dict[str, Any] = {}):
+    """Adjust system parameters based on feedback."""
+    try:
+        from core.adaptive_learning_rate import get_adaptive_learning_engine
+        engine = get_adaptive_learning_engine()
+        return engine.adjust_parameters(feedback)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/learning/temperature")
+async def get_temperature(task_type: str = "general"):
+    """Get optimal temperature for a task type."""
+    try:
+        from core.adaptive_learning_rate import get_adaptive_learning_engine
+        engine = get_adaptive_learning_engine()
+        return {"temperature": engine.get_optimal_temperature(task_type), "task_type": task_type}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/learning/exploration")
+async def get_exploration():
+    """Get current exploration rate."""
+    try:
+        from core.adaptive_learning_rate import get_adaptive_learning_engine
+        engine = get_adaptive_learning_engine()
+        return {"exploration_rate": engine.get_exploration_rate(), "should_explore": engine.should_explore()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/learning/stats")
+async def learning_stats():
+    """Get learning engine statistics."""
+    try:
+        from core.adaptive_learning_rate import get_adaptive_learning_engine
+        engine = get_adaptive_learning_engine()
+        return engine.get_learning_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

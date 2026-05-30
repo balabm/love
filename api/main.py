@@ -6481,6 +6481,7 @@ def get_self_evolution_status():
                 "cross_modal_fusion": {"available": True},
                 "emotional_resonance": {"available": True},
                 "knowledge_graph_builder": {"available": True},
+                "adaptive_learning_rate": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

@@ -39,6 +39,7 @@ Plus Modern AI Subsystems:
 - Cross-Modal Fusion Engine (combines text/visual/voice insights)
 - Emotional Resonance Engine (deep emotional pattern analysis)
 - Knowledge Graph Auto-Builder (entity & relationship extraction)
+- Adaptive Learning Rate Engine (dynamic parameter tuning)
 
 Usage:
     python start_evolution.py
