@@ -1,19 +1,17 @@
-docs+devops: Modern AI Systems showcase + docker-compose + architecture update
+feat(evolution): capability_gap_detector monitors modern AI module health
 
-README.md:
-- Added comprehensive Modern AI Systems (Wave 2025) table with all 22 engines
-- Updated stats: 150+ core modules, 480+ API endpoints
-- Each engine documented with description and API endpoint
-
-ARCHITECTURE.md:
-- Added Modern AI Systems (Wave 2025) section with 22 modules
-- Complete module inventory for: MCP, Reasoning, RAG, Memory,
-  Orchestration, Prediction, Adaptation, Optimization, Security
-
-DevOps:
-- Added docker-compose.yml with love-api, ollama, chromadb, love-ui services
-- Health checks for all services with retry logic
-- Named volumes for ollama-models and chroma-data persistence
+capability_gap_detector.py:
+- Added _detect_modern_module_gaps() method that checks AGI spine flags
+  for all 18 modern AI subsystems
+- Detects when modern modules (llm_manager, graph_rag, prompt_optimizer,
+  self_reflection, conversation_quality, predictive_maintenance,
+  multi_agent_orchestrator, intent_predictor, personality_adapter,
+  response_cache, context_window_manager, user_pattern_detector,
+  goal_drift_detector, cross_modal_fusion, emotional_resonance,
+  knowledge_graph_builder, adaptive_learning_rate, conversation_continuity)
+  are not initialized or have crashed
+- Detects missing modern module integration into the evolution loop
+- Gaps are auto-prioritized and can trigger self-coder missions
 
 All 95 tests pass.
 

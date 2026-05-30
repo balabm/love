@@ -133,6 +133,7 @@ class CapabilityGapDetector:
         new_gaps.extend(self._detect_relationship_gaps())
         new_gaps.extend(self._detect_creativity_gaps())
         new_gaps.extend(self._detect_productivity_gaps())
+        new_gaps.extend(self._detect_modern_module_gaps())
         
         # Detect cross-domain gaps
         self._detect_cross_domain_gaps()
@@ -442,6 +443,57 @@ class CapabilityGapDetector:
     
     # ── Cross-Domain Analysis ─────────────────────────────────────────────────
     
+    def _detect_modern_module_gaps(self) -> List[CapabilityGap]:
+        """Detect gaps in modern AI module performance and integration."""
+        gaps = []
+        
+        # Check modern module health from AGI spine
+        try:
+            from core.agi_spine import get_agi_system_flags
+            flags = get_agi_system_flags()
+            
+            modern_modules = [
+                "llm_manager", "graph_rag", "prompt_optimizer", "self_reflection",
+                "conversation_quality", "predictive_maintenance", "multi_agent_orchestrator",
+                "intent_predictor", "personality_adapter", "response_cache",
+                "context_window_manager", "user_pattern_detector", "goal_drift_detector",
+                "cross_modal_fusion", "emotional_resonance", "knowledge_graph_builder",
+                "adaptive_learning_rate", "conversation_continuity",
+            ]
+            
+            for module in modern_modules:
+                if not flags.get(module, False):
+                    gaps.append(CapabilityGap(
+                        domain="intelligence",
+                        subdomain=f"modern_{module}",
+                        description=f"Modern module {module} is not initialized or crashed",
+                        severity=0.6,
+                        impact=0.5,
+                        urgency=0.4,
+                        suggested_fixes=[f"Restart {module}", f"Check {module} dependencies"],
+                    ))
+        except Exception:
+            pass
+        
+        # Check for missing modern module integration
+        try:
+            from core.evolution_integration import EvolutionIntegration
+            ei = EvolutionIntegration()
+            if not getattr(ei._state, 'modern_modules_active', False):
+                gaps.append(CapabilityGap(
+                    domain="intelligence",
+                    subdomain="modern_module_integration",
+                    description="Modern AI modules are not fully integrated into the evolution loop",
+                    severity=0.5,
+                    impact=0.6,
+                    urgency=0.3,
+                    suggested_fixes=["Wire modern modules into evolution_integration", "Add modern module health checks to sentinel"],
+                ))
+        except Exception:
+            pass
+        
+        return gaps
+
     def _detect_cross_domain_gaps(self):
         """Detect gaps that span multiple domains."""
         # Group gaps by domain
