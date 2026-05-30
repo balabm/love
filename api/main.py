@@ -6476,6 +6476,7 @@ def get_self_evolution_status():
                 "personality_adapter": {"available": True},
                 "response_cache": {"available": True},
                 "context_window_manager": {"available": True},
+                "user_pattern_detector": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

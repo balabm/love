@@ -76,6 +76,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Personality Adapter | Dynamic tone & style calibration based on user context | Internal |
 | Response Cache | Intelligent response caching with semantic matching | Internal |
 | Context Window Manager | Intelligent LLM context optimization | Internal |
+| User Pattern Detector | Behavioral pattern recognition | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -184,6 +185,10 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/context/summarize` | Summarize old conversation turns |
 | `/modern/context/tokens` | Estimate token count for text |
 | `/modern/context/stats` | Context optimization statistics |
+| `/modern/patterns/detect` | Detect behavioral patterns from activities |
+| `/modern/patterns/insights` | Daily insights from detected patterns |
+| `/modern/patterns/predict` | Predict next user activity |
+| `/modern/patterns/stats` | Pattern detector statistics |
 
 ### Startup
 

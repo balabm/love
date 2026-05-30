@@ -34,6 +34,7 @@ Plus Modern AI Subsystems:
 - Personality Adapter (dynamic tone & style calibration)
 - Response Cache (intelligent response caching with semantic matching)
 - Context Window Manager (intelligent LLM context optimization)
+- User Pattern Detector (behavioral pattern recognition)
 
 Usage:
     python start_evolution.py

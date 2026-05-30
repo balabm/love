@@ -480,6 +480,7 @@ async def get_evolution_health():
             "personality_adapter": {"available": True},
             "response_cache": {"available": True},
             "context_window_manager": {"available": True},
+            "user_pattern_detector": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
