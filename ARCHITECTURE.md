@@ -160,6 +160,32 @@ Organized by function:
 | `os_symbiosis.py` | Deep OS integration |
 | `jarvis_protocol.py` | Jarvis-level proactive awareness |
 
+#### Modern AI Systems (Wave 2025)
+| Module | Purpose |
+|--------|---------|
+| `mcp_host.py` | MCP (Model Context Protocol) server management |
+| `reasoning_engine.py` | Chain-of-thought + reflection reasoning |
+| `structured_output.py` | JSON schema enforcement for LLM outputs |
+| `vector_memory.py` | Semantic search with ChromaDB embeddings |
+| `llm_manager.py` | Dynamic model routing per task type |
+| `graph_rag.py` | Knowledge graph + vector memory hybrid RAG |
+| `prompt_optimizer.py` | Adaptive prompt engineering with A/B testing |
+| `self_reflection.py` | Meta-cognitive analysis and decision auditing |
+| `conversation_quality.py` | Real-time interaction quality assessment |
+| `predictive_maintenance.py` | Proactive system health forecasting |
+| `multi_agent_orchestrator.py` | Coordinated multi-agent task dispatch |
+| `intent_predictor.py` | Proactive user intent prediction |
+| `personality_adapter.py` | Dynamic tone & style calibration |
+| `response_cache.py` | Semantic response caching |
+| `context_window_manager.py` | Intelligent LLM context optimization |
+| `user_pattern_detector.py` | Behavioral pattern recognition |
+| `goal_drift_detector.py` | Goal alignment monitoring and drift alerts |
+| `cross_modal_fusion.py` | Text/visual/voice insight fusion |
+| `emotional_resonance.py` | Deep emotional pattern analysis |
+| `knowledge_graph_builder.py` | Automated entity & relation extraction |
+| `adaptive_learning_rate.py` | Dynamic parameter tuning from feedback |
+| `conversation_continuity.py` | Context persistence across conversation gaps |
+
 #### Infrastructure
 | Module | Purpose |
 |--------|---------|

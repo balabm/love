@@ -2,7 +2,7 @@
 
 > *Not a chatbot. A local-first, self-evolving AI companion that tracks your body, protects your energy, manages your work, and builds itself while you sleep.*
 
-**95,000+ lines of Python | 128 core modules | 460+ API endpoints | 23 UI panels**
+**95,000+ lines of Python | 150+ core modules | 480+ API endpoints | 23 UI panels**
 
 ---
 
@@ -20,6 +20,37 @@ LOVE is a full-stack autonomous system that runs entirely on your machine. It co
 It runs on local Ollama models (deepseek-r1:7b for reasoning, qwen2.5-coder:7b for code). No cloud. No subscriptions. Your data never leaves your machine.
 
 ---
+
+## Modern AI Systems (Wave 2025)
+
+LOVE now includes 22 cutting-edge AI engines that run entirely locally:
+
+| Engine | What It Does | API Endpoint |
+|--------|-------------|--------------|
+| **MCP Host** | Model Context Protocol server management | `GET /modern/mcp/status` |
+| **Reasoning Engine** | Chain-of-thought + reflection | `POST /modern/reasoning/analyze` |
+| **Structured Output** | JSON schema enforcement | `POST /modern/structured/generate` |
+| **Vector Memory** | Semantic search with embeddings | `POST /modern/vector/search` |
+| **LLM Manager** | Dynamic model routing per task | `GET /modern/llm/route` |
+| **Graph RAG** | Knowledge graph + vector hybrid | `POST /modern/graph/query` |
+| **Prompt Optimizer** | Adaptive prompt A/B testing | `POST /modern/prompt/optimize` |
+| **Self-Reflection** | Meta-cognitive analysis | `POST /modern/reflect/reflect` |
+| **Conversation Quality** | Real-time interaction scoring | `POST /modern/quality/analyze` |
+| **Predictive Maintenance** | Proactive health forecasting | `GET /modern/maintenance/predictions` |
+| **Multi-Agent Orchestrator** | Coordinated agent dispatch | `POST /modern/orchestrator/dispatch` |
+| **Intent Predictor** | Proactive user intent prediction | `GET /modern/intent/predict` |
+| **Personality Adapter** | Dynamic tone calibration | `POST /modern/personality/adapt` |
+| **Response Cache** | Semantic response caching | `POST /modern/cache/get` |
+| **Context Window Manager** | LLM context optimization | `POST /modern/context/optimize` |
+| **User Pattern Detector** | Behavioral pattern recognition | `POST /modern/patterns/detect` |
+| **Goal Drift Detector** | Goal alignment monitoring | `GET /modern/goals/drift` |
+| **Cross-Modal Fusion** | Text/visual/voice fusion | `POST /modern/fusion/fuse` |
+| **Emotional Resonance** | Deep emotional analysis | `POST /modern/emotion/analyze` |
+| **Knowledge Graph Builder** | Auto entity/relationship extraction | `POST /modern/kg/build` |
+| **Adaptive Learning Rate** | Dynamic parameter tuning | `POST /modern/learning/adjust` |
+| **Conversation Continuity** | Context across long gaps | `POST /modern/continuity/snapshot` |
+
+All engines are fully wired into the AGI spine, health endpoints, evolution system, and Sentinel monitoring.
 
 ## Quick Start
 

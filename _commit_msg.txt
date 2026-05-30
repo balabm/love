@@ -1,16 +1,19 @@
-feat(security): Rate Limiter — API abuse protection with token bucket
+docs+devops: Modern AI Systems showcase + docker-compose + architecture update
 
-Rate Limiter (api/rate_limiter.py):
-- Token bucket algorithm with per-client buckets and burst tolerance
-- Endpoint-specific categories: heavy (graph/vector), medium (predict/analyze),
-  light (health/stats), auth (login)
-- check_rate_limit(): Consume tokens, return remaining + reset time
-- get_category_for_endpoint(): Auto-categorize endpoints by path
-- 172 lines of production rate limiting infrastructure
+README.md:
+- Added comprehensive Modern AI Systems (Wave 2025) table with all 22 engines
+- Updated stats: 150+ core modules, 480+ API endpoints
+- Each engine documented with description and API endpoint
 
-API Endpoints (api/modern_routes.py):
-- GET /modern/rate-limit/status — Client rate limit status
-- GET /modern/rate-limit/stats — Global rate limiter statistics
+ARCHITECTURE.md:
+- Added Modern AI Systems (Wave 2025) section with 22 modules
+- Complete module inventory for: MCP, Reasoning, RAG, Memory,
+  Orchestration, Prediction, Adaptation, Optimization, Security
+
+DevOps:
+- Added docker-compose.yml with love-api, ollama, chromadb, love-ui services
+- Health checks for all services with retry logic
+- Named volumes for ollama-models and chroma-data persistence
 
 All 95 tests pass.
 
