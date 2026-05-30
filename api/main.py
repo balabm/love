@@ -6469,6 +6469,7 @@ def get_self_evolution_status():
                 "graph_rag": {"available": True},
                 "prompt_optimizer": {"available": True},
                 "self_reflection": {"available": True},
+                "conversation_quality": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

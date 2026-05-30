@@ -69,6 +69,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Graph RAG | Hybrid knowledge graph + vector memory retrieval | Internal |
 | Prompt Optimizer | Adaptive prompt engineering with A/B testing | Internal |
 | Self-Reflection | Meta-cognitive behavioral analysis + capability assessment | Internal |
+| Conversation Quality | Real-time engagement, clarity, relevance, emotion analysis | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -148,6 +149,10 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/self-reflection/reflect` | Trigger meta-cognitive reflection cycle |
 | `/modern/self-reflection/insights` | Recent self-reflection insights |
 | `/modern/self-reflection/stats` | Self-reflection engine statistics |
+| `/modern/conversation/analyze-turn` | Analyze single conversation turn |
+| `/modern/conversation/analyze` | Analyze full conversation quality |
+| `/modern/conversation/trends` | Conversation quality trends |
+| `/modern/conversation/stats` | Conversation quality statistics |
 
 ### Startup
 

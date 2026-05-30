@@ -473,6 +473,7 @@ async def get_evolution_health():
             "graph_rag": {"available": True},
             "prompt_optimizer": {"available": True},
             "self_reflection": {"available": True},
+            "conversation_quality": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

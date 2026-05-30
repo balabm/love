@@ -27,6 +27,7 @@ Plus Modern AI Subsystems:
 - Graph RAG (knowledge graph + vector memory hybrid retrieval)
 - Prompt Optimizer (adaptive prompt engineering with A/B testing)
 - Self-Reflection Engine (meta-cognitive behavioral analysis)
+- Conversation Quality Analyzer (real-time interaction assessment)
 
 Usage:
     python start_evolution.py
