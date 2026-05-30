@@ -1,22 +1,11 @@
-docs: EVOLUTION_SYSTEM.md — modern AI module integration section
+ui(dashboard): evolution_dashboard.html shows modern AI module status
 
-EVOLUTION_SYSTEM.md:
-- Added all new modern API endpoints:
-  knowledge_graph (/modern/kg/*), adaptive_learning (/modern/learning/*),
-  conversation_continuity (/modern/continuity/*), rate_limiter (/modern/rate-limit/*)
-- Added comprehensive "Modern AI Module Integration" section documenting
-  how all 22 modern AI modules integrate into each evolution subsystem:
-  - Capability Gap Detector monitors all 18 modern modules
-  - Evolution Integration self-heals all 18 modern modules
-  - Meta-Evolution tracks modern module optimization strategies
-  - Swarm Evolution evaluates modern module hypothesis swarms
-  - Autonomous CI/CD checks modern module health post-deployment
-  - Cross-Instance Learning discovers modern module mutations
-  - Neural Architecture Search optimizes modern module architectures
-  - Multi-Modal Evolution registers modern modules as cross-modal patterns
-  - Task Evolution tracks modern modules as task patterns
-  - Fitness Evolution logs modern module health as fitness metrics
-  - Sentinel monitors all 18 modern subsystems
+static/evolution_dashboard.html:
+- Added "⚡ Modern Modules" status card showing active/total AI engines
+- Added loadModernModules() function that fetches /intelligence/self-evolution
+  and counts active modern modules from AGI spine flags
+- Integrated into loadAllData() parallel fetch pipeline
+- Displays real-time modern module health alongside evolution metrics
 
 All 95 tests pass.
 

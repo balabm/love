@@ -505,6 +505,11 @@
                 <div class="status-value" id="shared-mutations">0</div>
                 <div class="status-label">Shared Mutations</div>
             </div>
+            <div class="status-card">
+                <h3>⚡ Modern Modules</h3>
+                <div class="status-value" id="modern-modules-active">--</div>
+                <div class="status-label">AI engines online</div>
+            </div>
         </div>
 
         <!-- Closed Loop Status -->
@@ -716,7 +721,8 @@
                     loadExperiments(),
                     loadSwarms(),
                     loadHistory(),
-                    loadIntelligence()
+                    loadIntelligence(),
+                    loadModernModules()
                 ]);
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -869,6 +875,34 @@
                 
             } catch (error) {
                 console.error('Error loading history:', error);
+            }
+        }
+
+        async function loadModernModules() {
+            try {
+                const response = await fetch(`${API_BASE}/intelligence/self-evolution`);
+                const data = await response.json();
+                
+                const modernModules = [
+                    'llm_manager', 'graph_rag', 'prompt_optimizer', 'self_reflection',
+                    'conversation_quality', 'predictive_maintenance', 'multi_agent_orchestrator',
+                    'intent_predictor', 'personality_adapter', 'response_cache',
+                    'context_window_manager', 'user_pattern_detector', 'goal_drift_detector',
+                    'cross_modal_fusion', 'emotional_resonance', 'knowledge_graph_builder',
+                    'adaptive_learning_rate', 'conversation_continuity'
+                ];
+                
+                let activeCount = 0;
+                modernModules.forEach(module => {
+                    const available = data[module] && data[module].available;
+                    if (available) activeCount++;
+                });
+                
+                const modernEl = document.getElementById('modern-modules-active');
+                if (modernEl) modernEl.textContent = `${activeCount}/${modernModules.length}`;
+                
+            } catch (error) {
+                console.error('Error loading modern modules:', error);
             }
         }
 
