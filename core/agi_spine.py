@@ -444,4 +444,10 @@ def get_agi_system_flags():
         flags["response_cache"] = True
     except Exception:
         pass
+    try:
+        from core.context_window_manager import get_context_window_manager
+        cwm = get_context_window_manager()
+        flags["context_window_manager"] = True
+    except Exception:
+        pass
     return flags

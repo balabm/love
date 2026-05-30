@@ -1027,6 +1027,73 @@ async def cleanup_cache():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Context Window Manager ──────────────────────────────────────────────────────
+
+@router.post("/context/optimize")
+async def optimize_context(segments: List[Dict[str, Any]] = []):
+    """Optimize context segments to fit within LLM window."""
+    try:
+        from core.context_window_manager import get_context_window_manager, ContextSegment
+        manager = get_context_window_manager()
+        ctx_segments = [
+            ContextSegment(
+                content=s.get("content", ""),
+                segment_type=s.get("segment_type", "default"),
+                priority=s.get("priority", 1.0),
+                created_at=s.get("created_at", 0.0),
+            )
+            for s in segments
+        ]
+        optimized = manager.optimize_context(ctx_segments)
+        return {
+            "optimized": [
+                {
+                    "content": o.content[:200],
+                    "segment_type": o.segment_type,
+                    "priority": o.priority,
+                    "tokens": o.tokens,
+                }
+                for o in optimized
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/context/summarize")
+async def summarize_conversation(conversation: List[Dict[str, Any]] = [], keep_recent: int = 5):
+    """Summarize old conversation turns."""
+    try:
+        from core.context_window_manager import get_context_window_manager
+        manager = get_context_window_manager()
+        result = manager.summarize_old_turns(conversation, keep_recent)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/context/tokens")
+async def estimate_tokens(text: str):
+    """Estimate token count for text."""
+    try:
+        from core.context_window_manager import get_context_window_manager
+        manager = get_context_window_manager()
+        return {"tokens": manager.get_token_estimate(text)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/context/stats")
+async def context_stats():
+    """Get context window manager statistics."""
+    try:
+        from core.context_window_manager import get_context_window_manager
+        manager = get_context_window_manager()
+        return manager.get_context_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
