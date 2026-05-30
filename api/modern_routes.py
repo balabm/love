@@ -147,6 +147,43 @@ async def browser_navigate(url: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Structured Output ─────────────────────────────────────────────────────────
+
+@router.post("/structured/generate")
+async def structured_generate(prompt: str, schema_type: str = "reasoning"):
+    """Generate structured JSON output from a prompt."""
+    try:
+        from core.structured_output import get_structured_engine, SchemaField
+        engine = get_structured_engine()
+        if schema_type == "reasoning":
+            schema = engine.reasoning_schema()
+        elif schema_type == "decision":
+            schema = engine.decision_schema(["option_a", "option_b", "option_c"])
+        else:
+            schema = engine.build_schema("custom", [SchemaField("result", "string", "Generated result")])
+        result = engine.generate(prompt, schema)
+        return {
+            "success": result.success,
+            "data": result.data,
+            "attempts": result.attempts,
+            "latency_ms": result.latency_ms,
+            "errors": result.validation_errors,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/structured/stats")
+async def structured_stats():
+    """Get structured output engine statistics."""
+    try:
+        from core.structured_output import get_structured_engine
+        engine = get_structured_engine()
+        return engine.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
