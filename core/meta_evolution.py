@@ -205,6 +205,25 @@ class MetaEvolutionEngine:
                 success_rate=0.7,
                 domain_effectiveness={"goal_achievement": 0.9, "prioritization": 0.7}
             ),
+            LearningStrategy(
+                name="modern_module_optimization",
+                description="Optimize modern AI module parameters from usage feedback",
+                success_rate=0.65,
+                domain_effectiveness={
+                    "llm_routing": 0.8, "memory_search": 0.7, "prompt_tuning": 0.9,
+                    "context_optimization": 0.8, "cache_efficiency": 0.7,
+                    "pattern_detection": 0.8, "emotion_analysis": 0.6,
+                }
+            ),
+            LearningStrategy(
+                name="cross_modal_learning",
+                description="Transfer insights between text, visual, and voice modalities",
+                success_rate=0.6,
+                domain_effectiveness={
+                    "multimodal_fusion": 0.9, "conversation_quality": 0.7,
+                    "personality_adaptation": 0.8,
+                }
+            ),
         ]
         
         for strategy in default_strategies:
