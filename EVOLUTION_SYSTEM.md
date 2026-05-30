@@ -198,6 +198,39 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/goals/stats` | Detector statistics |
 
 
+| `/modern/goals/stats` | Detector statistics |
+| `/modern/kg/build` | Extract entities and relations from text |
+| `/modern/kg/stats` | Knowledge graph builder statistics |
+| `/modern/learning/adjust` | Adjust parameters from feedback |
+| `/modern/learning/temperature` | Get optimal temperature for task |
+| `/modern/learning/exploration` | Get current exploration rate |
+| `/modern/learning/stats` | Adaptive learning statistics |
+| `/modern/continuity/snapshot` | Save conversation state |
+| `/modern/continuity/restore` | Retrieve thread context |
+| `/modern/continuity/gap` | Summarize absence period |
+| `/modern/continuity/threads` | List conversation threads |
+| `/modern/continuity/stats` | Continuity statistics |
+| `/modern/rate-limit/status` | Client rate limit status |
+| `/modern/rate-limit/stats` | Global rate limiter statistics |
+
+### Modern AI Module Integration
+
+All 22 modern AI modules are fully integrated into the evolution system:
+
+| Evolution Subsystem | Modern Module Integration |
+|--------------------|--------------------------|
+| Capability Gap Detector | Monitors all 18 modern modules via AGI spine flags; creates gaps for offline modules |
+| Evolution Integration | Self-heals all 18 modern modules if they crash or stall |
+| Meta-Evolution | Tracks `modern_module_optimization` and `cross_modal_learning` strategies |
+| Swarm Evolution | Evaluates hypothesis swarms tagged with `modern_module:` prefix using AGI spine health |
+| Autonomous CI/CD | Checks critical modern module health after deployment; triggers rollback if offline |
+| Cross-Instance Learning | Discovers parameter tuning mutations from LLM Manager, Prompt Optimizer, and Adaptive Learning Rate |
+| Neural Architecture Search | Creates architecture entries for active modern modules (LLM Manager, Graph RAG, Prompt Optimizer, etc.) |
+| Multi-Modal Evolution | Registers cross_modal_fusion, emotional_resonance, personality_adapter, intent_predictor, user_pattern_detector as cross-modal patterns |
+| Task Evolution | Tracks modern modules (multi_agent_orchestrator, intent_predictor, goal_drift_detector, predictive_maintenance, conversation_continuity) as task patterns |
+| Fitness Evolution | Logs modern module health (emotional_resonance, user_pattern_detector, personality_adapter, response_cache, context_window_manager) as fitness metrics |
+| Sentinel | Monitors all 18 modern subsystems in the self-heal loop with proactive alerts |
+
 ### Startup
 
 ```bash

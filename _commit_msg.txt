@@ -1,16 +1,22 @@
-feat(evolution): task + fitness evolution integrate modern AI module tracking
+docs: EVOLUTION_SYSTEM.md — modern AI module integration section
 
-task_evolution_integration.py:
-- Added _track_modern_module_tasks() that registers active modern modules
-  (multi_agent_orchestrator, intent_predictor, goal_drift_detector,
-  predictive_maintenance, conversation_continuity) as TaskPattern entries
-- Runs every hour alongside existing task pattern analysis
-
-fitness_evolution_integration.py:
-- Added _track_modern_module_fitness() that logs modern module health
-  (emotional_resonance, user_pattern_detector, personality_adapter,
-  response_cache, context_window_manager) as fitness metrics
-- Enables fitness evolution to track and optimize modern module wellbeing
+EVOLUTION_SYSTEM.md:
+- Added all new modern API endpoints:
+  knowledge_graph (/modern/kg/*), adaptive_learning (/modern/learning/*),
+  conversation_continuity (/modern/continuity/*), rate_limiter (/modern/rate-limit/*)
+- Added comprehensive "Modern AI Module Integration" section documenting
+  how all 22 modern AI modules integrate into each evolution subsystem:
+  - Capability Gap Detector monitors all 18 modern modules
+  - Evolution Integration self-heals all 18 modern modules
+  - Meta-Evolution tracks modern module optimization strategies
+  - Swarm Evolution evaluates modern module hypothesis swarms
+  - Autonomous CI/CD checks modern module health post-deployment
+  - Cross-Instance Learning discovers modern module mutations
+  - Neural Architecture Search optimizes modern module architectures
+  - Multi-Modal Evolution registers modern modules as cross-modal patterns
+  - Task Evolution tracks modern modules as task patterns
+  - Fitness Evolution logs modern module health as fitness metrics
+  - Sentinel monitors all 18 modern subsystems
 
 All 95 tests pass.
 
