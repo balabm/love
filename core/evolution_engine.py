@@ -545,10 +545,14 @@ class EvolutionEngine:
                     conf = min(1.0, max(0.0, float(item.get("confidence", 0.5))))
                 except (ValueError, TypeError):
                     conf = 0.5
+                # Coerce target_metric to string (LLM may return a dict)
+                raw_target = item.get("target_metric", "response_quality")
+                if not isinstance(raw_target, str):
+                    raw_target = "response_quality"
                 h = Hypothesis(
                     claim=item.get("claim",""), rationale=item.get("rationale",""),
                     predicted_effect=item.get("predicted_effect",""),
-                    target_metric=item.get("target_metric","response_quality"),
+                    target_metric=raw_target,
                     predicted_delta=p_delta,
                     confidence=conf,
                 )
@@ -630,7 +634,10 @@ class EvolutionEngine:
         if treatment.total_interactions < exp.min_samples:
             return None
         # Map target metric to control/treatment values
+        # Defensive: target_metric must be a hashable string
         target = exp.mutation_params.get("target_metric", "response_quality")
+        if not isinstance(target, str):
+            target = "response_quality"
         metric_map = {
             "response_quality": ("quality", treatment.avg_quality),
             "latency_ms": ("latency", treatment.avg_latency_ms),
