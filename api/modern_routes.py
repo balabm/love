@@ -452,6 +452,85 @@ async def guardrails_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── LLM Manager ───────────────────────────────────────────────────────────────
+
+@router.get("/llm/models")
+async def llm_models():
+    """List all available local LLM models."""
+    try:
+        from core.llm_manager import get_llm_manager
+        mgr = get_llm_manager()
+        models = mgr.discover_models()
+        return {
+            "models": [
+                {
+                    "name": m.name,
+                    "provider": m.provider,
+                    "size": m.size,
+                    "quantization": m.quantization,
+                    "capabilities": m.capabilities,
+                    "loaded": m.loaded,
+                    "avg_latency_ms": m.avg_latency_ms,
+                    "success_rate": m.success_rate,
+                }
+                for m in models
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/llm/route")
+async def llm_route(task_type: str, preferred_model: str = "", quality: bool = False):
+    """Get the best model for a task type."""
+    try:
+        from core.llm_manager import get_llm_manager
+        mgr = get_llm_manager()
+        route = mgr.route_task(task_type, preferred_model, quality)
+        return {
+            "task_type": route.task_type,
+            "model": route.model,
+            "reason": route.reason,
+            "confidence": route.confidence,
+            "fallback_chain": route.fallback_chain,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/llm/stats")
+async def llm_stats():
+    """Get LLM performance statistics."""
+    try:
+        from core.llm_manager import get_llm_manager
+        mgr = get_llm_manager()
+        return mgr.get_all_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/llm/suggestions")
+async def llm_suggestions():
+    """Get proactive model suggestions."""
+    try:
+        from core.llm_manager import get_llm_manager
+        mgr = get_llm_manager()
+        return {"suggestions": mgr.suggest_models()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/llm/pull")
+async def llm_pull(model: str):
+    """Pull a new model from Ollama."""
+    try:
+        from core.llm_manager import get_llm_manager
+        mgr = get_llm_manager()
+        return mgr.pull_model(model)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

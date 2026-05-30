@@ -384,4 +384,10 @@ def get_agi_system_flags():
         flags["guardrails"] = True
     except Exception:
         pass
+    try:
+        from core.llm_manager import get_llm_manager
+        mgr = get_llm_manager()
+        flags["llm_manager"] = len(mgr._models) > 0
+    except Exception:
+        pass
     return flags
