@@ -118,6 +118,18 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/sandbox/stats` | Sandbox execution statistics |
 | `/modern/browser/search` | Browser-based web search |
 | `/modern/browser/navigate` | Browser page navigation |
+| `/modern/observability/health` | Health scores for all subsystems |
+| `/modern/observability/metrics` | Metric statistics with p95/p99 |
+| `/modern/observability/alerts` | Recent anomaly alerts |
+| `/modern/guardrails/scan` | Content safety scan |
+| `/modern/guardrails/goals` | Set user goals for drift detection |
+| `/modern/guardrails/rate-limit` | Check resource rate limits |
+| `/modern/guardrails/stats` | Guardrails statistics |
+| `/modern/llm/models` | List available local LLM models |
+| `/modern/llm/route` | Get optimal model for task |
+| `/modern/llm/stats` | Per-model performance analytics |
+| `/modern/llm/suggestions` | Proactive model recommendations |
+| `/modern/llm/pull` | Download a new model from Ollama |
 
 ### Startup
 
