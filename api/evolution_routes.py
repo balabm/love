@@ -30,6 +30,8 @@ class EvolutionStatus(BaseModel):
     meta_evolution_active: bool
     swarm_evolution_active: bool
     base_evolution_active: bool
+    self_coder_active: bool = False
+    cross_instance_active: bool = False
     current_generation: int
     active_mutations: int
     active_experiments: int
@@ -138,9 +140,23 @@ async def get_evolution_status():
             swarm_active = False
             active_swarms = 0
         
+        # Get self-coder status
+        try:
+            from core.self_coder import get_self_coder
+            self_coder_active = get_self_coder()._running
+        except Exception:
+            self_coder_active = False
+        
+        # Get cross-instance learning status
+        try:
+            from core.cross_instance_learning import get_cross_instance_learning
+            cross_instance_active = get_cross_instance_learning()._running
+        except Exception:
+            cross_instance_active = False
+        
         # Determine overall health
-        total_active = sum([base_active, meta_active, swarm_active])
-        if total_active == 3:
+        total_active = sum([base_active, meta_active, swarm_active, self_coder_active, cross_instance_active])
+        if total_active >= 4:
             health = "healthy"
         elif total_active >= 2:
             health = "degraded"
@@ -151,6 +167,8 @@ async def get_evolution_status():
             meta_evolution_active=meta_active,
             swarm_evolution_active=swarm_active,
             base_evolution_active=base_active,
+            self_coder_active=self_coder_active,
+            cross_instance_active=cross_instance_active,
             current_generation=generation,
             active_mutations=active_mutations,
             active_experiments=active_experiments,
