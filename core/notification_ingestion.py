@@ -1,21 +1,29 @@
 """
-LOVE Notification Ingestion Engine v2 — Smart Classification, Noise Filtering, Cross-Device Monitoring
+LOVE Notification Ingestion Engine v3 — The Digital Ear
 
-Silently runs in the background, siphoning notifications from Phone (KDE Connect/Webhook)
-and Microsoft 365 (Teams/Outlook). Now with:
-  - Smart classification (urgent, work, social, promo, system, financial, etc.)
-  - Noise / signal scoring — drops spam, surfaces what matters
-  - Entity extraction (names, deadlines, action words, locations)
-  - Cross-device semantic deduplication
-  - Rich structured NeuralBus events
-  - Integration with FinanceGuardian for bank/finance notifications
+Ingests, classifies, deduplicates, and routes ALL external signals:
+- Phone notifications (KDE Connect, ADB, webhook)
+- Microsoft 365 (Teams, Outlook)
+- Unified Device Bridge (Telegram, Discord, MQTT, webhook)
+- WhatsApp Web (if available)
+- System notifications (if available)
+
+Features:
+  - Smart classification with confidence scoring
+  - Temporal + semantic deduplication (prevents spam)
+  - Entity extraction (names, deadlines, amounts, action items)
+  - Actionable detection (can LOVE reply/dismiss/snooze?)
+  - Orchestrator-aware delivery (respects focus mode, system load)
+  - NeuralBus events for cross-module awareness
+  - FinanceGuardian routing for bank notifications
+  - Knowledge Graph ingestion for relational memory
 """
 
 import json
 import re
 import time
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Thread, Lock
 from typing import Set, Optional, Dict, List, Any
 from collections import defaultdict, deque
@@ -23,7 +31,7 @@ from collections import defaultdict, deque
 from core import knowledge_graph
 from integrations.phone_bridge import PhoneBridge
 
-# Microsoft Teams integration (optional — only if azure is installed)
+# Microsoft Teams integration (optional)
 try:
     from integrations.microsoft_bridge import MicrosoftBridge
     MICROSOFT_AVAILABLE = True
@@ -37,18 +45,13 @@ except ImportError:
             if _ms_bridge_instance is None:
                 _ms_bridge_instance = MicrosoftBridge()
             return _ms_bridge_instance
-        def is_connected(self):
-            return False
-        def poll_notifications(self):
-            return []
-        def get_teams_messages(self, limit=5):
-            return []
-        def get_unread_count(self):
-            return 0
-        def get_next_event(self):
-            return None
-        def get_context_summary(self):
-            return None
+        def is_connected(self): return False
+        def poll_notifications(self): return []
+        def get_teams_messages(self, limit=5): return []
+        def get_unread_emails(self, limit=5): return []
+        def get_unread_count(self): return 0
+        def get_next_event(self): return None
+        def get_context_summary(self): return None
 
 # Neural Bus integration
 try:
@@ -64,59 +67,70 @@ try:
 except ImportError:
     PUSH_AVAILABLE = False
 
+# Orchestration Master integration
+try:
+    from core.master_orchestrator import get_orchestration_master
+    ORCHESTRATOR_AVAILABLE = True
+except ImportError:
+    ORCHESTRATOR_AVAILABLE = False
+
 
 class SmartNotificationClassifier:
     """Heuristic classifier that scores notifications for relevance and type."""
 
-    # Urgency signals
     URGENT_KEYWORDS = [
         "urgent", "asap", "immediately", "critical", "alert", "warning",
         "failed", "error", "declined", "overdue", "expired", "suspended",
-        "locked", "fraud", "unauthorized", "breach", "emergency",
+        "locked", "fraud", "unauthorized", "breach", "emergency", "911",
     ]
 
-    # Work-related signals
     WORK_KEYWORDS = [
         "meeting", "deadline", "project", "client", "boss", "manager",
         "report", "review", "interview", "offer", "contract", "invoice",
-        " teams ", "slack", "jira", "github", "pull request", "deploy",
-        "calendar", "schedule", "appointment", "reminder",
+        "teams", "slack", "jira", "github", "pull request", "deploy",
+        "calendar", "schedule", "appointment", "reminder", "standup",
+        "sprint", "milestone", "deliverable", "feedback", "approval",
     ]
 
-    # Social signals
     SOCIAL_KEYWORDS = [
         "whatsapp", "telegram", "message", "call", "missed call", "voicemail",
         "instagram", "facebook", "twitter", "snapchat", "tiktok",
-        "birthday", "party", "dinner", "lunch", "catch up",
+        "birthday", "party", "dinner", "lunch", "catch up", "weekend",
+        "family", "friend", "invite", "rsvp",
     ]
 
-    # Promotional / spam signals (negative score)
     PROMO_KEYWORDS = [
         "sale", "discount", "offer", "coupon", "deal", "promo",
-        "subscribe", "newsletter", "promotion", " cashback", "reward",
+        "subscribe", "newsletter", "promotion", "cashback", "reward",
         "limited time", "act now", "free shipping", "buy now", "shop now",
-        "advertisement", "sponsored", "unsubscribe",
+        "advertisement", "sponsored", "unsubscribe", "flash sale",
     ]
 
-    # Financial signals
     FINANCE_KEYWORDS = [
         "debited", "credited", "spent", "purchase", "transaction", "payment",
         "withdrawn", "deposit", "balance", "account", "card", "bank",
         "upi", "emi", "loan", "refund", "transfer", "sent", "received",
+        "investment", "dividend", "stock", "crypto", "bitcoin", "nft",
+        "portfolio", "dividend", "interest", "mortgage", "insurance",
     ]
 
-    # System / low-value signals
     SYSTEM_KEYWORDS = [
         "update available", "backup complete", "synced", "upload complete",
         "download complete", "battery full", "wifi connected", "bluetooth",
         "app update", "software update", "storage", "cache cleared",
+        "system restart", "shutdown", "login", "logout",
+    ]
+
+    ACTION_KEYWORDS = [
+        "reply", "respond", "call back", "approve", "sign", "review",
+        "confirm", "verify", "pay", "submit", "upload", "download",
+        "join", "rsvp", "accept", "decline", "reschedule", "forward",
     ]
 
     def classify(self, text: str, source: str = "unknown") -> Dict[str, Any]:
         text_lower = text.lower()
         scores = defaultdict(int)
 
-        # Base scoring by keyword presence
         for kw in self.URGENT_KEYWORDS:
             if kw in text_lower:
                 scores["urgent"] += 3
@@ -148,10 +162,10 @@ class SmartNotificationClassifier:
                 scores["noise"] += 1
 
         # Source-based priors
-        if source in ("teams", "outlook", "work_email"):
+        if source in ("teams", "outlook", "work_email", "calendar"):
             scores["work"] += 2
             scores["signal"] += 1
-        if source == "phone" and "call" in text_lower:
+        if source in ("phone", "sms") and "call" in text_lower:
             scores["social"] += 1
             scores["signal"] += 1
 
@@ -166,7 +180,7 @@ class SmartNotificationClassifier:
         }
         primary = max(category_scores, key=category_scores.get) if max(category_scores.values()) > 0 else "general"
 
-        # Signal vs noise score (0-100)
+        # Signal vs noise score
         signal = scores["signal"]
         noise = scores["noise"]
         if primary == "promotional":
@@ -194,25 +208,29 @@ class SmartNotificationClassifier:
         else:
             priority = "low"
 
+        # Detect actionable items
+        actionable = any(kw in text_lower for kw in self.ACTION_KEYWORDS)
+
         return {
             "category": primary,
             "signal_score": signal_score,
             "priority": priority,
             "is_noise": signal_score < 25 or primary == "promotional",
             "raw_scores": dict(scores),
+            "is_actionable": actionable,
         }
 
     def extract_entities(self, text: str) -> Dict[str, Any]:
-        """Extract actionable entities from notification text."""
         entities = {
             "names": [],
             "deadlines": [],
             "amounts": [],
             "action_items": [],
             "locations": [],
+            "urls": [],
         }
 
-        # Names: capitalized words after "from", "to", "by"
+        # Names
         name_patterns = [
             r"from\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)",
             r"to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)",
@@ -224,11 +242,12 @@ class SmartNotificationClassifier:
                 if len(name) > 2 and name not in entities["names"]:
                     entities["names"].append(name)
 
-        # Deadlines: date/time mentions
+        # Deadlines
         date_patterns = [
             r"(today|tomorrow|tonight|next\s+\w+|by\s+\w+\s+\d{1,2})",
             r"(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)",
             r"(deadline[s]?\s*:?\s*\w+)",
+            r"(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*)",
         ]
         for pat in date_patterns:
             for m in re.finditer(pat, text, re.IGNORECASE):
@@ -236,7 +255,7 @@ class SmartNotificationClassifier:
                 if dl not in entities["deadlines"]:
                     entities["deadlines"].append(dl)
 
-        # Amounts: currency patterns
+        # Amounts
         amount_pattern = r"(?:Rs\.?|₹|\$|€|£|USD|EUR|GBP|INR)?\s*([\d,]+(?:\.\d{2})?)"
         for m in re.finditer(amount_pattern, text):
             try:
@@ -246,8 +265,8 @@ class SmartNotificationClassifier:
             except ValueError:
                 pass
 
-        # Action items: imperative sentences
-        action_starters = ["please", "need", "required", "action", "review", "approve", "sign", "submit", "confirm", "pay", "complete", "finish", "check", "verify"]
+        # Action items
+        action_starters = ["please", "need", "required", "action", "review", "approve", "sign", "submit", "confirm", "pay", "complete", "finish", "check", "verify", "respond", "reply"]
         sentences = re.split(r'[.!?\n]', text)
         for sent in sentences:
             sent_lower = sent.strip().lower()
@@ -257,6 +276,11 @@ class SmartNotificationClassifier:
                     if action and action not in entities["action_items"]:
                         entities["action_items"].append(action[:120])
                     break
+
+        # URLs
+        url_pattern = r"https?://[^\s<>\"{}|\\^`\[\]]+"
+        for m in re.finditer(url_pattern, text):
+            entities["urls"].append(m.group(0))
 
         return entities
 
@@ -277,7 +301,11 @@ class NotificationIngestionEngine:
             "dropped_duplicate": 0,
             "urgent_pushed": 0,
             "financial_routed": 0,
+            "actionable_detected": 0,
         }
+        self._pending_actionable: deque = deque(maxlen=50)
+        self._last_alert_time: float = 0
+        self._alert_cooldown: float = 30  # seconds between alerts
 
     @classmethod
     def get_instance(cls) -> "NotificationIngestionEngine":
@@ -292,13 +320,27 @@ class NotificationIngestionEngine:
         self._running = True
         self._thread = Thread(target=self._loop, args=(interval_seconds,), daemon=True)
         self._thread.start()
-        print(f"[Ingestion] Smart Notification Ingestion Engine started ({interval_seconds}s interval)")
+        print(f"[Ingestion] Notification Ingestion Engine v3 started ({interval_seconds}s interval)")
 
     def stop(self):
         self._running = False
 
     def get_stats(self) -> Dict[str, Any]:
         return dict(self._stats)
+
+    def get_pending_actionable(self) -> List[Dict]:
+        return list(self._pending_actionable)
+
+    def dismiss_actionable(self, index: int):
+        try:
+            pending = list(self._pending_actionable)
+            if 0 <= index < len(pending):
+                pending.pop(index)
+                self._pending_actionable = deque(pending, maxlen=50)
+                return True
+        except Exception:
+            pass
+        return False
 
     def _loop(self, interval: int):
         time.sleep(5)
@@ -313,7 +355,6 @@ class NotificationIngestionEngine:
         return hashlib.md5(text.encode('utf-8', errors='ignore')).hexdigest()
 
     def _is_semantic_duplicate(self, text: str) -> bool:
-        """Check if this notification is similar to a recent one (cross-device dedup)."""
         text_lower = text.lower()
         words = set(re.findall(r'\b\w{4,}\b', text_lower))
         if not words:
@@ -329,7 +370,6 @@ class NotificationIngestionEngine:
         return False
 
     def _ingest_notification(self, text: str, source: str, extra_meta: Dict = None):
-        """Ingest a single notification through the full pipeline."""
         if not text or not text.strip():
             return
 
@@ -340,7 +380,7 @@ class NotificationIngestionEngine:
             return
         self._seen_hashes.add(h)
 
-        # 2. Semantic dedup (cross-device)
+        # 2. Semantic dedup
         if self._is_semantic_duplicate(text):
             self._stats["dropped_duplicate"] += 1
             return
@@ -358,7 +398,7 @@ class NotificationIngestionEngine:
 
         self._stats["ingested_total"] += 1
 
-        # 5. Build structured payload
+        # 5. Build payload
         payload = {
             "text": text,
             "source": source,
@@ -367,12 +407,18 @@ class NotificationIngestionEngine:
             "priority": classification["priority"],
             "entities": entities,
             "is_noise": classification["is_noise"],
+            "is_actionable": classification["is_actionable"],
             "timestamp": datetime.now().isoformat(),
         }
         if extra_meta:
             payload.update(extra_meta)
 
-        # 6. Route financial notifications to FinanceGuardian
+        # Track actionable
+        if classification["is_actionable"]:
+            self._stats["actionable_detected"] += 1
+            self._pending_actionable.append(payload)
+
+        # 6. Route financial
         if classification["category"] == "financial":
             self._stats["financial_routed"] += 1
             try:
@@ -382,13 +428,13 @@ class NotificationIngestionEngine:
             except Exception as e:
                 print(f"[Ingestion] FinanceGuardian routing error: {e}")
 
-        # 7. Ingest into Knowledge Graph
+        # 7. Knowledge Graph
         try:
             knowledge_graph.ingest_text(text, source=f"{source}_notification")
         except Exception as e:
             print(f"[Ingestion] KG ingest error for {source}: {e}")
 
-        # 8. Publish to Neural Bus
+        # 8. Neural Bus
         if NEURAL_BUS_AVAILABLE:
             try:
                 priority_map = {
@@ -407,7 +453,7 @@ class NotificationIngestionEngine:
             except Exception as e:
                 print(f"[Ingestion] Neural bus publish error: {e}")
 
-        # 9. Learn patterns autonomously from ALL notifications
+        # 9. Pattern learning
         try:
             from core.notification_learning import get_notification_learning_engine
             learner = get_notification_learning_engine()
@@ -421,15 +467,40 @@ class NotificationIngestionEngine:
         except Exception:
             pass
 
-        # 10. Proactive push for urgent notifications
-        if classification["priority"] == "high" and PUSH_AVAILABLE:
+        # 10. Delivery to user (via orchestrator if available, else direct push)
+        if classification["priority"] == "high":
+            self._deliver_to_user(payload)
+
+    def _deliver_to_user(self, payload: Dict):
+        """Deliver notification to user, respecting orchestrator state."""
+        now = time.time()
+        if now - self._last_alert_time < self._alert_cooldown:
+            return
+        self._last_alert_time = now
+
+        text = payload.get("text", "")
+        source = payload.get("source", "unknown")
+        category = payload.get("category", "general")
+
+        # Check orchestrator state
+        if ORCHESTRATOR_AVAILABLE:
+            try:
+                om = get_orchestration_master()
+                state = om.get_system_summary()
+                if state.get("focus_mode"):
+                    # Don't alert during focus mode
+                    return
+            except Exception:
+                pass
+
+        if PUSH_AVAILABLE:
             try:
                 engine = get_push_engine()
                 engine.push(
                     category="ALERT",
                     message=f"[{source.upper()}] {text[:120]}",
                     priority="high",
-                    metadata={"source": "notification_ingestion", "category": classification["category"], "entities": entities},
+                    metadata={"source": "notification_ingestion", "category": category, "entities": payload.get("entities", {})},
                 )
                 self._stats["urgent_pushed"] += 1
             except Exception as e:
@@ -439,14 +510,17 @@ class NotificationIngestionEngine:
         phone = PhoneBridge.get_instance()
         ms = MicrosoftBridge.get_instance()
 
-        # 1. Phone Notifications (KDE Connect)
+        # 1. Phone Notifications
         if phone.is_connected():
-            state = phone.get_state()
-            notifs = state.get("notifications", [])
-            for n in notifs:
-                self._ingest_notification(n, "phone")
+            try:
+                state = phone.get_state()
+                notifs = state.get("notifications", [])
+                for n in notifs:
+                    self._ingest_notification(n, "phone")
+            except Exception:
+                pass
 
-        # 2. Microsoft Teams Messages
+        # 2. Microsoft Teams
         if ms.is_connected():
             try:
                 teams_msgs = ms.get_teams_messages(limit=5)
@@ -457,11 +531,11 @@ class NotificationIngestionEngine:
                     if not content:
                         continue
                     full_text = f"{sender} in {chat}: {content}"
-                    self._ingest_notification(full_text, "teams", extra_meta={"sender": sender, "chat": chat})
+                    self._ingest_notification(full_text, "teams", extra_meta={"sender": sender, "chat": chat, "type": "chat"})
             except Exception:
                 pass
 
-            # 3. Microsoft Outlook Emails
+            # 3. Microsoft Outlook
             try:
                 emails = ms.get_unread_emails(limit=5)
                 for email in emails:
@@ -470,12 +544,23 @@ class NotificationIngestionEngine:
                     preview = email.get("preview", "")
                     if not subj:
                         continue
-                    full_text = f"Email from {sender} about {subj}. Preview: {preview}"
-                    self._ingest_notification(full_text, "outlook", extra_meta={"sender": sender, "subject": subj})
+                    full_text = f"Email from {sender}: {subj}. {preview}"
+                    self._ingest_notification(full_text, "outlook", extra_meta={"sender": sender, "subject": subj, "type": "email"})
             except Exception:
                 pass
 
-        # 4. Unified Device Bridge (Telegram, MQTT, folder sync, Discord, webhook)
+            # 4. Calendar events
+            try:
+                event = ms.get_next_event()
+                if event:
+                    title = event.get("title", "")
+                    start_time = event.get("start", "")
+                    if title:
+                        self._ingest_notification(f"Upcoming: {title} at {start_time}", "calendar", extra_meta={"type": "calendar", "start": start_time})
+            except Exception:
+                pass
+
+        # 5. Unified Device Bridge
         try:
             from integrations.device_bridge import get_device_bridge
             bridge = get_device_bridge()
@@ -486,6 +571,20 @@ class NotificationIngestionEngine:
                     transport = msg.get("transport_name", "device")
                     if text:
                         self._ingest_notification(text, transport, extra_meta={"transport": transport, "raw": msg})
+        except Exception:
+            pass
+
+        # 6. WhatsApp Web (if available)
+        try:
+            from integrations.whatsapp_bridge import get_whatsapp_bridge
+            wa = get_whatsapp_bridge()
+            if wa and wa.is_connected():
+                msgs = wa.get_messages(limit=5)
+                for msg in msgs:
+                    text = msg.get("text", "")
+                    sender = msg.get("sender", "Unknown")
+                    if text:
+                        self._ingest_notification(f"{sender}: {text}", "whatsapp", extra_meta={"sender": sender, "type": "chat"})
         except Exception:
             pass
 

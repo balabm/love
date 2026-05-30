@@ -752,21 +752,47 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
     except Exception as _loop_err:
         print(f"[AgentLoop] Error: {_loop_err}")
 
-    # ── SWARM: Distributed Intelligence ──
-    if "research" in user_input.lower() or "deep dive" in user_input.lower() or "code review" in user_input.lower() or "analyze" in user_input.lower():
+    # ── SWARM: Coordinated multi-agent intelligence ──
+    _swarm_triggers = ("research", "deep dive", "code review", "analyze", "investigate", "compare")
+    if any(kw in user_input.lower() for kw in _swarm_triggers):
         try:
-            from core.swarm import get_agent_swarm
-            swarm = get_agent_swarm()
-            agents_to_use = ["ResearchAgent", "CodeAgent", "ReviewAgent"] if "code" in user_input.lower() else ["ResearchAgent", "ReviewAgent"]
-            swarm_result = swarm.delegate_task(user_input, required_agents=agents_to_use)
-            if "FINAL_SYNTHESIS" in swarm_result:
-                response = swarm_result["FINAL_SYNTHESIS"]
+            from core.coordinated_swarm import run_coordinated_sync
+            agents_to_use = (
+                ["ResearchAgent", "CodeAgent", "ReviewAgent"]
+                if "code" in user_input.lower()
+                else None
+            )
+            swarm_result = run_coordinated_sync(
+                user_input,
+                required_agents=agents_to_use,
+                context=get_prompt_context() if CONTEXT_ENGINE_AVAILABLE else "",
+            )
+            synthesis = swarm_result.get("FINAL_SYNTHESIS", "")
+            if synthesis:
+                response = synthesis
                 save_memory(user_input, response, mode=mode)
                 if FLOW_AVAILABLE:
                     record_turn(user_input, response, mode=mode)
-                return {"response": response, "thinking": f"Used Swarm Agents: {agents_to_use}"}
+                return {
+                    "response": response,
+                    "thinking": f"Coordinated swarm: {swarm_result.get('selected_agents', [])}",
+                    "swarm": swarm_result,
+                }
         except Exception as e:
-            print(f"[Swarm] Error: {e}")
+            print(f"[CoordinatedSwarm] Error: {e}, falling back to basic swarm")
+            try:
+                from core.swarm import get_agent_swarm
+                swarm = get_agent_swarm()
+                agents_to_use = ["ResearchAgent", "CodeAgent", "ReviewAgent"] if "code" in user_input.lower() else ["ResearchAgent", "ReviewAgent"]
+                swarm_result = swarm.delegate_task(user_input, required_agents=agents_to_use)
+                if "FINAL_SYNTHESIS" in swarm_result:
+                    response = swarm_result["FINAL_SYNTHESIS"]
+                    save_memory(user_input, response, mode=mode)
+                    if FLOW_AVAILABLE:
+                        record_turn(user_input, response, mode=mode)
+                    return {"response": response, "thinking": f"Used Swarm Agents: {agents_to_use}"}
+            except Exception as e2:
+                print(f"[Swarm] Error: {e2}")
 
     # ── ON-DEMAND: Detect and run specialized small models ──
     if ONDEMAND_AVAILABLE:
@@ -884,6 +910,36 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
                         for insight in domain_insights[:3]
                     ])
                     agi_context_parts.append(f"Cross-Domain Insights:\n{insights_summary}")
+
+        try:
+            from core.orchestrator import get_unified_state
+            life_state = get_unified_state()
+            interventions = life_state.get("active_interventions", [])
+            if interventions:
+                agi_context_parts.append(
+                    f"Life Orchestrator: {len(interventions)} active intervention(s)"
+                )
+        except Exception:
+            pass
+
+        try:
+            from core.evolution_integration import get_evolution_integration
+            evo = get_evolution_integration().get_integration_status()
+            active = sum(1 for k, v in evo.items() if k.endswith("_active") and v)
+            if active:
+                agi_context_parts.append(f"Evolution fleet: {active} subsystem(s) active")
+        except Exception:
+            pass
+
+        # ═══ ORCHESTRATION MASTER — LOVE's central brain status ═══
+        try:
+            from core.master_orchestrator import get_orchestration_master
+            om = get_orchestration_master()
+            om_ctx = om.get_context_for_chat()
+            if om_ctx:
+                agi_context_parts.append(om_ctx)
+        except Exception:
+            pass
         
         if agi_context_parts:
             agi_block = f"\n\n=== AGI-LEVEL INSIGHTS ===\n" + "\n".join(agi_context_parts)

@@ -442,7 +442,49 @@ try:
     TEMPORAL_MEMORY_AVAILABLE = True
 except ImportError:
     TEMPORAL_MEMORY_AVAILABLE = False
+
+try:
+    from core.reasoning_chain import get_reasoning_chain
+    REASONING_CHAIN_AVAILABLE = True
+except ImportError:
     REASONING_CHAIN_AVAILABLE = False
+
+# Evolution fleet
+try:
+    from core.evolution_integration import get_evolution_integration
+    EVOLUTION_INTEGRATION_AVAILABLE = True
+except ImportError:
+    EVOLUTION_INTEGRATION_AVAILABLE = False
+
+try:
+    from core.meta_evolution import get_meta_evolution
+    META_EVOLUTION_AVAILABLE = True
+except ImportError:
+    META_EVOLUTION_AVAILABLE = False
+
+try:
+    from core.swarm_evolution import get_swarm_evolution
+    SWARM_EVOLUTION_AVAILABLE = True
+except ImportError:
+    SWARM_EVOLUTION_AVAILABLE = False
+
+try:
+    from core.self_coder import get_self_coder
+    SELF_CODER_AVAILABLE = True
+except ImportError:
+    SELF_CODER_AVAILABLE = False
+
+try:
+    from core.cross_instance_learning import get_cross_instance_learning
+    CROSS_INSTANCE_AVAILABLE = True
+except ImportError:
+    CROSS_INSTANCE_AVAILABLE = False
+
+try:
+    from core.capability_gap_detector import get_capability_gap_detector
+    CAPABILITY_GAP_DETECTOR_AVAILABLE = True
+except ImportError:
+    CAPABILITY_GAP_DETECTOR_AVAILABLE = False
 
 # Register TTS notification callback for heartbeat
 def tts_notification(trigger):
@@ -520,14 +562,17 @@ def register_all_modules(lm, _loop=None):
     def start_google_services_module():
         from integrations.google_services import GoogleServices
         gs = GoogleServices.get_instance()
-        if not gs.is_connected():
-            return {"status": "degraded", "error": "Google Services not configured"}
+        return {"status": "ready", "connected": gs.is_connected()}
+
+    def start_microsoft_bridge_module():
+        from integrations.microsoft_bridge import MicrosoftBridge
+        ms = MicrosoftBridge.get_instance()
+        return {"status": "ready", "connected": ms.is_connected()}
 
     def start_phone_bridge_module():
         from integrations.phone_bridge import PhoneBridge
         bridge = PhoneBridge.get_instance()
-        if not bridge.is_connected():
-            return {"status": "degraded", "error": "Phone Bridge not connected"}
+        return {"status": "ready", "connected": bridge.is_connected()}
 
     lm.register(ModuleDescriptor(
         name="awareness", wave=1, start_fn=start_awareness_module, stop_fn=stop_awareness_module,
@@ -541,9 +586,28 @@ def register_all_modules(lm, _loop=None):
         name="context_engine", wave=1, start_fn=start_context_engine_module,
         depends_on=["awareness"], optional=False, description="Fuses environment signals into state context"
     ))
+
+    def start_intent_decoder_module():
+        try:
+            from interface.intent_decoder import get_intent_decoder
+            get_intent_decoder()
+            return {"status": "ready"}
+        except Exception as e:
+            return {"status": "degraded", "error": str(e)}
+
+    lm.register(ModuleDescriptor(
+        name="intent_decoder", wave=1, start_fn=start_intent_decoder_module,
+        depends_on=["context_engine"], optional=True,
+        description="Predictive intent decoding from user activity signals"
+    ))
+
     lm.register(ModuleDescriptor(
         name="google_services", wave=1, start_fn=start_google_services_module,
         depends_on=[], optional=True, description="Gmail, Calendar, Drive integrations"
+    ))
+    lm.register(ModuleDescriptor(
+        name="microsoft_bridge", wave=1, start_fn=start_microsoft_bridge_module,
+        depends_on=[], optional=True, description="Outlook, Teams, OneDrive, Microsoft 365"
     ))
     lm.register(ModuleDescriptor(
         name="phone_bridge", wave=1, start_fn=start_phone_bridge_module,
@@ -562,6 +626,22 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="notification_ingestion", wave=1, start_fn=start_notification_ingestion_module, stop_fn=stop_notification_ingestion_module,
         depends_on=["phone_bridge"], optional=True, description="Smart notification ingestion from phone, email, and apps"
+    ))
+
+    def start_notification_learning_module():
+        from core.notification_learning import start_notification_learning
+        start_notification_learning()
+        return {"status": "ready", "message": "Notification learning engine started"}
+
+    def stop_notification_learning_module():
+        from core.notification_learning import stop_notification_learning
+        stop_notification_learning()
+
+    lm.register(ModuleDescriptor(
+        name="notification_learning", wave=1, start_fn=start_notification_learning_module,
+        stop_fn=stop_notification_learning_module,
+        depends_on=["notification_ingestion"], optional=True,
+        description="Learns notification patterns and user preferences from ingested signals"
     ))
 
     def start_tunnel_agent_module():
@@ -661,6 +741,17 @@ def register_all_modules(lm, _loop=None):
         name="consciousness", wave=2, start_fn=start_consciousness_module, stop_fn=stop_consciousness_module,
         depends_on=["context_engine"], optional=False, description="Core LLM-driven internal monologue"
     ))
+
+    def start_living_substrate_module():
+        from core.living_substrate import start_living_substrate
+        return start_living_substrate()
+
+    lm.register(ModuleDescriptor(
+        name="living_substrate", wave=2, start_fn=start_living_substrate_module,
+        depends_on=["consciousness", "neural_bus"], optional=True,
+        description="Neural substrate: world model, SSM, MoE, embodied self, GWT ignition"
+    ))
+
     lm.register(ModuleDescriptor(
         name="temporal_memory", wave=2, start_fn=start_temporal_memory_module,
         depends_on=["consciousness"], optional=True, description="Short-term memory consolidation"
@@ -777,13 +868,22 @@ def register_all_modules(lm, _loop=None):
         get_constitution()
 
     def start_evolution_engine_module():
-        from core.evolution_engine import get_evolution_engine
-        evo = get_evolution_engine()
-        evo.start_evolution_loop(interval=3600)
+        from core.evolution_integration import get_evolution_integration
+        get_evolution_integration().start_all()
+        if CAPABILITY_GAP_DETECTOR_AVAILABLE:
+            try:
+                get_capability_gap_detector().start()
+            except Exception:
+                pass
 
     def stop_evolution_engine_module():
-        from core.evolution_engine import get_evolution_engine
-        get_evolution_engine().stop_evolution_loop()
+        from core.evolution_integration import get_evolution_integration
+        get_evolution_integration().stop_all()
+        if CAPABILITY_GAP_DETECTOR_AVAILABLE:
+            try:
+                get_capability_gap_detector().stop()
+            except Exception:
+                pass
 
     def start_memory_architect_module():
         from core.memory_architect import get_memory_architect
@@ -813,7 +913,8 @@ def register_all_modules(lm, _loop=None):
     ))
     lm.register(ModuleDescriptor(
         name="evolution_engine", wave=4, start_fn=start_evolution_engine_module, stop_fn=stop_evolution_engine_module,
-        depends_on=["neural_connectors"], optional=True, description="Self-optimizing genome generation"
+        depends_on=["neural_connectors", "living_substrate"], optional=True,
+        description="Unified evolution fleet: meta/swarm/self-coder/cross-instance"
     ))
     lm.register(ModuleDescriptor(
         name="memory_architect", wave=4, start_fn=start_memory_architect_module, stop_fn=stop_memory_architect_module,
@@ -822,6 +923,15 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="metacognitive_monitor", wave=4, start_fn=start_metacognitive_monitor_module, stop_fn=stop_metacognitive_monitor_module,
         depends_on=[], optional=True, description="Internal telemetry and health monitoring"
+    ))
+
+    def start_meta_cognition_module():
+        from core.meta_cognition import get_meta_cognition_engine
+        get_meta_cognition_engine()
+
+    lm.register(ModuleDescriptor(
+        name="meta_cognition", wave=4, start_fn=start_meta_cognition_module,
+        depends_on=["consciousness"], optional=True, description="Self-awareness and meta-cognitive reflection engine"
     ))
 
     # ── WAVE 5: SWARM & GOAL AGENTS ──
@@ -855,6 +965,11 @@ def register_all_modules(lm, _loop=None):
         brief_time = _os.getenv("DAILY_BRIEF_TIME", "08:00")
         briefing = get_briefing_system()
         briefing.start(brief_time=brief_time)
+
+    def start_mission_queue_module():
+        from core.autonomous_mission_queue import get_mission_queue
+        result = get_mission_queue().bootstrap_key_missions()
+        return {"status": "ready", "bootstrapped": result.get("count", 0)}
 
     def start_autonomy_supervisor_module():
         if AUTONOMY_SUPERVISOR_AVAILABLE:
@@ -954,8 +1069,15 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True, description="Generates and schedules morning brief report"
     ))
     lm.register(ModuleDescriptor(
+        name="mission_queue", wave=5, start_fn=start_mission_queue_module,
+        depends_on=[], optional=True, description="Bootstraps autonomous capability missions"
+    ))
+    lm.register(ModuleDescriptor(
         name="autonomy_supervisor", wave=5, start_fn=start_autonomy_supervisor_module, stop_fn=stop_autonomy_supervisor_module,
-        depends_on=["heartbeat", "self_improvement_daemon", "autonomous_goal_engine", "wave_engine"],
+        depends_on=[
+            "heartbeat", "self_improvement_daemon", "autonomous_goal_engine", "wave_engine",
+            "mission_queue", "living_substrate", "intelligence_hub", "causal_guardrail", "axiological_engine",
+        ],
         optional=True, description="Supervises autonomous loops and restarts failed daemons"
     ))
     lm.register(ModuleDescriptor(
@@ -1036,16 +1158,23 @@ def register_all_modules(lm, _loop=None):
     ))
 
     # ── WAVE 5: UTILITY MODULES (Prompts 21-24) ──
-    # These are library modules, not daemons — registered for visibility in lifecycle
+    def start_causal_guardrail_module():
+        from core.causal_guardrail import start_guardrail
+        start_guardrail()
+
+    def start_axiological_engine_module():
+        from core.axiological_engine import start_axiological_engine
+        start_axiological_engine()
+
     lm.register(ModuleDescriptor(
-        name="causal_guardrail", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
+        name="causal_guardrail", wave=5, start_fn=start_causal_guardrail_module, stop_fn=lambda: None,
         depends_on=[], optional=True,
-        description="LLM-based sanity check decorator for high-risk actions (trades, commits, emails)"
+        description="LLM-based sanity check for high-risk autonomous actions"
     ))
     lm.register(ModuleDescriptor(
-        name="axiological_engine", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
-        depends_on=[], optional=True,
-        description="Utility formula gating: (priority*2) - cost - (stress/2) vs threshold based on energy"
+        name="axiological_engine", wave=5, start_fn=start_axiological_engine_module, stop_fn=lambda: None,
+        depends_on=["homeostasis"], optional=True,
+        description="Utility formula gating autonomous actions against user energy/stress"
     ))
     lm.register(ModuleDescriptor(
         name="reality_check", wave=5, start_fn=lambda: None, stop_fn=lambda: None,
@@ -1155,13 +1284,7 @@ async def lifespan(app: FastAPI):
         verify_and_heal_system()
     except Exception as _e:
         print(f"[Sentinel] Startup check error (non-fatal): {_e}")
-    # Living Substrate boot -- deferred from module-level to here
-    try:
-        from core.living_substrate import start_living_substrate
-        _ls = start_living_substrate()
-        print(f"[API] Living Substrate online: {_ls}")
-    except Exception as _e:
-        print(f"[API] Living Substrate boot error (non-fatal): {_e}")
+    # Lifecycle manager handles substrate boot (living_substrate module, wave 2)
     # Pre-warm ChromaDB synchronously so module starts that call save_log() are instant
     try:
         _loop_pw = asyncio.get_event_loop()
@@ -1189,16 +1312,19 @@ async def lifespan(app: FastAPI):
     # ── Post-startup AGI notification ───────────────────────────────────────
     try:
         from core.proactive_push import get_push_engine
+        from core.agi_spine import get_agi_system_flags
+        flags = get_agi_system_flags()
+        active = sum(1 for v in flags.values() if v)
         pe = get_push_engine()
         pe.push(
             "AGI",
-            "Autonomous AGI loop is now active. Watch me think and act in real-time at /mind.",
+            f"Unified intelligence online — {active}/{len(flags)} AGI subsystems active. Watch /mind.",
             priority="normal",
         )
     except Exception:
         pass
 
-    print("[AGI] Autonomous intelligence loop active. Visit http://localhost:8000 and click '🧠 Mind' to watch LOVE think.")
+    print("[AGI] Unified intelligence loop active. Visit http://localhost:8000 and click Mind to watch LOVE think.")
 
     # ── Print access URLs so you know where to connect from ──────────────────
     try:
@@ -1405,6 +1531,101 @@ async def execute_swarm_endpoint(req: SwarmRequest):
     swarm = get_agent_swarm()
     result = await asyncio.to_thread(swarm.delegate_task, req.task, req.required_agents)
     return {"success": True, "results": result}
+
+@app.post("/agi/swarm/coordinate")
+async def execute_coordinated_swarm_endpoint(req: SwarmRequest, background_tasks: BackgroundTasks):
+    """Execute a complex task using the Coordinated Swarm (AGI Phase 10/11) in the background"""
+    from core.coordinated_swarm import get_coordinated_swarm, SwarmSession
+    import hashlib
+    import time
+    from datetime import datetime
+    
+    swarm = get_coordinated_swarm()
+    session_id = hashlib.sha256(f"{req.task}:{time.time()}".encode()).hexdigest()[:16]
+    
+    # Initialize placeholder running session
+    session = SwarmSession(
+        session_id=session_id,
+        task=req.task,
+        created_at=datetime.now().isoformat(),
+        status="running",
+        selected_agents=req.required_agents or []
+    )
+    swarm._sessions[session_id] = session
+    
+    # Define async runner to execute coordinated swarm in background
+    async def run_swarm_task():
+        try:
+            await swarm.execute_coordinated(
+                task=req.task,
+                required_agents=req.required_agents,
+                context="Triggered from UI Swarm Console",
+                session_id=session_id
+            )
+            # Notify client via websocket if manager is available
+            try:
+                await manager.broadcast({"type": "swarm_update", "session_id": session_id, "status": "complete"})
+            except Exception:
+                pass
+        except Exception as e:
+            if session_id in swarm._sessions:
+                swarm._sessions[session_id].status = "error"
+                swarm._sessions[session_id].synthesis = f"Coordinated swarm execution failed: {str(e)}"
+            try:
+                await manager.broadcast({"type": "swarm_update", "session_id": session_id, "status": "error"})
+            except Exception:
+                pass
+
+    background_tasks.add_task(run_swarm_task)
+    return {"success": True, "session_id": session_id, "status": "running"}
+
+@app.get("/agi/swarm/session/{session_id}")
+async def get_coordinated_swarm_session(session_id: str):
+    """Retrieve details and status of a coordinated swarm session"""
+    from core.coordinated_swarm import get_coordinated_swarm
+    swarm = get_coordinated_swarm()
+    session = swarm.get_session(session_id)
+    if not session:
+        return {"success": False, "error": "Session not found"}
+        
+    return {
+        "success": True,
+        "session_id": session.session_id,
+        "task": session.task,
+        "created_at": session.created_at,
+        "status": session.status,
+        "selected_agents": session.selected_agents,
+        "coordinator_reasoning": session.coordinator_reasoning,
+        "synthesis": session.synthesis or "",
+        "workspace": session.workspace,
+        "conflicts": [
+            {
+                "agent_a": c.agent_a,
+                "agent_b": c.agent_b,
+                "severity": c.severity,
+                "topic": c.topic,
+                "summary": c.summary
+            }
+            for c in session.conflicts
+        ],
+        "agent_results": {
+            name: {
+                "agent_name": r.agent_name,
+                "agent_role": r.agent_role,
+                "output": r.output,
+                "duration_sec": r.duration_sec,
+                "status": r.status,
+                "tool_calls": r.tool_calls
+            }
+            for name, r in session.agent_results.items()
+        }
+    }
+
+@app.get("/agi/swarm/agents")
+async def get_coordinated_swarm_agents():
+    """Retrieve the catalog of available swarm agents"""
+    from core.coordinated_swarm import Coordinator
+    return {"success": True, "agents": Coordinator.AGENT_CATALOG}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # EXTREME AGI ENDPOINTS
@@ -2495,6 +2716,50 @@ async def tunnel_stop():
     except Exception as e:
         return {"success": False, "error": str(e)}
 
+
+@app.get("/tunnel/qr")
+async def tunnel_qr():
+    """Get QR code data (ASCII) or raw webhook URL for phone pairing."""
+    try:
+        from core.tunnel_agent import get_tunnel_agent
+        agent = get_tunnel_agent()
+        state = agent.get_status()
+        url = state.get("public_url", "")
+        if not url:
+            from integrations.device_bridge import PUBLIC_TUNNEL_URL
+            url = PUBLIC_TUNNEL_URL
+        if not url:
+            url = "http://localhost:8000"
+        
+        webhook_url = f"{url}/device/webhook"
+        try:
+            import qrcode
+            qr = qrcode.QRCode(version=1, box_size=1, border=1)
+            qr.add_data(webhook_url)
+            qr.make(fit=True)
+            import io
+            f = io.StringIO()
+            qr.print_ascii(out=f)
+            f.seek(0)
+            qr_ascii = f.read()
+            return {"qr_data": qr_ascii}
+        except ImportError:
+            return {"qr_data": webhook_url}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/learning/zero-touch")
+async def learning_zero_touch():
+    """Get zero touch config containing Tasker profile XML and MQTT parameters."""
+    try:
+        from integrations.device_bridge import get_device_bridge
+        bridge = get_device_bridge()
+        return bridge.get_zero_touch_config()
+    except Exception as e:
+        return {"error": str(e)}
+
+
 # ── Settings & Ecosystem Management ────────────────────────────────────────
 
 @app.get("/settings")
@@ -3243,6 +3508,108 @@ async def finance_alpha_scan():
     }
 
 
+# ========== FINANCE TRACKER (file-backed, replaces stubs) ==========
+
+_FINANCE_DIR = Path(__file__).parent.parent / "data" / "finance"
+_FINANCE_DIR.mkdir(parents=True, exist_ok=True)
+_FINANCE_TXN_FILE = _FINANCE_DIR / "transactions.json"
+_FINANCE_ALERT_FILE = _FINANCE_DIR / "alerts.json"
+
+
+def _load_finance_transactions() -> list:
+    try:
+        if _FINANCE_TXN_FILE.exists():
+            return json.loads(_FINANCE_TXN_FILE.read_text())
+    except Exception:
+        pass
+    return []
+
+
+def _save_finance_transactions(txns: list):
+    try:
+        _FINANCE_TXN_FILE.write_text(json.dumps(txns, indent=2, default=str))
+    except Exception:
+        pass
+
+
+def _load_finance_alerts() -> list:
+    try:
+        if _FINANCE_ALERT_FILE.exists():
+            return json.loads(_FINANCE_ALERT_FILE.read_text())
+    except Exception:
+        pass
+    return []
+
+
+@app.get("/finance/stats")
+async def finance_stats():
+    txns = _load_finance_transactions()
+    today = datetime.now().strftime("%Y-%m-%d")
+    daily = [t for t in txns if t.get("date", "").startswith(today)]
+    income = sum(t["amount"] for t in daily if t.get("type") == "income")
+    expense = sum(t["amount"] for t in daily if t.get("type") == "expense")
+    total = sum(t["amount"] if t.get("type") == "income" else -t["amount"] for t in txns)
+    return {
+        "total_value": round(total, 2),
+        "daily_pnl": round(income - expense, 2),
+        "income_today": round(income, 2),
+        "expense_today": round(expense, 2),
+        "transaction_count": len(txns),
+        "active_positions": 0,
+    }
+
+@app.post("/finance/transactions")
+async def finance_add_transaction(req: dict):
+    """Add a manual transaction: {type: 'income'|'expense', amount: float, category: str, description: str}"""
+    txns = _load_finance_transactions()
+    txn = {
+        "id": f"txn-{len(txns)+1:04d}",
+        "date": datetime.now().isoformat(),
+        "type": req.get("type", "expense"),
+        "amount": abs(float(req.get("amount", 0))),
+        "category": req.get("category", "uncategorized"),
+        "description": req.get("description", ""),
+    }
+    txns.append(txn)
+    _save_finance_transactions(txns)
+    return {"success": True, "transaction": txn}
+
+@app.get("/finance/transactions")
+async def finance_transactions(limit: int = 50):
+    txns = _load_finance_transactions()
+    return {"transactions": txns[-limit:][::-1], "count": len(txns)}
+
+@app.get("/finance/alerts")
+async def finance_alerts(limit: int = 20):
+    alerts = _load_finance_alerts()
+    return {"alerts": alerts[:limit], "unread_count": len(alerts)}
+
+@app.get("/finance/price")
+async def finance_price(symbol: str):
+    # Simple fallback without API key — returns placeholder
+    return {"symbol": symbol.upper(), "price": None, "change_24h": None, "source": "manual"}
+
+@app.get("/finance/strategies")
+async def finance_strategies():
+    return {"strategies": [], "active": 0}
+
+@app.get("/finance/autonomous/strategies")
+async def finance_auto_strategies():
+    return {"strategies": [], "evolving": False}
+
+@app.get("/finance/autonomous/status")
+async def finance_auto_status():
+    return {"active": False, "last_run": None, "mode": "manual"}
+
+@app.get("/finance/autonomous/evolution-log")
+async def finance_auto_evolution_log():
+    return {"logs": [], "generation": 0}
+
+@app.get("/finance/autonomous/auto-trades")
+async def finance_auto_trades():
+    return {"trades": [], "pending": 0}
+
+
 # ========== AMBIENT VOICE LAYER ENDPOINTS ==========
 
 @app.get("/voice/status")
@@ -3606,6 +3973,102 @@ async def learning_reviews():
     agent = LearningAgent()
     due = agent.get_due_reviews()
     return {"due_count": len(due), "reviews": due}
+
+
+# ========== LEARNING TRACKER (context-aware, replaces stubs) ==========
+
+_LEARNING_DIR = Path(__file__).parent.parent / "data" / "learning"
+_LEARNING_DIR.mkdir(parents=True, exist_ok=True)
+_LEARNING_LOG = _LEARNING_DIR / "sessions.json"
+
+
+def _load_learning_sessions() -> list:
+    try:
+        if _LEARNING_LOG.exists():
+            return json.loads(_LEARNING_LOG.read_text())
+    except Exception:
+        pass
+    return []
+
+
+def _save_learning_sessions(sessions: list):
+    try:
+        _LEARNING_LOG.write_text(json.dumps(sessions, indent=2, default=str))
+    except Exception:
+        pass
+
+
+@app.get("/learning/profile")
+async def learning_profile():
+    ctx = get_live_context()
+    sessions = _load_learning_sessions()
+    total_hours = sum(s.get("duration_hours", 0) for s in sessions) + getattr(ctx, "learning_streak", 0)
+    # Count unique days with sessions
+    days = set()
+    for s in sessions:
+        d = s.get("date", "")[:10]
+        if d:
+            days.add(d)
+    today = datetime.now().strftime("%Y-%m-%d")
+    if getattr(ctx, "learning_streak", 0) > 0:
+        days.add(today)
+    return {
+        "subjects": list(set(s.get("subject", "general") for s in sessions)),
+        "hours_total": round(total_hours, 2),
+        "streak_days": len(days),
+        "today_hours": round(getattr(ctx, "learning_streak", 0), 2),
+    }
+
+@app.post("/learning/log")
+async def learning_log_session(req: dict):
+    """Log a learning session: {subject: str, duration_hours: float, notes: str}"""
+    sessions = _load_learning_sessions()
+    sessions.append({
+        "date": datetime.now().isoformat(),
+        "subject": req.get("subject", "general"),
+        "duration_hours": float(req.get("duration_hours", 0)),
+        "notes": req.get("notes", ""),
+    })
+    _save_learning_sessions(sessions)
+    return {"success": True}
+
+@app.get("/learning/mood")
+async def learning_mood():
+    ctx = get_live_context()
+    sessions = _load_learning_sessions()
+    last = sessions[-1].get("date") if sessions else None
+    return {
+        "mood": "focused" if getattr(ctx, "activity", "") in ("coding", "browsing", "writing") else "neutral",
+        "focus_score": 0.7 if getattr(ctx, "activity", "") in ("coding", "writing") else 0.4,
+        "last_study": last,
+        "current_app": getattr(ctx, "active_app", ""),
+    }
+
+@app.get("/learning/merchants")
+async def learning_merchants():
+    return {"merchants": [], "top_merchant": None}
+
+@app.get("/learning/recurring")
+async def learning_recurring():
+    sessions = _load_learning_sessions()
+    from collections import Counter
+    subjects = Counter(s.get("subject", "general") for s in sessions)
+    patterns = [{"subject": subj, "count": count} for subj, count in subjects.most_common(5)]
+    return {"patterns": patterns, "monthly_estimate": round(len(sessions) * 0.5, 1)}
+
+@app.get("/learning/anomalies")
+async def learning_anomalies():
+    return {"anomalies": [], "flagged_count": 0}
+
+@app.get("/learning/suggestions")
+async def learning_suggestions():
+    ctx = get_live_context()
+    suggestions = []
+    if getattr(ctx, "activity", "") == "coding":
+        suggestions.append("You're coding — consider logging this as a learning session.")
+    if getattr(ctx, "activity", "") == "browsing":
+        suggestions.append("Research detected — document insights to build knowledge base.")
+    return {"suggestions": suggestions, "based_on": "live_context"}
 
 
 # ========== EMOTIONAL AGENT ENDPOINTS ==========
@@ -4021,10 +4484,84 @@ async def get_insights():
 async def get_context_summary_endpoint():
     """Get a human-readable summary of what LOVE knows right now."""
     ctx = get_live_context()
+    # Fetch integration statuses for visibility
+    integrations = {}
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        integrations["google"] = {"connected": gs.is_connected(), "name": "Google Workspace"}
+    except Exception:
+        integrations["google"] = {"connected": False, "name": "Google Workspace"}
+    try:
+        from integrations.microsoft_bridge import MicrosoftBridge
+        mb = MicrosoftBridge.get_instance()
+        integrations["microsoft"] = {"connected": mb.is_connected(), "name": "Microsoft 365"}
+    except Exception:
+        integrations["microsoft"] = {"connected": False, "name": "Microsoft 365"}
+    try:
+        from integrations.phone_bridge import PhoneBridge
+        pb = PhoneBridge.get_instance()
+        phone_state = pb.get_state()
+        integrations["phone"] = {
+            "connected": phone_state.get("connected", False),
+            "name": "Phone",
+            "battery": phone_state.get("battery"),
+            "location": phone_state.get("location_label"),
+        }
+    except Exception:
+        integrations["phone"] = {"connected": False, "name": "Phone"}
+
+    # Finance snapshot
+    finance_snapshot = {"total_value": 0.0, "daily_pnl": 0.0, "transaction_count": 0}
+    try:
+        txns = _load_finance_transactions()
+        today = datetime.now().strftime("%Y-%m-%d")
+        daily = [t for t in txns if t.get("date", "").startswith(today)]
+        income = sum(t["amount"] for t in daily if t.get("type") == "income")
+        expense = sum(t["amount"] for t in daily if t.get("type") == "expense")
+        total = sum(t["amount"] if t.get("type") == "income" else -t["amount"] for t in txns)
+        finance_snapshot = {
+            "total_value": round(total, 2),
+            "daily_pnl": round(income - expense, 2),
+            "income_today": round(income, 2),
+            "expense_today": round(expense, 2),
+            "transaction_count": len(txns),
+        }
+    except Exception:
+        pass
+
+    # Learning snapshot
+    learning_snapshot = {"hours_total": 0.0, "streak_days": 0, "today_hours": 0.0}
+    try:
+        sessions = _load_learning_sessions()
+        total_hours = sum(s.get("duration_hours", 0) for s in sessions) + getattr(ctx, "learning_streak", 0)
+        days = set(s.get("date", "")[:10] for s in sessions if s.get("date"))
+        today = datetime.now().strftime("%Y-%m-%d")
+        if getattr(ctx, "learning_streak", 0) > 0:
+            days.add(today)
+        learning_snapshot = {
+            "hours_total": round(total_hours, 2),
+            "streak_days": len(days),
+            "today_hours": round(getattr(ctx, "learning_streak", 0), 2),
+            "subjects": list(set(s.get("subject", "general") for s in sessions)),
+        }
+    except Exception:
+        pass
+
+    # System metrics
+    system_metrics = {"cpu": ctx.system_cpu, "ram": ctx.system_ram}
+    try:
+        import psutil
+        system_metrics["disk_percent"] = round(psutil.disk_usage('/').percent, 1)
+        system_metrics["uptime_hours"] = round((datetime.now().timestamp() - psutil.boot_time()) / 3600, 1)
+    except Exception:
+        pass
+
     return {
         "summary": ctx.context_summary,
         "local_time": ctx.local_time,
         "time_of_day": ctx.time_of_day,
+        "day_type": ctx.day_type,
         "activity": ctx.activity,
         "active_app": ctx.active_app,
         "active_window": ctx.active_window,
@@ -4046,7 +4583,19 @@ async def get_context_summary_endpoint():
         "phone_connected": ctx.phone_connected,
         "tasks_overdue": ctx.tasks_overdue,
         "tasks_due_today": ctx.tasks_due_today,
-        "hours_worked": ctx.hours_worked_today,
+        "hours_worked": round(ctx.hours_worked_today, 2),
+        "work_hours_today": round(ctx.work_hours_today, 2),
+        "learning_today": round(getattr(ctx, "learning_streak", 0), 2),
+        "sleep_hours": ctx.sleep_hours_last_night,
+        "hydration_pct": ctx.hydration_pct,
+        "meals_today": ctx.meals_today,
+        "stress_level": ctx.stress_level,
+        "energy_level": ctx.energy_level,
+        "focus_mode_active": ctx.focus_mode_active,
+        "finance": finance_snapshot,
+        "learning": learning_snapshot,
+        "integrations": integrations,
+        "system": system_metrics,
     }
 
 
@@ -4096,17 +4645,22 @@ async def day_summary():
             "suggestion": overview.get("suggestion", ""),
         }
     except Exception:
-        sections["tasks"] = {"active": ctx.tasks_due_today, "overdue": ctx.tasks_overdue}
+        sections["tasks"] = {
+            "active": getattr(ctx, "tasks_due_today", 0),
+            "overdue": getattr(ctx, "tasks_overdue", 0),
+        }
 
     # Work
+    hours_today = getattr(ctx, "work_hours_today", getattr(ctx, "hours_worked_today", 0.0))
+    limit = getattr(ctx, "work_limit_hours", 8.0)
     sections["work"] = {
-        "hours_today": ctx.hours_worked_today,
-        "limit": ctx.work_limit_hours,
-        "remaining": max(0, ctx.work_limit_hours - ctx.hours_worked_today),
-        "current_app": ctx.active_app,
-        "current_window": ctx.active_window[:100] if ctx.active_window else "",
-        "activity": ctx.activity,
-        "project": ctx.active_project or "",
+        "hours_today": hours_today,
+        "limit": limit,
+        "remaining": max(0, limit - hours_today),
+        "current_app": getattr(ctx, "active_app", ""),
+        "current_window": (getattr(ctx, "active_window", "") or "")[:100],
+        "activity": getattr(ctx, "activity", ""),
+        "project": getattr(ctx, "active_project", "") or "",
     }
 
     # Wellness
@@ -4128,11 +4682,11 @@ async def day_summary():
 
     # Phone
     sections["phone"] = {
-        "connected": ctx.phone_connected,
-        "battery": ctx.phone_battery,
-        "location": ctx.phone_location,
-        "missed_calls": ctx.missed_calls,
-        "unread_messages": ctx.unread_messages,
+        "connected": getattr(ctx, "phone_connected", False),
+        "battery": getattr(ctx, "phone_battery", None),
+        "location": getattr(ctx, "phone_location", getattr(ctx, "location", "")),
+        "missed_calls": getattr(ctx, "missed_calls", 0),
+        "unread_messages": getattr(ctx, "unread_messages", 0),
     }
 
     # Alerts
@@ -4262,6 +4816,47 @@ async def google_calendar_insights():
         return {"connected": True, **insights}
     except Exception as e:
         return {"connected": False, "error": str(e)}
+
+
+@app.get("/integrations/google/tasks")
+async def google_tasks():
+    """Get pending Google Tasks with overdue/due-today summary."""
+    try:
+        from integrations.google_services import GoogleServices
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"connected": False, "tasks": []}
+        summary = await asyncio.to_thread(gs.get_tasks_summary)
+        return {"connected": True, **summary}
+    except Exception as e:
+        return {"connected": False, "error": str(e)}
+
+
+@app.post("/integrations/google/calendar/events")
+async def google_create_event(data: dict):
+    """Create a new Google Calendar event.
+    Body: {summary, start_iso, end_iso, description?, location?}
+    """
+    try:
+        from integrations.google_services import GoogleServices
+        from datetime import datetime
+        gs = GoogleServices.get_instance()
+        if not gs.is_connected():
+            return {"success": False, "error": "Google not connected"}
+        start_dt = datetime.fromisoformat(data["start_iso"].replace("Z", "+00:00"))
+        end_dt = datetime.fromisoformat(data["end_iso"].replace("Z", "+00:00"))
+        result = await asyncio.to_thread(
+            gs.create_calendar_event,
+            summary=data["summary"],
+            start_dt=start_dt,
+            end_dt=end_dt,
+            description=data.get("description", ""),
+            location=data.get("location", ""),
+            attendees=data.get("attendees"),
+        )
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # ========== PHONE BRIDGE ENDPOINTS ==========
@@ -6188,7 +6783,9 @@ async def record_learning_experience(data: dict):
 @app.get("/agi/status")
 async def get_agi_status():
     """Get status of all AGI-level systems."""
-    return {
+    from core.agi_spine import get_agi_system_flags
+    spine_flags = get_agi_system_flags()
+    core_flags = {
         "autonomous_agent": AUTONOMOUS_AGENT_AVAILABLE,
         "psychological_model": PSYCHOLOGICAL_MODEL_AVAILABLE,
         "predictive_intelligence": PREDICTIVE_INTELLIGENCE_AVAILABLE,
@@ -6199,19 +6796,31 @@ async def get_agi_status():
         "meta_cognition": META_COGNITION_AVAILABLE,
         "cross_domain_reasoning": CROSS_DOMAIN_REASONING_AVAILABLE,
         "continuous_learning": CONTINUOUS_LEARNING_AVAILABLE,
-        "total_systems": 10,
-        "active_systems": sum([
-            AUTONOMOUS_AGENT_AVAILABLE,
-            PSYCHOLOGICAL_MODEL_AVAILABLE,
-            PREDICTIVE_INTELLIGENCE_AVAILABLE,
-            SELF_IMPROVEMENT_AVAILABLE,
-            STRATEGIC_PLANNING_AVAILABLE,
-            AUTONOMOUS_ACTIONS_AVAILABLE,
-            WORLD_MODEL_AVAILABLE,
-            META_COGNITION_AVAILABLE,
-            CROSS_DOMAIN_REASONING_AVAILABLE,
-            CONTINUOUS_LEARNING_AVAILABLE
-        ])
+        "consciousness": CONSCIOUSNESS_AVAILABLE,
+        "temporal_memory": TEMPORAL_MEMORY_AVAILABLE,
+        "reasoning_chain": REASONING_CHAIN_AVAILABLE,
+        "evolution_integration": EVOLUTION_INTEGRATION_AVAILABLE,
+        "meta_evolution": META_EVOLUTION_AVAILABLE,
+        "swarm_evolution": SWARM_EVOLUTION_AVAILABLE,
+        "self_coder": SELF_CODER_AVAILABLE,
+        "cross_instance_learning": CROSS_INSTANCE_AVAILABLE,
+        "capability_gap_detector": CAPABILITY_GAP_DETECTOR_AVAILABLE,
+        "autonomy_supervisor": AUTONOMY_SUPERVISOR_AVAILABLE,
+    }
+    merged = {**core_flags, **spine_flags}
+    total = len(merged)
+    active = sum(1 for v in merged.values() if v)
+    evolution_status = {}
+    if EVOLUTION_INTEGRATION_AVAILABLE:
+        try:
+            evolution_status = get_evolution_integration().get_integration_status()
+        except Exception:
+            pass
+    return {
+        **merged,
+        "total_systems": total,
+        "active_systems": active,
+        "evolution_integration_status": evolution_status,
     }
 
 
@@ -7074,5 +7683,77 @@ async def lora_peft_status():
     }
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  SERVE REACT UI (built to ui/dist) — mount AFTER all API routes so
+#  regular endpoints take precedence, and the React SPA handles unknown paths.
+# ═══════════════════════════════════════════════════════════════════════════════
+UI_DIST_DIR = _os.path.join(BASE_DIR, "ui", "dist")
+if _os.path.isdir(UI_DIST_DIR) and _os.path.isfile(_os.path.join(UI_DIST_DIR, "index.html")):
+    app.mount("/", StaticFiles(directory=UI_DIST_DIR, html=True), name="ui")
+    print(f"[API] React UI mounted from {UI_DIST_DIR}")
+else:
+    print(f"[API] React UI not found at {UI_DIST_DIR} — run `npm run build` in ui/")
+
 if __name__ == "__main__":
     uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
+
+# ========== ORCHESTRATION MASTER ENDPOINTS ==========
+
+@app.get("/orchestrator/master/status")
+async def orchestrator_master_status():
+    """Get full status from the Orchestration Master."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    return om.get_status()
+
+@app.get("/orchestrator/master/modules")
+async def orchestrator_master_modules():
+    """Get module health from the Orchestration Master."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    return om.get_all_module_health()
+
+@app.get("/orchestrator/master/narrative")
+async def orchestrator_master_narrative(limit: int = 50, since_hours: float = None):
+    """Get LOVE's life narrative."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    return {"narrative": om.get_narrative(limit=limit, since_hours=since_hours)}
+
+@app.get("/orchestrator/master/decisions")
+async def orchestrator_master_decisions(limit: int = 20):
+    """Get recent coordination decisions."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    return {"decisions": om.get_recent_decisions(limit=limit)}
+
+@app.get("/orchestrator/master/comms")
+async def orchestrator_master_comms(limit: int = 30):
+    """Get recent user communications."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    return {"comms": om.get_user_comms(limit=limit)}
+
+@app.post("/orchestrator/master/command")
+async def orchestrator_master_command(req: dict):
+    """Send a command to the Orchestration Master."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    message = req.get("message", "")
+    if not message:
+        return {"error": "message required"}
+    response = om.receive_from_user(message)
+    return {"response": response, "timestamp": datetime.now().isoformat()}
+
+@app.post("/orchestrator/master/speak")
+async def orchestrator_master_speak(req: dict):
+    """Make LOVE speak to the user via the orchestrator."""
+    from core.master_orchestrator import get_orchestration_master
+    om = get_orchestration_master()
+    message = req.get("message", "")
+    category = req.get("category", "THOUGHT")
+    importance = req.get("importance", "normal")
+    if not message:
+        return {"error": "message required"}
+    om.speak_to_user(message, category=category, importance=importance)
+    return {"status": "sent", "message": message}
