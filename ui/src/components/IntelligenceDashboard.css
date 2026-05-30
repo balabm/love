@@ -243,3 +243,33 @@
     padding: 10px;
   }
 }
+
+
+.intel-subsection {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #2a2a40;
+}
+
+.intel-subtitle {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.intel-micro-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.intel-micro-stats span {
+  font-size: 0.75rem;
+  background: #252540;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #aaa;
+}

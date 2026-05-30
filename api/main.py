@@ -6404,7 +6404,42 @@ def get_self_evolution_status():
     """Get LOVE's self-evolution status and active experiments."""
     try:
         from core.self_evolution import get_evolution_status
-        return get_evolution_status()
+        result = get_evolution_status()
+        
+        # Augment with evolution integration data
+        try:
+            from core.evolution_integration import get_evolution_integration
+            evo = get_evolution_integration()
+            result["integration"] = evo.get_integration_status()
+        except Exception:
+            pass
+        
+        # Augment with capability gap data
+        try:
+            from core.capability_gap_detector import get_capability_gap_detector
+            detector = get_capability_gap_detector()
+            gaps = detector.detect_all_gaps()
+            result["capability_gaps"] = {
+                "total": len(gaps),
+                "high_impact": len([g for g in gaps if g.impact > 0.6]),
+                "domains": list(set(g.domain for g in gaps)),
+            }
+        except Exception:
+            pass
+        
+        # Augment with autonomous CI/CD data
+        try:
+            from core.autonomous_cicd import get_autonomous_cicd
+            cicd = get_autonomous_cicd()
+            deps = list(cicd._deployments.values())[-5:]
+            result["deployments"] = [
+                {"id": d.id, "version": d.version, "status": d.status, "stages": {k: v.status for k, v in d.stages.items()}}
+                for d in deps
+            ]
+        except Exception:
+            pass
+        
+        return result
     except Exception as e:
         return {"error": str(e)}
 

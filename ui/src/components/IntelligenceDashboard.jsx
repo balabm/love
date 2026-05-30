@@ -174,6 +174,54 @@ export default function IntelligenceDashboard() {
           ) : (
             <p className="intel-empty">No active experiments. LOVE is stable.</p>
           )}
+
+          {/* Evolution Integration */}
+          {evolution.integration && (
+            <div className="intel-subsection">
+              <div className="intel-subtitle">Integration</div>
+              <div className="intel-stat">
+                {evolution.integration.running ? "Running" : "Stopped"}
+                {evolution.integration.last_full_cycle && ` — ${new Date(evolution.integration.last_full_cycle).toLocaleTimeString()}`}
+              </div>
+              {evolution.integration.statistics && (
+                <div className="intel-micro-stats">
+                  <span>{evolution.integration.statistics.total_code_modifications || 0} code mods</span>
+                  <span>{evolution.integration.statistics.total_mutations_applied || 0} mutations</span>
+                  <span>{evolution.integration.statistics.successful_cross_adoptions || 0} adoptions</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Capability Gaps */}
+          {evolution.capability_gaps && (
+            <div className="intel-subsection">
+              <div className="intel-subtitle">Capability Gaps</div>
+              <div className="intel-stat">
+                {evolution.capability_gaps.high_impact || 0} high-impact / {evolution.capability_gaps.total || 0} total
+              </div>
+              {evolution.capability_gaps.domains?.length > 0 && (
+                <div className="intel-micro-stats">
+                  {evolution.capability_gaps.domains.map((d, i) => (
+                    <span key={i}>{d}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Deployments */}
+          {evolution.deployments && evolution.deployments.length > 0 && (
+            <div className="intel-subsection">
+              <div className="intel-subtitle">Deployments</div>
+              {evolution.deployments.slice(-3).map((dep, i) => (
+                <div key={i} className="intel-item">
+                  <span className="intel-bullet">◈</span>
+                  <span className="intel-item-text">{dep.version} — {dep.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
 
         {/* World Model */}

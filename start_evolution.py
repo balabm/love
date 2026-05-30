@@ -53,9 +53,9 @@ def start_evolution_systems():
     try:
         base_engine = EvolutionEngine()
         base_engine.start_evolution_loop()
-        print("      ✓ Base evolution engine started")
+        print("      [OK] Base evolution engine started")
     except Exception as e:
-        print(f"      ✗ Base evolution engine error: {e}")
+        print(f"      [FAIL] Base evolution engine error: {e}")
     
     time.sleep(2)
     
@@ -65,9 +65,9 @@ def start_evolution_systems():
         meta_engine = get_meta_evolution()
         meta_engine.initialize_strategies()
         meta_engine.start()
-        print("      ✓ Meta-evolution started")
+        print("      [OK] Meta-evolution started")
     except Exception as e:
-        print(f"      ✗ Meta-evolution error: {e}")
+        print(f"      [FAIL] Meta-evolution error: {e}")
     
     time.sleep(2)
     
@@ -76,9 +76,9 @@ def start_evolution_systems():
     try:
         swarm_engine = get_swarm_evolution()
         swarm_engine.start()
-        print("      ✓ Swarm evolution started")
+        print("      [OK] Swarm evolution started")
     except Exception as e:
-        print(f"      ✗ Swarm evolution error: {e}")
+        print(f"      [FAIL] Swarm evolution error: {e}")
     
     time.sleep(2)
     
@@ -87,9 +87,9 @@ def start_evolution_systems():
     try:
         self_coder = get_self_coder()
         self_coder.start()
-        print("      ✓ Self-coder started")
+        print("      [OK] Self-coder started")
     except Exception as e:
-        print(f"      ✗ Self-coder error: {e}")
+        print(f"      [FAIL] Self-coder error: {e}")
     
     time.sleep(2)
     
@@ -98,9 +98,9 @@ def start_evolution_systems():
     try:
         cross_instance = get_cross_instance_learning()
         cross_instance.start()
-        print("      ✓ Cross-instance learning started")
+        print("      [OK] Cross-instance learning started")
     except Exception as e:
-        print(f"      ✗ Cross-instance learning error: {e}")
+        print(f"      [FAIL] Cross-instance learning error: {e}")
     
     time.sleep(2)
     
@@ -109,9 +109,9 @@ def start_evolution_systems():
     try:
         gap_detector = get_capability_gap_detector()
         gap_detector.start()
-        print("      ✓ Capability gap detector started")
+        print("      [OK] Capability gap detector started")
     except Exception as e:
-        print(f"      ✗ Capability gap detector error: {e}")
+        print(f"      [FAIL] Capability gap detector error: {e}")
     
     time.sleep(2)
     
@@ -120,9 +120,9 @@ def start_evolution_systems():
     try:
         cicd = get_autonomous_cicd()
         cicd.start()
-        print("      ✓ Autonomous CI/CD started")
+        print("      [OK] Autonomous CI/CD started")
     except Exception as e:
-        print(f"      ✗ Autonomous CI/CD error: {e}")
+        print(f"      [FAIL] Autonomous CI/CD error: {e}")
     
     time.sleep(2)
     
@@ -131,9 +131,9 @@ def start_evolution_systems():
     try:
         integration = get_evolution_integration()
         integration.start_all()
-        print("      ✓ Evolution integration started")
+        print("      [OK] Evolution integration started")
     except Exception as e:
-        print(f"      ✗ Evolution integration error: {e}")
+        print(f"      [FAIL] Evolution integration error: {e}")
     
     print_header("Evolution Systems Started")
     print("All evolution systems are now running.")
@@ -163,9 +163,9 @@ def stop_evolution_systems():
         from core.evolution_integration import get_evolution_integration
         integration = get_evolution_integration()
         integration.stop_all()
-        print("✓ All evolution systems stopped")
+        print("[OK] All evolution systems stopped")
     except Exception as e:
-        print(f"✗ Error stopping systems: {e}")
+        print(f"[FAIL] Error stopping systems: {e}")
 
 
 if __name__ == "__main__":

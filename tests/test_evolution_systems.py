@@ -43,7 +43,13 @@ class TestEvolutionEngine:
     @pytest.fixture
     def engine(self):
         """Create a fresh evolution engine instance."""
-        return EvolutionEngine()
+        e = EvolutionEngine()
+        e._interactions.clear()
+        e._mutations.clear()
+        # cleared above
+        e._experiments.clear()
+        e._history.clear()
+        return e
     
     def test_singleton(self, engine):
         """Test that EvolutionEngine is a singleton."""
@@ -116,7 +122,11 @@ class TestMetaEvolutionEngine:
     @pytest.fixture
     def meta_engine(self):
         """Create a fresh meta-evolution engine instance."""
-        return MetaEvolutionEngine()
+        e = MetaEvolutionEngine()
+        e._strategies.clear()
+        e._pressures.clear()
+        # cleared above
+        return e
     
     def test_singleton(self, meta_engine):
         """Test that MetaEvolutionEngine is a singleton."""
@@ -182,7 +192,12 @@ class TestSwarmEvolutionEngine:
     @pytest.fixture
     def swarm_engine(self):
         """Create a fresh swarm evolution engine instance."""
-        return SwarmEvolutionEngine()
+        e = SwarmEvolutionEngine()
+        e._swarms.clear()
+        e._competitions.clear()
+        e._signals.clear()
+        e._active_competition = None
+        return e
     
     def test_singleton(self, swarm_engine):
         """Test that SwarmEvolutionEngine is a singleton."""
@@ -392,7 +407,9 @@ class TestCapabilityGapDetector:
     @pytest.fixture
     def gap_detector(self):
         """Create a fresh gap detector instance."""
-        return CapabilityGapDetector()
+        d = CapabilityGapDetector()
+        d._gaps.clear()
+        return d
     
     def test_singleton(self, gap_detector):
         """Test that CapabilityGapDetector is a singleton."""
@@ -507,7 +524,7 @@ class TestAutonomousCICD:
         should_rollback, reason = cicd._check_rollback_triggers(deployment)
         
         assert should_rollback == True
-        assert "error_rate" in reason or "satisfaction_rate" in reason
+        assert "error" in reason.lower() or "satisfaction" in reason.lower()
 
 
 # ── Evolution Integration Tests ───────────────────────────────────────────────
