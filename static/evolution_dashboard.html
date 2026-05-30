@@ -325,6 +325,56 @@
                 flex-direction: column;
             }
         }
+
+        /* Capability Gaps */
+        .gaps-section {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .gaps-section h3 { color: #e94560; margin-bottom: 15px; }
+        .gaps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .gap-card {
+            background: rgba(15, 52, 96, 0.5);
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        .gap-card h4 { color: #eaeaea; margin-bottom: 8px; }
+        .gap-card .severity { color: #ef4444; font-weight: bold; }
+        .gap-card .domain { color: #888; font-size: 0.85em; }
+
+        /* Deployments */
+        .deployments-section {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .deployments-section h3 { color: #e94560; margin-bottom: 15px; }
+        .deploy-list { display: flex; flex-direction: column; gap: 10px; }
+        .deploy-item {
+            background: rgba(15, 52, 96, 0.5);
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .deploy-item .version { color: #eaeaea; font-weight: bold; }
+        .deploy-item .status {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .status-deployed { background: rgba(74, 222, 128, 0.2); color: #4ade80; border: 1px solid #4ade80; }
+        .status-rolled_back { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
+        .status-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
     </style>
 </head>
 <body>
@@ -385,6 +435,22 @@
             <h3>🐝 Swarm Intelligence</h3>
             <div class="swarm-grid" id="swarm-grid">
                 <div class="loading">Loading swarm data...</div>
+            </div>
+        </div>
+
+        <!-- Capability Gaps -->
+        <div class="gaps-section">
+            <h3>⚠️ Capability Gaps</h3>
+            <div id="gaps-grid" class="gaps-grid">
+                <div class="loading">Loading capability gaps...</div>
+            </div>
+        </div>
+
+        <!-- Deployments -->
+        <div class="deployments-section">
+            <h3>🚀 Deployments</h3>
+            <div id="deploy-list" class="deploy-list">
+                <div class="loading">Loading deployments...</div>
             </div>
         </div>
 
@@ -499,7 +565,8 @@
                     loadMetrics(),
                     loadExperiments(),
                     loadSwarms(),
-                    loadHistory()
+                    loadHistory(),
+                    loadIntelligence()
                 ]);
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -650,6 +717,54 @@
                 
             } catch (error) {
                 console.error('Error loading history:', error);
+            }
+        }
+
+        async function loadIntelligence() {
+            try {
+                const response = await fetch(`${API_BASE}/intelligence/self-evolution`);
+                const data = await response.json();
+                
+                // Capability gaps
+                const gapsContainer = document.getElementById('gaps-grid');
+                const gaps = data.capability_gaps;
+                if (gaps && gaps.total > 0) {
+                    gapsContainer.innerHTML = `
+                        <div class="gap-card">
+                            <h4>Total Gaps</h4>
+                            <div class="severity">${gaps.total}</div>
+                            <div class="domain">${gaps.high_impact || 0} high-impact</div>
+                        </div>
+                        ${(gaps.domains || []).map(d => `
+                        <div class="gap-card">
+                            <h4>${d}</h4>
+                            <div class="domain">Domain</div>
+                        </div>
+                        `).join('')}
+                    `;
+                } else {
+                    gapsContainer.innerHTML = '<div class="loading">No capability gaps detected</div>';
+                }
+                
+                // Deployments
+                const deployContainer = document.getElementById('deploy-list');
+                const deployments = data.deployments || [];
+                if (deployments.length > 0) {
+                    deployContainer.innerHTML = deployments.slice(-5).map(dep => {
+                        const statusClass = dep.status === 'deployed' ? 'status-deployed' :
+                                          dep.status === 'rolled_back' ? 'status-rolled_back' : 'status-pending';
+                        return `
+                            <div class="deploy-item">
+                                <span class="version">${dep.version}</span>
+                                <span class="status ${statusClass}">${dep.status}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    deployContainer.innerHTML = '<div class="loading">No deployments yet</div>';
+                }
+            } catch (error) {
+                console.error('Error loading intelligence:', error);
             }
         }
 
