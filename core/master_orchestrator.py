@@ -326,6 +326,19 @@ class OrchestrationMaster:
             else:
                 parts.append("All systems healthy.")
 
+            # Evolution activity summary
+            try:
+                from core.evolution_integration import get_evolution_integration
+                evo = get_evolution_integration()
+                stats = evo.get_integration_status().get("statistics", {})
+                if stats.get("total_code_modifications", 0) > 0 or stats.get("total_mutations_applied", 0) > 0:
+                    parts.append(
+                        f"Evolution: {stats.get('total_code_modifications', 0)} code mod(s), "
+                        f"{stats.get('total_mutations_applied', 0)} mutation(s)."
+                    )
+            except Exception:
+                pass
+
             message = " ".join(parts)
             if message:
                 self.speak_to_user(message, category="THOUGHT", importance="low")
