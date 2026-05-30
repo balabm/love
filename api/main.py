@@ -6492,6 +6492,8 @@ def get_self_evolution_status():
                 "wellness_nudger": {"available": True},
                 "notification_filter": {"available": True},
                 "deep_work_protector": {"available": True},
+                "energy_forecaster": {"available": True},
+                "smart_break_suggester": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

@@ -50,6 +50,8 @@ Plus Modern AI Subsystems:
 - Wellness Nudger (proactive wellness alerts)
 - Notification Filter (contextual relevance filtering)
 - Deep Work Protector (focus session guardian)
+- Energy Forecaster (predictive energy modeling)
+- Smart Break Suggester (optimal break timing)
 
 Usage:
     python start_evolution.py

@@ -547,5 +547,17 @@ def get_agi_system_flags():
         flags["deep_work_protector"] = True
     except Exception:
         pass
+    try:
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        flags["energy_forecaster"] = True
+    except Exception:
+        pass
+    try:
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        flags["smart_break_suggester"] = True
+    except Exception:
+        pass
 
     return flags

@@ -1,24 +1,38 @@
-feat(modern): Deep Work Protector — focus session guardian
+feat(modern): Energy Forecaster + Smart Break Suggester
 
-Deep Work Protector (core/deep_work_protector.py):
-- start_session(): Begins protected focus session with configurable duration
-- end_session(): Ends session, calculates quality score, learns optimal length
-- handle_interruption(): Routes urgent interruptions, suppresses non-urgent
-  during active focus sessions
-- get_focus_stats(): Tracks session quality, interruptions, optimal length
-- Learns optimal session length from successful high-quality sessions
-- 300 lines of production focus protection infrastructure
+Energy Forecaster (core/energy_forecaster.py):
+- forecast_energy(): Predicts energy levels for upcoming hours using
+  learned hourly patterns, time-of-day factors, and recent trends
+- report_actual_energy(): Updates model with real energy reports
+- get_energy_insights(): Identifies peak/crash hours, energy drains,
+  and boosts from activity history
+- get_recommendations(): Suggests optimal task timing based on forecast
+- 323 lines of production energy forecasting infrastructure
+
+Smart Break Suggester (core/smart_break_suggester.py):
+- suggest_break(): Detects break need from work duration, cognitive load,
+  energy level, and stress; suggests micro/movement/deep_rest/social breaks
+- get_optimal_schedule(): Builds task+break schedule with alternating focus
+- record_break_effectiveness(): Learns optimal break interval from feedback
+- Adapts break frequency based on effectiveness (extends if helping,
+  shortens if not)
+- 341 lines of production break suggestion infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/focus/start — Start focus session
-- POST /modern/focus/end — End focus session
-- GET /modern/focus/status — Check if focus session active
-- GET /modern/focus/stats — Focus session statistics
+- GET /modern/energy/forecast — Forecast energy levels
+- POST /modern/energy/report — Report actual energy
+- GET /modern/energy/insights — Energy pattern insights
+- POST /modern/energy/recommendations — Task timing recommendations
+- POST /modern/breaks/suggest — Suggest break
+- POST /modern/breaks/schedule — Optimal task+break schedule
+- POST /modern/breaks/record — Record break taken
+- POST /modern/breaks/effectiveness — Record break effectiveness
+- GET /modern/breaks/stats — Break statistics
 
 Integration:
-- AGI spine includes deep_work_protector flag
+- AGI spine includes energy_forecaster and smart_break_suggester flags
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Deep Work Protector
+- start_evolution.py lists both engines
 
 All 101 tests pass.
 

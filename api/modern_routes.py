@@ -2002,6 +2002,122 @@ async def focus_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Energy Forecaster ─────────────────────────────────────────────────────
+
+@router.get("/energy/forecast")
+async def energy_forecast(hours_ahead: int = 4):
+    """Forecast energy levels for upcoming hours."""
+    try:
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        return {"forecasts": ef.forecast_energy(hours_ahead)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/energy/report")
+async def report_energy(data: Dict[str, Any] = {}):
+    """Report actual energy level."""
+    try:
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        ef.report_actual_energy(data.get("level", 0.5), data.get("factors"), data.get("activity", ""))
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/energy/insights")
+async def energy_insights():
+    """Get energy pattern insights."""
+    try:
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        return ef.get_energy_insights()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/energy/recommendations")
+async def energy_recommendations(data: Dict[str, Any] = {}):
+    """Get task timing recommendations based on energy forecast."""
+    try:
+        from core.energy_forecaster import get_energy_forecaster
+        ef = get_energy_forecaster()
+        return {"recommendations": ef.get_recommendations(data.get("tasks", []))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Smart Break Suggester ─────────────────────────────────────────────────
+
+@router.post("/breaks/suggest")
+async def suggest_break(data: Dict[str, Any] = {}):
+    """Suggest a break based on current context."""
+    try:
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        return {"suggestion": sbs.suggest_break(data)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/breaks/schedule")
+async def optimal_schedule(data: Dict[str, Any] = {}):
+    """Get optimal task+break schedule."""
+    try:
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        return {"schedule": sbs.get_optimal_schedule(data.get("tasks", []))}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/breaks/record")
+async def record_break(data: Dict[str, Any] = {}):
+    """Record that a break was taken."""
+    try:
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        sbs.record_break_taken(
+            data.get("suggestion_id", ""),
+            data.get("break_type", ""),
+            data.get("planned_duration", 0),
+            data.get("actual_duration", 0.0),
+            data.get("activities", []),
+        )
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/breaks/effectiveness")
+async def break_effectiveness(data: Dict[str, Any] = {}):
+    """Record break effectiveness."""
+    try:
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        sbs.record_break_effectiveness(
+            data.get("break_id", ""),
+            data.get("effectiveness", 0.5),
+            data.get("post_break_energy", 0.5),
+        )
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/breaks/stats")
+async def break_stats():
+    """Get break statistics."""
+    try:
+        from core.smart_break_suggester import get_smart_break_suggester
+        sbs = get_smart_break_suggester()
+        return sbs.get_break_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

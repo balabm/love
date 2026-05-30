@@ -496,6 +496,8 @@ async def get_evolution_health():
             "wellness_nudger": {"available": True},
             "notification_filter": {"available": True},
             "deep_work_protector": {"available": True},
+            "energy_forecaster": {"available": True},
+            "smart_break_suggester": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
