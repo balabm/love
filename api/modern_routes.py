@@ -1094,6 +1094,52 @@ async def context_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── User Pattern Detector ──────────────────────────────────────────────────────
+
+@router.post("/patterns/detect")
+async def detect_patterns(activities: List[Dict[str, Any]] = []):
+    """Detect behavioral patterns from user activities."""
+    try:
+        from core.user_pattern_detector import get_user_pattern_detector
+        detector = get_user_pattern_detector()
+        return {"patterns": detector.detect_patterns(activities)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/patterns/insights")
+async def pattern_insights():
+    """Get daily insights based on detected patterns."""
+    try:
+        from core.user_pattern_detector import get_user_pattern_detector
+        detector = get_user_pattern_detector()
+        return {"insights": detector.get_daily_insights()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/patterns/predict")
+async def predict_activity():
+    """Predict the user's next activity."""
+    try:
+        from core.user_pattern_detector import get_user_pattern_detector
+        detector = get_user_pattern_detector()
+        return detector.predict_next_activity()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/patterns/stats")
+async def pattern_stats():
+    """Get pattern detector statistics."""
+    try:
+        from core.user_pattern_detector import get_user_pattern_detector
+        detector = get_user_pattern_detector()
+        return detector.get_pattern_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

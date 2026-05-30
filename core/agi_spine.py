@@ -450,4 +450,10 @@ def get_agi_system_flags():
         flags["context_window_manager"] = True
     except Exception:
         pass
+    try:
+        from core.user_pattern_detector import get_user_pattern_detector
+        upd = get_user_pattern_detector()
+        flags["user_pattern_detector"] = True
+    except Exception:
+        pass
     return flags
