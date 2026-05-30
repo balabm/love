@@ -1,21 +1,18 @@
-feat(modern): Knowledge Injector — proactive contextual knowledge delivery
+feat(integration): daily_briefing + heartbeat now monitor modern AI modules
 
-Knowledge Injector (core/knowledge_injector.py):
-- inject_knowledge(): Extracts topics from text, searches memory + graph,
-  scores relevance using Jaccard similarity + recency boost + source weight
-- record_injection_feedback(): Learns from user acceptance/rejection
-- get_injection_stats(): Tracks acceptance rate and injection effectiveness
-- 253 lines of production knowledge injection infrastructure
+daily_briefing.py (_gather_data):
+- Added modern_modules_active / modern_modules_total / modern_modules list
+  (queries AGI spine flags for all 23 modern modules)
+- Added emotion_trend and emotion_recent_avg from Emotion-Aware Response Generator
+- Added predictive_alerts count from Predictive Maintenance Engine
+- Added goal_drift_alerts count from Goal Drift Detector
 
-API Endpoints (api/modern_routes.py):
-- POST /modern/knowledge/inject — Propose knowledge to inject
-- POST /modern/knowledge/feedback — Record injection feedback
-- GET /modern/knowledge/stats — Knowledge injector statistics
-
-Integration:
-- AGI spine includes knowledge_injector flag
-- /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Knowledge Injector
+heartbeat.py (_scan_cycle + _scan_modern_modules):
+- New _scan_modern_modules() method monitors modern AI modules
+- Detects offline modern modules and publishes trigger events
+- Monitors emotional decline via Emotion-Aware Response Generator
+  trajectory (warns if declining below -0.4)
+- Surfaces high-severity predictive maintenance alerts as heartbeat triggers
 
 All 101 tests pass.
 

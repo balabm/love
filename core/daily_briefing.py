@@ -200,6 +200,56 @@ class DailyBriefingSystem:
         except Exception:
             pass
 
+        # Modern AI module status
+        try:
+            from core.agi_spine import get_agi_flags
+            flags = get_agi_flags()
+            modern_modules = [
+                "llm_manager", "graph_rag", "prompt_optimizer", "self_reflection",
+                "conversation_quality", "predictive_maintenance", "multi_agent_orchestrator",
+                "intent_predictor", "personality_adapter", "response_cache",
+                "context_window_manager", "user_pattern_detector", "goal_drift_detector",
+                "cross_modal_fusion", "emotional_resonance", "knowledge_graph_builder",
+                "adaptive_learning_rate", "conversation_continuity",
+                "memory_compressor", "semantic_search_optimizer",
+                "emotion_aware_response", "knowledge_injector",
+            ]
+            active_modern = [m for m in modern_modules if flags.get(m, False)]
+            data["modern_modules_active"] = len(active_modern)
+            data["modern_modules_total"] = len(modern_modules)
+            data["modern_modules"] = active_modern
+        except Exception:
+            data["modern_modules_active"] = 0
+            data["modern_modules_total"] = 23
+
+        # Emotional trajectory summary
+        try:
+            from core.emotion_aware_response import get_emotion_aware_response_generator
+            ear = get_emotion_aware_response_generator()
+            traj = ear.get_emotional_trajectory()
+            data["emotion_trend"] = traj.get("trend", "unknown")
+            data["emotion_recent_avg"] = traj.get("recent_avg", 0)
+        except Exception:
+            pass
+
+        # Predictive maintenance alerts
+        try:
+            from core.predictive_maintenance import get_predictive_maintenance_engine
+            pme = get_predictive_maintenance_engine()
+            predictions = pme.get_predictions()
+            data["predictive_alerts"] = len([p for p in predictions if p.get("severity") == "high"])
+        except Exception:
+            pass
+
+        # Goal drift detection
+        try:
+            from core.goal_drift_detector import get_goal_drift_detector
+            gdd = get_goal_drift_detector()
+            alerts = gdd.get_drift_alerts()
+            data["goal_drift_alerts"] = len(alerts)
+        except Exception:
+            pass
+
         return data
 
     # ── Brief generation ──────────────────────────────────────────────────────

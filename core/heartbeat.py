@@ -118,6 +118,9 @@ class ProactiveHeartbeat:
         # AGI-Level background processing
         self._scan_agi_systems()
 
+        # Modern AI module monitoring
+        triggers.extend(self._scan_modern_modules())
+
         # Weekly self-improvement proposal
         self._maybe_self_improve()
 
@@ -149,6 +152,67 @@ class ProactiveHeartbeat:
         if active_triggers:
             logger.info(f"{len(active_triggers)} trigger(s) detected")
     
+    def _scan_modern_modules(self) -> List[TriggerEvent]:
+        """Scan modern AI modules for issues and opportunities."""
+        triggers = []
+        try:
+            from core.agi_spine import get_agi_flags
+            flags = get_agi_flags()
+            modern_modules = [
+                ("memory_compressor", "Memory Compressor"),
+                ("semantic_search_optimizer", "Semantic Search"),
+                ("emotion_aware_response", "Emotion-Aware Response"),
+                ("knowledge_injector", "Knowledge Injector"),
+                ("adaptive_learning_rate", "Adaptive Learning"),
+                ("conversation_continuity", "Conversation Continuity"),
+            ]
+            offline = [name for key, name in modern_modules if not flags.get(key, False)]
+            if offline:
+                triggers.append(TriggerEvent(
+                    source="modern_modules",
+                    trigger_type="module_offline",
+                    severity="warning",
+                    message=f"Modern modules offline: {', '.join(offline)}",
+                    action_suggestion="Check module initialization",
+                ))
+        except Exception:
+            pass
+
+        # Emotional decline monitoring
+        try:
+            from core.emotion_aware_response import get_emotion_aware_response_generator
+            ear = get_emotion_aware_response_generator()
+            traj = ear.get_emotional_trajectory()
+            if traj.get("trend") == "declining" and traj.get("recent_avg", 0) < -0.4:
+                triggers.append(TriggerEvent(
+                    source="modern_modules",
+                    trigger_type="emotional_decline",
+                    severity="warning",
+                    message="Emotional trend is declining. Consider a break or conversation.",
+                    action_suggestion="Take a break or discuss feelings",
+                ))
+        except Exception:
+            pass
+
+        # Predictive maintenance alerts
+        try:
+            from core.predictive_maintenance import get_predictive_maintenance_engine
+            pme = get_predictive_maintenance_engine()
+            predictions = pme.get_predictions()
+            high_risk = [p for p in predictions if p.get("severity") == "high"]
+            for pred in high_risk[:2]:
+                triggers.append(TriggerEvent(
+                    source="modern_modules",
+                    trigger_type="predictive_alert",
+                    severity="warning",
+                    message=f"Predicted issue: {pred.get('issue', 'unknown')}",
+                    action_suggestion="Review system health",
+                ))
+        except Exception:
+            pass
+
+        return triggers
+
     def _scan_finance(self) -> List[TriggerEvent]:
         """Scan for finance triggers."""
         triggers = []
