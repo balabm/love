@@ -303,6 +303,8 @@ class Sentinel:
         decisions.extend(await self._check_finance_alerts())
         # 6. Focus protection
         decisions.extend(await self._check_focus_protection())
+        # 7. Guardrails proactive warnings
+        decisions.extend(await self._check_guardrails_warnings())
 
         # Execute decisions
         for decision in decisions:
@@ -530,6 +532,11 @@ class Sentinel:
             ("proactive_push", "core.proactive_push", "get_push_engine"),
             ("goal_engine", "core.autonomous_goal_engine", "start_goal_engine"),
             ("evolution_integration", "core.evolution_integration", "get_evolution_integration"),
+            ("neural_architecture_search", "core.neural_architecture_search", "get_neural_architecture_search"),
+            ("multimodal_evolution", "core.multimodal_evolution", "get_multimodal_evolution"),
+            ("task_evolution", "agents.task_evolution_integration", "get_task_evolution_integration"),
+            ("fitness_evolution", "agents.fitness_evolution_integration", "get_fitness_evolution_integration"),
+            ("observability", "core.observability", "get_observability_engine"),
         ]
         for name, module, func in subsystems:
             try:
@@ -553,6 +560,32 @@ class Sentinel:
                 self._subsystem_health[name] = {"status": "dead", "error": str(e)}
                 self._emit("health", f"Subsystem Dead: {name}",
                            f"Cannot restart {name}: {e}", "high")
+
+    async def _check_guardrails_warnings(self) -> List[Dict]:
+        """Check guardrails for proactive warnings about user wellbeing."""
+        decisions = []
+        try:
+            from core.guardrails import get_guardrails_engine
+            gr = get_guardrails_engine()
+            # Build context from current state
+            context = {
+                "work_hours_today": getattr(self._presence, 'work_hours_today', 0),
+                "work_limit": 8,  # Default
+                "sleep_last_night": getattr(self._presence, 'sleep_hours', 0),
+                "hours_since_social": getattr(self._presence, 'hours_since_social', 0),
+            }
+            warning = gr.warn_if_risky(context)
+            if warning:
+                decisions.append({
+                    "category": "wellbeing",
+                    "type": "warning",
+                    "title": warning["title"],
+                    "message": f"{warning['message']} {warning['suggestion']}",
+                    "priority": warning["severity"],
+                })
+        except Exception as e:
+            print(f"[Sentinel] Guardrails check error: {e}")
+        return decisions
 
     def _generate_hour_summary(self):
         """Build a quick summary of what happened this hour."""
