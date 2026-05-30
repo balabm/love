@@ -1238,6 +1238,209 @@ async def get_drift_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+# ── Cross-Modal Fusion ────────────────────────────────────────────────────────
+
+@router.post("/fusion/fuse")
+async def fusion_fuse(
+    text_insights: list = None,
+    visual_insights: list = None,
+    voice_insights: list = None,
+):
+    """Fuse insights from multiple modalities into unified understanding."""
+    try:
+        from core.cross_modal_fusion import get_cross_modal_fusion_engine
+        engine = get_cross_modal_fusion_engine()
+        result = engine.fuse_insights(
+            text_insights=text_insights,
+            visual_insights=visual_insights,
+            voice_insights=voice_insights,
+        )
+        return {
+            "id": result.id,
+            "unified_themes": result.unified_themes,
+            "dominant_emotion": result.dominant_emotion,
+            "dominant_entities": result.dominant_entities,
+            "confidence": result.confidence,
+            "modality_weights": result.modality_weights,
+            "resolved_conflicts": result.resolved_conflicts,
+            "proactive_suggestion": result.proactive_suggestion,
+            "timestamp": result.timestamp,
+        }
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fusion/conflicts")
+async def fusion_conflicts(modalities: list):
+    """Detect modality conflicts across insights."""
+    try:
+        from core.cross_modal_fusion import get_cross_modal_fusion_engine
+        engine = get_cross_modal_fusion_engine()
+        reports = engine.detect_modal_conflicts(modalities)
+        return {
+            "conflicts": [
+                {
+                    "id": r.id,
+                    "entity": r.entity,
+                    "conflict_type": r.conflict_type,
+                    "modalities_involved": r.modalities_involved,
+                    "signals": r.signals,
+                    "severity": r.severity,
+                    "recommendation": r.recommendation,
+                }
+                for r in reports
+            ]
+        }
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/fusion/summary")
+async def fusion_summary(sources: list):
+    """Generate a cross-modal summary weighted by confidence."""
+    try:
+        from core.cross_modal_fusion import get_cross_modal_fusion_engine
+        engine = get_cross_modal_fusion_engine()
+        summary = engine.get_cross_modal_summary(sources)
+        return {
+            "id": summary.id,
+            "sources": summary.sources,
+            "summary": summary.summary_text,
+            "key_themes": summary.key_themes,
+            "emotional_tone": summary.emotional_tone,
+            "confidence": summary.confidence,
+            "suggested_action": summary.suggested_action,
+            "timestamp": summary.timestamp,
+        }
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/fusion/stats")
+async def fusion_stats():
+    """Get cross-modal fusion engine statistics."""
+    try:
+        from core.cross_modal_fusion import get_cross_modal_fusion_engine
+        engine = get_cross_modal_fusion_engine()
+        return engine.get_fusion_stats()
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+# ── Emotional Resonance Engine ────────────────────────────────────────────────
+
+class EmotionalAnalyzeRequest(BaseModel):
+    text: str
+
+
+class EmotionalResonanceRequest(BaseModel):
+    user_text: str
+    love_response: str
+
+
+@router.post("/emotion/analyze")
+async def analyze_emotion(req: EmotionalAnalyzeRequest):
+    """Deep emotional analysis beyond surface sentiment."""
+    try:
+        from core.emotional_resonance import get_emotional_resonance_engine
+        engine = get_emotional_resonance_engine()
+        state = engine.analyze_emotional_depth(req.text)
+        return {
+            "state_id": state.state_id,
+            "timestamp": state.timestamp,
+            "valence": state.valence,
+            "arousal": state.arousal,
+            "dominance": state.dominance,
+            "sarcasm": state.sarcasm,
+            "suppressed_frustration": state.suppressed_frustration,
+            "growing_anxiety": state.growing_anxiety,
+            "hidden_excitement": state.hidden_excitement,
+            "emotional_numbness": state.emotional_numbness,
+            "defensiveness": state.defensiveness,
+            "vulnerability": state.vulnerability,
+            "masked_distress": state.masked_distress,
+            "primary_emotion": state.primary_emotion,
+            "depth_score": state.depth_score,
+            "transparency": state.transparency,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/emotion/shifts")
+async def detect_emotion_shifts():
+    """Detect emotional shifts in recent history."""
+    try:
+        from core.emotional_resonance import get_emotional_resonance_engine
+        engine = get_emotional_resonance_engine()
+        alerts = engine.detect_emotional_shifts()
+        return {
+            "shifts_detected": len(alerts),
+            "alerts": [
+                {
+                    "alert_id": a.alert_id,
+                    "shift_type": a.shift_type,
+                    "severity": a.severity,
+                    "description": a.description,
+                    "recommendation": a.recommendation,
+                    "timestamp": a.timestamp,
+                }
+                for a in alerts
+            ],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/emotion/resonance")
+async def measure_resonance(req: EmotionalResonanceRequest):
+    """Measure how well LOVE's response resonated emotionally."""
+    try:
+        from core.emotional_resonance import get_emotional_resonance_engine
+        engine = get_emotional_resonance_engine()
+        reading = engine.measure_resonance(req.user_text, req.love_response)
+        return {
+            "reading_id": reading.reading_id,
+            "timestamp": reading.timestamp,
+            "emotional_match": reading.emotional_match,
+            "validation_felt": reading.validation_felt,
+            "tone_alignment": reading.tone_alignment,
+            "depth_reciprocity": reading.depth_reciprocity,
+            "overall_resonance": reading.overall_resonance,
+            "suggestions": reading.suggestions,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/emotion/forecast")
+async def emotional_forecast():
+    """Get emotional trajectory forecast."""
+    try:
+        from core.emotional_resonance import get_emotional_resonance_engine
+        engine = get_emotional_resonance_engine()
+        return engine.get_emotional_forecast()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/emotion/stats")
+async def emotion_stats():
+    """Get Emotional Resonance Engine statistics."""
+    try:
+        from core.emotional_resonance import get_emotional_resonance_engine
+        engine = get_emotional_resonance_engine()
+        return engine.get_resonance_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

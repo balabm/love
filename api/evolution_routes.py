@@ -482,6 +482,8 @@ async def get_evolution_health():
             "context_window_manager": {"available": True},
             "user_pattern_detector": {"available": True},
             "goal_drift_detector": {"available": True},
+            "cross_modal_fusion": {"available": True},
+            "emotional_resonance": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

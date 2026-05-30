@@ -6478,6 +6478,8 @@ def get_self_evolution_status():
                 "context_window_manager": {"available": True},
                 "user_pattern_detector": {"available": True},
                 "goal_drift_detector": {"available": True},
+                "cross_modal_fusion": {"available": True},
+                "emotional_resonance": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

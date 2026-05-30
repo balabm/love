@@ -36,6 +36,8 @@ Plus Modern AI Subsystems:
 - Context Window Manager (intelligent LLM context optimization)
 - User Pattern Detector (behavioral pattern recognition)
 - Goal Drift Detector (warns when activities drift from goals)
+- Cross-Modal Fusion Engine (combines text/visual/voice insights)
+- Emotional Resonance Engine (deep emotional pattern analysis)
 
 Usage:
     python start_evolution.py

@@ -463,4 +463,17 @@ def get_agi_system_flags():
     except Exception:
         pass
 
+    try:
+        from core.cross_modal_fusion import get_cross_modal_fusion_engine
+        cm = get_cross_modal_fusion_engine()
+        flags["cross_modal_fusion"] = True
+    except Exception:
+        pass
+    try:
+        from core.emotional_resonance import get_emotional_resonance_engine
+        er = get_emotional_resonance_engine()
+        flags["emotional_resonance"] = True
+    except Exception:
+        pass
+
     return flags
