@@ -6465,6 +6465,7 @@ def get_self_evolution_status():
                 "code_sandbox": {"available": True},
                 "observability": {"running": get_observability_engine()._running},
                 "guardrails": {"available": True},
+                "llm_manager": {"available": len(get_llm_manager()._models) > 0},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

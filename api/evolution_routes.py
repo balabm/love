@@ -467,6 +467,9 @@ async def get_evolution_health():
             "reasoning_engine": {"available": True},
             "vector_memory": {"available": True},
             "code_sandbox": {"available": True},
+            "observability": {"running": get_observability_engine()._running},
+            "guardrails": {"available": True},
+            "llm_manager": {"available": len(get_llm_manager()._models) > 0},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
