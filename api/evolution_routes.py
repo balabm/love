@@ -472,6 +472,7 @@ async def get_evolution_health():
             "llm_manager": {"available": len(get_llm_manager()._models) > 0},
             "graph_rag": {"available": True},
             "prompt_optimizer": {"available": True},
+            "self_reflection": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

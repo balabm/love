@@ -68,6 +68,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | LLM Manager | Dynamic model routing, performance tracking, proactive suggestions | Internal |
 | Graph RAG | Hybrid knowledge graph + vector memory retrieval | Internal |
 | Prompt Optimizer | Adaptive prompt engineering with A/B testing | Internal |
+| Self-Reflection | Meta-cognitive behavioral analysis + capability assessment | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -144,6 +145,9 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/prompts/suggestions` | Get improvement suggestions |
 | `/modern/prompts/stats` | Prompt optimizer statistics |
 | `/modern/prompts/best` | Best prompt for task type |
+| `/modern/self-reflection/reflect` | Trigger meta-cognitive reflection cycle |
+| `/modern/self-reflection/insights` | Recent self-reflection insights |
+| `/modern/self-reflection/stats` | Self-reflection engine statistics |
 
 ### Startup
 
