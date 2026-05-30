@@ -166,6 +166,43 @@ def start_evolution_systems():
     except Exception as e:
         print(f"      [FAIL] Evolution integration error: {e}")
     
+
+    time.sleep(2)
+
+    # Initialize modern AI modules
+    print("[9/9] Initializing modern AI modules...")
+    modern_modules = [
+        ("LLM Manager", "core.llm_manager", "get_llm_manager"),
+        ("Graph RAG", "core.graph_rag", "get_graph_rag_engine"),
+        ("Prompt Optimizer", "core.prompt_optimizer", "get_prompt_optimizer"),
+        ("Self-Reflection", "core.self_reflection", "get_self_reflection_engine"),
+        ("Conversation Quality", "core.conversation_quality", "get_conversation_quality_analyzer"),
+        ("Predictive Maintenance", "core.predictive_maintenance", "get_predictive_maintenance_engine"),
+        ("Multi-Agent Orchestrator", "core.multi_agent_orchestrator", "get_multi_agent_orchestrator"),
+        ("Intent Predictor", "core.intent_predictor", "get_intent_predictor"),
+        ("Personality Adapter", "core.personality_adapter", "get_personality_adapter"),
+        ("Response Cache", "core.response_cache", "get_response_cache"),
+        ("Context Window Manager", "core.context_window_manager", "get_context_window_manager"),
+        ("User Pattern Detector", "core.user_pattern_detector", "get_user_pattern_detector"),
+        ("Goal Drift Detector", "core.goal_drift_detector", "get_goal_drift_detector"),
+        ("Cross-Modal Fusion", "core.cross_modal_fusion", "get_cross_modal_fusion_engine"),
+        ("Emotional Resonance", "core.emotional_resonance", "get_emotional_resonance_engine"),
+        ("Knowledge Graph Builder", "core.knowledge_graph_builder", "get_knowledge_graph_builder"),
+        ("Adaptive Learning Rate", "core.adaptive_learning_rate", "get_adaptive_learning_engine"),
+        ("Conversation Continuity", "core.conversation_continuity", "get_conversation_continuity_manager"),
+    ]
+
+    initialized = 0
+    for name, module, func in modern_modules:
+        try:
+            mod = __import__(module, fromlist=[func])
+            getattr(mod, func)()
+            print(f"      [OK] {name} initialized")
+            initialized += 1
+        except Exception as e:
+            print(f"      [WARN] {name}: {e}")
+
+    print(f"      Modern modules: {initialized}/{len(modern_modules)} initialized")
     print_header("Evolution Systems Started")
     print("All evolution systems are now running.")
     print("LOVE will continuously improve itself based on:")
