@@ -1,11 +1,14 @@
-feat(evolution): swarm_evolution evaluates modern AI module hypothesis swarms
+feat(evolution): autonomous_cicd monitors modern AI module health post-deployment
 
-swarm_evolution.py:
-- Added modern module swarm evaluation in update_swarm_performance()
-- Swarms with hypotheses starting with "modern_module:" now check
-  AGI spine health flags and adjust collective_score accordingly
-- Healthy modules boost swarm score (+0.1), offline modules penalize (-0.2)
-- Enables swarm-based A/B testing of modern AI module configurations
+autonomous_cicd.py:
+- Added modern AI module health check in _check_rollback_triggers()
+- After metric-based trigger checks, verifies critical modern modules
+  (llm_manager, graph_rag, prompt_optimizer, self_reflection,
+  predictive_maintenance, multi_agent_orchestrator) are online
+- If any critical modern module is offline post-deployment, triggers
+  rollback with specific module name in reason
+- Fixed test: modern module check runs AFTER metric-based triggers to
+  preserve existing rollback behavior
 
 All 95 tests pass.
 

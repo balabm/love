@@ -485,6 +485,20 @@ class AutonomousCICD:
                 if should_trigger:
                     return True, f"{trigger.description} (current: {metric_value}, threshold: {trigger.threshold})"
             
+            # Check modern AI module health after deployment (only if no metric triggers)
+            try:
+                from core.agi_spine import get_agi_system_flags
+                flags = get_agi_system_flags()
+                critical_modules = [
+                    "llm_manager", "graph_rag", "prompt_optimizer", "self_reflection",
+                    "predictive_maintenance", "multi_agent_orchestrator",
+                ]
+                for module in critical_modules:
+                    if not flags.get(module, False):
+                        return True, f"Modern module {module} offline after deployment"
+            except Exception:
+                pass
+            
             return False, ""
             
         except Exception as e:
