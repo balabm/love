@@ -330,4 +330,16 @@ def get_agi_system_flags():
         flags["mission_queue"] = getattr(mq, "_running", False)
     except Exception:
         pass
+    try:
+        from core.mcp_host import get_mcp_host
+        mcp = get_mcp_host()
+        flags["mcp_host"] = mcp.get_health().get("sdk_available", False)
+    except Exception:
+        pass
+    try:
+        from core.reasoning_engine import get_reasoning_engine
+        re = get_reasoning_engine()
+        flags["reasoning_engine"] = True
+    except Exception:
+        pass
     return flags

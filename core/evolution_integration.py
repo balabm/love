@@ -137,6 +137,23 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Autonomous CI/CD error: {e}')
         
+        # Start MCP Host (modern tool protocol)
+        try:
+            from core.mcp_host import get_mcp_host
+            mcp = get_mcp_host()
+            mcp.start()
+            print('[EvolutionIntegration] MCP Host started')
+        except Exception as e:
+            print(f'[EvolutionIntegration] MCP Host error: {e}')
+        
+        # Start Reasoning Engine (chain-of-thought)
+        try:
+            from core.reasoning_engine import get_reasoning_engine
+            re = get_reasoning_engine()
+            print('[EvolutionIntegration] Reasoning Engine initialized')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Reasoning Engine error: {e}')
+        
         # Start integration loop
         self._running = True
         self._thread = threading.Thread(

@@ -7831,3 +7831,12 @@ async def orchestrator_master_speak(req: dict):
         return {"error": "message required"}
     om.speak_to_user(message, category=category, importance=importance)
     return {"status": "sent", "message": message}
+
+
+# Wave 33: Modern AI Routes (MCP, Reasoning, Browser)
+try:
+    from api.modern_routes import register_modern_routes
+    register_modern_routes(app)
+    print('[API] Wave 33 Modern AI routes loaded')
+except Exception as e:
+    print(f'[API] Modern routes error: {e}')
