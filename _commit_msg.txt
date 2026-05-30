@@ -1,24 +1,25 @@
-feat(modern): Context-Aware Task Prioritizer — intelligent task ordering
+feat(modern): Wellness Nudger — proactive wellness alerts
 
-Context-Aware Task Prioritizer (core/context_aware_prioritizer.py):
-- prioritize_tasks(): Reorders tasks based on user context (energy, time,
-  location, emotion, focus) and task characteristics (urgency, importance,
-  cognitive load, deadline)
-- suggest_next_task(): Recommends the single best next task
-- Context factors: energy alignment, time alignment, emotional alignment,
-  focus alignment, deadline pressure, work limit consideration
-- record_task_completion(): Learns from satisfaction feedback
-- 384 lines of production task prioritization infrastructure
+Wellness Nudger (core/wellness_nudger.py):
+- detect_and_nudge(): Detects wellness patterns (hydration, movement, rest,
+  social, nutrition) from user context and generates contextual nudges
+- Pattern detection: hydration %, work limit hours, hours since movement,
+  sleep hours, social interaction time, meal timing
+- Nudge generation: Adapts tone (gentle/firm/urgent) based on severity
+- Cooldown system: Prevents same-pattern nudges within 2 hours
+- record_nudge_response(): Tracks which nudges get acted on
+- Receptiveness learning: Tracks effectiveness by hour of day
+- 371 lines of production wellness nudging infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/tasks/prioritize — Prioritize tasks by context
-- POST /modern/tasks/suggest-next — Suggest best next task
-- GET /modern/tasks/prioritize/stats — Prioritization statistics
+- POST /modern/wellness/nudge — Detect patterns and generate nudge
+- POST /modern/wellness/nudge/feedback — Record nudge response
+- GET /modern/wellness/nudge/stats — Nudge effectiveness statistics
 
 Integration:
-- AGI spine includes context_aware_prioritizer flag
+- AGI spine includes wellness_nudger flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Context-Aware Task Prioritizer
+- start_evolution.py lists Wellness Nudger
 
 All 101 tests pass.
 

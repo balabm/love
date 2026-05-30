@@ -47,6 +47,7 @@ Plus Modern AI Subsystems:
 - Knowledge Injector (proactive contextual knowledge delivery)
 - Conversation Summarizer (hierarchical conversation distillation)
 - Context-Aware Task Prioritizer (intelligent task ordering)
+- Wellness Nudger (proactive wellness alerts)
 
 Usage:
     python start_evolution.py

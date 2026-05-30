@@ -493,6 +493,7 @@ async def get_evolution_health():
             "knowledge_injector": {"available": True},
             "conversation_summarizer": {"available": True},
             "context_aware_prioritizer": {"available": True},
+            "wellness_nudger": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -1874,6 +1874,42 @@ async def prioritization_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Wellness Nudger ───────────────────────────────────────────────────────
+
+@router.post("/wellness/nudge")
+async def detect_wellness_nudge(data: Dict[str, Any] = {}):
+    """Detect wellness patterns and generate nudge."""
+    try:
+        from core.wellness_nudger import get_wellness_nudger
+        nudger = get_wellness_nudger()
+        return {"nudge": nudger.detect_and_nudge(data)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wellness/nudge/feedback")
+async def nudge_feedback(data: Dict[str, Any] = {}):
+    """Record nudge response."""
+    try:
+        from core.wellness_nudger import get_wellness_nudger
+        nudger = get_wellness_nudger()
+        nudger.record_nudge_response(data.get("nudge_id", ""), data.get("acted", False))
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/wellness/nudge/stats")
+async def nudge_stats():
+    """Get nudge statistics."""
+    try:
+        from core.wellness_nudger import get_wellness_nudger
+        nudger = get_wellness_nudger()
+        return nudger.get_nudge_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

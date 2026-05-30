@@ -529,5 +529,11 @@ def get_agi_system_flags():
         flags["context_aware_prioritizer"] = True
     except Exception:
         pass
+    try:
+        from core.wellness_nudger import get_wellness_nudger
+        wn = get_wellness_nudger()
+        flags["wellness_nudger"] = True
+    except Exception:
+        pass
 
     return flags
