@@ -1140,6 +1140,104 @@ async def pattern_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+
+# ── Goal Drift Detector ───────────────────────────────────────────────────────
+
+class GoalSetRequest(BaseModel):
+    goal_id: str
+    description: str
+    priority: float
+    target_metrics: Optional[Dict[str, Any]] = None
+
+
+class ActivityLogRequest(BaseModel):
+    activity_type: str
+    description: str
+    duration: float
+    goal_alignment_score: float
+    linked_goal_ids: Optional[List[str]] = None
+
+
+@router.post("/goals/set")
+async def set_goal(req: GoalSetRequest):
+    """Register a user goal."""
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        detector = get_goal_drift_detector()
+        goal = detector.set_goal(
+            goal_id=req.goal_id,
+            description=req.description,
+            priority=req.priority,
+            target_metrics=req.target_metrics or {},
+        )
+        return {"success": True, "goal": goal.__dict__}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/goals/activity")
+async def log_activity(req: ActivityLogRequest):
+    """Log a daily activity."""
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        detector = get_goal_drift_detector()
+        activity = detector.record_activity(
+            activity_type=req.activity_type,
+            description=req.description,
+            duration=req.duration,
+            goal_alignment_score=req.goal_alignment_score,
+            linked_goal_ids=req.linked_goal_ids or [],
+        )
+        return {"success": True, "activity": activity.__dict__}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/goals/drift")
+async def detect_drift():
+    """Detect goal drift based on recent activities."""
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        detector = get_goal_drift_detector()
+        alerts = detector.detect_drift()
+        return {"alerts": [a.__dict__ for a in alerts]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/goals/alerts")
+async def get_drift_alerts(include_acknowledged: bool = False):
+    """Get active drift warnings with severity."""
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        detector = get_goal_drift_detector()
+        return {"alerts": detector.get_drift_alerts(include_acknowledged=include_acknowledged)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/goals/progress")
+async def get_goal_progress(goal_id: str):
+    """Get progress toward a specific goal."""
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        detector = get_goal_drift_detector()
+        return detector.get_goal_progress(goal_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/goals/stats")
+async def get_drift_stats():
+    """Get detector statistics."""
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        detector = get_goal_drift_detector()
+        return detector.get_drift_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

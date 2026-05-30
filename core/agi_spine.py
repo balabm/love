@@ -456,4 +456,11 @@ def get_agi_system_flags():
         flags["user_pattern_detector"] = True
     except Exception:
         pass
+    try:
+        from core.goal_drift_detector import get_goal_drift_detector
+        gd = get_goal_drift_detector()
+        flags["goal_drift_detector"] = True
+    except Exception:
+        pass
+
     return flags
