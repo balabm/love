@@ -1624,6 +1624,36 @@ async def continuity_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Rate Limiter ────────────────────────────────────────────────────────────
+
+@router.get("/rate-limit/status")
+async def rate_limit_status(client_id: str = "default"):
+    """Get current rate limit status for a client."""
+    try:
+        from api.rate_limiter import get_rate_limiter
+        limiter = get_rate_limiter()
+        bucket = limiter.get_bucket(client_id)
+        return {
+            "client_id": client_id,
+            "remaining": int(bucket.tokens),
+            "limit": bucket.capacity,
+            "reset_after": round(bucket.get_wait_time(), 1),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/rate-limit/stats")
+async def rate_limit_stats():
+    """Get rate limiter global statistics."""
+    try:
+        from api.rate_limiter import get_rate_limiter
+        limiter = get_rate_limiter()
+        return limiter.get_rate_limit_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

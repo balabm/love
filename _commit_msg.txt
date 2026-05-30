@@ -1,26 +1,16 @@
-feat(modern): Conversation Continuity Manager — context persistence across gaps
+feat(security): Rate Limiter — API abuse protection with token bucket
 
-Conversation Continuity Manager (core/conversation_continuity.py):
-- capture_snapshot(): Save key facts, pending questions, emotional state,
-  unfinished tasks, and last topics as structured continuity snapshots
-- restore_context(): Retrieve the most recent context for any thread
-- get_gap_summary(): Summarize what happened during user's absence
-- get_thread_status(): Show all active/paused conversation threads
-- create_thread() / pause_thread(): Manage multiple conversation threads
-- 305 lines of production context persistence infrastructure
+Rate Limiter (api/rate_limiter.py):
+- Token bucket algorithm with per-client buckets and burst tolerance
+- Endpoint-specific categories: heavy (graph/vector), medium (predict/analyze),
+  light (health/stats), auth (login)
+- check_rate_limit(): Consume tokens, return remaining + reset time
+- get_category_for_endpoint(): Auto-categorize endpoints by path
+- 172 lines of production rate limiting infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/continuity/snapshot — Save conversation state
-- GET /modern/continuity/restore — Retrieve thread context
-- GET /modern/continuity/gap — Summarize absence period
-- GET /modern/continuity/threads — List conversation threads
-- POST /modern/continuity/threads — Create new thread
-- GET /modern/continuity/stats — Continuity statistics
-
-Integration:
-- AGI spine includes conversation_continuity flag
-- /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Conversation Continuity Manager
+- GET /modern/rate-limit/status — Client rate limit status
+- GET /modern/rate-limit/stats — Global rate limiter statistics
 
 All 95 tests pass.
 
