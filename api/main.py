@@ -6486,6 +6486,7 @@ def get_self_evolution_status():
                 "memory_compressor": {"available": True},
                 "semantic_search_optimizer": {"available": True},
                 "emotion_aware_response": {"available": True},
+                "knowledge_injector": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

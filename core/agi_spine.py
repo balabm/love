@@ -511,5 +511,11 @@ def get_agi_system_flags():
         flags["emotion_aware_response"] = True
     except Exception:
         pass
+    try:
+        from core.knowledge_injector import get_knowledge_injector
+        ki = get_knowledge_injector()
+        flags["knowledge_injector"] = True
+    except Exception:
+        pass
 
     return flags

@@ -1,24 +1,21 @@
-feat(modern): Emotion-Aware Response Generator — emotional calibration
+feat(modern): Knowledge Injector — proactive contextual knowledge delivery
 
-Emotion-Aware Response Generator (core/emotion_aware_response.py):
-- generate_response(): Detects emotion from text, calibrates tone
-  (warmth, assertiveness, verbosity, humor, validation),
-  tracks emotional trajectory, offers proactive support for declining trends
-- calibrate_tone(): Maps emotions to calibrated tone parameters
-- get_emotional_trajectory(): Tracks valence trends (improving / stable / declining)
-- record_support_feedback(): Learns from user feedback on interventions
-- 322 lines of production emotional calibration infrastructure
+Knowledge Injector (core/knowledge_injector.py):
+- inject_knowledge(): Extracts topics from text, searches memory + graph,
+  scores relevance using Jaccard similarity + recency boost + source weight
+- record_injection_feedback(): Learns from user acceptance/rejection
+- get_injection_stats(): Tracks acceptance rate and injection effectiveness
+- 253 lines of production knowledge injection infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/emotion/generate — Generate emotionally calibrated response
-- POST /modern/emotion/feedback — Record support feedback
-- GET /modern/emotion/stats — Support effectiveness statistics
-- GET /modern/emotion/trajectory — Emotional trajectory over time
+- POST /modern/knowledge/inject — Propose knowledge to inject
+- POST /modern/knowledge/feedback — Record injection feedback
+- GET /modern/knowledge/stats — Knowledge injector statistics
 
 Integration:
-- AGI spine includes emotion_aware_response flag
+- AGI spine includes knowledge_injector flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Emotion-Aware Response Generator
+- start_evolution.py lists Knowledge Injector
 
 All 101 tests pass.
 

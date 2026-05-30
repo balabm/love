@@ -44,6 +44,7 @@ Plus Modern AI Subsystems:
 - Memory Compressor (semantic conversation memory compression)
 - Semantic Search Optimizer (vector query optimization and reranking)
 - Emotion-Aware Response Generator (emotional calibration)
+- Knowledge Injector (proactive contextual knowledge delivery)
 
 Usage:
     python start_evolution.py

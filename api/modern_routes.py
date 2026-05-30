@@ -1773,6 +1773,42 @@ async def emotion_trajectory():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Knowledge Injector ────────────────────────────────────────────────────────
+
+@router.post("/knowledge/inject")
+async def inject_knowledge(data: Dict[str, Any] = {}):
+    """Propose knowledge to inject into the conversation."""
+    try:
+        from core.knowledge_injector import get_knowledge_injector
+        injector = get_knowledge_injector()
+        return injector.inject_knowledge(data.get("text", ""), data.get("context", []))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/knowledge/feedback")
+async def knowledge_injection_feedback(data: Dict[str, Any] = {}):
+    """Record feedback on knowledge injection."""
+    try:
+        from core.knowledge_injector import get_knowledge_injector
+        injector = get_knowledge_injector()
+        injector.record_injection_feedback(data.get("injection_id", ""), data.get("accepted", False))
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/knowledge/stats")
+async def knowledge_injector_stats():
+    """Get knowledge injector statistics."""
+    try:
+        from core.knowledge_injector import get_knowledge_injector
+        injector = get_knowledge_injector()
+        return injector.get_injection_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
