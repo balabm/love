@@ -487,5 +487,11 @@ def get_agi_system_flags():
         flags["adaptive_learning_rate"] = True
     except Exception:
         pass
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        ccm = get_conversation_continuity_manager()
+        flags["conversation_continuity"] = True
+    except Exception:
+        pass
 
     return flags

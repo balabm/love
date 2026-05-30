@@ -486,6 +486,7 @@ async def get_evolution_health():
             "emotional_resonance": {"available": True},
             "knowledge_graph_builder": {"available": True},
             "adaptive_learning_rate": {"available": True},
+            "conversation_continuity": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

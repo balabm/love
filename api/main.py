@@ -6482,6 +6482,7 @@ def get_self_evolution_status():
                 "emotional_resonance": {"available": True},
                 "knowledge_graph_builder": {"available": True},
                 "adaptive_learning_rate": {"available": True},
+                "conversation_continuity": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

@@ -1,15 +1,26 @@
-feat(sentinel): monitor all 18 modern AI subsystems in self-heal loop
+feat(modern): Conversation Continuity Manager — context persistence across gaps
 
-Sentinel (core/sentinel.py):
-- Added 18 modern AI subsystems to _self_heal() monitoring loop:
-  llm_manager, graph_rag, prompt_optimizer, self_reflection,
-  conversation_quality, predictive_maintenance, multi_agent_orchestrator,
-  intent_predictor, personality_adapter, response_cache,
-  context_window_manager, user_pattern_detector, goal_drift_detector,
-  cross_modal_fusion, emotional_resonance, knowledge_graph_builder,
-  adaptive_learning_rate
-- Sentinel now auto-detects and reports health for all modern engines
-- Proactive alerts when any modern subsystem stalls or crashes
+Conversation Continuity Manager (core/conversation_continuity.py):
+- capture_snapshot(): Save key facts, pending questions, emotional state,
+  unfinished tasks, and last topics as structured continuity snapshots
+- restore_context(): Retrieve the most recent context for any thread
+- get_gap_summary(): Summarize what happened during user's absence
+- get_thread_status(): Show all active/paused conversation threads
+- create_thread() / pause_thread(): Manage multiple conversation threads
+- 305 lines of production context persistence infrastructure
+
+API Endpoints (api/modern_routes.py):
+- POST /modern/continuity/snapshot — Save conversation state
+- GET /modern/continuity/restore — Retrieve thread context
+- GET /modern/continuity/gap — Summarize absence period
+- GET /modern/continuity/threads — List conversation threads
+- POST /modern/continuity/threads — Create new thread
+- GET /modern/continuity/stats — Continuity statistics
+
+Integration:
+- AGI spine includes conversation_continuity flag
+- /evolution/health and /intelligence/self-evolution include availability
+- start_evolution.py lists Conversation Continuity Manager
 
 All 95 tests pass.
 

@@ -40,6 +40,7 @@ Plus Modern AI Subsystems:
 - Emotional Resonance Engine (deep emotional pattern analysis)
 - Knowledge Graph Auto-Builder (entity & relationship extraction)
 - Adaptive Learning Rate Engine (dynamic parameter tuning)
+- Conversation Continuity Manager (context persistence across gaps)
 
 Usage:
     python start_evolution.py

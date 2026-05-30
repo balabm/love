@@ -1556,6 +1556,74 @@ async def learning_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Conversation Continuity Manager ───────────────────────────────────────────
+
+@router.post("/continuity/snapshot")
+async def capture_snapshot(context: Dict[str, Any] = {}):
+    """Save a conversation state snapshot."""
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        manager = get_conversation_continuity_manager()
+        return manager.capture_snapshot(context)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/continuity/restore")
+async def restore_context(thread_id: str = "default"):
+    """Retrieve the most recent context for a thread."""
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        manager = get_conversation_continuity_manager()
+        return manager.restore_context(thread_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/continuity/gap")
+async def gap_summary(thread_id: str = "default", absence_hours: float = 1.0):
+    """Summarize what happened during user's absence."""
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        manager = get_conversation_continuity_manager()
+        return manager.get_gap_summary(thread_id, absence_hours)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/continuity/threads")
+async def thread_status():
+    """Show all active conversation threads."""
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        manager = get_conversation_continuity_manager()
+        return manager.get_thread_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/continuity/threads")
+async def create_thread(thread_id: str, name: str):
+    """Create a new conversation thread."""
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        manager = get_conversation_continuity_manager()
+        return manager.create_thread(thread_id, name)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/continuity/stats")
+async def continuity_stats():
+    """Get conversation continuity statistics."""
+    try:
+        from core.conversation_continuity import get_conversation_continuity_manager
+        manager = get_conversation_continuity_manager()
+        return manager.get_continuity_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
