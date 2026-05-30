@@ -33,6 +33,7 @@ Plus Modern AI Subsystems:
 - Intent Predictor (proactive user intent prediction + response preparation)
 - Personality Adapter (dynamic tone & style calibration)
 - Response Cache (intelligent response caching with semantic matching)
+- Context Window Manager (intelligent LLM context optimization)
 
 Usage:
     python start_evolution.py

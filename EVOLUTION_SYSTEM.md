@@ -75,6 +75,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Intent Predictor | Proactive intent prediction + response preparation | Internal |
 | Personality Adapter | Dynamic tone & style calibration based on user context | Internal |
 | Response Cache | Intelligent response caching with semantic matching | Internal |
+| Context Window Manager | Intelligent LLM context optimization | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -179,6 +180,10 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/cache/stats` | Response cache statistics |
 | `/modern/cache/invalidate` | Invalidate cache entries |
 | `/modern/cache/cleanup` | Remove expired cache entries |
+| `/modern/context/optimize` | Optimize context segments for LLM window |
+| `/modern/context/summarize` | Summarize old conversation turns |
+| `/modern/context/tokens` | Estimate token count for text |
+| `/modern/context/stats` | Context optimization statistics |
 
 ### Startup
 
