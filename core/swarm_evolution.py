@@ -237,6 +237,19 @@ class SwarmEvolutionEngine:
                                      (1 - alpha) * agent.performance_score)
             agent.last_active = datetime.now().isoformat()
         
+        # Modern module swarm: check AGI spine health for module swarms
+        if swarm.hypothesis and swarm.hypothesis.startswith("modern_module:"):
+            try:
+                from core.agi_spine import get_agi_system_flags
+                flags = get_agi_system_flags()
+                module_name = swarm.hypothesis.replace("modern_module:", "").strip()
+                if flags.get(module_name, False):
+                    swarm.collective_score = min(1.0, swarm.collective_score + 0.1)
+                else:
+                    swarm.collective_score = max(0.0, swarm.collective_score - 0.2)
+            except Exception:
+                pass
+        
         # Share signal if performance is notably good or bad
         if user_feedback > 0.8:
             self._share_signal(swarm_id, "success", 

@@ -1,16 +1,11 @@
-feat(evolution): meta_evolution tracks modern AI module strategies
+feat(evolution): swarm_evolution evaluates modern AI module hypothesis swarms
 
-meta_evolution.py:
-- Added modern_module_optimization strategy: optimizes LLM routing,
-  memory search, prompt tuning, context optimization, cache efficiency,
-  pattern detection, and emotion analysis parameters
-- Added cross_modal_learning strategy: transfers insights between
-  text, visual, and voice modalities for multimodal fusion,
-  conversation quality, and personality adaptation
-- Both strategies include domain effectiveness scoring for targeted
-  meta-learning across modern AI subsystems
-
-Fixed syntax error from previous insertion.
+swarm_evolution.py:
+- Added modern module swarm evaluation in update_swarm_performance()
+- Swarms with hypotheses starting with "modern_module:" now check
+  AGI spine health flags and adjust collective_score accordingly
+- Healthy modules boost swarm score (+0.1), offline modules penalize (-0.2)
+- Enables swarm-based A/B testing of modern AI module configurations
 
 All 95 tests pass.
 
