@@ -188,6 +188,18 @@ class DailyBriefingSystem:
             data["cross_domain_insights"] = get_correlations()
         except Exception:
             pass
+
+        # Evolution activity (overnight self-improvement)
+        try:
+            from core.evolution_integration import get_evolution_integration
+            evo = get_evolution_integration()
+            stats = evo.get_integration_status().get("statistics", {})
+            data["evo_code_mods"] = stats.get("total_code_modifications", 0)
+            data["evo_mutations"] = stats.get("total_mutations_applied", 0)
+            data["evo_adoptions"] = stats.get("successful_cross_adoptions", 0)
+        except Exception:
+            pass
+
         return data
 
     # ── Brief generation ──────────────────────────────────────────────────────
@@ -348,8 +360,10 @@ def _build_raw_sections(data: Dict) -> List[str]:
         events = data["ms_events"]
         sections.append(f"CALENDAR: {len(events)} Outlook events today")
         for ev in events[:3]:
-            start = ev.get("start", "")[:16].replace("T", " ")
-            sections.append(f"  - {start} {ev.get('title','')}")
+            start = ev.get("start_str", ev.get("start", ""))[:16].replace("T", " ")
+            mins = ev.get("minutes_away")
+            when = f" (in {mins}min)" if mins and mins > 0 else ""
+            sections.append(f"  - {start} {ev.get('title','')}{when}")
 
     # Email
     gmail_unread = data.get("gmail_unread", 0)
@@ -427,6 +441,22 @@ def _build_raw_sections(data: Dict) -> List[str]:
     bat = data.get("system_battery")
     if bat is not None and bat < 30:
         sections.append(f"SYSTEM: Battery low at {bat}%")
+
+
+    # Evolution activity (overnight self-improvement)
+    evo_mods = data.get("evo_code_mods", 0)
+    evo_muts = data.get("evo_mutations", 0)
+    evo_adopts = data.get("evo_adoptions", 0)
+    if evo_mods > 0 or evo_muts > 0 or evo_adopts > 0:
+        parts = []
+        if evo_mods > 0:
+            parts.append(f"{evo_mods} code mod(s)")
+        if evo_muts > 0:
+            parts.append(f"{evo_muts} mutation(s)")
+        if evo_adopts > 0:
+            parts.append(f"{evo_adopts} peer adoption(s)")
+        joined = " | ".join(parts)
+        sections.append(f"EVOLUTION: Overnight I applied {joined}.")
 
     return sections
 
