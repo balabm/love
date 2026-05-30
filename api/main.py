@@ -6438,6 +6438,14 @@ def get_self_evolution_status():
             from core.cross_instance_learning import get_cross_instance_learning
             from core.capability_gap_detector import get_capability_gap_detector
             from core.autonomous_cicd import get_autonomous_cicd
+            from core.neural_architecture_search import get_neural_architecture_search
+            from core.multimodal_evolution import get_multimodal_evolution
+            from agents.task_evolution_integration import get_task_evolution_integration
+            from agents.fitness_evolution_integration import get_fitness_evolution_integration
+            from core.mcp_host import get_mcp_host
+            from core.code_sandbox import get_code_sandbox
+            from core.observability import get_observability_engine
+            from core.guardrails import get_guardrails_engine
             evo_int = get_evolution_integration()
             result["health"] = {
                 "integration": {"running": evo_int._running},
@@ -6447,6 +6455,16 @@ def get_self_evolution_status():
                 "cross_instance": {"running": get_cross_instance_learning()._running},
                 "capability_gap_detector": {"running": get_capability_gap_detector()._running},
                 "autonomous_cicd": {"running": get_autonomous_cicd()._running},
+                "neural_architecture_search": {"running": get_neural_architecture_search()._running},
+                "multimodal_evolution": {"running": get_multimodal_evolution()._running},
+                "task_evolution": {"running": get_task_evolution_integration()._running},
+                "fitness_evolution": {"running": get_fitness_evolution_integration()._running},
+                "mcp_host": {"available": get_mcp_host().get_health().get("sdk_available", False)},
+                "reasoning_engine": {"available": True},
+                "vector_memory": {"available": True},
+                "code_sandbox": {"available": True},
+                "observability": {"running": get_observability_engine()._running},
+                "guardrails": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

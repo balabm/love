@@ -198,11 +198,14 @@ export default function IntelligenceDashboard() {
                 <div className="intel-subsection">
                   <div className="intel-subtitle">Health</div>
                   <div className="intel-health-grid">
-                    {Object.entries(evolution.health).filter(([k]) => k !== "overall").map(([name, info]) => (
-                      <span key={name} className={`intel-health-chip ${info.running ? "up" : "down"}`}>
-                        {info.running ? "●" : "○"} {name.replace(/_/g, " ")}
-                      </span>
-                    ))}
+                    {Object.entries(evolution.health).filter(([k]) => k !== "overall").map(([name, info]) => {
+                      const isUp = info.running || info.available;
+                      return (
+                        <span key={name} className={`intel-health-chip ${isUp ? "up" : "down"}`}>
+                          {isUp ? "●" : "○"} {name.replace(/_/g, " ")}
+                        </span>
+                      );
+                    })}
                   </div>
                   {evolution.health.overall && (
                     <div className={`intel-overall-${evolution.health.overall}`}>

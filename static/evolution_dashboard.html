@@ -883,8 +883,9 @@
             let html = '';
             for (const [name, info] of Object.entries(health)) {
                 if (name === 'overall') continue;
-                const active = info.running ? 'active' : 'inactive';
-                const status = info.running ? 'Running' : 'Stopped';
+                const isUp = info.running || info.available;
+                const active = isUp ? 'active' : 'inactive';
+                const status = isUp ? (info.running ? 'Running' : 'Available') : 'Stopped';
                 html += `<div class="health-card">
                     <span class="health-dot ${active}"></span>
                     <span class="health-name">${name.replace(/_/g, ' ')}</span>
