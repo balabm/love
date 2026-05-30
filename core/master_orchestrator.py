@@ -203,6 +203,8 @@ class OrchestrationMaster:
                 self._update_proactive_state(event_type, payload)
             elif domain == "self_evolution":
                 self._update_evolution_state(event_type, payload)
+            elif domain == "sentinel":
+                self._update_sentinel_state(event_type, payload)
 
             self._state.timestamp = datetime.now().isoformat()
 
@@ -258,6 +260,79 @@ class OrchestrationMaster:
             ex = payload.get("executed", 0)
             if ex > 0:
                 self._narrate("evolution", f"Self-evolution completed {ex} improvement(s)", "action", importance="normal")
+                # Tell the user about significant improvements
+                if ex >= 3:
+                    self.speak_to_user(
+                        f"I just completed {ex} self-improvements. I'm getting better at helping you.",
+                        category="EVOLUTION",
+                        importance="normal"
+                    )
+
+    def _update_sentinel_state(self, event_type: str, payload: Dict):
+        if event_type == "decision_executed":
+            cat = payload.get("category", "nudge")
+            title = payload.get("title", "")
+            msg = payload.get("message", "")
+            priority = payload.get("priority", "normal")
+            self._narrate(f"sentinel_{cat}", f"[{title}] {msg[:100]}", "observation",
+                          importance="high" if priority in ("critical", "high") else "normal")
+            # Critical sentinel decisions get relayed to user via orchestrator voice
+            if priority == "critical" and cat in ("alert", "action"):
+                self.speak_to_user(msg, category="ALERT", importance="critical")
+
+    # ═══════════════════════════════════════════════════════════════
+    # LIFE PULSE — LOVE's Heartbeat to the User
+    # ═══════════════════════════════════════════════════════════════
+
+    def _generate_life_pulse(self):
+        """
+        Periodically generate a user-facing summary of what LOVE has been doing.
+        This is LOVE's way of saying 'I'm here, I'm working, here's what I noticed.'
+        """
+        try:
+            now = datetime.now()
+            last_pulse = getattr(self, '_last_life_pulse', None)
+            if last_pulse and (now - last_pulse).seconds < 1800:
+                return  # Max once every 30 minutes
+
+            # Build summary from recent narrative
+            recent = [e for e in self._state.narrative if (now - datetime.fromisoformat(e.timestamp)).seconds < 3600]
+            if not recent:
+                return
+
+            actions = [e for e in recent if e.category == "action"]
+            observations = [e for e in recent if e.category == "observation"]
+            thoughts = [e for e in recent if e.category == "thought"]
+
+            parts = []
+            if actions:
+                action_summary = "; ".join([f"{e.event}: {e.detail[:40]}" for e in actions[-3:]])
+                parts.append(f"I performed {len(actions)} action(s): {action_summary}")
+            if observations:
+                parts.append(f"I noticed {len(observations)} event(s) across your systems.")
+            if thoughts:
+                parts.append(f"I had {len(thoughts)} thought(s) about your life.")
+
+            # Module health summary
+            states = defaultdict(int)
+            for h in self._state.modules.values():
+                states[h.state] += 1
+            failed = states.get("failed", 0)
+            degraded = states.get("degraded", 0)
+            if failed > 0:
+                parts.append(f"{failed} module(s) need attention.")
+            elif degraded > 0:
+                parts.append(f"{degraded} module(s) running degraded.")
+            else:
+                parts.append("All systems healthy.")
+
+            message = " ".join(parts)
+            if message:
+                self.speak_to_user(message, category="THOUGHT", importance="low")
+                self._last_life_pulse = now
+
+        except Exception as e:
+            print(f"[OrchestrationMaster] Life pulse error: {e}")
 
     # ═══════════════════════════════════════════════════════════════
     # MAIN LOOP — The Brainbeat
@@ -272,6 +347,7 @@ class OrchestrationMaster:
                     self._evaluate_coordination_rules()
                     self._process_user_requests()
                     self._generate_periodic_narrative()
+                    self._generate_life_pulse()
                     self._save_state()
                 time.sleep(10)
             except Exception as e:

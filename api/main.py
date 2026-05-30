@@ -916,6 +916,19 @@ def register_all_modules(lm, _loop=None):
         depends_on=["neural_connectors", "living_substrate"], optional=True,
         description="Unified evolution fleet: meta/swarm/self-coder/cross-instance"
     ))
+    def start_agi_spine_module():
+        from core.agi_spine import start_agi_spine
+        start_agi_spine()
+
+    def stop_agi_spine_module():
+        from core.agi_spine import stop_agi_spine
+        stop_agi_spine()
+
+    lm.register(ModuleDescriptor(
+        name="agi_spine", wave=4, start_fn=start_agi_spine_module, stop_fn=stop_agi_spine_module,
+        depends_on=["master_orchestrator", "evolution_engine", "sentinel"], optional=True,
+        description="Central nervous system bridge -- wires all modules into unified organism"
+    ))
     lm.register(ModuleDescriptor(
         name="memory_architect", wave=4, start_fn=start_memory_architect_module, stop_fn=stop_memory_architect_module,
         depends_on=["neural_connectors"], optional=False, description="Auto-indexing vector & episodic memory"

@@ -146,6 +146,30 @@ class CapabilityGapDetector:
         
         self._save_gaps()
         
+        # ── CREATE MISSIONS FROM HIGH-IMPACT GAPS ──
+        try:
+            high_impact = [g for g in new_gaps if g.impact > 0.6 and g.urgency > 0.5]
+            if high_impact:
+                from core.autonomous_mission_queue import get_mission_queue
+                mq = get_mission_queue()
+                for gap in high_impact[:3]:
+                    mq.add_mission(
+                        title=f"Close gap: {gap.subdomain}",
+                        description=f"{gap.description}. Fixes: {', '.join(gap.suggested_fixes[:2])}",
+                        domain=gap.domain,
+                        priority="high" if gap.urgency > 0.7 else "normal",
+                        source="capability_gap_detector",
+                    )
+                # Report to orchestrator
+                try:
+                    from core.master_orchestrator import get_orchestration_master
+                    om = get_orchestration_master()
+                    om._narrate("gap_missions", f"Created {len(high_impact[:3])} missions from capability gaps", "action")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        
         return new_gaps
     
     def _detect_health_gaps(self) -> List[CapabilityGap]:
@@ -294,9 +318,18 @@ class CapabilityGapDetector:
         try:
             from core.autonomous import get_relationship_state
             rel_state = get_relationship_state()
+            if not rel_state:
+                return gaps
             
-            # Check for low interaction frequency
-            interaction_freq = float(rel_state.get("interaction_frequency", 0.5))
+            raw_freq = rel_state.get("interaction_frequency")
+            if raw_freq is None:
+                return gaps
+            
+            try:
+                interaction_freq = float(raw_freq)
+            except (ValueError, TypeError):
+                return gaps
+            
             if interaction_freq < 0.3:
                 gap = CapabilityGap(
                     domain="relationships",
@@ -314,8 +347,8 @@ class CapabilityGapDetector:
                 )
                 gaps.append(gap)
             
-        except Exception as e:
-            print(f"[GapDetector] Relationship gap detection error: {e}")
+        except Exception:
+            pass
         
         return gaps
     

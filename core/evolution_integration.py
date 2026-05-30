@@ -246,6 +246,33 @@ class EvolutionIntegration:
             "event": "cycle_complete",
             "duration_seconds": cycle_duration,
         })
+        
+        # ── REPORT TO ORCHESTRATOR ──
+        # If we made improvements, tell the user through the orchestrator
+        try:
+            from core.master_orchestrator import get_orchestration_master
+            om = get_orchestration_master()
+            total_mods = self._state.total_code_modifications
+            total_muts = self._state.total_mutations_applied
+            total_adopt = self._state.successful_cross_adoptions
+            
+            if total_mods > 0 or total_muts > 0:
+                om._narrate(
+                    "evolution_cycle",
+                    f"Evolution cycle complete in {cycle_duration:.0f}s. Total: {total_mods} code mods, {total_muts} mutations, {total_adopt} adoptions.",
+                    "action",
+                    importance="normal"
+                )
+                # Only notify user about significant milestones
+                if total_mods > 0 and total_mods % 5 == 0:
+                    om.speak_to_user(
+                        f"I've made {total_mods} code improvements through self-evolution. "
+                        "I'm learning how to serve you better.",
+                        category="EVOLUTION",
+                        importance="normal"
+                    )
+        except Exception:
+            pass
     
     def _get_current_state(self) -> Dict[str, Any]:
         """Get current state for predictive trigger checking."""
