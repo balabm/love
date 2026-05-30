@@ -14,6 +14,7 @@ export default function SelfEvolutionPanel() {
   const [integration, setIntegration] = useState(null);
   const [capabilityGaps, setCapabilityGaps] = useState(null);
   const [deployments, setDeployments] = useState([]);
+  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // New LoRA PEFT states
@@ -53,6 +54,14 @@ export default function SelfEvolutionPanel() {
       if (dnaRes.data) setDna(dnaRes.data);
       if (peftRes.data) setPeftStatus(peftRes.data);
       if (memRes.data) setMemoryState(memRes.data);
+
+      // Fetch evolution health
+      try {
+        const healthRes = await api.get("/evolution/health");
+        if (healthRes.data) setHealth(healthRes.data);
+      } catch (e) {
+        // Endpoint may not be available
+      }
 
       // Fetch intelligence/self-evolution for integration, gaps, deployments
       try {

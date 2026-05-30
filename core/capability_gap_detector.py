@@ -687,7 +687,7 @@ Focus on interconnected improvements rather than isolated fixes."""
             except Exception as e:
                 print(f"[GapDetector] Loop error: {e}")
             
-            time.sleep(3600)  # Run every hour
+            time.sleep(1800)  # Run every 30 minutes
     
     # ── Query Methods ───────────────────────────────────────────────────────────
     
