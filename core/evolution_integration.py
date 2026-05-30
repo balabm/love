@@ -43,6 +43,7 @@ class IntegrationState:
     swarm_evolution_active: bool = False
     self_coder_active: bool = False
     cross_instance_active: bool = False
+    autonomous_cicd_active: bool = False
     total_mutations_applied: int = 0
     total_hypotheses_tested: int = 0
     total_code_modifications: int = 0
