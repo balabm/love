@@ -146,6 +146,30 @@ class CapabilityGapDetector:
         
         self._save_gaps()
         
+        # ── TRIGGER SELF-CODER FOR HIGH-IMPACT GAPS ──
+        try:
+            from core.self_coder import get_self_coder
+            sc = get_self_coder()
+            for gap in high_impact[:1]:  # Trigger at most 1 per scan
+                domain_file_map = {
+                    "health": "core/heartbeat.py",
+                    "career": "core/daily_briefing.py",
+                    "finance": "integrations/finance_intelligence.py",
+                    "relationships": "core/life_domains.py",
+                    "creativity": "core/dream_engine.py",
+                }
+                target_file = domain_file_map.get(gap.domain, "core/evolution_engine.py")
+                hypothesis = f"Improve {gap.subdomain}: {gap.description}"
+                mod = sc.generate_modification(
+                    hypothesis=hypothesis,
+                    file_path=target_file,
+                    improvement_type="gap_closure"
+                )
+                if mod:
+                    print(f"[GapDetector] Triggered self-coder for gap: {gap.subdomain}")
+        except Exception as e:
+            print(f"[GapDetector] Self-coder trigger error: {e}")
+
         # ── CREATE MISSIONS FROM HIGH-IMPACT GAPS ──
         try:
             high_impact = [g for g in new_gaps if g.impact > 0.6 and g.urgency > 0.5]

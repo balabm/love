@@ -817,11 +817,39 @@ Ensure the modification is safe and maintains existing functionality."""
                     "core/sentinel.py",
                 ]
 
+                modifications_generated = 0
                 for file_path in core_files:
                     if Path(file_path).exists():
                         analysis = self.analyze_file(file_path)
                         if analysis.improvement_opportunities:
                             print(f"[SelfCoder] Found opportunities in {file_path}")
+                            # Actually generate modifications for top opportunities
+                            for opp in analysis.improvement_opportunities[:2]:
+                                try:
+                                    mod = self.generate_modification(
+                                        hypothesis=opp,
+                                        file_path=file_path,
+                                        improvement_type="enhancement"
+                                    )
+                                    if mod:
+                                        # Test the modification
+                                        if self.test_modification(mod.id):
+                                            print(f"[SelfCoder] Generated and tested modification for {file_path}")
+                                            modifications_generated += 1
+                                        else:
+                                            print(f"[SelfCoder] Modification failed tests: {mod.id}")
+                                except Exception as e:
+                                    print(f"[SelfCoder] Modification generation error: {e}")
+
+                if modifications_generated > 0:
+                    print(f"[SelfCoder] Generated {modifications_generated} modification(s) this cycle")
+                    # Report to orchestrator
+                    try:
+                        from core.master_orchestrator import get_orchestration_master
+                        om = get_orchestration_master()
+                        om._narrate("self_coder", f"Generated {modifications_generated} code modification(s)", "action")
+                    except Exception:
+                        pass
 
             except Exception as e:
                 print(f"[SelfCoder] Loop error: {e}")

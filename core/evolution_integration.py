@@ -412,7 +412,7 @@ class EvolutionIntegration:
                 if h.status == "confirmed" and h.confidence > 0.8
             ]
             
-            for hypothesis in confirmed[:1]:  # Generate at most 1 per cycle
+            for hypothesis in confirmed[:2]:  # Generate up to 2 per cycle
                 # Determine target file based on hypothesis
                 target_file = self._map_hypothesis_to_file(hypothesis)
                 
