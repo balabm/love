@@ -109,6 +109,9 @@ class ProactiveHeartbeat:
         triggers.extend(self._scan_memory_consolidation())
         triggers.extend(self._scan_dream_engine())
 
+        # Evolution self-improvement during idle periods
+        triggers.extend(self._scan_evolution_idle())
+
         # Jarvis-level proactive scans from context engine
         triggers.extend(self._scan_context_engine())
 
@@ -440,6 +443,32 @@ class ProactiveHeartbeat:
                         message=f"I spent time thinking about you. Found {len(insights)} insights and {len(predictions)} patterns.",
                         action_suggestion="Ask me what I learned",
                         metadata={"insights": len(insights), "predictions": len(predictions)},
+                    ))
+        except Exception:
+            pass
+        return triggers
+
+    def _scan_evolution_idle(self) -> List[TriggerEvent]:
+        """Trigger evolution self-improvement during idle periods."""
+        triggers = []
+        try:
+            from core.idle_mind import is_idle
+            from core.evolution_integration import get_evolution_integration
+
+            # Only trigger evolution if idle and not recently triggered
+            if is_idle() and not self._recently_triggered('evolution_idle_cycle', minutes=30):
+                integration = get_evolution_integration()
+                if integration._running:
+                    # Run a full evolution cycle during idle time
+                    integration._run_full_cycle()
+                    stats = integration.get_integration_status().get("statistics", {})
+                    triggers.append(TriggerEvent(
+                        source="evolution",
+                        trigger_type="idle_improvement",
+                        severity="info",
+                        message=f"I used your idle time to improve myself. {stats.get('total_code_modifications', 0)} code mod(s), {stats.get('total_mutations_applied', 0)} mutation(s).",
+                        action_suggestion="Check evolution dashboard",
+                        metadata={"code_mods": stats.get("total_code_modifications", 0), "mutations": stats.get("total_mutations_applied", 0)},
                     ))
         except Exception:
             pass
@@ -824,13 +853,13 @@ class ProactiveHeartbeat:
             except Exception:
                 pass
 
-        # Print to console
+        # Print to console (ASCII-safe for Windows cp1252 console)
         icon = {
-            'critical': '🚨',
-            'warning': '⚠️',
-            'info': 'ℹ️',
-            'celebration': '🎉'
-        }.get(trigger.severity, '•')
+            'critical': '[CRIT]',
+            'warning':  '[WARN]',
+            'info':     '[INFO]',
+            'celebration': '[YAY]'
+        }.get(trigger.severity, '[NOTE]')
 
         logger.info(f"{icon} [{trigger.source.upper()}] {trigger.message}")
         
