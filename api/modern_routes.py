@@ -990,6 +990,43 @@ async def personality_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Response Cache ─────────────────────────────────────────────────────────────
+
+@router.get("/cache/stats")
+async def cache_stats():
+    """Get response cache statistics."""
+    try:
+        from core.response_cache import get_response_cache
+        cache = get_response_cache()
+        return cache.get_cache_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cache/invalidate")
+async def invalidate_cache(context_type: str = "all"):
+    """Invalidate cache entries."""
+    try:
+        from core.response_cache import get_response_cache
+        cache = get_response_cache()
+        removed = cache.invalidate_context(context_type)
+        return {"removed": removed}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/cache/cleanup")
+async def cleanup_cache():
+    """Remove expired cache entries."""
+    try:
+        from core.response_cache import get_response_cache
+        cache = get_response_cache()
+        removed = cache.cleanup_expired()
+        return {"removed": removed}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

@@ -438,4 +438,10 @@ def get_agi_system_flags():
         flags["personality_adapter"] = True
     except Exception:
         pass
+    try:
+        from core.response_cache import get_response_cache
+        rc = get_response_cache()
+        flags["response_cache"] = True
+    except Exception:
+        pass
     return flags
