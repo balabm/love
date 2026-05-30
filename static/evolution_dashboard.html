@@ -376,6 +376,40 @@
         .status-rolled_back { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; }
         .status-pending { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
 
+        /* Subsystem Health */
+        .health-section {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .health-section h3 { color: #e94560; margin-bottom: 15px; }
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+        .health-card {
+            background: rgba(15, 52, 96, 0.5);
+            border: 1px solid #0f3460;
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .health-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .health-dot.active { background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+        .health-dot.inactive { background: #ef4444; }
+        .health-name { color: #eaeaea; font-size: 0.9em; }
+        .health-status { color: #888; font-size: 0.75em; margin-left: auto; }
+
         /* Closed Loop Status */
         .loop-section {
             background: rgba(22, 33, 62, 0.8);
@@ -496,6 +530,14 @@
                         <span class="loop-stat-lbl">Gaps</span>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Subsystem Health -->
+        <div class="health-section" id="health-section">
+            <h3>❤️ Subsystem Health</h3>
+            <div class="health-grid" id="health-grid">
+                <div class="loading">Loading subsystem health...</div>
             </div>
         </div>
 
@@ -828,6 +870,35 @@
             } catch (error) {
                 console.error('Error loading history:', error);
             }
+        }
+
+        async function updateHealthGrid(data) {
+            const grid = document.getElementById('health-grid');
+            if (!grid) return;
+            if (!data || !data.health) {
+                grid.innerHTML = '<div class="loading">No health data available</div>';
+                return;
+            }
+            const health = data.health;
+            let html = '';
+            for (const [name, info] of Object.entries(health)) {
+                if (name === 'overall') continue;
+                const active = info.running ? 'active' : 'inactive';
+                const status = info.running ? 'Running' : 'Stopped';
+                html += `<div class="health-card">
+                    <span class="health-dot ${active}"></span>
+                    <span class="health-name">${name.replace(/_/g, ' ')}</span>
+                    <span class="health-status">${status}</span>
+                </div>`;
+            }
+            if (health.overall) {
+                html += `<div class="health-card" style="grid-column: 1 / -1; justify-content: center;">
+                    <span class="health-status" style="color: ${health.overall === 'healthy' ? '#4ade80' : '#fbbf24'}; font-weight: bold;">
+                        Overall: ${health.overall}
+                    </span>
+                </div>`;
+            }
+            grid.innerHTML = html;
         }
 
         async function loadIntelligence() {
