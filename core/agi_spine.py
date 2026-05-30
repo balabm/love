@@ -408,4 +408,10 @@ def get_agi_system_flags():
         flags["self_reflection"] = getattr(sr, '_running', False)
     except Exception:
         pass
+    try:
+        from core.conversation_quality import get_conversation_quality_analyzer
+        cq = get_conversation_quality_analyzer()
+        flags["conversation_quality"] = True
+    except Exception:
+        pass
     return flags

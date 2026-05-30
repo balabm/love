@@ -695,6 +695,70 @@ async def self_reflection_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Conversation Quality ──────────────────────────────────────────────────────
+
+@router.post("/conversation/analyze-turn")
+async def analyze_turn(user_message: str, love_response: str, response_time_ms: float = 0.0):
+    """Analyze a single conversation turn for quality."""
+    try:
+        from core.conversation_quality import get_conversation_quality_analyzer
+        analyzer = get_conversation_quality_analyzer()
+        result = analyzer.analyze_turn(user_message, love_response, response_time_ms)
+        return {
+            "turn_id": result.turn_id,
+            "engagement": result.engagement_score,
+            "clarity": result.clarity_score,
+            "relevance": result.relevance_score,
+            "emotional_tone": result.emotional_tone,
+            "response_time_ms": result.response_time_ms,
+            "overall_score": result.overall_score,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/conversation/analyze")
+async def analyze_conversation():
+    """Analyze the current conversation for quality."""
+    try:
+        from core.conversation_quality import get_conversation_quality_analyzer
+        analyzer = get_conversation_quality_analyzer()
+        result = analyzer.analyze_conversation()
+        return {
+            "conversation_id": result.conversation_id,
+            "turn_count": result.turn_count,
+            "avg_quality": result.avg_quality,
+            "best_turn": result.best_turn,
+            "worst_turn": result.worst_turn,
+            "dominant_emotion": result.dominant_emotion,
+            "suggestions": result.suggestions,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/conversation/trends")
+async def conversation_trends(days: int = 7):
+    """Get conversation quality trends."""
+    try:
+        from core.conversation_quality import get_conversation_quality_analyzer
+        analyzer = get_conversation_quality_analyzer()
+        return analyzer.get_quality_trends(days)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/conversation/stats")
+async def conversation_stats():
+    """Get conversation quality statistics."""
+    try:
+        from core.conversation_quality import get_conversation_quality_analyzer
+        analyzer = get_conversation_quality_analyzer()
+        return analyzer.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 
