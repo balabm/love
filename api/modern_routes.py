@@ -531,6 +531,41 @@ async def llm_pull(model: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Graph RAG ───────────────────────────────────────────────────────────────────
+
+@router.post("/graph-rag/query")
+async def graph_rag_query(question: str, top_k: int = 5):
+    """Query using knowledge graph + vector memory hybrid retrieval."""
+    try:
+        from core.graph_rag import get_graph_rag_engine
+        engine = get_graph_rag_engine()
+        result = engine.query(question, top_k=top_k)
+        return {
+            "answer": result.answer,
+            "entities": result.entities,
+            "paths": [
+                {"steps": p.steps, "confidence": p.confidence, "source": p.source}
+                for p in result.paths
+            ],
+            "semantic_matches": result.semantic_matches,
+            "suggested_questions": result.suggested_questions,
+            "confidence": result.confidence,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/graph-rag/stats")
+async def graph_rag_stats():
+    """Get Graph RAG engine statistics."""
+    try:
+        from core.graph_rag import get_graph_rag_engine
+        engine = get_graph_rag_engine()
+        return engine.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

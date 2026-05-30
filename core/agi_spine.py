@@ -390,4 +390,10 @@ def get_agi_system_flags():
         flags["llm_manager"] = len(mgr._models) > 0
     except Exception:
         pass
+    try:
+        from core.graph_rag import get_graph_rag_engine
+        gr = get_graph_rag_engine()
+        flags["graph_rag"] = True
+    except Exception:
+        pass
     return flags
