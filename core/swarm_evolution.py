@@ -139,7 +139,9 @@ class SwarmEvolutionEngine:
                 for sid, sd in data.get("swarms", {}).items():
                     swarm = Swarm(**sd)
                     swarm.agents = [SwarmAgent(**a) for a in swarm.agents]
-                    self._swarms[sid] = swarm
+                    # Only keep active swarms; discard completed/disbanded from previous runs
+                    if swarm.status == "active":
+                        self._swarms[sid] = swarm
                 for cid, cd in data.get("competitions", {}).items():
                     self._competitions[cid] = Competition(**cd)
         except Exception as e:
@@ -169,14 +171,15 @@ class SwarmEvolutionEngine:
     
     def spawn_swarms(self, hypotheses: List[Dict[str, Any]]) -> List[str]:
         """Spawn multiple swarms to test different hypotheses in parallel."""
-        if len(self._swarms) >= self._max_swarms:
-            print("[SwarmEvolution] Max swarms reached, cannot spawn more")
+        active_count = sum(1 for s in self._swarms.values() if s.status == "active")
+        if active_count >= self._max_swarms:
             return []
-        
+
         spawned_ids = []
-        
+
         for i, hyp in enumerate(hypotheses):
-            if len(self._swarms) >= self._max_swarms:
+            active_count = sum(1 for s in self._swarms.values() if s.status == "active")
+            if active_count >= self._max_swarms:
                 break
             
             # Determine strategy based on index
@@ -453,6 +456,31 @@ Provide:
                     
                     if time_since_start > 86400 or min_interactions >= 10:
                         self.evaluate_competition(self._active_competition)
+                
+                # ── EVALUATE ACTIVE SWARMS ──
+                for s in list(self._swarms.values()):
+                    if s.status == "active" and s.interactions_count >= 3:
+                        score = s.collective_score
+                        if score > 0.7:
+                            from core.evolution_engine import EvolutionEngine
+                            engine = EvolutionEngine()
+                            engine.create_mutation(
+                                mutation_type="swarm_validated",
+                                description=f"Swarm-validated: {s.hypothesis[:60]}",
+                                prompt_modification=s.hypothesis,
+                                injection_point="system_suffix",
+                            )
+                            s.status = "winner"
+                            print(f"[SwarmEvolution] Swarm {s.id} winner (score {score:.2f})")
+                            try:
+                                from core.master_orchestrator import get_orchestration_master
+                                om = get_orchestration_master()
+                                om._narrate("swarm_evolution", f"Swarm validated hypothesis (score {score:.2f})", "action")
+                            except Exception:
+                                pass
+                        elif score < 0.3 and s.interactions_count >= 5:
+                            s.status = "disbanded"
+                            print(f"[SwarmEvolution] Disbanded swarm {s.id} (score {score:.2f})")
                 
             except Exception as e:
                 print(f"[SwarmEvolution] Loop error: {e}")

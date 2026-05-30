@@ -535,6 +535,24 @@ class CrossInstanceLearning:
                 if to_remove:
                     self._save_knowledge_hub()
                 
+                # ── SHARE AND ADOPT ──
+                try:
+                    self._share_local_mutations()
+                    discovered = self.discover_mutations()
+                    if discovered:
+                        print(f"[CrossInstance] Discovered {len(discovered)} mutation(s)")
+                    adopted = self.adopt_mutations()
+                    if adopted:
+                        print(f"[CrossInstance] Adopted {len(adopted)} mutation(s)")
+                        try:
+                            from core.master_orchestrator import get_orchestration_master
+                            om = get_orchestration_master()
+                            om._narrate("cross_instance", f"Adopted {len(adopted)} peer mutation(s)", "action")
+                        except Exception:
+                            pass
+                except Exception as e:
+                    print(f"[CrossInstance] Share/adopt error: {e}")
+                
             except Exception as e:
                 print(f"[CrossInstance] Loop error: {e}")
             

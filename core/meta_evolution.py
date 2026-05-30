@@ -275,81 +275,60 @@ class MetaEvolutionEngine:
     def update_evolutionary_pressures(self):
         """Analyze user's life state and update evolutionary pressures."""
         pressures = {}
+        has_any_data = False
         try:
             try:
-                from core.autonomous import get_relationship_state
-            except Exception:
-                get_relationship_state = None
-
-            try:
                 from agents.task_agent import get_task_overview
-            except Exception:
-                get_task_overview = None
-
-            try:
-                from agents.fitness_agent import get_fitness_overview
-            except Exception:
-                get_fitness_overview = None
-
-            try:
-                from integrations.finance_intelligence import get_finance_intelligence
-            except Exception:
-                get_finance_intelligence = None
-
-            # Career/Work pressure
-            if get_task_overview is not None:
-                try:
+                if get_task_overview is not None:
                     tasks = get_task_overview()
                     overdue = tasks.get("overdue_count", 0)
                     due_soon = len(tasks.get("due_soon", []))
-                    pressures["career"] = min(1.0, (overdue * 0.3 + due_soon * 0.1))
-                except Exception:
-                    pressures["career"] = 0.3
-            else:
-                pressures["career"] = 0.6
+                    if overdue > 0 or due_soon > 0:
+                        pressures["career"] = min(1.0, (overdue * 0.3 + due_soon * 0.1))
+                        has_any_data = True
+            except Exception:
+                pass
 
-            # Health pressure
-            if get_fitness_overview is not None:
-                try:
+            try:
+                from agents.fitness_agent import get_fitness_overview
+                if get_fitness_overview is not None:
                     fitness = get_fitness_overview()
-                    activity_level = fitness.get("recent_activity_level", 0.5)
-                    pressures["health"] = 1.0 - activity_level
-                except Exception:
-                    pressures["health"] = 0.5
-            else:
-                pressures["health"] = 0.6
+                    activity_level = fitness.get("recent_activity_level")
+                    if activity_level is not None:
+                        pressures["health"] = 1.0 - activity_level
+                        has_any_data = True
+            except Exception:
+                pass
 
-            # Finance pressure
-            if get_finance_intelligence is not None:
-                try:
+            try:
+                from integrations.finance_intelligence import get_finance_intelligence
+                if get_finance_intelligence is not None:
                     fi = get_finance_intelligence()
                     alerts = fi.get_alerts(5)
-                    pressures["finance"] = min(1.0, len(alerts) * 0.2)
-                except Exception:
-                    pressures["finance"] = 0.3
-            else:
-                pressures["finance"] = 0.5
+                    if alerts:
+                        pressures["finance"] = min(1.0, len(alerts) * 0.2)
+                        has_any_data = True
+            except Exception:
+                pass
 
-            # Relationship pressure (from interaction patterns)
-            if get_relationship_state is not None:
-                try:
+            try:
+                from core.autonomous import get_relationship_state
+                if get_relationship_state is not None:
                     rel_state = get_relationship_state()
-                    interaction_frequency = rel_state.get("interaction_frequency", 0.5)
-                    pressures["relationships"] = 1.0 - interaction_frequency
-                except Exception:
-                    pressures["relationships"] = 0.3
-            else:
-                pressures["relationships"] = 0.4
+                    freq = rel_state.get("interaction_frequency")
+                    if freq is not None:
+                        try:
+                            pressures["relationships"] = 1.0 - float(freq)
+                            has_any_data = True
+                        except (ValueError, TypeError):
+                            pass
+            except Exception:
+                pass
 
-            # Ensure key pressure areas exist even if external data unavailable
-            pressures.setdefault("career", 0.6)
-            pressures.setdefault("health", 0.6)
-            pressures.setdefault("resilience", 0.5)
-            pressures.setdefault("productivity", 0.5)
-            pressures.setdefault("finance", 0.5)
-            pressures.setdefault("relationships", 0.4)
+            if not has_any_data:
+                return pressures
 
-            # Update or create pressure objects
+            # Update or create pressure objects only from real data
             for area, level in pressures.items():
                 pressure_id = f"pressure_{area}"
                 if pressure_id not in self._pressures:
@@ -360,30 +339,25 @@ class MetaEvolutionEngine:
                     )
                 else:
                     old_level = self._pressures[pressure_id].pressure_level
-                    # Determine trend
                     if level > old_level + 0.1:
                         self._pressures[pressure_id].trend = "increasing"
                     elif level < old_level - 0.1:
                         self._pressures[pressure_id].trend = "decreasing"
                     else:
                         self._pressures[pressure_id].trend = "stable"
-                    
                     self._pressures[pressure_id].pressure_level = level
                     self._pressures[pressure_id].last_updated = datetime.now().isoformat()
 
             self._save_state()
             return pressures
-        except Exception as e:
-            print(f"[MetaEvolution] Pressure update error: {e}")
-            pressures.setdefault("career", 0.6)
-            pressures.setdefault("health", 0.6)
-            pressures.setdefault("finance", 0.5)
-            pressures.setdefault("relationships", 0.4)
+        except Exception:
             return pressures
+
+    def get_evolutionary_priorities(self) -> List[Tuple[str, float]]:
         """Get ordered list of evolution priorities based on pressures."""
         if not self._pressures:
             self.update_evolutionary_pressures()
-        
+
         # Calculate priority score = pressure_level * priority_weight
         scored = [
             (p.goal_area, p.pressure_level * p.priority)
@@ -596,6 +570,30 @@ Return as JSON array with: source_domain, target_domain, hypothesis, proposed_ch
                 
                 # Detect cross-domain patterns
                 self.detect_cross_domain_patterns()
+                
+                # ── APPLY BEST STRATEGIES ──
+                try:
+                    priorities = self.get_evolutionary_priorities()
+                    for domain, _ in priorities[:2]:
+                        best = self.get_best_strategy(domain=domain)
+                        if best and best.success_rate > 0.5:
+                            from core.evolution_engine import EvolutionEngine
+                            engine = EvolutionEngine()
+                            hypothesis = engine.create_hypothesis(
+                                claim=f"Apply {best.name} strategy to improve {domain}",
+                                rationale=f"Meta-evolution detected {domain} as high-pressure. Strategy {best.name} has {best.success_rate:.0%} success rate.",
+                                target_metric=domain,
+                                predicted_delta=0.1,
+                            )
+                            print(f"[MetaEvolution] Applied strategy '{best.name}' to '{domain}' -> hypothesis {hypothesis.id}")
+                            try:
+                                from core.master_orchestrator import get_orchestration_master
+                                om = get_orchestration_master()
+                                om._narrate("meta_evolution", f"Applied strategy '{best.name}' to {domain} (success: {best.success_rate:.0%})", "action")
+                            except Exception:
+                                pass
+                except Exception as e:
+                    print(f"[MetaEvolution] Strategy application error: {e}")
                 
             except Exception as e:
                 print(f"[MetaEvolution] Loop error: {e}")
