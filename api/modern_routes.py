@@ -1726,6 +1726,53 @@ async def search_optimizer_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Emotion-Aware Response Generator ────────────────────────────────────────
+
+@router.post("/emotion/generate")
+async def generate_emotion_aware_response(data: Dict[str, Any] = {}):
+    """Generate an emotionally calibrated response."""
+    try:
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        generator = get_emotion_aware_response_generator()
+        return generator.generate_response(data.get("text", ""), data.get("emotion_state"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/emotion/feedback")
+async def emotion_support_feedback(data: Dict[str, Any] = {}):
+    """Record feedback on emotional support."""
+    try:
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        generator = get_emotion_aware_response_generator()
+        generator.record_support_feedback(data.get("support_id", ""), data.get("helpful", False))
+        return {"status": "recorded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/emotion/stats")
+async def emotion_aware_stats():
+    """Get emotional support effectiveness statistics."""
+    try:
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        generator = get_emotion_aware_response_generator()
+        return generator.get_support_effectiveness()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/emotion/trajectory")
+async def emotion_trajectory():
+    """Get emotional trajectory over time."""
+    try:
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        generator = get_emotion_aware_response_generator()
+        return generator.get_emotional_trajectory()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

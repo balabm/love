@@ -1,23 +1,24 @@
-feat(modern): Semantic Search Optimizer — vector query optimization and reranking
+feat(modern): Emotion-Aware Response Generator — emotional calibration
 
-Semantic Search Optimizer (core/semantic_search_optimizer.py):
-- optimize_query(): Expand queries with synonyms, add contextual terms,
-  generate multiple variants for broader coverage
-- rerank_results(): Rerank using vector similarity + keyword matching +
-  temporal decay + diversity penalty
-- search_with_optimization(): Full pipeline from query to optimized results
-- record_feedback(): Learn from user feedback to improve scoring
-- 267 lines of production search optimization infrastructure
+Emotion-Aware Response Generator (core/emotion_aware_response.py):
+- generate_response(): Detects emotion from text, calibrates tone
+  (warmth, assertiveness, verbosity, humor, validation),
+  tracks emotional trajectory, offers proactive support for declining trends
+- calibrate_tone(): Maps emotions to calibrated tone parameters
+- get_emotional_trajectory(): Tracks valence trends (improving / stable / declining)
+- record_support_feedback(): Learns from user feedback on interventions
+- 322 lines of production emotional calibration infrastructure
 
 API Endpoints (api/modern_routes.py):
-- POST /modern/search/optimize — Optimize a search query
-- POST /modern/search/rerank — Rerank results with multiple signals
-- GET /modern/search/stats — Search optimizer statistics
+- POST /modern/emotion/generate — Generate emotionally calibrated response
+- POST /modern/emotion/feedback — Record support feedback
+- GET /modern/emotion/stats — Support effectiveness statistics
+- GET /modern/emotion/trajectory — Emotional trajectory over time
 
 Integration:
-- AGI spine includes semantic_search_optimizer flag
+- AGI spine includes emotion_aware_response flag
 - /evolution/health and /intelligence/self-evolution include availability
-- start_evolution.py lists Semantic Search Optimizer
+- start_evolution.py lists Emotion-Aware Response Generator
 
 All 101 tests pass.
 

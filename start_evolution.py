@@ -43,6 +43,7 @@ Plus Modern AI Subsystems:
 - Conversation Continuity Manager (context persistence across gaps)
 - Memory Compressor (semantic conversation memory compression)
 - Semantic Search Optimizer (vector query optimization and reranking)
+- Emotion-Aware Response Generator (emotional calibration)
 
 Usage:
     python start_evolution.py

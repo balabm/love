@@ -505,5 +505,11 @@ def get_agi_system_flags():
         flags["semantic_search_optimizer"] = True
     except Exception:
         pass
+    try:
+        from core.emotion_aware_response import get_emotion_aware_response_generator
+        ear = get_emotion_aware_response_generator()
+        flags["emotion_aware_response"] = True
+    except Exception:
+        pass
 
     return flags
