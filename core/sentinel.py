@@ -537,6 +537,23 @@ class Sentinel:
             ("task_evolution", "agents.task_evolution_integration", "get_task_evolution_integration"),
             ("fitness_evolution", "agents.fitness_evolution_integration", "get_fitness_evolution_integration"),
             ("observability", "core.observability", "get_observability_engine"),
+            ("llm_manager", "core.llm_manager", "get_llm_manager"),
+            ("graph_rag", "core.graph_rag", "get_graph_rag_engine"),
+            ("prompt_optimizer", "core.prompt_optimizer", "get_prompt_optimizer"),
+            ("self_reflection", "core.self_reflection", "get_self_reflection_engine"),
+            ("conversation_quality", "core.conversation_quality", "get_conversation_quality_analyzer"),
+            ("predictive_maintenance", "core.predictive_maintenance", "get_predictive_maintenance_engine"),
+            ("multi_agent_orchestrator", "core.multi_agent_orchestrator", "get_multi_agent_orchestrator"),
+            ("intent_predictor", "core.intent_predictor", "get_intent_predictor"),
+            ("personality_adapter", "core.personality_adapter", "get_personality_adapter"),
+            ("response_cache", "core.response_cache", "get_response_cache"),
+            ("context_window_manager", "core.context_window_manager", "get_context_window_manager"),
+            ("user_pattern_detector", "core.user_pattern_detector", "get_user_pattern_detector"),
+            ("goal_drift_detector", "core.goal_drift_detector", "get_goal_drift_detector"),
+            ("cross_modal_fusion", "core.cross_modal_fusion", "get_cross_modal_fusion_engine"),
+            ("emotional_resonance", "core.emotional_resonance", "get_emotional_resonance_engine"),
+            ("knowledge_graph_builder", "core.knowledge_graph_builder", "get_knowledge_graph_builder"),
+            ("adaptive_learning_rate", "core.adaptive_learning_rate", "get_adaptive_learning_engine"),
         ]
         for name, module, func in subsystems:
             try:
