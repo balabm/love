@@ -315,6 +315,38 @@ async def multimodal_recommend(task: str, context: dict = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Code Sandbox ──────────────────────────────────────────────────────────────
+
+@router.post("/sandbox/execute")
+async def sandbox_execute(code: str, timeout: float = 10.0):
+    """Execute Python code in a restricted sandbox."""
+    try:
+        from core.code_sandbox import get_code_sandbox
+        sandbox = get_code_sandbox()
+        result = sandbox.execute(code, timeout=timeout)
+        return {
+            "success": result.success,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "blocked": result.blocked,
+            "block_reason": result.block_reason,
+            "execution_time_ms": result.execution_time_ms,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/sandbox/stats")
+async def sandbox_stats():
+    """Get sandbox execution statistics."""
+    try:
+        from core.code_sandbox import get_code_sandbox
+        sandbox = get_code_sandbox()
+        return sandbox.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

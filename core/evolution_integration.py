@@ -172,6 +172,14 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Task Evolution error: {e}')
         
+        # Start Code Sandbox
+        try:
+            from core.code_sandbox import get_code_sandbox
+            sb = get_code_sandbox()
+            print('[EvolutionIntegration] Code Sandbox initialized')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Code Sandbox error: {e}')
+        
         # Start Fitness Evolution
         try:
             from agents.fitness_evolution_integration import get_fitness_evolution_integration

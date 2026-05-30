@@ -366,4 +366,10 @@ def get_agi_system_flags():
         flags["fitness_evolution"] = getattr(fe, '_running', False)
     except Exception:
         pass
+    try:
+        from core.code_sandbox import get_code_sandbox
+        sb = get_code_sandbox()
+        flags["code_sandbox"] = True
+    except Exception:
+        pass
     return flags
