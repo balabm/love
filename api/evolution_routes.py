@@ -427,3 +427,35 @@ async def get_evolution_history(limit: int = 50):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/health")
+async def get_evolution_health():
+    """Get health status of all evolution subsystems."""
+    try:
+        from core.evolution_integration import get_evolution_integration
+        from core.meta_evolution import get_meta_evolution
+        from core.swarm_evolution import get_swarm_evolution
+        from core.self_coder import get_self_coder
+        from core.cross_instance_learning import get_cross_instance_learning
+        from core.capability_gap_detector import get_capability_gap_detector
+        from core.autonomous_cicd import get_autonomous_cicd
+
+        integration = get_evolution_integration()
+        integration_status = integration.get_integration_status()
+
+        health = {
+            "integration": {
+                "running": integration._running,
+                "state": integration_status.get("state", {}),
+            },
+            "meta_evolution": {"running": get_meta_evolution()._running},
+            "swarm_evolution": {"running": get_swarm_evolution()._running},
+            "self_coder": {"running": get_self_coder()._running},
+            "cross_instance": {"running": get_cross_instance_learning()._running},
+            "capability_gap_detector": {"running": get_capability_gap_detector()._running},
+            "autonomous_cicd": {"running": get_autonomous_cicd()._running},
+            "overall": "healthy" if integration._running else "degraded",
+        }
+        return health
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
