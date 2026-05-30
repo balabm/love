@@ -252,6 +252,33 @@ class CrossInstanceLearning:
         relevant.sort(key=lambda m: (m.success_rate, m.sample_size), reverse=True)
         
         return relevant[:10]  # Return top 10
+    def discover_modern_module_mutations(self, min_success_rate: float = 0.6) -> List[SharedMutation]:
+        """Discover mutations from modern AI modules."""
+        relevant = []
+        modern_modules = [
+            ("llm_manager", "core.llm_manager", "get_all_stats"),
+            ("prompt_optimizer", "core.prompt_optimizer", "get_statistics"),
+            ("adaptive_learning_rate", "core.adaptive_learning_rate", "get_learning_stats"),
+        ]
+        for name, module, stat_func in modern_modules:
+            try:
+                mod = __import__(module, fromlist=[stat_func])
+                stats = getattr(mod, stat_func)()
+                if stats.get("total_adjustments", 0) > 0:
+                    relevant.append(SharedMutation(
+                        mutation_id=f"modern_{name}_{int(time.time())}",
+                        source_instance_id=self._instance_id,
+                        mutation_type="modern_module_tuning",
+                        description=f"{name} parameter tuning: {stats.get('total_adjustments', 0)} adjustments",
+                        domains=["intelligence"],
+                        success_rate=stats.get("average_quality", 0.5),
+                        sample_size=stats.get("total_adjustments", 1),
+                        adopted_by=set(),
+                    ))
+            except Exception:
+                pass
+        relevant.sort(key=lambda m: (m.success_rate, m.sample_size), reverse=True)
+        return relevant[:10]
     
     def discover_patterns(self, pattern_type: str = "", min_effectiveness: float = 0.6) -> List[SharedPattern]:
         """Discover relevant patterns from the knowledge hub."""
