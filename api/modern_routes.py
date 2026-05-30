@@ -807,6 +807,82 @@ async def predictive_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Multi-Agent Orchestrator ────────────────────────────────────────────────────
+
+@router.post("/agents/orchestrate")
+async def orchestrate_task(goal: str):
+    """Run a multi-agent orchestration for a high-level goal."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        orch = get_multi_agent_orchestrator()
+        return orch.run_orchestration(goal)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/agents/task")
+async def create_agent_task(description: str, role: str = "", dependencies: str = ""):
+    """Create a new task for an agent."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator, AgentRole
+        orch = get_multi_agent_orchestrator()
+        agent_role = None
+        if role:
+            try:
+                agent_role = AgentRole(role)
+            except ValueError:
+                pass
+        deps = dependencies.split(",") if dependencies else []
+        task_id = orch.create_task(description, agent_role, deps)
+        return {"task_id": task_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agents/status")
+async def agent_status():
+    """Get status of all agents."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        orch = get_multi_agent_orchestrator()
+        return {"agents": orch.get_agent_status()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agents/tasks")
+async def task_status():
+    """Get status of all tasks."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        orch = get_multi_agent_orchestrator()
+        return {"tasks": orch.get_task_status()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agents/messages")
+async def agent_messages(limit: int = 20):
+    """Get recent inter-agent messages."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        orch = get_multi_agent_orchestrator()
+        return {"messages": orch.get_recent_messages(limit)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/agents/stats")
+async def agent_stats():
+    """Get multi-agent orchestrator statistics."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        orch = get_multi_agent_orchestrator()
+        return orch.get_statistics()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

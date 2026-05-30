@@ -420,4 +420,10 @@ def get_agi_system_flags():
         flags["predictive_maintenance"] = True
     except Exception:
         pass
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        ma = get_multi_agent_orchestrator()
+        flags["multi_agent"] = len(ma._agents) > 0
+    except Exception:
+        pass
     return flags

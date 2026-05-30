@@ -207,6 +207,15 @@ class EvolutionIntegration:
         except Exception as e:
             print(f'[EvolutionIntegration] Multi-Modal error: {e}')
         
+        # Start Multi-Agent Orchestrator
+        try:
+            from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+            ma = get_multi_agent_orchestrator()
+            ma._running = True
+            print('[EvolutionIntegration] Multi-Agent Orchestrator initialized')
+        except Exception as e:
+            print(f'[EvolutionIntegration] Multi-Agent Orchestrator error: {e}')
+        
         # Start Predictive Maintenance Engine
         try:
             from core.predictive_maintenance import get_predictive_maintenance_engine
