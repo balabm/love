@@ -548,10 +548,38 @@ class MultiModalEvolution:
             except Exception as e:
                 print(f"[MultiModal] Loop error: {e}")
             
+            # Modern module cross-modal integration
+            try:
+                self._integrate_modern_modules()
+            except Exception:
+                pass
+            
             time.sleep(7200)  # Run every 2 hours
     
     # ── Query Methods ───────────────────────────────────────────────────────────
     
+    def _integrate_modern_modules(self):
+        """Integrate modern AI modules into cross-modal evolution."""
+        try:
+            from core.agi_spine import get_agi_system_flags
+            flags = get_agi_system_flags()
+            modern_modules = [
+                "cross_modal_fusion", "emotional_resonance", "personality_adapter",
+                "intent_predictor", "user_pattern_detector",
+            ]
+            for module in modern_modules:
+                if flags.get(module, False):
+                    # Register as a cross-modal pattern
+                    pattern = CrossModalPattern(
+                        modalities=["text", "context"],
+                        pattern_description=f"Modern module {module} active in multimodal evolution",
+                        strength=0.7,
+                        applications=["conversation", "adaptation"],
+                    )
+                    self._cross_modal_patterns[pattern.id] = pattern
+        except Exception:
+            pass
+
     def get_system_status(self) -> Dict:
         """Get overall multi-modal system status."""
         return {
