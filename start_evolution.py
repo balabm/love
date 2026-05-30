@@ -31,6 +31,7 @@ Plus Modern AI Subsystems:
 - Predictive Maintenance Engine (proactive system health forecasting)
 - Multi-Agent Orchestrator (coordinated role-based intelligence)
 - Intent Predictor (proactive user intent prediction + response preparation)
+- Personality Adapter (dynamic tone & style calibration)
 
 Usage:
     python start_evolution.py
