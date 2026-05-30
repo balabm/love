@@ -517,5 +517,11 @@ def get_agi_system_flags():
         flags["knowledge_injector"] = True
     except Exception:
         pass
+    try:
+        from core.conversation_summarizer import get_conversation_summarizer
+        cs = get_conversation_summarizer()
+        flags["conversation_summarizer"] = True
+    except Exception:
+        pass
 
     return flags

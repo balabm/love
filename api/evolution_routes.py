@@ -491,6 +491,7 @@ async def get_evolution_health():
             "semantic_search_optimizer": {"available": True},
             "emotion_aware_response": {"available": True},
             "knowledge_injector": {"available": True},
+            "conversation_summarizer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

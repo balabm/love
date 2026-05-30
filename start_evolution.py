@@ -45,6 +45,7 @@ Plus Modern AI Subsystems:
 - Semantic Search Optimizer (vector query optimization and reranking)
 - Emotion-Aware Response Generator (emotional calibration)
 - Knowledge Injector (proactive contextual knowledge delivery)
+- Conversation Summarizer (hierarchical conversation distillation)
 
 Usage:
     python start_evolution.py

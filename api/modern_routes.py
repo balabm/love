@@ -1809,6 +1809,31 @@ async def knowledge_injector_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Conversation Summarizer ─────────────────────────────────────────────────
+
+@router.post("/conversation/summarize")
+async def summarize_conversation(data: Dict[str, Any] = {}):
+    """Summarize a conversation from turns."""
+    try:
+        from core.conversation_summarizer import get_conversation_summarizer
+        summarizer = get_conversation_summarizer()
+        turns = data.get("turns", [])
+        return summarizer.summarize_conversation(turns)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/conversation/summary/stats")
+async def conversation_summary_stats():
+    """Get conversation summarizer statistics."""
+    try:
+        from core.conversation_summarizer import get_conversation_summarizer
+        summarizer = get_conversation_summarizer()
+        return summarizer.get_summary_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Router Registration ───────────────────────────────────────────────────
 
 

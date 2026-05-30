@@ -1,18 +1,22 @@
-feat(integration): daily_briefing + heartbeat now monitor modern AI modules
+feat(modern): Conversation Summarizer — hierarchical conversation distillation
 
-daily_briefing.py (_gather_data):
-- Added modern_modules_active / modern_modules_total / modern_modules list
-  (queries AGI spine flags for all 23 modern modules)
-- Added emotion_trend and emotion_recent_avg from Emotion-Aware Response Generator
-- Added predictive_alerts count from Predictive Maintenance Engine
-- Added goal_drift_alerts count from Goal Drift Detector
+Conversation Summarizer (core/conversation_summarizer.py):
+- summarize_conversation(): Hierarchical summary with topic segments,
+  key decisions, action items, and emotional arc
+- extract_action_items(): Detects commitments using action markers
+  ("need to", "should", "will", "plan to", etc.)
+- get_topic_segments(): Splits conversations by topic with per-topic summaries
+- get_summary_stats(): Tracks compression ratios and action item counts
+- 345 lines of production conversation summarization infrastructure
 
-heartbeat.py (_scan_cycle + _scan_modern_modules):
-- New _scan_modern_modules() method monitors modern AI modules
-- Detects offline modern modules and publishes trigger events
-- Monitors emotional decline via Emotion-Aware Response Generator
-  trajectory (warns if declining below -0.4)
-- Surfaces high-severity predictive maintenance alerts as heartbeat triggers
+API Endpoints (api/modern_routes.py):
+- POST /modern/conversation/summarize — Summarize conversation turns
+- GET /modern/conversation/summary/stats — Summarizer statistics
+
+Integration:
+- AGI spine includes conversation_summarizer flag
+- /evolution/health and /intelligence/self-evolution include availability
+- start_evolution.py lists Conversation Summarizer
 
 All 101 tests pass.
 
