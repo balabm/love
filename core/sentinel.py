@@ -529,6 +529,7 @@ class Sentinel:
             ("heartbeat", "core.heartbeat", "start_heartbeat"),
             ("proactive_push", "core.proactive_push", "get_push_engine"),
             ("goal_engine", "core.autonomous_goal_engine", "start_goal_engine"),
+            ("evolution_integration", "core.evolution_integration", "get_evolution_integration"),
         ]
         for name, module, func in subsystems:
             try:
