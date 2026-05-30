@@ -474,6 +474,7 @@ async def get_evolution_health():
             "prompt_optimizer": {"available": True},
             "self_reflection": {"available": True},
             "conversation_quality": {"available": True},
+            "predictive_maintenance": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

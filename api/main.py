@@ -6470,6 +6470,7 @@ def get_self_evolution_status():
                 "prompt_optimizer": {"available": True},
                 "self_reflection": {"available": True},
                 "conversation_quality": {"available": True},
+                "predictive_maintenance": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
         except Exception:

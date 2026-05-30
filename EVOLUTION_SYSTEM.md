@@ -70,6 +70,7 @@ LOVE operates a fully closed-loop self-improvement ecosystem.
 | Prompt Optimizer | Adaptive prompt engineering with A/B testing | Internal |
 | Self-Reflection | Meta-cognitive behavioral analysis + capability assessment | Internal |
 | Conversation Quality | Real-time engagement, clarity, relevance, emotion analysis | Internal |
+| Predictive Maintenance | Proactive failure prediction + maintenance scheduling | Internal |
 | AGI Spine | Bridges all modules, health monitoring | Orchestrator |
 
 ### Closed Loop Flow
@@ -153,6 +154,10 @@ Generate -> Test -> Auto-Approve -> Deploy -> Report
 | `/modern/conversation/analyze` | Analyze full conversation quality |
 | `/modern/conversation/trends` | Conversation quality trends |
 | `/modern/conversation/stats` | Conversation quality statistics |
+| `/modern/predictive/health/{subsystem}` | Health forecast for subsystem |
+| `/modern/predictive/predictions` | All failure predictions |
+| `/modern/predictive/snapshot` | Record health snapshot |
+| `/modern/predictive/stats` | Predictive maintenance statistics |
 
 ### Startup
 
