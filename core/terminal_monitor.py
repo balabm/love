@@ -315,28 +315,26 @@ class TerminalMonitor:
             return
 
         # Ask LLM
-        fix = _ask_llm_for_fix(tb_info)
+   
+    # Attempt auto-apply if patch + high confidence
+    applied = True
+    if (fix.get('fix_type') == 'patch'
+            and fix.get('patch')
+            and fix.get('confidence', 0) >= 0.75
+            and file_path):
+        fix['patch_result'] = result
+        applied = result.get('applied', False)
+        if applied:
+            fix['auto_applied'] = True
+            print(f"[TerminalMonitor] Auto-patched {file_path}")
 
-        # Attempt auto-apply if patch + high confidence
-        applied = False
-        if (fix.get("fix_type") == "patch"
-                and fix.get("patch")
-                and fix.get("confidence", 0) >= 0.75
-                and file_path):
-            result = _apply_patch(file_path, fix["patch"])
-            fix["patch_result"] = result
-            applied = result.get("applied", False)
-            if applied:
-                fix["auto_applied"] = True
-                print(f"[TerminalMonitor] Auto-patched {file_path}")
-
-        # Log fix attempt
-        fix_record = {**tb_info, "fix": fix, "auto_applied": applied, "ts": datetime.now().isoformat()}
-        self._append_log(FIX_LOG, fix_record)
-        with _lock:
-            self._fixes.append(fix_record)
-            if len(self._fixes) > MAX_ERRORS_MEMORY:
-                self._fixes.pop(0)
+    # Log fix attempt
+    fix_record = {**tb_info, "fix": fix, "auto_applied": applied, "ts": datetime.now().isoformat()}
+    self._append_log(FIX_LOG, fix_record)
+    with _lock:
+        self._fixes.append(fix_record)
+        if len(self._fixes) > MAX_ERRORS_MEMORY:
+            self._fixes.pop(0)
 
         # Push to WebSocket
         self._push_notice(tb_info, fix, applied)
