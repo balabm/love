@@ -284,3 +284,20 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.6; }
 }
+
+.intel-health-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.intel-health-chip {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  background: rgba(0,0,0,0.3);
+}
+.intel-health-chip.up { color: #4ade80; }
+.intel-health-chip.down { color: #ef4444; }
+.intel-overall-healthy { color: #4ade80; font-size: 0.8rem; margin-top: 6px; }
+.intel-overall-degraded { color: #fbbf24; font-size: 0.8rem; margin-top: 6px; }

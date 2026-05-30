@@ -194,6 +194,23 @@ export default function IntelligenceDashboard() {
                   <span>{evolution.integration.statistics.successful_cross_adoptions || 0} adoptions</span>
                 </div>
               )}
+              {evolution.health && (
+                <div className="intel-subsection">
+                  <div className="intel-subtitle">Health</div>
+                  <div className="intel-health-grid">
+                    {Object.entries(evolution.health).filter(([k]) => k !== "overall").map(([name, info]) => (
+                      <span key={name} className={`intel-health-chip ${info.running ? "up" : "down"}`}>
+                        {info.running ? "●" : "○"} {name.replace(/_/g, " ")}
+                      </span>
+                    ))}
+                  </div>
+                  {evolution.health.overall && (
+                    <div className={`intel-overall-${evolution.health.overall}`}>
+                      Overall: {evolution.health.overall}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
