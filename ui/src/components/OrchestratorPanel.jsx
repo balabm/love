@@ -173,6 +173,17 @@ const OrchestratorPanel = () => {
                     <span className="evo-metric-lbl">Deployments</span>
                   </div>
                 )}
+                {evolution.health && (
+                  <div className="evo-metric" style={{gridColumn: "1 / -1", marginTop: 8}}>
+                    <span className="evo-metric-lbl">Health: </span>
+                    <span style={{color: evolution.health.overall === "healthy" ? "#4ade80" : "#fbbf24", fontWeight: "bold"}}>
+                      {evolution.health.overall}
+                    </span>
+                    <span style={{fontSize: "0.75rem", marginLeft: 8, opacity: 0.7}}>
+                      {Object.values(evolution.health).filter(h => h && h.running).length} / {Object.keys(evolution.health).filter(k => k !== "overall").length} up
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
