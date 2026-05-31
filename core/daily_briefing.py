@@ -213,6 +213,8 @@ class DailyBriefingSystem:
                 "adaptive_learning_rate", "conversation_continuity",
                 "memory_compressor", "semantic_search_optimizer",
                 "emotion_aware_response", "knowledge_injector",
+                "habit_streak_tracker", "sleep_analyzer",
+                "social_connection_monitor", "learning_path_optimizer",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

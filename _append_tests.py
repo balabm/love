@@ -1,4 +1,7 @@
+with open('tests/test_modern_engines.py', 'r', encoding='utf-8') as f:
+    content = f.read()
 
+new_tests = '''
 
 
 # -- Habit Streak Tracker Tests ------------------------------------------------
@@ -130,3 +133,9 @@ class TestLearningPathOptimizer:
         lpo.add_skill("Python", level=0.3)
         suggestions = lpo.suggest_next_topic("Python")
         assert isinstance(suggestions, list)
+'''
+
+with open('tests/test_modern_engines.py', 'w', encoding='utf-8') as f:
+    f.write(content + new_tests)
+
+print('Appended new tests successfully')

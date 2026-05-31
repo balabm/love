@@ -52,6 +52,10 @@ Plus Modern AI Subsystems:
 - Deep Work Protector (focus session guardian)
 - Energy Forecaster (predictive energy modeling)
 - Smart Break Suggester (optimal break timing)
+- Habit Streak Tracker (consistency and momentum)
+- Sleep Analyzer (sleep pattern intelligence)
+- Social Connection Monitor (relationship health)
+- Learning Path Optimizer (adaptive learning sequences)
 
 Usage:
     python start_evolution.py
@@ -201,6 +205,21 @@ def start_evolution_systems():
         ("Knowledge Graph Builder", "core.knowledge_graph_builder", "get_knowledge_graph_builder"),
         ("Adaptive Learning Rate", "core.adaptive_learning_rate", "get_adaptive_learning_engine"),
         ("Conversation Continuity", "core.conversation_continuity", "get_conversation_continuity_manager"),
+        ("Memory Compressor", "core.memory_compressor", "get_memory_compressor"),
+        ("Semantic Search Optimizer", "core.semantic_search_optimizer", "get_semantic_search_optimizer"),
+        ("Emotion-Aware Response", "core.emotion_aware_response", "get_emotion_aware_response_generator"),
+        ("Knowledge Injector", "core.knowledge_injector", "get_knowledge_injector"),
+        ("Conversation Summarizer", "core.conversation_summarizer", "get_conversation_summarizer"),
+        ("Context-Aware Task Prioritizer", "core.context_aware_prioritizer", "get_context_aware_prioritizer"),
+        ("Wellness Nudger", "core.wellness_nudger", "get_wellness_nudger"),
+        ("Notification Filter", "core.notification_filter", "get_notification_filter"),
+        ("Deep Work Protector", "core.deep_work_protector", "get_deep_work_protector"),
+        ("Energy Forecaster", "core.energy_forecaster", "get_energy_forecaster"),
+        ("Smart Break Suggester", "core.smart_break_suggester", "get_smart_break_suggester"),
+        ("Habit Streak Tracker", "core.habit_streak_tracker", "get_habit_streak_tracker"),
+        ("Sleep Analyzer", "core.sleep_analyzer", "get_sleep_analyzer"),
+        ("Social Connection Monitor", "core.social_connection_monitor", "get_social_connection_monitor"),
+        ("Learning Path Optimizer", "core.learning_path_optimizer", "get_learning_path_optimizer"),
     ]
 
     initialized = 0

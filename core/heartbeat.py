@@ -165,6 +165,10 @@ class ProactiveHeartbeat:
                 ("knowledge_injector", "Knowledge Injector"),
                 ("adaptive_learning_rate", "Adaptive Learning"),
                 ("conversation_continuity", "Conversation Continuity"),
+                ("habit_streak_tracker", "Habit Streak Tracker"),
+                ("sleep_analyzer", "Sleep Analyzer"),
+                ("social_connection_monitor", "Social Connection Monitor"),
+                ("learning_path_optimizer", "Learning Path Optimizer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

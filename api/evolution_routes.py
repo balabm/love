@@ -498,6 +498,10 @@ async def get_evolution_health():
             "deep_work_protector": {"available": True},
             "energy_forecaster": {"available": True},
             "smart_break_suggester": {"available": True},
+            "habit_streak_tracker": {"available": True},
+            "sleep_analyzer": {"available": True},
+            "social_connection_monitor": {"available": True},
+            "learning_path_optimizer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
