@@ -92,6 +92,10 @@ Plus Modern AI Subsystems:
 - Password Health Checker (security intelligence)
 - Subscription Manager (finance intelligence)
 - Digital Declutterer (digital wellness intelligence)
+- Event Planner (event intelligence)
+- Habit Builder (habit intelligence)
+- Morning Routine Designer (morning intelligence)
+- Evening Wind-Down Coach (sleep intelligence)
 
 Usage:
     python start_evolution.py
@@ -292,6 +296,10 @@ def start_evolution_systems():
         ("Password Health Checker", "core.password_health_checker", "get_password_health_checker"),
         ("Subscription Manager", "core.subscription_manager", "get_subscription_manager"),
         ("Digital Declutterer", "core.digital_declutterer", "get_digital_declutterer"),
+        ("Event Planner", "core.event_planner", "get_event_planner"),
+        ("Habit Builder", "core.habit_builder", "get_habit_builder"),
+        ("Morning Routine Designer", "core.morning_routine_designer", "get_morning_routine_designer"),
+        ("Evening Wind-Down Coach", "core.evening_wind_down_coach", "get_evening_wind_down_coach"),
     ]
 
     initialized = 0

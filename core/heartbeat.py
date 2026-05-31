@@ -205,6 +205,10 @@ class ProactiveHeartbeat:
                 ("password_health_checker", "Password Health Checker"),
                 ("subscription_manager", "Subscription Manager"),
                 ("digital_declutterer", "Digital Declutterer"),
+                ("event_planner", "Event Planner"),
+                ("habit_builder", "Habit Builder"),
+                ("morning_routine_designer", "Morning Routine Designer"),
+                ("evening_wind_down_coach", "Evening Wind-Down Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

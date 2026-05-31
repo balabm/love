@@ -538,6 +538,10 @@ async def get_evolution_health():
             "password_health_checker": {"available": True},
             "subscription_manager": {"available": True},
             "digital_declutterer": {"available": True},
+            "event_planner": {"available": True},
+            "habit_builder": {"available": True},
+            "morning_routine_designer": {"available": True},
+            "evening_wind_down_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
