@@ -306,6 +306,10 @@ export default function IntelligenceDashboard() {
     { name: "wealth_builder", stats: modernStats.evolution_health?.wealth_builder },
     { name: "income_diversifier", stats: modernStats.evolution_health?.income_diversifier },
     { name: "financial_independence_tracker", stats: modernStats.evolution_health?.financial_independence_tracker },
+    { name: "sustainability_coach", stats: modernStats.evolution_health?.sustainability_coach },
+    { name: "nature_connector", stats: modernStats.evolution_health?.nature_connector },
+    { name: "eco_footprint_tracker", stats: modernStats.evolution_health?.eco_footprint_tracker },
+    { name: "regenerative_living_guide", stats: modernStats.evolution_health?.regenerative_living_guide },
   ].filter(m => m.stats);
 
   return (
