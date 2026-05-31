@@ -261,6 +261,8 @@ class DailyBriefingSystem:
                 "peak_performance_tracker", "mindful_productivity_coach",
                 "sleep_optimizer", "nutrition_coach",
                 "movement_tracker", "health_integrator",
+                "digital_minimalism_coach", "focus_ritual_designer",
+                "attention_recovery_specialist", "cognitive_load_manager",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

@@ -148,6 +148,10 @@ Plus Modern AI Subsystems:
 - Nutrition Coach (fuel intelligence)
 - Movement Tracker (body intelligence)
 - Health Integrator (holistic health intelligence)
+- Digital Minimalism Coach (intentional tech intelligence)
+- Focus Ritual Designer (ritual intelligence)
+- Attention Recovery Specialist (attention restoration intelligence)
+- Cognitive Load Manager (mental bandwidth intelligence)
 
 Usage:
     python start_evolution.py
@@ -404,6 +408,10 @@ def start_evolution_systems():
         ("Nutrition Coach", "core.nutrition_coach", "get_nutrition_coach"),
         ("Movement Tracker", "core.movement_tracker", "get_movement_tracker"),
         ("Health Integrator", "core.health_integrator", "get_health_integrator"),
+        ("Digital Minimalism Coach", "core.digital_minimalism_coach", "get_digital_minimalism_coach"),
+        ("Focus Ritual Designer", "core.focus_ritual_designer", "get_focus_ritual_designer"),
+        ("Attention Recovery Specialist", "core.attention_recovery_specialist", "get_attention_recovery_specialist"),
+        ("Cognitive Load Manager", "core.cognitive_load_manager", "get_cognitive_load_manager"),
     ]
 
     initialized = 0
