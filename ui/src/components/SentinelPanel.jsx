@@ -222,6 +222,7 @@ export default function SentinelPanel() {
                 "legacy_builder", "death_awareness_coach", "experience_maximizer", "wonder_cultivator", "travel_optimizer", "community_builder", "social_impact_tracker", "volunteer_coordinator", "network_weaver", "longevity_optimizer", "vitality_tracker", "age_reversal_coach", "life_phase_navigator", "parenting_coach", "family_harmony_builder", "grief_support_companion", "humor_cultivator", "civic_engagement_tracker", "mentorship_weaver", "wisdom_keeper", "play_architect", "home_environment_optimizer", "intergenerational_bridge_builder", "aesthetic_life_designer", "comfort_zone_challenger",
                 "conflict_resolution_coach", "forgiveness_facilitator", "celebration_architect", "rest_designer",
                 "boundary_coach", "emotional_literacy_trainer", "hope_cultivator", "attention_steward",
+                "identity_explorer", "values_navigator", "belonging_builder", "rejection_resilience_coach",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
