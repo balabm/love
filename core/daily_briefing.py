@@ -255,6 +255,8 @@ class DailyBriefingSystem:
                 "environment_curator", "ritual_master",
                 "values_explorer", "belief_examiner",
                 "shadow_integrator", "inner_critic_manager",
+                "emotional_intelligence_trainer", "empathy_builder",
+                "compassion_generator", "gratitude_amplifier",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

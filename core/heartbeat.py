@@ -249,6 +249,10 @@ class ProactiveHeartbeat:
                 ("belief_examiner", "Belief Examiner"),
                 ("shadow_integrator", "Shadow Integrator"),
                 ("inner_critic_manager", "Inner Critic Manager"),
+                ("emotional_intelligence_trainer", "Emotional Intelligence Trainer"),
+                ("empathy_builder", "Empathy Builder"),
+                ("compassion_generator", "Compassion Generator"),
+                ("gratitude_amplifier", "Gratitude Amplifier"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

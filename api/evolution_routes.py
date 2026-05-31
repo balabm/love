@@ -582,6 +582,10 @@ async def get_evolution_health():
             "belief_examiner": {"available": True},
             "shadow_integrator": {"available": True},
             "inner_critic_manager": {"available": True},
+            "emotional_intelligence_trainer": {"available": True},
+            "empathy_builder": {"available": True},
+            "compassion_generator": {"available": True},
+            "gratitude_amplifier": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

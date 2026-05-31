@@ -136,6 +136,10 @@ Plus Modern AI Subsystems:
 - Belief Examiner (epistemology intelligence)
 - Shadow Integrator (unconscious intelligence)
 - Inner Critic Manager (self-talk intelligence)
+- Emotional Intelligence Trainer (EQ intelligence)
+- Empathy Builder (perspective intelligence)
+- Compassion Generator (loving-kindness intelligence)
+- Gratitude Amplifier (appreciation intelligence)
 
 Usage:
     python start_evolution.py
@@ -380,6 +384,10 @@ def start_evolution_systems():
         ("Belief Examiner", "core.belief_examiner", "get_belief_examiner"),
         ("Shadow Integrator", "core.shadow_integrator", "get_shadow_integrator"),
         ("Inner Critic Manager", "core.inner_critic_manager", "get_inner_critic_manager"),
+        ("Emotional Intelligence Trainer", "core.emotional_intelligence_trainer", "get_emotional_intelligence_trainer"),
+        ("Empathy Builder", "core.empathy_builder", "get_empathy_builder"),
+        ("Compassion Generator", "core.compassion_generator", "get_compassion_generator"),
+        ("Gratitude Amplifier", "core.gratitude_amplifier", "get_gratitude_amplifier"),
     ]
 
     initialized = 0
