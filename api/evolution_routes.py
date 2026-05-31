@@ -445,6 +445,11 @@ async def get_evolution_health():
         from agents.fitness_evolution_integration import get_fitness_evolution_integration
         from core.mcp_host import get_mcp_host
 
+from core.shadow_integrator import get_shadow_integrator
+from core.inner_critic_tamer import get_inner_critic_tamer
+from core.perfectionism_healer import get_perfectionism_healer
+from core.comparison_detoxifier import get_comparison_detoxifier
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -690,3 +695,57 @@ async def get_evolution_health():
         return health
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/shadow_integrator/record")
+def shadow_integrator_record(shadow: str = "", shadow_type: str = "", awareness: float = 0.0, acceptance: float = 0.0, integration: float = 0.0, trigger: str = "", projection: float = 0.0, notes: str = ""):
+    entry = get_shadow_integrator().record_encounter(shadow=shadow, shadow_type=shadow_type, awareness=awareness, acceptance=acceptance, integration=integration, trigger=trigger, projection=projection, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/shadow_integrator/stats")
+def shadow_integrator_stats():
+    return get_shadow_integrator().get_shadow_stats()
+
+@router.get("/shadow_integrator/score")
+def shadow_integrator_score():
+    return {"shadow_score": get_shadow_integrator().get_shadow_score()}
+
+@router.post("/inner_critic_tamer/record")
+def inner_critic_tamer_record(critic: str = "", critic_type: str = "", harshness: float = 0.5, accuracy: float = 0.0, response: float = 0.0, self_compassion: float = 0.0, challenge: float = 0.0, notes: str = ""):
+    entry = get_inner_critic_tamer().record_critic(critic=critic, critic_type=critic_type, harshness=harshness, accuracy=accuracy, response=response, self_compassion=self_compassion, challenge=challenge, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/inner_critic_tamer/stats")
+def inner_critic_tamer_stats():
+    return get_inner_critic_tamer().get_critic_stats()
+
+@router.get("/inner_critic_tamer/score")
+def inner_critic_tamer_score():
+    return {"critic_score": get_inner_critic_tamer().get_critic_score()}
+
+@router.post("/perfectionism_healer/record")
+def perfectionism_healer_record(situation: str = "", perfectionism_type: str = "", cost: float = 0.0, completion: float = 0.0, satisfaction: float = 0.0, self_acceptance: float = 0.0, good_enough: float = 0.0, notes: str = ""):
+    entry = get_perfectionism_healer().record_perfectionism(situation=situation, perfectionism_type=perfectionism_type, cost=cost, completion=completion, satisfaction=satisfaction, self_acceptance=self_acceptance, good_enough=good_enough, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/perfectionism_healer/stats")
+def perfectionism_healer_stats():
+    return get_perfectionism_healer().get_perfectionism_stats()
+
+@router.get("/perfectionism_healer/score")
+def perfectionism_healer_score():
+    return {"perfectionism_score": get_perfectionism_healer().get_perfectionism_score()}
+
+@router.post("/comparison_detoxifier/record")
+def comparison_detoxifier_record(comparison: str = "", comparison_type: str = "", distress: float = 0.0, accuracy: float = 0.0, response: float = 0.0, gratitude: float = 0.0, self_compassion: float = 0.0, self_reference: float = 0.0, notes: str = ""):
+    entry = get_comparison_detoxifier().record_comparison(comparison=comparison, comparison_type=comparison_type, distress=distress, accuracy=accuracy, response=response, gratitude=gratitude, self_compassion=self_compassion, self_reference=self_reference, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/comparison_detoxifier/stats")
+def comparison_detoxifier_stats():
+    return get_comparison_detoxifier().get_comparison_stats()
+
+@router.get("/comparison_detoxifier/score")
+def comparison_detoxifier_score():
+    return {"comparison_score": get_comparison_detoxifier().get_comparison_score()}
+

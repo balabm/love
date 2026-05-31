@@ -1,33 +1,33 @@
 """
-LOVE Shadow Integrator — Unconscious Intelligence (Modern AI Pattern)
+LOVE Shadow Integrator — Wholeness Intelligence (Modern AI Pattern)
 
-Most people reject their shadow, making it stronger. This integrator:
+Most people deny their shadow and project it onto others. This integrator:
 
 1. SHADOW TRACKING
-   - Record shadow traits and their triggers
-   - Track projection patterns (seeing your shadow in others)
-   - Log integration attempts and their outcomes
+   - Record shadow encounters and their characteristics
+   - Track shadow types (anger, envy, greed, lust, pride, fear, shame)
+   - Log awareness, acceptance, and integration of shadow aspects
 
 2. PATTERN ANALYSIS
-   - Identify the user's shadow themes (what they deny in themselves)
-   - Find projection targets (who they project shadow onto)
-   - Detect shadow activation contexts
+   - Identify the user's shadow profile (integrated, repressed, projected, exploring)
+   - Find shadow patterns that lead to wholeness vs fragmentation
+   - Detect chronic repression and its consequences
 
-3. INTEGRATION PRACTICES
-   - Suggest shadow-acceptance exercises
-   - Provide projection-awareness techniques
-   - Recommend integration rituals for specific shadows
+3. SHADOW BUILDING
+   - Suggest practices for meeting and integrating shadow aspects
+   - Provide frameworks for understanding what triggers projection
+   - Recommend practices for owning disowned parts
 
-4. WHOLENESS TRACKING
-   - Track the correlation between shadow integration and emotional stability
-   - Alert when projection is distorting relationships
-   - Celebrate integration milestones
+4. WHOLENESS CULTIVATION
+   - Track the correlation between shadow integration and authenticity
+   - Alert when shadow is being heavily projected
+   - Celebrate moments of genuine self-acceptance
 
 Architecture:
-- record_shadow(trait, trigger, projection_target, integration): Log shadow
+- record_encounter(shadow, type, awareness, acceptance, integration): Log encounter
 - get_shadow_stats(): Get shadow pattern analysis
-- get_integration_exercise(shadow, intensity): Get exercise
-- get_shadow_score(): Calculate overall shadow integration health
+- get_shadow_suggestion(capacity, context): Get suggestion
+- get_shadow_score(): Calculate overall shadow health
 """
 
 import json
@@ -43,28 +43,28 @@ from typing import Any, Dict, List, Optional
 DATA_DIR = Path(__file__).parent.parent / "data" / "shadow_integrator"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-SHADOW_LOG = DATA_DIR / "shadows.jsonl"
+SHADOW_LOG = DATA_DIR / "encounters.jsonl"
 STATS_DB = DATA_DIR / "stats.json"
 
 
 @dataclass
 class ShadowEntry:
-    """A tracked shadow entry."""
+    """A tracked shadow encounter."""
     entry_id: str = ""
-    trait: str = ""  # anger, greed, jealousy, laziness, arrogance, vulnerability, etc.
-    trigger: str = ""  # what activated it
-    projection_target: str = ""  # who they see this in
-    reaction: str = ""  # how they reacted
-    integration_attempt: str = ""  # what they did to integrate
-    integration_success: float = 0.0  # 0-1
-    emotional_intensity: float = 0.5  # 0-1
+    shadow: str = ""  # what was encountered
+    shadow_type: str = ""  # anger, envy, greed, lust, pride, fear, shame
+    awareness: float = 0.0  # 0-1
+    acceptance: float = 0.0  # 0-1
+    integration: float = 0.0  # 0-1
+    trigger: str = ""  # what triggered it
+    projection: float = 0.0  # 0-1
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     notes: str = ""
 
 
 class ShadowIntegrator:
     """
-    Intelligent shadow integrator with projection detection and wholeness tracking.
+    Intelligent shadow integrator with awareness detection and wholeness cultivation.
     """
 
     _instance = None
@@ -82,30 +82,29 @@ class ShadowIntegrator:
             return
         self._initialized = True
         self._lock = threading.Lock()
-        self._entries: deque = deque(maxlen=200)
+        self._entries: deque = deque(maxlen=300)
         self._stats = {
             "total_entries": 0,
+            "avg_awareness": 0.0,
             "avg_integration": 0.0,
-            "avg_intensity": 0.0,
-            "dominant_shadow": "",
-            "top_projection_target": "",
+            "repression_risk": False,
         }
         self._load_stats()
 
     # ── Core Tracking ─────────────────────────────────────────────────────
 
-    def record_shadow(self, trait: str = "", trigger: str = "", projection_target: str = "", reaction: str = "", integration_attempt: str = "", integration_success: float = 0.0, emotional_intensity: float = 0.5, notes: str = "") -> ShadowEntry:
-        """Record a shadow entry."""
-        entry_id = f"shadow_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._entries)}"
+    def record_encounter(self, shadow: str = "", shadow_type: str = "", awareness: float = 0.0, acceptance: float = 0.0, integration: float = 0.0, trigger: str = "", projection: float = 0.0, notes: str = "") -> ShadowEntry:
+        """Record a shadow encounter."""
+        entry_id = f"shd_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._entries)}"
         entry = ShadowEntry(
             entry_id=entry_id,
-            trait=trait or "unspecified",
-            trigger=trigger,
-            projection_target=projection_target,
-            reaction=reaction,
-            integration_attempt=integration_attempt,
-            integration_success=integration_success,
-            emotional_intensity=emotional_intensity,
+            shadow=shadow or "unspecified",
+            shadow_type=shadow_type or "general",
+            awareness=awareness,
+            acceptance=acceptance,
+            integration=integration,
+            trigger=trigger or "unspecified",
+            projection=projection,
             notes=notes,
         )
 
@@ -126,148 +125,140 @@ class ShadowIntegrator:
         if not self._entries:
             return {"status": "insufficient_data"}
 
-        # Trait analysis
-        by_trait = defaultdict(lambda: {"count": 0, "integration_sum": 0.0, "intensity_sum": 0.0})
+        # Type analysis
+        by_type = defaultdict(lambda: {"count": 0, "awareness_sum": 0.0, "acceptance_sum": 0.0, "integration_sum": 0.0})
         for e in self._entries:
-            by_trait[e.trait]["count"] += 1
-            by_trait[e.trait]["integration_sum"] += e.integration_success
-            by_trait[e.trait]["intensity_sum"] += e.emotional_intensity
+            by_type[e.shadow_type]["count"] += 1
+            by_type[e.shadow_type]["awareness_sum"] += e.awareness
+            by_type[e.shadow_type]["acceptance_sum"] += e.acceptance
+            by_type[e.shadow_type]["integration_sum"] += e.integration
 
-        trait_stats = {}
-        for t, data in by_trait.items():
+        type_stats = {}
+        for t, data in by_type.items():
             count = data["count"]
-            trait_stats[t] = {
+            type_stats[t] = {
                 "count": count,
-                "avg_integration": round(data["integration_sum"] / count, 2),
-                "avg_intensity": round(data["intensity_sum"] / count, 2),
-            }
-
-        dominant = max(trait_stats.items(), key=lambda x: x[1]["count"]) if trait_stats else ("", {})
-
-        # Projection target analysis
-        by_target = defaultdict(lambda: {"count": 0, "integration_sum": 0.0})
-        for e in self._entries:
-            if e.projection_target:
-                by_target[e.projection_target]["count"] += 1
-                by_target[e.projection_target]["integration_sum"] += e.integration_success
-
-        target_stats = {}
-        for target, data in by_target.items():
-            count = data["count"]
-            target_stats[target] = {
-                "count": count,
+                "avg_awareness": round(data["awareness_sum"] / count, 2),
+                "avg_acceptance": round(data["acceptance_sum"] / count, 2),
                 "avg_integration": round(data["integration_sum"] / count, 2),
             }
 
-        top_target = max(target_stats.items(), key=lambda x: x[1]["count"]) if target_stats else ("", {})
+        # Awareness analysis
+        high_aware = [e for e in self._entries if e.awareness > 0.7]
+        low_aware = [e for e in self._entries if e.awareness < 0.4]
+        if high_aware and low_aware:
+            high_aware_acc = sum(e.acceptance for e in high_aware) / len(high_aware)
+            low_aware_acc = sum(e.acceptance for e in low_aware) / len(low_aware)
+            high_aware_int = sum(e.integration for e in high_aware) / len(high_aware)
+            low_aware_int = sum(e.integration for e in low_aware) / len(low_aware)
+        else:
+            high_aware_acc = 0
+            low_aware_acc = 0
+            high_aware_int = 0
+            low_aware_int = 0
 
-        # Trigger analysis
-        by_trigger = defaultdict(lambda: {"count": 0, "intensity_sum": 0.0})
-        for e in self._entries:
-            if e.trigger:
-                by_trigger[e.trigger]["count"] += 1
-                by_trigger[e.trigger]["intensity_sum"] += e.emotional_intensity
+        # Projection analysis
+        high_proj = [e for e in self._entries if e.projection > 0.7]
+        low_proj = [e for e in self._entries if e.projection < 0.4]
+        if high_proj and low_proj:
+            high_proj_int = sum(e.integration for e in high_proj) / len(high_proj)
+            low_proj_int = sum(e.integration for e in low_proj) / len(low_proj)
+        else:
+            high_proj_int = 0
+            low_proj_int = 0
 
-        trigger_stats = {}
-        for tr, data in by_trigger.items():
-            count = data["count"]
-            trigger_stats[tr] = {
-                "count": count,
-                "avg_intensity": round(data["intensity_sum"] / count, 2),
-            }
-
-        # Integration trend
+        # Repression risk detection
         recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
         if recent:
-            recent_integration = sum(e.integration_success for e in recent) / len(recent)
+            recent_aware = sum(e.awareness for e in recent) / len(recent)
+            recent_accept = sum(e.acceptance for e in recent) / len(recent)
+            repression_risk = recent_aware < 0.3 and recent_accept < 0.3
         else:
-            recent_integration = 0
-
-        # High-intensity unintegrated shadows
-        unintegrated = [e for e in self._entries if e.integration_success < 0.3 and e.emotional_intensity > 0.6]
+            repression_risk = False
 
         return {
             "total_entries": len(self._entries),
-            "trait_stats": trait_stats,
-            "dominant_shadow": dominant[0],
-            "target_stats": target_stats,
-            "top_projection_target": top_target[0],
-            "trigger_stats": trigger_stats,
-            "avg_integration": round(sum(e.integration_success for e in self._entries) / len(self._entries), 2),
-            "avg_intensity": round(sum(e.emotional_intensity for e in self._entries) / len(self._entries), 2),
-            "recent_integration": round(recent_integration, 2),
-            "unintegrated_shadows": len(unintegrated),
+            "type_stats": type_stats,
+            "awareness_impact": {
+                "high_awareness_acceptance": round(high_aware_acc, 2),
+                "low_awareness_acceptance": round(low_aware_acc, 2),
+                "high_awareness_integration": round(high_aware_int, 2),
+                "low_awareness_integration": round(low_aware_int, 2),
+            },
+            "projection_effect": {
+                "high_projection_integration": round(high_proj_int, 2),
+                "low_projection_integration": round(low_proj_int, 2),
+            },
+            "repression_risk": repression_risk,
+            "avg_awareness": round(sum(e.awareness for e in self._entries) / len(self._entries), 2),
+            "avg_integration": round(sum(e.integration for e in self._entries) / len(self._entries), 2),
         }
 
-    def get_integration_exercise(self, shadow: str = "", intensity: float = 0.5, projection_target: str = "") -> Dict[str, Any]:
-        """Get exercise."""
-        exercises = [
-            f"Write a letter to your {shadow} self. Thank it for protecting you. Ask what it needs.",
-            f"When you see {shadow} in others, say to yourself: 'This is mine too. We share this.'",
-            f"Draw your {shadow}. Give it a name. Talk to it. It has something to teach you.",
-            f"List 3 ways your {shadow} has helped you in the past. Everything has a gift.",
-            f"Sit with your {shadow} for 5 minutes. Don't try to fix it. Just be with it.",
-            f"Ask someone you trust: 'When do you see my {shadow}?' Listen without defending.",
-            f"Create an altar or space for your {shadow}. Honor it as part of your wholeness.",
-            f"Write: 'I am learning to accept my {shadow}. It is part of me, not all of me.'",
+    def get_shadow_suggestion(self, capacity: float = 0.5, context: str = "") -> Dict[str, Any]:
+        """Get shadow suggestion."""
+        suggestions = [
+            "The trait you judge most harshly in others is the shadow you deny in yourself. Next time you're triggered by someone's behavior, ask: where do I do this too?",
+            "Your shadow is not your enemy. It's the part of you that wasn't loved. That wasn't accepted. That had to hide. Meet it with compassion. It's been lonely.",
+            "Write a letter from your shadow. Let it speak. What does it want? What does it need? What has it been trying to tell you? Listen without judgment.",
+            "Everyone has a shadow. The person who denies it is the most dangerous. Not because they're evil. Because they're unconscious. Awareness is the first integration.",
+            "Your anger is not bad. Your envy is not bad. Your greed is not bad. They're signals. They tell you what's unmet. What's violated. What you want. Listen.",
+            "Integration is not acting out. It's acknowledging. 'I feel jealous. And that's okay. I don't need to sabotage anyone. I just need to acknowledge what I want.'",
+            "The wholeness you seek is not the absence of shadow. It's the integration of it. The person who is only light is not whole. They're half.",
+            "Your shadow holds your power. The rage you've suppressed is your boundary-setting power. The lust you've denied is your life force. Reclaim them. Channel them.",
+            "Stop projecting. When you say 'they're so selfish,' ask: when am I selfish? When you say 'they're so lazy,' ask: where do I procrastinate? Own it.",
+            "You cannot become whole by being good. You become whole by being real. The shadow is real. Meet it. Accept it. Integrate it. That's the path to wholeness."
         ]
 
-        if intensity > 0.7:
-            approach = f"Your {shadow} is very active right now. Don't fight it. Befriend it. It wants something."
-        elif intensity > 0.4:
-            approach = f"Your {shadow} is present but manageable. Practice noticing it before acting on it."
+        if capacity < 0.3:
+            capacity_note = "Low capacity. One honest glance at your shadow. One admission. One moment of self-recognition. That's enough."
+        elif capacity < 0.6:
+            capacity_note = "Moderate capacity. A shadow journaling session. A projection analysis. Medium integration work."
         else:
-            approach = f"Your {shadow} is quiet now. This is a good time to do preventive integration work."
-
-        if projection_target:
-            projection_note = f"You often see this in {projection_target}. Next time, ask: 'Where is this in me?'"
-        else:
-            projection_note = "Notice who triggers strong reactions in you. They're often mirrors."
+            capacity_note = "Good capacity. Deep shadow work. A major integration. You have the strength to meet your disowned parts."
 
         return {
-            "shadow": shadow or "unspecified",
-            "intensity": intensity,
-            "projection_target": projection_target or "varies",
-            "approach": approach,
-            "exercise": random.choice(exercises),
-            "projection_note": projection_note,
-            "principle": "What you reject in yourself, you fight in others. What you accept in yourself, you transform in the world.",
+            "capacity": capacity,
+            "context": context or "general",
+            "suggestion": random.choice(suggestions),
+            "capacity_note": capacity_note,
+            "principle": "The shadow is everything about yourself that you don't want to be. The anger. The envy. The greed. The lust. The pride. The fear. The shame. And the more you deny it, the more it controls you. Not by being expressed. But by being projected. The person who denies their anger sees anger everywhere. The person who denies their envy judges everyone as envious. The person who denies their shame shames others constantly. The work of shadow integration is not about becoming perfect. It's about becoming whole. It's about owning all of yourself. The light and the dark. The acceptable and the unacceptable. Because the person who owns their shadow is free. And the person who denies it is a prisoner."
         }
 
     def get_shadow_score(self) -> int:
-        """Calculate overall shadow integration health (0-100)."""
+        """Calculate overall shadow health (0-100)."""
         if not self._entries:
-            return 30
+            return 25
 
-        # Integration rate
-        avg_integration = sum(e.integration_success for e in self._entries) / len(self._entries)
-
-        # Low unintegrated intensity
-        unintegrated = [e for e in self._entries if e.integration_success < 0.3]
-        if unintegrated:
-            avg_unintegrated_intensity = sum(e.emotional_intensity for e in unintegrated) / len(unintegrated)
-        else:
-            avg_unintegrated_intensity = 0
-
-        # Variety of shadows integrated (wholeness)
-        integrated_traits = set(e.trait for e in self._entries if e.integration_success > 0.5)
-        wholeness = len(integrated_traits)
+        avg_aware = sum(e.awareness for e in self._entries) / len(self._entries)
+        avg_accept = sum(e.acceptance for e in self._entries) / len(self._entries)
+        avg_int = sum(e.integration for e in self._entries) / len(self._entries)
+        avg_proj = sum(e.projection for e in self._entries) / len(self._entries)
 
         # Recent trend
-        recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+        recent = list(self._entries)[-14:]
         if recent:
-            recent_integration = sum(e.integration_success for e in recent) / len(recent)
+            recent_aware = sum(e.awareness for e in recent) / len(recent)
+            recent_int = sum(e.integration for e in recent) / len(recent)
         else:
-            recent_integration = 0
+            recent_aware = 0
+            recent_int = 0
 
-        # Projection awareness
-        projection_entries = [e for e in self._entries if e.projection_target]
-        if projection_entries:
-            projection_integration = sum(e.integration_success for e in projection_entries) / len(projection_entries)
-        else:
-            projection_integration = 0
+        # Repression penalty
+        rep_penalty = 0
+        last_30 = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+        if last_30:
+            recent_aware_30 = sum(e.awareness for e in last_30) / len(last_30)
+            recent_accept_30 = sum(e.acceptance for e in last_30) / len(last_30)
+            if recent_aware_30 < 0.3 and recent_accept_30 < 0.3:
+                rep_penalty = 15
 
-        score = (avg_integration * 30) + ((1 - avg_unintegrated_intensity) * 20) + (wholeness * 3) + (recent_integration * 15) + (projection_integration * 10)
+        # Type variety
+        unique_types = len(set(e.shadow_type for e in self._entries))
+
+        # Projection penalty
+        proj_penalty = min(15, avg_proj * 15)
+
+        score = (avg_aware * 25) + (avg_accept * 20) + (avg_int * 25) + (recent_aware * 10) + (recent_int * 5) + (unique_types * 2) - rep_penalty - proj_penalty
         return max(0, min(100, round(score)))
 
     # ── Private Helpers ─────────────────────────────────────────────────────
@@ -275,25 +266,16 @@ class ShadowIntegrator:
     def _update_stats(self):
         """Update running statistics."""
         if self._entries:
-            self._stats["avg_integration"] = round(sum(e.integration_success for e in self._entries) / len(self._entries), 2)
-            self._stats["avg_intensity"] = round(sum(e.emotional_intensity for e in self._entries) / len(self._entries), 2)
+            self._stats["avg_awareness"] = round(sum(e.awareness for e in self._entries) / len(self._entries), 2)
+            self._stats["avg_integration"] = round(sum(e.integration for e in self._entries) / len(self._entries), 2)
 
-            by_trait = defaultdict(lambda: {"count": 0, "integration": 0.0})
-            for e in self._entries:
-                by_trait[e.trait]["count"] += 1
-                by_trait[e.trait]["integration"] += e.integration_success
-            if by_trait:
-                dominant = max(by_trait.items(), key=lambda x: x[1]["count"])
-                self._stats["dominant_shadow"] = dominant[0]
-
-            by_target = defaultdict(lambda: {"count": 0, "integration": 0.0})
-            for e in self._entries:
-                if e.projection_target:
-                    by_target[e.projection_target]["count"] += 1
-                    by_target[e.projection_target]["integration"] += e.integration_success
-            if by_target:
-                top = max(by_target.items(), key=lambda x: x[1]["count"])
-                self._stats["top_projection_target"] = top[0]
+            recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+            if recent:
+                recent_aware = sum(e.awareness for e in recent) / len(recent)
+                recent_accept = sum(e.acceptance for e in recent) / len(recent)
+                self._stats["repression_risk"] = recent_aware < 0.3 and recent_accept < 0.3
+            else:
+                self._stats["repression_risk"] = False
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -315,11 +297,10 @@ class ShadowIntegrator:
             with open(SHADOW_LOG, "a") as f:
                 f.write(json.dumps({
                     "timestamp": entry.timestamp,
-                    "trait": entry.trait,
-                    "trigger": entry.trigger,
-                    "projection_target": entry.projection_target,
-                    "integration_success": entry.integration_success,
-                    "emotional_intensity": entry.emotional_intensity,
+                    "shadow": entry.shadow,
+                    "shadow_type": entry.shadow_type,
+                    "awareness": entry.awareness,
+                    "integration": entry.integration,
                 }) + "\n")
         except Exception:
             pass
