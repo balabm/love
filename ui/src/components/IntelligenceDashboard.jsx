@@ -230,6 +230,10 @@ export default function IntelligenceDashboard() {
     { name: "savoring_trainer", stats: modernStats.evolution_health?.savoring_trainer },
     { name: "presence_detector", stats: modernStats.evolution_health?.presence_detector },
     { name: "intuition_trainer", stats: modernStats.evolution_health?.intuition_trainer },
+    { name: "resilience_builder", stats: modernStats.evolution_health?.resilience_builder },
+    { name: "growth_mindset_coach", stats: modernStats.evolution_health?.growth_mindset_coach },
+    { name: "adaptability_trainer", stats: modernStats.evolution_health?.adaptability_trainer },
+    { name: "antifragility_tracker", stats: modernStats.evolution_health?.antifragility_tracker },
   ].filter(m => m.stats);
 
   return (
