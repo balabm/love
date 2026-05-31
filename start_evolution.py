@@ -156,6 +156,10 @@ Plus Modern AI Subsystems:
 - Emotional Regulation Coach (affective intelligence)
 - Mindfulness Trainer (awareness intelligence)
 - Presence Amplifier (embodied awareness intelligence)
+- Creativity Catalyst (creative intelligence)
+- Innovation Spark Generator (breakthrough intelligence)
+- Problem Reframer (solution intelligence)
+- Perspective Shifter (cognitive flexibility intelligence)
 
 Usage:
     python start_evolution.py
@@ -420,6 +424,10 @@ def start_evolution_systems():
         ("Emotional Regulation Coach", "core.emotional_regulation_coach", "get_emotional_regulation_coach"),
         ("Mindfulness Trainer", "core.mindfulness_trainer", "get_mindfulness_trainer"),
         ("Presence Amplifier", "core.presence_amplifier", "get_presence_amplifier"),
+        ("Creativity Catalyst", "core.creativity_catalyst", "get_creativity_catalyst"),
+        ("Innovation Spark Generator", "core.innovation_spark_generator", "get_innovation_spark_generator"),
+        ("Problem Reframer", "core.problem_reframer", "get_problem_reframer"),
+        ("Perspective Shifter", "core.perspective_shifter", "get_perspective_shifter"),
     ]
 
     initialized = 0

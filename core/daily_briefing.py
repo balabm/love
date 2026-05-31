@@ -265,6 +265,8 @@ class DailyBriefingSystem:
                 "attention_recovery_specialist", "cognitive_load_manager",
                 "stress_resilience_trainer", "emotional_regulation_coach",
                 "mindfulness_trainer", "presence_amplifier",
+                "creativity_catalyst", "innovation_spark_generator",
+                "problem_reframer", "perspective_shifter",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

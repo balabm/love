@@ -602,6 +602,10 @@ async def get_evolution_health():
             "emotional_regulation_coach": {"available": True},
             "mindfulness_trainer": {"available": True},
             "presence_amplifier": {"available": True},
+            "creativity_catalyst": {"available": True},
+            "innovation_spark_generator": {"available": True},
+            "problem_reframer": {"available": True},
+            "perspective_shifter": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

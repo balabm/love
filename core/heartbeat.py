@@ -269,6 +269,10 @@ class ProactiveHeartbeat:
                 ("emotional_regulation_coach", "Emotional Regulation Coach"),
                 ("mindfulness_trainer", "Mindfulness Trainer"),
                 ("presence_amplifier", "Presence Amplifier"),
+                ("creativity_catalyst", "Creativity Catalyst"),
+                ("innovation_spark_generator", "Innovation Spark Generator"),
+                ("problem_reframer", "Problem Reframer"),
+                ("perspective_shifter", "Perspective Shifter"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
