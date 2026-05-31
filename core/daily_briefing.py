@@ -227,6 +227,8 @@ class DailyBriefingSystem:
                 "creativity_booster", "stress_response_coach",
                 "communication_analyzer", "goal_progress_visualizer",
                 "life_balance_wheel", "productivity_gamifier",
+                "environment_optimizer", "weather_suggester",
+                "travel_planner", "gift_idea_generator",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

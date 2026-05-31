@@ -526,6 +526,10 @@ async def get_evolution_health():
             "goal_progress_visualizer": {"available": True},
             "life_balance_wheel": {"available": True},
             "productivity_gamifier": {"available": True},
+            "environment_optimizer": {"available": True},
+            "weather_suggester": {"available": True},
+            "travel_planner": {"available": True},
+            "gift_idea_generator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

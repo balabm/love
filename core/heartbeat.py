@@ -193,6 +193,10 @@ class ProactiveHeartbeat:
                 ("goal_progress_visualizer", "Goal Progress Visualizer"),
                 ("life_balance_wheel", "Life Balance Wheel"),
                 ("productivity_gamifier", "Productivity Gamifier"),
+                ("environment_optimizer", "Environment Optimizer"),
+                ("weather_suggester", "Weather Suggester"),
+                ("travel_planner", "Travel Planner"),
+                ("gift_idea_generator", "Gift Idea Generator"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

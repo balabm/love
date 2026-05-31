@@ -80,6 +80,10 @@ Plus Modern AI Subsystems:
 - Goal Progress Visualizer (goal intelligence)
 - Life Balance Wheel (life intelligence)
 - Productivity Gamifier (gamification intelligence)
+- Environment Optimizer (space intelligence)
+- Weather Suggester (weather intelligence)
+- Travel Planner (travel intelligence)
+- Gift Idea Generator (gift intelligence)
 
 Usage:
     python start_evolution.py
@@ -268,6 +272,10 @@ def start_evolution_systems():
         ("Goal Progress Visualizer", "core.goal_progress_visualizer", "get_goal_progress_visualizer"),
         ("Life Balance Wheel", "core.life_balance_wheel", "get_life_balance_wheel"),
         ("Productivity Gamifier", "core.productivity_gamifier", "get_productivity_gamifier"),
+        ("Environment Optimizer", "core.environment_optimizer", "get_environment_optimizer"),
+        ("Weather Suggester", "core.weather_suggester", "get_weather_suggester"),
+        ("Travel Planner", "core.travel_planner", "get_travel_planner"),
+        ("Gift Idea Generator", "core.gift_idea_generator", "get_gift_idea_generator"),
     ]
 
     initialized = 0
