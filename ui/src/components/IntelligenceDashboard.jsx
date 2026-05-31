@@ -222,6 +222,10 @@ export default function IntelligenceDashboard() {
     { name: "play_coach", stats: modernStats.evolution_health?.play_coach },
     { name: "adventure_planner", stats: modernStats.evolution_health?.adventure_planner },
     { name: "wonder_tracker", stats: modernStats.evolution_health?.wonder_tracker },
+    { name: "meaning_mapper", stats: modernStats.evolution_health?.meaning_mapper },
+    { name: "purpose_navigator", stats: modernStats.evolution_health?.purpose_navigator },
+    { name: "legacy_builder", stats: modernStats.evolution_health?.legacy_builder },
+    { name: "death_awareness_coach", stats: modernStats.evolution_health?.death_awareness_coach },
   ].filter(m => m.stats);
 
   return (

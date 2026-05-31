@@ -217,7 +217,9 @@ export default function SentinelPanel() {
                 "self_compassion_coach", "forgiveness_tracker",
                 "vulnerability_builder", "trust_builder",
                 "curiosity_spark", "play_coach",
-                "adventure_planner", "wonder_tracker"
+                "adventure_planner", "wonder_tracker",
+                "meaning_mapper", "purpose_navigator",
+                "legacy_builder", "death_awareness_coach"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>
