@@ -646,6 +646,9 @@ async def get_evolution_health():
             "transcendence_guide": {"available": True},
             "sacred_ritual_designer": {"available": True},
             "contemplation_keeper": {"available": True},
+            "experience_maximizer": {"available": True},
+            "wonder_cultivator": {"available": True},
+            "travel_optimizer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -63,3 +63,51 @@ class AutonomousMissionQueue:
                 f.write(json.dumps(rec) + "\n")
         except Exception:
             pass
+
+    def get_missions(self, status: str = '', limit: int = 50):
+        if status:
+            return [m for m in self._missions if m.status == status][:limit]
+        return self._missions[:limit]
+
+    def add_mission(self, title: str, domain: str, priority: str = 'high', metadata=None):
+        import uuid
+        m = Mission(
+            id=str(uuid.uuid4())[:8],
+            title=title,
+            domain=domain,
+            priority=priority,
+            metadata=metadata or {},
+        )
+        self._missions.append(m)
+        self._save()
+        self._log('added', {'id': m.id, 'title': m.title})
+        return m
+
+    def update_mission(self, mission_id: str, status: str = '', last_result: str = '', metadata=None) -> bool:
+        for m in self._missions:
+            if m.id == mission_id:
+                if status:
+                    m.status = status
+                if last_result:
+                    m.last_result = last_result
+                if metadata:
+                    m.metadata.update(metadata)
+                m.updated_at = datetime.now().isoformat()
+                m.attempts += 1
+                self._save()
+                self._log('updated', {'id': m.id, 'status': m.status})
+                return True
+        return False
+
+
+# Singleton
+_mission_queue_instance = None
+_mission_queue_lock = threading.Lock()
+
+
+def get_mission_queue():
+    global _mission_queue_instance
+    with _mission_queue_lock:
+        if _mission_queue_instance is None:
+            _mission_queue_instance = AutonomousMissionQueue()
+        return _mission_queue_instance

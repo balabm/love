@@ -484,6 +484,9 @@ def start_evolution_systems():
         ("Transcendence Guide", "core.transcendence_guide", "get_transcendence_guide"),
         ("Sacred Ritual Designer", "core.sacred_ritual_designer", "get_sacred_ritual_designer"),
         ("Contemplation Keeper", "core.contemplation_keeper", "get_contemplation_keeper"),
+        ("Experience Maximizer", "core.experience_maximizer", "get_experience_maximizer"),
+        ("Wonder Cultivator", "core.wonder_cultivator", "get_wonder_cultivator"),
+        ("Travel Optimizer", "core.travel_optimizer", "get_travel_optimizer"),
     ]
 
     initialized = 0

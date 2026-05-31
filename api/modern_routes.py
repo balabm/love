@@ -8,6 +8,7 @@ Cutting-edge 2025 endpoints for:
 """
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
 router = APIRouter(prefix="/modern", tags=["modern"])

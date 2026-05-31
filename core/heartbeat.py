@@ -313,6 +313,9 @@ class ProactiveHeartbeat:
                 ("transcendence_guide", "Transcendence Guide"),
                 ("sacred_ritual_designer", "Sacred Ritual Designer"),
                 ("contemplation_keeper", "Contemplation Keeper"),
+                ("experience_maximizer", "Experience Maximizer"),
+                ("wonder_cultivator", "Wonder Cultivator"),
+                ("travel_optimizer", "Travel Optimizer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
