@@ -214,6 +214,10 @@ export default function IntelligenceDashboard() {
     { name: "boundaries_coach", stats: modernStats.evolution_health?.boundaries_coach },
     { name: "assertiveness_trainer", stats: modernStats.evolution_health?.assertiveness_trainer },
     { name: "active_listening_coach", stats: modernStats.evolution_health?.active_listening_coach },
+    { name: "self_compassion_coach", stats: modernStats.evolution_health?.self_compassion_coach },
+    { name: "forgiveness_tracker", stats: modernStats.evolution_health?.forgiveness_tracker },
+    { name: "vulnerability_builder", stats: modernStats.evolution_health?.vulnerability_builder },
+    { name: "trust_builder", stats: modernStats.evolution_health?.trust_builder },
   ].filter(m => m.stats);
 
   return (
