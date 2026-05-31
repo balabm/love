@@ -4,13 +4,8 @@ import re
 with open('ui/src/components/SentinelPanel.jsx', 'r', encoding='utf-8') as f:
     content = f.read()
 
-old_filter = '''"courage_coach", "risk_intelligence_trainer",
-                "vulnerability_builder", "authenticity_amplifier"'''
-
-new_filter = '''"courage_coach", "risk_intelligence_trainer",
-                "vulnerability_builder", "authenticity_amplifier",
-                "humor_playfulness_trainer", "joy_cultivator",
-                "celebration_architect", "spontaneity_generator"'''
+old_filter = '"celebration_architect", "spontaneity_generator",'
+new_filter = '"celebration_architect", "spontaneity_generator",\n                "forgiveness_coach", "reconciliation_builder",\n                "trust_architect", "repair_specialist",'
 
 if old_filter in content:
     content = content.replace(old_filter, new_filter)
@@ -24,15 +19,9 @@ else:
 with open('ui/src/components/IntelligenceDashboard.jsx', 'r', encoding='utf-8') as f:
     content = f.read()
 
-old_modules = '''{ name: "authenticity_amplifier", stats: modernStats.evolution_health?.authenticity_amplifier },
-  ].filter(m => m.stats);'''
+old_modules = '{ name: "spontaneity_generator", stats: modernStats.evolution_health?.spontaneity_generator },\n  ].filter(m => m.stats);'
 
-new_modules = '''{ name: "authenticity_amplifier", stats: modernStats.evolution_health?.authenticity_amplifier },
-    { name: "humor_playfulness_trainer", stats: modernStats.evolution_health?.humor_playfulness_trainer },
-    { name: "joy_cultivator", stats: modernStats.evolution_health?.joy_cultivator },
-    { name: "celebration_architect", stats: modernStats.evolution_health?.celebration_architect },
-    { name: "spontaneity_generator", stats: modernStats.evolution_health?.spontaneity_generator },
-  ].filter(m => m.stats);'''
+new_modules = '{ name: "spontaneity_generator", stats: modernStats.evolution_health?.spontaneity_generator },\n    { name: "forgiveness_coach", stats: modernStats.evolution_health?.forgiveness_coach },\n    { name: "reconciliation_builder", stats: modernStats.evolution_health?.reconciliation_builder },\n    { name: "trust_architect", stats: modernStats.evolution_health?.trust_architect },\n    { name: "repair_specialist", stats: modernStats.evolution_health?.repair_specialist },\n  ].filter(m => m.stats);'
 
 if old_modules in content:
     content = content.replace(old_modules, new_modules)

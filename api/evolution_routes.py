@@ -626,6 +626,10 @@ async def get_evolution_health():
             "reconciliation_builder": {"available": True},
             "trust_architect": {"available": True},
             "repair_specialist": {"available": True},
+            "deep_listener": {"available": True},
+            "conflict_navigator": {"available": True},
+            "assertiveness_builder": {"available": True},
+            "boundary_architect": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -464,6 +464,10 @@ def start_evolution_systems():
         ("Reconciliation Builder", "core.reconciliation_builder", "get_reconciliation_builder"),
         ("Trust Architect", "core.trust_architect", "get_trust_architect"),
         ("Repair Specialist", "core.repair_specialist", "get_repair_specialist"),
+        ("Deep Listener", "core.deep_listener", "get_deep_listener"),
+        ("Conflict Navigator", "core.conflict_navigator", "get_conflict_navigator"),
+        ("Assertiveness Builder", "core.assertiveness_builder", "get_assertiveness_builder"),
+        ("Boundary Architect", "core.boundary_architect", "get_boundary_architect"),
     ]
 
     initialized = 0

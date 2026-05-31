@@ -293,6 +293,10 @@ class ProactiveHeartbeat:
                 ("reconciliation_builder", "Reconciliation Builder"),
                 ("trust_architect", "Trust Architect"),
                 ("repair_specialist", "Repair Specialist"),
+                ("deep_listener", "Deep Listener"),
+                ("conflict_navigator", "Conflict Navigator"),
+                ("assertiveness_builder", "Assertiveness Builder"),
+                ("boundary_architect", "Boundary Architect"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

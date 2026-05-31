@@ -1,23 +1,12 @@
-test(modern): 74 comprehensive tests for all Wave 2025 engines
+feat(modern): Forgiveness Coach + Reconciliation Builder + Trust Architect + Repair Specialist (156 engines total)
 
-tests/test_modern_engines.py:
-- TestMemoryCompressor (2 tests): compress_conversation, estimate_savings
-- TestSemanticSearchOptimizer (2 tests): optimize_query, rerank_results
-- TestEmotionAwareResponse (2 tests): generate_response, detect_emotion
-- TestKnowledgeInjector (1 test): inject_knowledge
-- TestConversationSummarizer (1 test): summarize_conversation
-- TestContextAwarePrioritizer (1 test): prioritize_tasks
-- TestWellnessNudger (2 tests): detect_patterns, generate_nudge
-- TestNotificationFilter (1 test): filter_notifications
-- TestDeepWorkProtector (2 tests): start_end_session, handle_interruption
-- TestEnergyForecaster (2 tests): forecast_energy, report_and_insights
-- TestSmartBreakSuggester (2 tests): suggest_break, get_optimal_schedule
+Forgiveness Coach — release intelligence, grudge detection, forgiveness practice
+Reconciliation Builder — repair intelligence, damage assessment, strategy matching
+Trust Architect — reliability intelligence, commitment tracking, transparency analysis
+Repair Specialist — restoration intelligence, proactive maintenance, damage detection
 
-Bug fixes:
-- memory_compressor.py: clamp compression_ratio to >= 0
-- conversation_summarizer.py: clamp compression_ratio to >= 0
-
-All 119 tests pass (101 evolution + 74 modern = 175 total test functions).
+- Wired into API routes, startup, daily briefing, heartbeat
+- 623 tests passing
 
 Generated with [Devin](https://cli.devin.ai/docs)
 
