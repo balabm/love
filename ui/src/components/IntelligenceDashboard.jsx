@@ -242,6 +242,10 @@ export default function IntelligenceDashboard() {
     { name: "boundary_enforcer", stats: modernStats.evolution_health?.boundary_enforcer },
     { name: "time_sovereign", stats: modernStats.evolution_health?.time_sovereign },
     { name: "attention_guardian", stats: modernStats.evolution_health?.attention_guardian },
+    { name: "identity_designer", stats: modernStats.evolution_health?.identity_designer },
+    { name: "habit_architect", stats: modernStats.evolution_health?.habit_architect },
+    { name: "environment_curator", stats: modernStats.evolution_health?.environment_curator },
+    { name: "ritual_master", stats: modernStats.evolution_health?.ritual_master },
   ].filter(m => m.stats);
 
   return (

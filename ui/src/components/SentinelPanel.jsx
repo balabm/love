@@ -228,10 +228,14 @@ export default function SentinelPanel() {
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
                 "time_sovereign", "attention_guardian",
+                "identity_designer", "habit_architect",
+                "environment_curator", "ritual_master",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
                 "time_sovereign", "attention_guardian",
+                "identity_designer", "habit_architect",
+                "environment_curator", "ritual_master",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
@@ -240,10 +244,14 @@ export default function SentinelPanel() {
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
                 "time_sovereign", "attention_guardian",
+                "identity_designer", "habit_architect",
+                "environment_curator", "ritual_master",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
-                "time_sovereign", "attention_guardian"
+                "time_sovereign", "attention_guardian",
+                "identity_designer", "habit_architect",
+                "environment_curator", "ritual_master"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>
