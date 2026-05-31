@@ -144,6 +144,10 @@ Plus Modern AI Subsystems:
 - Recovery Optimizer (restoration intelligence)
 - Peak Performance Tracker (excellence intelligence)
 - Mindful Productivity Coach (conscious efficiency intelligence)
+- Sleep Optimizer (rest intelligence)
+- Nutrition Coach (fuel intelligence)
+- Movement Tracker (body intelligence)
+- Health Integrator (holistic health intelligence)
 
 Usage:
     python start_evolution.py
@@ -396,6 +400,10 @@ def start_evolution_systems():
         ("Recovery Optimizer", "core.recovery_optimizer", "get_recovery_optimizer"),
         ("Peak Performance Tracker", "core.peak_performance_tracker", "get_peak_performance_tracker"),
         ("Mindful Productivity Coach", "core.mindful_productivity_coach", "get_mindful_productivity_coach"),
+        ("Sleep Optimizer", "core.sleep_optimizer", "get_sleep_optimizer"),
+        ("Nutrition Coach", "core.nutrition_coach", "get_nutrition_coach"),
+        ("Movement Tracker", "core.movement_tracker", "get_movement_tracker"),
+        ("Health Integrator", "core.health_integrator", "get_health_integrator"),
     ]
 
     initialized = 0

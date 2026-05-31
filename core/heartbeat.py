@@ -257,6 +257,10 @@ class ProactiveHeartbeat:
                 ("recovery_optimizer", "Recovery Optimizer"),
                 ("peak_performance_tracker", "Peak Performance Tracker"),
                 ("mindful_productivity_coach", "Mindful Productivity Coach"),
+                ("sleep_optimizer", "Sleep Optimizer"),
+                ("nutrition_coach", "Nutrition Coach"),
+                ("movement_tracker", "Movement Tracker"),
+                ("health_integrator", "Health Integrator"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
