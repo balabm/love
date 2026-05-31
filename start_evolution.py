@@ -72,6 +72,10 @@ Plus Modern AI Subsystems:
 - Nutrition Analyzer (dietary intelligence)
 - Exercise Optimizer (fitness intelligence)
 - Meditation Coach (mindfulness intelligence)
+- Reading Tracker (knowledge intelligence)
+- Writing Coach (writing intelligence)
+- Creativity Booster (creative intelligence)
+- Stress Response Coach (resilience intelligence)
 
 Usage:
     python start_evolution.py
@@ -252,6 +256,10 @@ def start_evolution_systems():
         ("Nutrition Analyzer", "core.nutrition_analyzer", "get_nutrition_analyzer"),
         ("Exercise Optimizer", "core.exercise_optimizer", "get_exercise_optimizer"),
         ("Meditation Coach", "core.meditation_coach", "get_meditation_coach"),
+        ("Reading Tracker", "core.reading_tracker", "get_reading_tracker"),
+        ("Writing Coach", "core.writing_coach", "get_writing_coach"),
+        ("Creativity Booster", "core.creativity_booster", "get_creativity_booster"),
+        ("Stress Response Coach", "core.stress_response_coach", "get_stress_response_coach"),
     ]
 
     initialized = 0

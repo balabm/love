@@ -223,6 +223,8 @@ class DailyBriefingSystem:
                 "task_batch_optimizer", "meeting_optimizer",
                 "finance_pattern_detector", "nutrition_analyzer",
                 "exercise_optimizer", "meditation_coach",
+                "reading_tracker", "writing_coach",
+                "creativity_booster", "stress_response_coach",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

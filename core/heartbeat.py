@@ -185,6 +185,10 @@ class ProactiveHeartbeat:
                 ("nutrition_analyzer", "Nutrition Analyzer"),
                 ("exercise_optimizer", "Exercise Optimizer"),
                 ("meditation_coach", "Meditation Coach"),
+                ("reading_tracker", "Reading Tracker"),
+                ("writing_coach", "Writing Coach"),
+                ("creativity_booster", "Creativity Booster"),
+                ("stress_response_coach", "Stress Response Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

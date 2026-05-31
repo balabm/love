@@ -518,6 +518,10 @@ async def get_evolution_health():
             "nutrition_analyzer": {"available": True},
             "exercise_optimizer": {"available": True},
             "meditation_coach": {"available": True},
+            "reading_tracker": {"available": True},
+            "writing_coach": {"available": True},
+            "creativity_booster": {"available": True},
+            "stress_response_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
