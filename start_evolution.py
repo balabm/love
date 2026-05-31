@@ -480,6 +480,10 @@ def start_evolution_systems():
         ("Nature Connector", "core.nature_connector", "get_nature_connector"),
         ("Eco Footprint Tracker", "core.eco_footprint_tracker", "get_eco_footprint_tracker"),
         ("Regenerative Living Guide", "core.regenerative_living_guide", "get_regenerative_living_guide"),
+        ("Spiritual Practice Coach", "core.spiritual_practice_coach", "get_spiritual_practice_coach"),
+        ("Transcendence Guide", "core.transcendence_guide", "get_transcendence_guide"),
+        ("Sacred Ritual Designer", "core.sacred_ritual_designer", "get_sacred_ritual_designer"),
+        ("Contemplation Keeper", "core.contemplation_keeper", "get_contemplation_keeper"),
     ]
 
     initialized = 0

@@ -309,6 +309,10 @@ class ProactiveHeartbeat:
                 ("nature_connector", "Nature Connector"),
                 ("eco_footprint_tracker", "Eco Footprint Tracker"),
                 ("regenerative_living_guide", "Regenerative Living Guide"),
+                ("spiritual_practice_coach", "Spiritual Practice Coach"),
+                ("transcendence_guide", "Transcendence Guide"),
+                ("sacred_ritual_designer", "Sacred Ritual Designer"),
+                ("contemplation_keeper", "Contemplation Keeper"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

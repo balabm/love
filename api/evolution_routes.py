@@ -642,6 +642,10 @@ async def get_evolution_health():
             "nature_connector": {"available": True},
             "eco_footprint_tracker": {"available": True},
             "regenerative_living_guide": {"available": True},
+            "spiritual_practice_coach": {"available": True},
+            "transcendence_guide": {"available": True},
+            "sacred_ritual_designer": {"available": True},
+            "contemplation_keeper": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
