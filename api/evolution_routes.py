@@ -586,6 +586,10 @@ async def get_evolution_health():
             "empathy_builder": {"available": True},
             "compassion_generator": {"available": True},
             "gratitude_amplifier": {"available": True},
+            "deep_work_enabler": {"available": True},
+            "recovery_optimizer": {"available": True},
+            "peak_performance_tracker": {"available": True},
+            "mindful_productivity_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

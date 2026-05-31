@@ -140,6 +140,10 @@ Plus Modern AI Subsystems:
 - Empathy Builder (perspective intelligence)
 - Compassion Generator (loving-kindness intelligence)
 - Gratitude Amplifier (appreciation intelligence)
+- Deep Work Enabler (cognitive excellence intelligence)
+- Recovery Optimizer (restoration intelligence)
+- Peak Performance Tracker (excellence intelligence)
+- Mindful Productivity Coach (conscious efficiency intelligence)
 
 Usage:
     python start_evolution.py
@@ -388,6 +392,10 @@ def start_evolution_systems():
         ("Empathy Builder", "core.empathy_builder", "get_empathy_builder"),
         ("Compassion Generator", "core.compassion_generator", "get_compassion_generator"),
         ("Gratitude Amplifier", "core.gratitude_amplifier", "get_gratitude_amplifier"),
+        ("Deep Work Enabler", "core.deep_work_enabler", "get_deep_work_enabler"),
+        ("Recovery Optimizer", "core.recovery_optimizer", "get_recovery_optimizer"),
+        ("Peak Performance Tracker", "core.peak_performance_tracker", "get_peak_performance_tracker"),
+        ("Mindful Productivity Coach", "core.mindful_productivity_coach", "get_mindful_productivity_coach"),
     ]
 
     initialized = 0

@@ -253,6 +253,10 @@ class ProactiveHeartbeat:
                 ("empathy_builder", "Empathy Builder"),
                 ("compassion_generator", "Compassion Generator"),
                 ("gratitude_amplifier", "Gratitude Amplifier"),
+                ("deep_work_enabler", "Deep Work Enabler"),
+                ("recovery_optimizer", "Recovery Optimizer"),
+                ("peak_performance_tracker", "Peak Performance Tracker"),
+                ("mindful_productivity_coach", "Mindful Productivity Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

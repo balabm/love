@@ -257,6 +257,8 @@ class DailyBriefingSystem:
                 "shadow_integrator", "inner_critic_manager",
                 "emotional_intelligence_trainer", "empathy_builder",
                 "compassion_generator", "gratitude_amplifier",
+                "deep_work_enabler", "recovery_optimizer",
+                "peak_performance_tracker", "mindful_productivity_coach",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)
