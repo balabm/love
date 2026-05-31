@@ -514,6 +514,10 @@ async def get_evolution_health():
             "context_switching_minimizer": {"available": True},
             "task_batch_optimizer": {"available": True},
             "meeting_optimizer": {"available": True},
+            "finance_pattern_detector": {"available": True},
+            "nutrition_analyzer": {"available": True},
+            "exercise_optimizer": {"available": True},
+            "meditation_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

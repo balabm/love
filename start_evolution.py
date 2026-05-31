@@ -68,6 +68,10 @@ Plus Modern AI Subsystems:
 - Context Switching Minimizer (flow state protector)
 - Task Batch Optimizer (task clustering engine)
 - Meeting Optimizer (meeting intelligence)
+- Finance Pattern Detector (financial intelligence)
+- Nutrition Analyzer (dietary intelligence)
+- Exercise Optimizer (fitness intelligence)
+- Meditation Coach (mindfulness intelligence)
 
 Usage:
     python start_evolution.py
@@ -244,6 +248,10 @@ def start_evolution_systems():
         ("Context Switching Minimizer", "core.context_switching_minimizer", "get_context_switching_minimizer"),
         ("Task Batch Optimizer", "core.task_batch_optimizer", "get_task_batch_optimizer"),
         ("Meeting Optimizer", "core.meeting_optimizer", "get_meeting_optimizer"),
+        ("Finance Pattern Detector", "core.finance_pattern_detector", "get_finance_pattern_detector"),
+        ("Nutrition Analyzer", "core.nutrition_analyzer", "get_nutrition_analyzer"),
+        ("Exercise Optimizer", "core.exercise_optimizer", "get_exercise_optimizer"),
+        ("Meditation Coach", "core.meditation_coach", "get_meditation_coach"),
     ]
 
     initialized = 0

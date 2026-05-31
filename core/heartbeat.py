@@ -181,6 +181,10 @@ class ProactiveHeartbeat:
                 ("context_switching_minimizer", "Context Switching Minimizer"),
                 ("task_batch_optimizer", "Task Batch Optimizer"),
                 ("meeting_optimizer", "Meeting Optimizer"),
+                ("finance_pattern_detector", "Finance Pattern Detector"),
+                ("nutrition_analyzer", "Nutrition Analyzer"),
+                ("exercise_optimizer", "Exercise Optimizer"),
+                ("meditation_coach", "Meditation Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
