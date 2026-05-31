@@ -112,6 +112,10 @@ Plus Modern AI Subsystems:
 - Purpose Navigator (direction intelligence)
 - Legacy Builder (long-term impact intelligence)
 - Death Awareness Coach (mortality intelligence)
+- Flow State Coach (optimal experience intelligence)
+- Savoring Trainer (positive experience amplification intelligence)
+- Presence Detector (attention intelligence)
+- Intuition Trainer (inner wisdom intelligence)
 
 Usage:
     python start_evolution.py
@@ -332,6 +336,10 @@ def start_evolution_systems():
         ("Purpose Navigator", "core.purpose_navigator", "get_purpose_navigator"),
         ("Legacy Builder", "core.legacy_builder", "get_legacy_builder"),
         ("Death Awareness Coach", "core.death_awareness_coach", "get_death_awareness_coach"),
+        ("Flow State Coach", "core.flow_state_coach", "get_flow_state_coach"),
+        ("Savoring Trainer", "core.savoring_trainer", "get_savoring_trainer"),
+        ("Presence Detector", "core.presence_detector", "get_presence_detector"),
+        ("Intuition Trainer", "core.intuition_trainer", "get_intuition_trainer"),
     ]
 
     initialized = 0

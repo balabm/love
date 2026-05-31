@@ -558,6 +558,10 @@ async def get_evolution_health():
             "purpose_navigator": {"available": True},
             "legacy_builder": {"available": True},
             "death_awareness_coach": {"available": True},
+            "flow_state_coach": {"available": True},
+            "savoring_trainer": {"available": True},
+            "presence_detector": {"available": True},
+            "intuition_trainer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
