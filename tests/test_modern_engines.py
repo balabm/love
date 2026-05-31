@@ -8038,3 +8038,195 @@ class TestComfortZoneChallenger:
         czc = get_comfort_zone_challenger()
         score = czc.get_challenge_score()
         assert 0 <= score <= 100
+
+
+# -- Conflict Resolution Coach Tests ---------------------------------------------------
+
+class TestConflictResolutionCoach:
+    """Test Conflict Resolution Coach."""
+
+    def test_singleton(self):
+        from core.conflict_resolution_coach import get_conflict_resolution_coach
+        c1 = get_conflict_resolution_coach()
+        c2 = get_conflict_resolution_coach()
+        assert c1 is c2
+
+    def test_record_conflict(self):
+        from core.conflict_resolution_coach import get_conflict_resolution_coach
+        crc = get_conflict_resolution_coach()
+        entry = crc.record_conflict(
+            "Disagreement about project direction",
+            "values",
+            0.7,
+            0.6,
+            0.8,
+            0.5,
+            0.7,
+            "Resolved through active listening",
+        )
+        assert entry is not None
+        assert entry.conflict == "Disagreement about project direction"
+        assert entry.conflict_type == "values"
+
+    def test_get_conflict_stats(self):
+        from core.conflict_resolution_coach import get_conflict_resolution_coach
+        crc = get_conflict_resolution_coach()
+        stats = crc.get_conflict_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_resolution_suggestion(self):
+        from core.conflict_resolution_coach import get_conflict_resolution_coach
+        crc = get_conflict_resolution_coach()
+        suggestion = crc.get_resolution_suggestion(0.6, "escalating")
+        assert isinstance(suggestion, dict)
+        assert "suggestion" in suggestion
+
+    def test_get_conflict_score(self):
+        from core.conflict_resolution_coach import get_conflict_resolution_coach
+        crc = get_conflict_resolution_coach()
+        score = crc.get_conflict_score()
+        assert 0 <= score <= 100
+
+
+# -- Forgiveness Facilitator Tests ---------------------------------------------------
+
+class TestForgivenessFacilitator:
+    """Test Forgiveness Facilitator."""
+
+    def test_singleton(self):
+        from core.forgiveness_facilitator import get_forgiveness_facilitator
+        f1 = get_forgiveness_facilitator()
+        f2 = get_forgiveness_facilitator()
+        assert f1 is f2
+
+    def test_record_forgiveness(self):
+        from core.forgiveness_facilitator import get_forgiveness_facilitator
+        ff = get_forgiveness_facilitator()
+        entry = ff.record_forgiveness(
+            "Former friend who betrayed trust",
+            "other",
+            0.6,
+            0.7,
+            0.5,
+            0.8,
+            0.4,
+            "Working on letting go",
+        )
+        assert entry is not None
+        assert entry.target == "Former friend who betrayed trust"
+        assert entry.forgiveness_type == "other"
+
+    def test_get_forgiveness_stats(self):
+        from core.forgiveness_facilitator import get_forgiveness_facilitator
+        ff = get_forgiveness_facilitator()
+        stats = ff.get_forgiveness_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_forgiveness_suggestion(self):
+        from core.forgiveness_facilitator import get_forgiveness_facilitator
+        ff = get_forgiveness_facilitator()
+        suggestion = ff.get_forgiveness_suggestion(0.5, "resentment")
+        assert isinstance(suggestion, dict)
+        assert "suggestion" in suggestion
+
+    def test_get_forgiveness_score(self):
+        from core.forgiveness_facilitator import get_forgiveness_facilitator
+        ff = get_forgiveness_facilitator()
+        score = ff.get_forgiveness_score()
+        assert 0 <= score <= 100
+
+
+# -- Celebration Architect Tests ---------------------------------------------------
+
+class TestCelebrationArchitect:
+    """Test Celebration Architect."""
+
+    def test_singleton(self):
+        from core.celebration_architect import get_celebration_architect
+        c1 = get_celebration_architect()
+        c2 = get_celebration_architect()
+        assert c1 is c2
+
+    def test_record_celebration(self):
+        from core.celebration_architect import get_celebration_architect
+        ca = get_celebration_architect()
+        entry = ca.record_celebration(
+            "Completed marathon",
+            "achievement",
+            0.9,
+            0.8,
+            0.7,
+            0.6,
+            0.9,
+            "Shared with family",
+        )
+        assert entry is not None
+        assert entry.achievement == "Completed marathon"
+        assert entry.celebration_type == "achievement"
+
+    def test_get_celebration_stats(self):
+        from core.celebration_architect import get_celebration_architect
+        ca = get_celebration_architect()
+        stats = ca.get_celebration_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_celebration_suggestion(self):
+        from core.celebration_architect import get_celebration_architect
+        ca = get_celebration_architect()
+        suggestion = ca.get_celebration_suggestion(0.7, "milestone")
+        assert isinstance(suggestion, dict)
+        assert "suggestion" in suggestion
+
+    def test_get_celebration_score(self):
+        from core.celebration_architect import get_celebration_architect
+        ca = get_celebration_architect()
+        score = ca.get_celebration_score()
+        assert 0 <= score <= 100
+
+
+# -- Rest Designer Tests ---------------------------------------------------
+
+class TestRestDesigner:
+    """Test Rest Designer."""
+
+    def test_singleton(self):
+        from core.rest_designer import get_rest_designer
+        r1 = get_rest_designer()
+        r2 = get_rest_designer()
+        assert r1 is r2
+
+    def test_record_rest(self):
+        from core.rest_designer import get_rest_designer
+        rd = get_rest_designer()
+        entry = rd.record_rest(
+            "Afternoon nap",
+            "physical",
+            0.8,
+            0.7,
+            0.9,
+            0.1,
+            45,
+            "Felt restored",
+        )
+        assert entry is not None
+        assert entry.activity == "Afternoon nap"
+        assert entry.rest_type == "physical"
+
+    def test_get_rest_stats(self):
+        from core.rest_designer import get_rest_designer
+        rd = get_rest_designer()
+        stats = rd.get_rest_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_rest_suggestion(self):
+        from core.rest_designer import get_rest_designer
+        rd = get_rest_designer()
+        suggestion = rd.get_rest_suggestion(0.5, "exhausted")
+        assert isinstance(suggestion, dict)
+        assert "suggestion" in suggestion
+
+    def test_get_rest_score(self):
+        from core.rest_designer import get_rest_designer
+        rd = get_rest_designer()
+        score = rd.get_rest_score()
+        assert 0 <= score <= 100

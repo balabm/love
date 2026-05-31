@@ -8,6 +8,7 @@ The supervisor can execute one cycle repeatedly until missions complete.
 from __future__ import annotations
 
 import json
+import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass, field

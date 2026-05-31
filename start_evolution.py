@@ -507,6 +507,10 @@ def start_evolution_systems():
         ("Intergenerational Bridge Builder", "core.intergenerational_bridge_builder", "get_intergenerational_bridge_builder"),
         ("Aesthetic Life Designer", "core.aesthetic_life_designer", "get_aesthetic_life_designer"),
         ("Comfort Zone Challenger", "core.comfort_zone_challenger", "get_comfort_zone_challenger"),
+        ("Conflict Resolution Coach", "core.conflict_resolution_coach", "get_conflict_resolution_coach"),
+        ("Forgiveness Facilitator", "core.forgiveness_facilitator", "get_forgiveness_facilitator"),
+        ("Celebration Architect", "core.celebration_architect", "get_celebration_architect"),
+        ("Rest Designer", "core.rest_designer", "get_rest_designer"),
     ]
 
     initialized = 0

@@ -1,37 +1,38 @@
 """
-LOVE Conflict Resolution Coach — Relationship Intelligence (Modern AI Pattern)
+LOVE Conflict Resolution Coach — Relational Repair Intelligence (Modern AI Pattern)
 
-Most conflict advice is reactive. This coach:
+Most conflicts are handled poorly because people lack skills. This coach:
 
 1. CONFLICT TRACKING
-   - Record conflicts with trigger, parties, intensity, and outcome
-   - Track resolution time and emotional cost
-   - Log which strategies worked vs failed
+   - Record conflicts and their characteristics
+   - Track conflict types (values, resources, communication, power, identity)
+   - Log resolution quality, repair, and learning from conflicts
 
 2. PATTERN ANALYSIS
-   - Identify recurring conflict triggers and themes
-   - Detect escalation patterns before they explode
-   - Find user's default conflict style (avoidant, accommodating, compromising, collaborative, competitive)
+   - Identify the user's conflict profile (avoidant, confrontational, collaborative, compromising)
+   - Find conflict patterns that lead to resolution vs escalation
+   - Detect recurring conflict themes and their triggers
 
-3. STRATEGY RECOMMENDATION
-   - Suggest de-escalation techniques based on conflict type
-   - Recommend I-statements and active listening scripts
-   - Propose timing and setting for difficult conversations
+3. RESOLUTION OPTIMIZATION
+   - Suggest resolution strategies matched to conflict type and relationship
+   - Provide frameworks for difficult conversations
+   - Recommend repair practices after conflict
 
-4. PROACTIVE PREVENTION
-   - Alert when similar conflict patterns emerge
-   - Suggest boundary-setting before issues escalate
-   - Track relationship health scores over time
+4. RELATIONSHIP CULTIVATION
+   - Track the correlation between resolution quality and relationship health
+   - Alert when conflicts are becoming destructive patterns
+   - Celebrate moments of genuine repair and growth through conflict
 
 Architecture:
-- record_conflict(trigger, parties, intensity, resolution): Log conflict
-- get_conflict_patterns(): Get recurring theme analysis
-- get_resolution_strategy(conflict_type): Get tailored strategy
-- get_relationship_health(): Calculate relationship status
+- record_conflict(conflict, type, resolution, repair, learning): Log conflict
+- get_conflict_stats(): Get conflict pattern analysis
+- get_resolution_suggestion(capacity, context): Get suggestion
+- get_conflict_score(): Calculate overall conflict health
 """
 
 import json
 import math
+import random
 import threading
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
@@ -47,26 +48,23 @@ STATS_DB = DATA_DIR / "stats.json"
 
 
 @dataclass
-class Conflict:
+class ConflictEntry:
     """A tracked conflict."""
-    conflict_id: str = ""
-    trigger: str = ""  # what started it
-    parties: List[str] = field(default_factory=list)
-    conflict_type: str = ""  # values, needs, power, misunderstanding, external_stress
-    intensity: float = 5.0  # 1-10
-    duration_minutes: float = 0.0
-    user_style: str = ""  # avoidant, accommodating, compromising, collaborative, competitive
-    resolution: str = ""  # resolved, unresolved, ongoing, escalated
-    strategies_used: List[str] = field(default_factory=list)
-    outcome_satisfaction: float = 0.5
-    emotional_cost: float = 0.5  # 0-1, how draining it was
-    lessons_learned: List[str] = field(default_factory=list)
+    entry_id: str = ""
+    conflict: str = ""  # what the conflict was about
+    conflict_type: str = ""  # values, resources, communication, power, identity
+    resolution: float = 0.0  # 0-1 how well it was resolved
+    repair: float = 0.0  # 0-1
+    learning: float = 0.0  # 0-1
+    relationship_impact: float = 0.0  # 0-1
+    self_awareness: float = 0.0  # 0-1
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    notes: str = ""
 
 
 class ConflictResolutionCoach:
     """
-    Intelligent conflict coach with pattern analysis and proactive prevention.
+    Intelligent conflict resolution coach with repair detection and relationship cultivation.
     """
 
     _instance = None
@@ -84,210 +82,198 @@ class ConflictResolutionCoach:
             return
         self._initialized = True
         self._lock = threading.Lock()
-        self._conflicts: deque = deque(maxlen=200)
+        self._entries: deque = deque(maxlen=300)
         self._stats = {
-            "total_conflicts": 0,
-            "avg_intensity": 0.0,
-            "resolution_rate": 0.0,
-            "avg_emotional_cost": 0.0,
-            "dominant_style": "",
+            "total_entries": 0,
+            "avg_resolution": 0.0,
+            "avg_repair": 0.0,
+            "destructive_pattern_risk": False,
         }
         self._load_stats()
 
     # ── Core Tracking ─────────────────────────────────────────────────────
 
-    def record_conflict(self, trigger: str = "", parties: Optional[List[str]] = None, conflict_type: str = "", intensity: float = 5.0, duration: float = 0, user_style: str = "", resolution: str = "", strategies: Optional[List[str]] = None, outcome: float = 0.5, emotional_cost: float = 0.5, lessons: Optional[List[str]] = None) -> Conflict:
+    def record_conflict(self, conflict: str = "", conflict_type: str = "", resolution: float = 0.0, repair: float = 0.0, learning: float = 0.0, relationship_impact: float = 0.0, self_awareness: float = 0.0, notes: str = "") -> ConflictEntry:
         """Record a conflict."""
-        conflict_id = f"conflict_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._conflicts)}"
-        conflict = Conflict(
-            conflict_id=conflict_id,
-            trigger=trigger or "unspecified",
-            parties=parties or [],
-            conflict_type=conflict_type or "misunderstanding",
-            intensity=intensity,
-            duration_minutes=duration,
-            user_style=user_style or "unspecified",
-            resolution=resolution or "unresolved",
-            strategies_used=strategies or [],
-            outcome_satisfaction=outcome,
-            emotional_cost=emotional_cost,
-            lessons_learned=lessons or [],
+        entry_id = f"cnf_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._entries)}"
+        entry = ConflictEntry(
+            entry_id=entry_id,
+            conflict=conflict or "unspecified",
+            conflict_type=conflict_type or "communication",
+            resolution=resolution,
+            repair=repair,
+            learning=learning,
+            relationship_impact=relationship_impact,
+            self_awareness=self_awareness,
+            notes=notes,
         )
 
         with self._lock:
-            self._conflicts.append(conflict)
-            self._stats["total_conflicts"] += 1
-            self._update_stats(conflict)
+            self._entries.append(entry)
+            self._stats["total_entries"] += 1
+            self._update_stats()
 
         self._save_stats()
-        self._log_conflict(conflict)
+        self._log_entry(entry)
 
-        return conflict
+        return entry
 
     # ── Analysis ──────────────────────────────────────────────────────────
 
-    def get_conflict_patterns(self) -> Dict[str, Any]:
-        """Get recurring theme analysis."""
-        if not self._conflicts:
+    def get_conflict_stats(self) -> Dict[str, Any]:
+        """Get conflict pattern analysis."""
+        if not self._entries:
             return {"status": "insufficient_data"}
 
-        # Trigger analysis
-        by_trigger = defaultdict(lambda: {"count": 0, "avg_intensity": 0.0, "resolution_rate": 0.0})
-        for c in self._conflicts:
-            by_trigger[c.trigger]["count"] += 1
-            by_trigger[c.trigger]["avg_intensity"] += c.intensity
-            if c.resolution == "resolved":
-                by_trigger[c.trigger]["resolution_rate"] += 1
-
-        trigger_stats = {}
-        for t, data in by_trigger.items():
-            count = data["count"]
-            trigger_stats[t] = {
-                "count": count,
-                "avg_intensity": round(data["avg_intensity"] / count, 1),
-                "resolution_rate": round(data["resolution_rate"] / count, 2),
-                "risk": "high" if data["avg_intensity"] / count > 7 else "medium" if data["avg_intensity"] / count > 4 else "low",
-            }
-
         # Type analysis
-        by_type = defaultdict(lambda: {"count": 0, "avg_intensity": 0.0, "emotional_cost": 0.0})
-        for c in self._conflicts:
-            by_type[c.conflict_type]["count"] += 1
-            by_type[c.conflict_type]["avg_intensity"] += c.intensity
-            by_type[c.conflict_type]["emotional_cost"] += c.emotional_cost
+        by_type = defaultdict(lambda: {"count": 0, "resolution_sum": 0.0, "repair_sum": 0.0, "learning_sum": 0.0})
+        for e in self._entries:
+            by_type[e.conflict_type]["count"] += 1
+            by_type[e.conflict_type]["resolution_sum"] += e.resolution
+            by_type[e.conflict_type]["repair_sum"] += e.repair
+            by_type[e.conflict_type]["learning_sum"] += e.learning
 
         type_stats = {}
         for t, data in by_type.items():
             count = data["count"]
             type_stats[t] = {
                 "count": count,
-                "avg_intensity": round(data["avg_intensity"] / count, 1),
-                "avg_emotional_cost": round(data["emotional_cost"] / count, 2),
+                "avg_resolution": round(data["resolution_sum"] / count, 2),
+                "avg_repair": round(data["repair_sum"] / count, 2),
+                "avg_learning": round(data["learning_sum"] / count, 2),
             }
 
-        # Style analysis
-        by_style = defaultdict(int)
-        for c in self._conflicts:
-            if c.user_style:
-                by_style[c.user_style] += 1
+        # Resolution analysis
+        high_res = [e for e in self._entries if e.resolution > 0.7]
+        low_res = [e for e in self._entries if e.resolution < 0.4]
+        if high_res and low_res:
+            high_res_repair = sum(e.repair for e in high_res) / len(high_res)
+            low_res_repair = sum(e.repair for e in low_res) / len(low_res)
+            high_res_rel = sum(e.relationship_impact for e in high_res) / len(high_res)
+            low_res_rel = sum(e.relationship_impact for e in low_res) / len(low_res)
+        else:
+            high_res_repair = 0
+            low_res_repair = 0
+            high_res_rel = 0
+            low_res_rel = 0
 
-        dominant_style = max(by_style.items(), key=lambda x: x[1])[0] if by_style else "unspecified"
+        # Self-awareness analysis
+        high_sa = [e for e in self._entries if e.self_awareness > 0.7]
+        low_sa = [e for e in self._entries if e.self_awareness < 0.4]
+        if high_sa and low_sa:
+            high_sa_res = sum(e.resolution for e in high_sa) / len(high_sa)
+            low_sa_res = sum(e.resolution for e in low_sa) / len(low_sa)
+        else:
+            high_sa_res = 0
+            low_sa_res = 0
 
-        # Escalation detection
-        recent = [c for c in self._conflicts if c.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
-        escalation_trend = sum(c.intensity for c in recent) / max(1, len(recent)) if recent else 0
+        # Destructive pattern detection
+        recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=90)).isoformat()]
+        if recent:
+            recent_resolution = sum(e.resolution for e in recent) / len(recent)
+            recent_repair = sum(e.repair for e in recent) / len(recent)
+            destructive_pattern_risk = recent_resolution < 0.4 and recent_repair < 0.3
+        else:
+            destructive_pattern_risk = False
 
         return {
-            "total_conflicts": len(self._conflicts),
-            "trigger_stats": trigger_stats,
+            "total_entries": len(self._entries),
             "type_stats": type_stats,
-            "dominant_style": dominant_style,
-            "escalation_trend": "rising" if escalation_trend > 6 else "stable" if escalation_trend > 3 else "calm",
-            "most_common_trigger": max(trigger_stats.items(), key=lambda x: x[1]["count"])[0] if trigger_stats else "",
-            "highest_risk_trigger": max(trigger_stats.items(), key=lambda x: x[1]["avg_intensity"])[0] if trigger_stats else "",
+            "resolution_impact": {
+                "high_resolution_repair": round(high_res_repair, 2),
+                "low_resolution_repair": round(low_res_repair, 2),
+                "high_resolution_relationship": round(high_res_rel, 2),
+                "low_resolution_relationship": round(low_res_rel, 2),
+            },
+            "self_awareness_effect": {
+                "high_awareness_resolution": round(high_sa_res, 2),
+                "low_awareness_resolution": round(low_sa_res, 2),
+            },
+            "destructive_pattern_risk": destructive_pattern_risk,
+            "avg_resolution": round(sum(e.resolution for e in self._entries) / len(self._entries), 2),
+            "avg_repair": round(sum(e.repair for e in self._entries) / len(self._entries), 2),
         }
 
-    def get_resolution_strategy(self, conflict_type: str = "", intensity: float = 5.0, parties: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Get tailored conflict resolution strategy."""
-        strategies = {
-            "values": {
-                "approach": "Find common ground, respect differences",
-                "techniques": ["Acknowledge their values", "Find shared values", "Agree to disagree respectfully", "Set boundaries on the topic"],
-                "timing": "When emotions have cooled",
-                "setting": "Neutral, private space",
-            },
-            "needs": {
-                "approach": "Identify underlying needs, brainstorm solutions",
-                "techniques": ["Ask 'What do you need?'", "Share your needs", "Brainstorm options together", "Find creative compromise"],
-                "timing": "When both parties have energy",
-                "setting": "Comfortable, distraction-free",
-            },
-            "power": {
-                "approach": "Address imbalance directly but respectfully",
-                "techniques": ["Name the dynamic", "Focus on behavior not person", "Propose concrete changes", "Seek mediation if needed"],
-                "timing": "Prepare first, don't ambush",
-                "setting": "With witness/mediator if necessary",
-            },
-            "misunderstanding": {
-                "approach": "Clarify, paraphrase, repair",
-                "techniques": ["Paraphrase what you heard", "Ask clarifying questions", "Own your misunderstanding", "Repair with humor if appropriate"],
-                "timing": "As soon as noticed",
-                "setting": "Anywhere, but privately",
-            },
-            "external_stress": {
-                "approach": "Team up against the stress, not each other",
-                "techniques": ["Acknowledge external pressure", "Say 'it's us vs the problem'", "Offer support", "Plan decompression together"],
-                "timing": "When stress is acknowledged",
-                "setting": "Comfortable, low-pressure",
-            },
-        }
+    def get_resolution_suggestion(self, capacity: float = 0.5, context: str = "") -> Dict[str, Any]:
+        """Get resolution suggestion."""
+        suggestions = [
+            "Name the conflict. Not the person. 'We have a disagreement about money' not 'You're bad with money.' Separate the issue from the identity.",
+            "Listen first. Really listen. Not to respond. To understand. Repeat back what you heard. 'What I'm hearing is...' Most conflicts are listening failures.",
+            "Find the need beneath the position. They want X. Why? What need are they trying to meet? Security? Respect? Autonomy? Address the need, not the demand.",
+            "Take responsibility for your part. Even if it's 10%. Own it. 'I could have communicated better.' Responsibility disarms defensiveness.",
+            "Use 'I' statements. 'I feel hurt when...' not 'You always...' Own your experience. Don't accuse. It changes the entire conversation.",
+            "Take a break if needed. Not to avoid. To regulate. 'I need 20 minutes to calm down. Then I'll be back.' Disengagement with commitment is not avoidance.",
+            "Focus on the future. Not the past. What do we want going forward? The past is a reference. The future is where solutions live.",
+            "Repair after. Even if you resolved it well. An apology. A gesture. A check-in. Repair says: our relationship matters more than this conflict.",
+            "Conflict is not bad. It's data. It tells you what's important to someone. What they need. What they fear. The goal is not zero conflict. It's healthy conflict.",
+            "The person you're in conflict with is not your enemy. They're a person with needs, fears, and a different perspective. Treat them like a person. Even when they're wrong. Especially when they're wrong.",
+        ]
 
-        base = strategies.get(conflict_type, strategies["misunderstanding"])
-
-        # Intensity adjustments
-        if intensity > 7:
-            base["urgency"] = "high"
-            base["advice"] = "High intensity conflict. Take a break if needed. Don't try to resolve while flooded."
-            base["techniques"].insert(0, "Take a 20-minute break")
-        elif intensity > 4:
-            base["urgency"] = "medium"
-            base["advice"] = "Moderate intensity. Stay calm, use I-statements, listen more than you speak."
+        if capacity < 0.3:
+            capacity_note = "Low capacity. One small repair. One honest sentence. One moment of listening. That's enough."
+        elif capacity < 0.6:
+            capacity_note = "Moderate capacity. A real conversation. A framework. A repair attempt. Medium investment in resolution."
         else:
-            base["urgency"] = "low"
-            base["advice"] = "Low intensity. Good time to practice collaborative skills."
+            capacity_note = "Good capacity. A deep resolution process. A pattern conversation. A relationship reset. You have the energy for real repair."
 
-        # Party-specific advice
-        if parties and len(parties) > 2:
-            base["techniques"].append("With multiple parties, use round-robin speaking")
+        return {
+            "capacity": capacity,
+            "context": context or "general",
+            "suggestion": random.choice(suggestions),
+            "capacity_note": capacity_note,
+            "principle": "Conflict is inevitable. In any relationship worth having, there will be disagreement. The question is not whether you will conflict. It's how. The people with the best relationships are not the people who never fight. They're the people who fight well. Who listen. Who repair. Who take responsibility. Who stay in the conversation even when it's hard. Conflict handled well deepens intimacy. It builds trust. It creates understanding. Conflict handled poorly destroys relationships. The difference is skill. And skill can be learned.",
+        }
 
-        return base
+    def get_conflict_score(self) -> int:
+        """Calculate overall conflict health (0-100)."""
+        if not self._entries:
+            return 25
 
-    def get_relationship_health(self, party: str = "") -> int:
-        """Calculate relationship health score (0-100)."""
-        if not self._conflicts:
-            return 70  # Neutral baseline
+        avg_resolution = sum(e.resolution for e in self._entries) / len(self._entries)
+        avg_repair = sum(e.repair for e in self._entries) / len(self._entries)
+        avg_learning = sum(e.learning for e in self._entries) / len(self._entries)
+        avg_rel_impact = sum(e.relationship_impact for e in self._entries) / len(self._entries)
+        avg_self_aware = sum(e.self_awareness for e in self._entries) / len(self._entries)
 
-        # Filter by party if specified
-        conflicts = [c for c in self._conflicts if not party or party in c.parties]
-        if not conflicts:
-            return 70
+        # Recent trend
+        recent = list(self._entries)[-14:]
+        if recent:
+            recent_resolution = sum(e.resolution for e in recent) / len(recent)
+            recent_repair = sum(e.repair for e in recent) / len(recent)
+        else:
+            recent_resolution = 0
+            recent_repair = 0
 
-        # Resolution rate
-        resolved = sum(1 for c in conflicts if c.resolution == "resolved")
-        resolution_rate = resolved / len(conflicts)
+        # Destructive pattern penalty
+        destruct_penalty = 0
+        last_90 = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=90)).isoformat()]
+        if last_90:
+            recent_res_90 = sum(e.resolution for e in last_90) / len(last_90)
+            recent_rep_90 = sum(e.repair for e in last_90) / len(last_90)
+            if recent_res_90 < 0.4 and recent_rep_90 < 0.3:
+                destruct_penalty = 20
 
-        # Average emotional cost
-        avg_cost = sum(c.emotional_cost for c in conflicts) / len(conflicts)
+        # Type variety
+        unique_types = len(set(e.conflict_type for e in self._entries))
 
-        # Recency weighting (recent conflicts hurt more)
-        recent = [c for c in conflicts if c.timestamp > (datetime.now() - timedelta(days=14)).isoformat()]
-        recent_penalty = len(recent) * 5
-
-        # Calculate score
-        base = 70
-        resolution_bonus = (resolution_rate - 0.5) * 40
-        cost_penalty = avg_cost * 30
-        
-        score = base + resolution_bonus - cost_penalty - recent_penalty
+        score = (avg_resolution * 30) + (avg_repair * 20) + (avg_learning * 10) + (avg_rel_impact * 15) + (avg_self_aware * 10) + (recent_resolution * 10) + (recent_repair * 5) + (unique_types * 2) - destruct_penalty
         return max(0, min(100, round(score)))
 
     # ── Private Helpers ─────────────────────────────────────────────────────
 
-    def _update_stats(self, conflict: Conflict):
+    def _update_stats(self):
         """Update running statistics."""
-        n = self._stats["total_conflicts"]
-        self._stats["avg_intensity"] = round((self._stats["avg_intensity"] * (n - 1) + conflict.intensity) / n, 1)
-        self._stats["avg_emotional_cost"] = round((self._stats["avg_emotional_cost"] * (n - 1) + conflict.emotional_cost) / n, 2)
-        
-        resolved = sum(1 for c in self._conflicts if c.resolution == "resolved")
-        self._stats["resolution_rate"] = round(resolved / n, 2)
+        if self._entries:
+            self._stats["avg_resolution"] = round(sum(e.resolution for e in self._entries) / len(self._entries), 2)
+            self._stats["avg_repair"] = round(sum(e.repair for e in self._entries) / len(self._entries), 2)
 
-        styles = defaultdict(int)
-        for c in self._conflicts:
-            if c.user_style:
-                styles[c.user_style] += 1
-        if styles:
-            self._stats["dominant_style"] = max(styles.items(), key=lambda x: x[1])[0]
+            recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=90)).isoformat()]
+            if recent:
+                recent_resolution = sum(e.resolution for e in recent) / len(recent)
+                recent_repair = sum(e.repair for e in recent) / len(recent)
+                self._stats["destructive_pattern_risk"] = recent_resolution < 0.4 and recent_repair < 0.3
+            else:
+                self._stats["destructive_pattern_risk"] = False
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -304,17 +290,15 @@ class ConflictResolutionCoach:
         except Exception:
             pass
 
-    def _log_conflict(self, conflict: Conflict):
+    def _log_entry(self, entry: ConflictEntry):
         try:
             with open(CONFLICT_LOG, "a") as f:
                 f.write(json.dumps({
-                    "timestamp": conflict.timestamp,
-                    "trigger": conflict.trigger,
-                    "type": conflict.conflict_type,
-                    "intensity": conflict.intensity,
-                    "resolution": conflict.resolution,
-                    "emotional_cost": conflict.emotional_cost,
-                    "outcome": conflict.outcome_satisfaction,
+                    "timestamp": entry.timestamp,
+                    "conflict": entry.conflict,
+                    "conflict_type": entry.conflict_type,
+                    "resolution": entry.resolution,
+                    "repair": entry.repair,
                 }) + "\n")
         except Exception:
             pass

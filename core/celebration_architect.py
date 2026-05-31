@@ -1,32 +1,32 @@
 """
 LOVE Celebration Architect — Recognition Intelligence (Modern AI Pattern)
 
-Most achievements pass unnoticed. This architect:
+Most people achieve without celebrating. This architect:
 
 1. CELEBRATION TRACKING
    - Record celebrations and their characteristics
-   - Track celebration types (milestone, effort, progress, relationship, recovery)
-   - Log celebration outcomes and their effects
+   - Track celebration types (achievement, milestone, effort, presence, relationship, survival)
+   - Log joy, recognition, and integration from celebrations
 
 2. PATTERN ANALYSIS
-   - Identify the user's celebration profile (minimizer, acknowledge, celebrator, over-celebrator)
-   - Find celebration styles that increase motivation
-   - Detect celebration gaps (achievements without recognition)
+   - Identify the user's celebration profile (celebratory, dismissive, conditional, abundant)
+   - Find celebration patterns that create motivation and wellbeing
+   - Detect achievement without recognition and its costs
 
-3. CELEBRATION DESIGN
-   - Suggest celebration practices matched to achievement size
-   - Provide celebration planning for milestones
-   - Recommendation recognition rituals
+3. CELEBRATION BUILDING
+   - Suggest celebrations matched to current achievements and capacity
+   - Provide frameworks for meaningful recognition
+   - Recommend celebrations of effort, not just outcomes
 
 4. RECOGNITION CULTIVATION
    - Track the correlation between celebration and sustained motivation
-   - Alert when achievements are being rushed past
-   - Celebrate the act of celebrating
+   - Alert when achievements are being dismissed
+   - Celebrate moments of genuine joy in accomplishment
 
 Architecture:
-- record_celebration(achievement, type, celebration, effect): Log celebration
+- record_celebration(achievement, type, joy, recognition, integration): Log celebration
 - get_celebration_stats(): Get celebration pattern analysis
-- get_celebration_plan(achievement_size, energy): Get plan
+- get_celebration_suggestion(capacity, context): Get suggestion
 - get_celebration_score(): Calculate overall celebration health
 """
 
@@ -49,23 +49,22 @@ STATS_DB = DATA_DIR / "stats.json"
 
 @dataclass
 class CelebrationEntry:
-    """A tracked celebration entry."""
+    """A tracked celebration."""
     entry_id: str = ""
-    achievement: str = ""
-    celebration_type: str = ""  # milestone, effort, progress, relationship, recovery, daily_win
-    celebration_action: str = ""  # what they did to celebrate
-    effort_invested: float = 0.5  # 0-1
-    celebration_size: float = 0.5  # 0-1, how big the celebration was
-    motivation_after: float = 0.5  # 0-1
-    satisfaction: float = 0.5  # 0-1
-    shared: bool = False
+    achievement: str = ""  # what was celebrated
+    celebration_type: str = ""  # achievement, milestone, effort, presence, relationship, survival
+    joy: float = 0.5  # 0-1
+    recognition: float = 0.0  # 0-1
+    integration: float = 0.0  # 0-1 how well it was absorbed
+    shared: float = 0.0  # 0-1 was it shared?
+    gratitude: float = 0.0  # 0-1
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     notes: str = ""
 
 
 class CelebrationArchitect:
     """
-    Intelligent celebration architect with gap detection and recognition rituals.
+    Intelligent celebration architect with recognition detection and joy cultivation.
     """
 
     _instance = None
@@ -86,27 +85,26 @@ class CelebrationArchitect:
         self._entries: deque = deque(maxlen=300)
         self._stats = {
             "total_entries": 0,
-            "avg_celebration_size": 0.0,
-            "avg_motivation": 0.0,
-            "celebration_gap": False,
+            "avg_joy": 0.0,
+            "avg_recognition": 0.0,
+            "dismissal_risk": False,
         }
         self._load_stats()
 
     # ── Core Tracking ─────────────────────────────────────────────────────
 
-    def record_celebration(self, achievement: str = "", celebration_type: str = "", celebration_action: str = "", effort_invested: float = 0.5, celebration_size: float = 0.5, motivation_after: float = 0.5, satisfaction: float = 0.5, shared: bool = False, notes: str = "") -> CelebrationEntry:
-        """Record a celebration entry."""
+    def record_celebration(self, achievement: str = "", celebration_type: str = "", joy: float = 0.5, recognition: float = 0.0, integration: float = 0.0, shared: float = 0.0, gratitude: float = 0.0, notes: str = "") -> CelebrationEntry:
+        """Record a celebration."""
         entry_id = f"cel_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._entries)}"
         entry = CelebrationEntry(
             entry_id=entry_id,
             achievement=achievement or "unspecified",
-            celebration_type=celebration_type or "effort",
-            celebration_action=celebration_action,
-            effort_invested=effort_invested,
-            celebration_size=celebration_size,
-            motivation_after=motivation_after,
-            satisfaction=satisfaction,
+            celebration_type=celebration_type or "achievement",
+            joy=joy,
+            recognition=recognition,
+            integration=integration,
             shared=shared,
+            gratitude=gratitude,
             notes=notes,
         )
 
@@ -128,194 +126,148 @@ class CelebrationArchitect:
             return {"status": "insufficient_data"}
 
         # Type analysis
-        by_type = defaultdict(lambda: {"count": 0, "effort_sum": 0.0, "size_sum": 0.0, "motivation_sum": 0.0, "satisfaction_sum": 0.0})
+        by_type = defaultdict(lambda: {"count": 0, "joy_sum": 0.0, "recognition_sum": 0.0, "integration_sum": 0.0})
         for e in self._entries:
             by_type[e.celebration_type]["count"] += 1
-            by_type[e.celebration_type]["effort_sum"] += e.effort_invested
-            by_type[e.celebration_type]["size_sum"] += e.celebration_size
-            by_type[e.celebration_type]["motivation_sum"] += e.motivation_after
-            by_type[e.celebration_type]["satisfaction_sum"] += e.satisfaction
+            by_type[e.celebration_type]["joy_sum"] += e.joy
+            by_type[e.celebration_type]["recognition_sum"] += e.recognition
+            by_type[e.celebration_type]["integration_sum"] += e.integration
 
         type_stats = {}
         for t, data in by_type.items():
             count = data["count"]
             type_stats[t] = {
                 "count": count,
-                "avg_effort": round(data["effort_sum"] / count, 2),
-                "avg_size": round(data["size_sum"] / count, 2),
-                "avg_motivation": round(data["motivation_sum"] / count, 2),
-                "avg_satisfaction": round(data["satisfaction_sum"] / count, 2),
+                "avg_joy": round(data["joy_sum"] / count, 2),
+                "avg_recognition": round(data["recognition_sum"] / count, 2),
+                "avg_integration": round(data["integration_sum"] / count, 2),
             }
 
-        # Size-effort correlation
-        high_effort = [e for e in self._entries if e.effort_invested > 0.7]
-        if high_effort:
-            high_effort_size = sum(e.celebration_size for e in high_effort) / len(high_effort)
+        # Joy analysis
+        high_joy = [e for e in self._entries if e.joy > 0.7]
+        low_joy = [e for e in self._entries if e.joy < 0.4]
+        if high_joy and low_joy:
+            high_joy_int = sum(e.integration for e in high_joy) / len(high_joy)
+            low_joy_int = sum(e.integration for e in low_joy) / len(low_joy)
+            high_joy_grat = sum(e.gratitude for e in high_joy) / len(high_joy)
+            low_joy_grat = sum(e.gratitude for e in low_joy) / len(low_joy)
         else:
-            high_effort_size = 0
+            high_joy_int = 0
+            low_joy_int = 0
+            high_joy_grat = 0
+            low_joy_grat = 0
 
-        low_effort = [e for e in self._entries if e.effort_invested <= 0.4]
-        if low_effort:
-            low_effort_size = sum(e.celebration_size for e in low_effort) / len(low_effort)
+        # Recognition analysis
+        high_rec = [e for e in self._entries if e.recognition > 0.7]
+        low_rec = [e for e in self._entries if e.recognition < 0.4]
+        if high_rec and low_rec:
+            high_rec_int = sum(e.integration for e in high_rec) / len(high_rec)
+            low_rec_int = sum(e.integration for e in low_rec) / len(low_rec)
         else:
-            low_effort_size = 0
+            high_rec_int = 0
+            low_rec_int = 0
 
-        # Celebration gap (high effort, small celebration)
-        celebration_gap = high_effort_size < 0.4 and len(high_effort) > 3
-
-        # Sharing analysis
-        shared = [e for e in self._entries if e.shared]
-        sharing_rate = len(shared) / len(self._entries)
-        if shared:
-            shared_motivation = sum(e.motivation_after for e in shared) / len(shared)
-            shared_satisfaction = sum(e.satisfaction for e in shared) / len(shared)
+        # Shared analysis
+        high_shared = [e for e in self._entries if e.shared > 0.7]
+        low_shared = [e for e in self._entries if e.shared < 0.4]
+        if high_shared and low_shared:
+            high_shared_joy = sum(e.joy for e in high_shared) / len(high_shared)
+            low_shared_joy = sum(e.joy for e in low_shared) / len(low_shared)
         else:
-            shared_motivation = 0
-            shared_satisfaction = 0
+            high_shared_joy = 0
+            low_shared_joy = 0
 
-        # Recent trend
-        recent = list(self._entries)[-14:]
+        # Dismissal risk detection
+        recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
         if recent:
-            recent_size = sum(e.celebration_size for e in recent) / len(recent)
-            recent_motivation = sum(e.motivation_after for e in recent) / len(recent)
-            recent_satisfaction = sum(e.satisfaction for e in recent) / len(recent)
+            recent_joy = sum(e.joy for e in recent) / len(recent)
+            recent_recognition = sum(e.recognition for e in recent) / len(recent)
+            dismissal_risk = recent_joy < 0.3 and recent_recognition < 0.3
         else:
-            recent_size = 0
-            recent_motivation = 0
-            recent_satisfaction = 0
-
-        older = list(self._entries)[:-14] if len(self._entries) > 14 else []
-        if older:
-            older_size = sum(e.celebration_size for e in older) / len(older)
-            older_motivation = sum(e.motivation_after for e in older) / len(older)
-            size_trend = recent_size - older_size
-            motivation_trend = recent_motivation - older_motivation
-        else:
-            size_trend = 0
-            motivation_trend = 0
+            dismissal_risk = True
 
         return {
             "total_entries": len(self._entries),
             "type_stats": type_stats,
-            "size_effort_analysis": {
-                "high_effort_avg_size": round(high_effort_size, 2),
-                "low_effort_avg_size": round(low_effort_size, 2),
+            "joy_impact": {
+                "high_joy_integration": round(high_joy_int, 2),
+                "low_joy_integration": round(low_joy_int, 2),
+                "high_joy_gratitude": round(high_joy_grat, 2),
+                "low_joy_gratitude": round(low_joy_grat, 2),
             },
-            "celebration_gap": celebration_gap,
-            "sharing_rate": round(sharing_rate, 2),
-            "shared_motivation": round(shared_motivation, 2),
-            "shared_satisfaction": round(shared_satisfaction, 2),
-            "avg_size": round(sum(e.celebration_size for e in self._entries) / len(self._entries), 2),
-            "avg_motivation": round(sum(e.motivation_after for e in self._entries) / len(self._entries), 2),
-            "avg_satisfaction": round(sum(e.satisfaction for e in self._entries) / len(self._entries), 2),
-            "size_trend": round(size_trend, 2),
-            "motivation_trend": round(motivation_trend, 2),
-            "recent_size": round(recent_size, 2),
-            "recent_motivation": round(recent_motivation, 2),
-            "recent_satisfaction": round(recent_satisfaction, 2),
+            "recognition_effect": {
+                "high_recognition_integration": round(high_rec_int, 2),
+                "low_recognition_integration": round(low_rec_int, 2),
+            },
+            "shared_effect": {
+                "high_shared_joy": round(high_shared_joy, 2),
+                "low_shared_joy": round(low_shared_joy, 2),
+            },
+            "dismissal_risk": dismissal_risk,
+            "avg_joy": round(sum(e.joy for e in self._entries) / len(self._entries), 2),
+            "avg_recognition": round(sum(e.recognition for e in self._entries) / len(self._entries), 2),
         }
 
-    def get_celebration_plan(self, achievement_size: float = 0.5, energy: float = 0.5) -> Dict[str, Any]:
-        """Get plan."""
-        if achievement_size < 0.3:
-            size_category = "small"
-        elif achievement_size < 0.7:
-            size_category = "medium"
-        else:
-            size_category = "large"
-
-        small_celebrations = [
-            "Take a 5-minute walk. No phone. Just breathe.",
-            "Get a coffee or tea you love. Sit and savor it.",
-            "Send yourself a congratulatory text. Seriously.",
-            "Do a little dance. 30 seconds. Feel ridiculous. Feel good.",
-            "Write 'done' on a sticky note. Put it somewhere you'll see it.",
+    def get_celebration_suggestion(self, capacity: float = 0.5, context: str = "") -> Dict[str, Any]:
+        """Get celebration suggestion."""
+        suggestions = [
+            "Celebrate the effort, not just the outcome. You showed up. You tried. You did the hard thing. That deserves recognition even if the result wasn't perfect.",
+            "Tell someone. Celebrations shared are celebrations amplified. Text a friend. Call a parent. Post it if you want. Let someone witness your win.",
+            "Do something you enjoy. Not productive. Enjoyable. A meal. A movie. A walk. A purchase. Celebrate with pleasure. You earned it.",
+            "Write it down. What you did. How it felt. What it took. The written celebration becomes a resource for hard times. Proof that you can.",
+            "Celebrate small things. The email sent. The workout done. The difficult conversation had. If you only celebrate big wins, you'll rarely celebrate.",
+            "Take a moment of genuine recognition. Stop. Feel it. Let it in. Most people rush past their achievements. Don't. Pause. Breathe. You did this.",
+            "Celebrate survival. Some days, getting through is the achievement. The bad day you survived. The loss you endured. The illness you recovered from. These are wins too.",
+            "Create a victory ritual. A dance. A phrase. A gesture. Something you do every time you achieve. Rituals make celebration automatic.",
+            "Celebrate others too. Their wins. Their efforts. Their presence. Celebration is a culture. Create it around you.",
+            "The person who never celebrates is the person who runs out of fuel. Motivation is not infinite. It needs replenishment. Celebration is the refueling station. Stop and fill up."
         ]
 
-        medium_celebrations = [
-            "Buy yourself something small you've been wanting. Under $20.",
-            "Take an afternoon off. Do something fun. Guilt-free.",
-            "Cook or order your favorite meal. Eat it slowly.",
-            "Call a friend and tell them what you accomplished. Let them celebrate you.",
-            "Watch an episode of your favorite show. No multitasking.",
-        ]
-
-        large_celebrations = [
-            "Plan an experience. A day trip. A concert. A museum. Something to remember.",
-            "Buy the thing. The one you've been putting off. You earned it.",
-            "Throw a small gathering. Even if it's just 2 people. Celebrate together.",
-            "Take a day off. Sleep in. Do nothing productive. Rest is celebration.",
-            "Document the achievement. Write about it. Photo. Video. Make it real.",
-        ]
-
-        if size_category == "small":
-            selected = small_celebrations
-            size_note = "Small win. Don't skip the celebration. Small celebrations build the habit."
-        elif size_category == "medium":
-            selected = medium_celebrations
-            size_note = "Medium win. This deserves real recognition. Not just a mental nod."
+        if capacity < 0.3:
+            capacity_note = "Low capacity. One acknowledgment. One breath of pride. One moment of recognition. That's enough."
+        elif capacity < 0.6:
+            capacity_note = "Moderate capacity. A small celebration. A treat. A shared moment. Medium recognition."
         else:
-            selected = large_celebrations
-            size_note = "Big win. Celebrate properly. This is not indulgence. It's justice."
-
-        if energy < 0.3:
-            energy_note = "Low energy. Choose the easiest celebration. Rest counts."
-        elif energy < 0.6:
-            energy_note = "Moderate energy. A medium celebration will restore you."
-        else:
-            energy_note = "Good energy. Go big. You have the bandwidth to enjoy it fully."
+            capacity_note = "Good capacity. A real celebration. A ritual. A party. You have the energy to honor your achievement fully."
 
         return {
-            "achievement_size": achievement_size,
-            "size_category": size_category,
-            "energy": energy,
-            "celebration": random.choice(selected),
-            "size_note": size_note,
-            "energy_note": energy_note,
-            "principle": "Celebration is not frivolous. It's the psychological close of a loop. Without it, your brain doesn't register the achievement. You keep chasing, never arriving. Celebrate to mark progress. Celebrate to build motivation. Celebrate because you are worth celebrating.",
+            "capacity": capacity,
+            "context": context or "general",
+            "suggestion": random.choice(suggestions),
+            "capacity_note": capacity_note,
+            "principle": "We are terrible at celebrating ourselves. We achieve and immediately ask: what's next? We finish and immediately start the next thing. We succeed and immediately focus on what we could have done better. This is not humility. This is self-neglect. Celebration is not arrogance. It's not bragging. It's the acknowledgment that effort matters. That progress matters. That you matter. The person who never celebrates becomes the person who never feels satisfied. Who never feels accomplished. Who burns out chasing a finish line that keeps moving. Stop. Celebrate. Then keep going."
         }
 
     def get_celebration_score(self) -> int:
         """Calculate overall celebration health (0-100)."""
         if not self._entries:
-            return 30
+            return 25
 
-        # Celebration size relative to effort
-        avg_size = sum(e.celebration_size for e in self._entries) / len(self._entries)
-        avg_effort = sum(e.effort_invested for e in self._entries) / len(self._entries)
-        size_effort_ratio = avg_size / max(0.1, avg_effort)
-
-        # Motivation and satisfaction
-        avg_motivation = sum(e.motivation_after for e in self._entries) / len(self._entries)
-        avg_satisfaction = sum(e.satisfaction for e in self._entries) / len(self._entries)
-
-        # Sharing
-        shared = [e for e in self._entries if e.shared]
-        sharing_rate = len(shared) / len(self._entries)
-
-        # Type variety
-        unique_types = len(set(e.celebration_type for e in self._entries))
+        avg_joy = sum(e.joy for e in self._entries) / len(self._entries)
+        avg_recognition = sum(e.recognition for e in self._entries) / len(self._entries)
+        avg_integration = sum(e.integration for e in self._entries) / len(self._entries)
+        avg_shared = sum(e.shared for e in self._entries) / len(self._entries)
+        avg_gratitude = sum(e.gratitude for e in self._entries) / len(self._entries)
 
         # Recent trend
         recent = list(self._entries)[-14:]
         if recent:
-            recent_size = sum(e.celebration_size for e in recent) / len(recent)
-            recent_motivation = sum(e.motivation_after for e in recent) / len(recent)
-            recent_satisfaction = sum(e.satisfaction for e in recent) / len(recent)
+            recent_joy = sum(e.joy for e in recent) / len(recent)
+            recent_recognition = sum(e.recognition for e in recent) / len(recent)
         else:
-            recent_size = 0
-            recent_motivation = 0
-            recent_satisfaction = 0
+            recent_joy = 0
+            recent_recognition = 0
 
-        # Gap penalty
-        high_effort = [e for e in self._entries if e.effort_invested > 0.7]
-        if high_effort:
-            high_effort_size = sum(e.celebration_size for e in high_effort) / len(high_effort)
-            gap_penalty = 10 if high_effort_size < 0.4 else 0
-        else:
-            gap_penalty = 0
+        # Dismissal penalty
+        dismissal_penalty = 0
+        last_30 = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+        if len(last_30) < 2:
+            dismissal_penalty = 15
 
-        score = (avg_size * 15) + (size_effort_ratio * 15) + (avg_motivation * 20) + (avg_satisfaction * 15) + (sharing_rate * 10) + (unique_types * 2) + (recent_size * 15) + (recent_motivation * 10) + (recent_satisfaction * 10) - gap_penalty
+        # Type variety
+        unique_types = len(set(e.celebration_type for e in self._entries))
+
+        score = (avg_joy * 25) + (avg_recognition * 20) + (avg_integration * 15) + (avg_shared * 15) + (avg_gratitude * 10) + (recent_joy * 5) + (recent_recognition * 5) + (unique_types * 2) - dismissal_penalty
         return max(0, min(100, round(score)))
 
     # ── Private Helpers ─────────────────────────────────────────────────────
@@ -323,13 +275,16 @@ class CelebrationArchitect:
     def _update_stats(self):
         """Update running statistics."""
         if self._entries:
-            self._stats["avg_celebration_size"] = round(sum(e.celebration_size for e in self._entries) / len(self._entries), 2)
-            self._stats["avg_motivation"] = round(sum(e.motivation_after for e in self._entries) / len(self._entries), 2)
+            self._stats["avg_joy"] = round(sum(e.joy for e in self._entries) / len(self._entries), 2)
+            self._stats["avg_recognition"] = round(sum(e.recognition for e in self._entries) / len(self._entries), 2)
 
-            high_effort = [e for e in self._entries if e.effort_invested > 0.7]
-            if high_effort:
-                high_effort_size = sum(e.celebration_size for e in high_effort) / len(high_effort)
-                self._stats["celebration_gap"] = high_effort_size < 0.4
+            recent = [e for e in self._entries if e.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+            if recent:
+                recent_joy = sum(e.joy for e in recent) / len(recent)
+                recent_recognition = sum(e.recognition for e in recent) / len(recent)
+                self._stats["dismissal_risk"] = recent_joy < 0.3 and recent_recognition < 0.3
+            else:
+                self._stats["dismissal_risk"] = True
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -353,12 +308,8 @@ class CelebrationArchitect:
                     "timestamp": entry.timestamp,
                     "achievement": entry.achievement,
                     "celebration_type": entry.celebration_type,
-                    "celebration_action": entry.celebration_action,
-                    "effort_invested": entry.effort_invested,
-                    "celebration_size": entry.celebration_size,
-                    "motivation_after": entry.motivation_after,
-                    "satisfaction": entry.satisfaction,
-                    "shared": entry.shared,
+                    "joy": entry.joy,
+                    "recognition": entry.recognition,
                 }) + "\n")
         except Exception:
             pass

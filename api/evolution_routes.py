@@ -669,6 +669,10 @@ async def get_evolution_health():
             "intergenerational_bridge_builder": {"available": True},
             "aesthetic_life_designer": {"available": True},
             "comfort_zone_challenger": {"available": True},
+            "conflict_resolution_coach": {"available": True},
+            "forgiveness_facilitator": {"available": True},
+            "celebration_architect": {"available": True},
+            "rest_designer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

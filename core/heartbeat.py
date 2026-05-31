@@ -336,6 +336,10 @@ class ProactiveHeartbeat:
                 ("intergenerational_bridge_builder", "Intergenerational Bridge Builder"),
                 ("aesthetic_life_designer", "Aesthetic Life Designer"),
                 ("comfort_zone_challenger", "Comfort Zone Challenger"),
+                ("conflict_resolution_coach", "Conflict Resolution Coach"),
+                ("forgiveness_facilitator", "Forgiveness Facilitator"),
+                ("celebration_architect", "Celebration Architect"),
+                ("rest_designer", "Rest Designer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
