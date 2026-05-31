@@ -298,6 +298,10 @@ export default function IntelligenceDashboard() {
     { name: "conflict_navigator", stats: modernStats.evolution_health?.conflict_navigator },
     { name: "assertiveness_builder", stats: modernStats.evolution_health?.assertiveness_builder },
     { name: "boundary_architect", stats: modernStats.evolution_health?.boundary_architect },
+    { name: "leadership_coach", stats: modernStats.evolution_health?.leadership_coach },
+    { name: "influence_builder", stats: modernStats.evolution_health?.influence_builder },
+    { name: "delegation_trainer", stats: modernStats.evolution_health?.delegation_trainer },
+    { name: "vision_keeper", stats: modernStats.evolution_health?.vision_keeper },
   ].filter(m => m.stats);
 
   return (
