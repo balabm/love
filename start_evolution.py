@@ -499,6 +499,10 @@ def start_evolution_systems():
         ("Family Harmony Builder", "core.family_harmony_builder", "get_family_harmony_builder"),
         ("Grief Support Companion", "core.grief_support_companion", "get_grief_support_companion"),
         ("Humor Cultivator", "core.humor_cultivator", "get_humor_cultivator"),
+        ("Civic Engagement Tracker", "core.civic_engagement_tracker", "get_civic_engagement_tracker"),
+        ("Mentorship Weaver", "core.mentorship_weaver", "get_mentorship_weaver"),
+        ("Wisdom Keeper", "core.wisdom_keeper", "get_wisdom_keeper"),
+        ("Play Architect", "core.play_architect", "get_play_architect"),
     ]
 
     initialized = 0

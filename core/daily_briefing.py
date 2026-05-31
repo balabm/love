@@ -295,6 +295,8 @@ class DailyBriefingSystem:
                 "age_reversal_coach", "life_phase_navigator",
                 "parenting_coach", "family_harmony_builder",
                 "grief_support_companion", "humor_cultivator",
+                "civic_engagement_tracker", "mentorship_weaver",
+                "wisdom_keeper", "play_architect",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

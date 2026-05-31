@@ -661,6 +661,10 @@ async def get_evolution_health():
             "family_harmony_builder": {"available": True},
             "grief_support_companion": {"available": True},
             "humor_cultivator": {"available": True},
+            "civic_engagement_tracker": {"available": True},
+            "mentorship_weaver": {"available": True},
+            "wisdom_keeper": {"available": True},
+            "play_architect": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
