@@ -248,6 +248,8 @@ export default function SentinelPanel() {
                 "knowledge_synthesizer", "wisdom_distiller",
                 "purpose_clarity_engine", "legacy_builder",
                 "impact_maximizer", "meaning_amplifier",
+                "courage_coach", "risk_intelligence_trainer",
+                "vulnerability_builder", "authenticity_amplifier",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -272,6 +274,8 @@ export default function SentinelPanel() {
                 "knowledge_synthesizer", "wisdom_distiller",
                 "purpose_clarity_engine", "legacy_builder",
                 "impact_maximizer", "meaning_amplifier",
+                "courage_coach", "risk_intelligence_trainer",
+                "vulnerability_builder", "authenticity_amplifier",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
@@ -300,6 +304,8 @@ export default function SentinelPanel() {
                 "knowledge_synthesizer", "wisdom_distiller",
                 "purpose_clarity_engine", "legacy_builder",
                 "impact_maximizer", "meaning_amplifier",
+                "courage_coach", "risk_intelligence_trainer",
+                "vulnerability_builder", "authenticity_amplifier",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -323,7 +329,9 @@ export default function SentinelPanel() {
                 "curiosity_cultivator", "learning_acceleration_engine",
                 "knowledge_synthesizer", "wisdom_distiller",
                 "purpose_clarity_engine", "legacy_builder",
-                "impact_maximizer", "meaning_amplifier"
+                "impact_maximizer", "meaning_amplifier",
+                "courage_coach", "risk_intelligence_trainer",
+                "vulnerability_builder", "authenticity_amplifier"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>

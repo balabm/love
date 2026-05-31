@@ -282,6 +282,10 @@ export default function IntelligenceDashboard() {
     { name: "legacy_builder", stats: modernStats.evolution_health?.legacy_builder },
     { name: "impact_maximizer", stats: modernStats.evolution_health?.impact_maximizer },
     { name: "meaning_amplifier", stats: modernStats.evolution_health?.meaning_amplifier },
+    { name: "courage_coach", stats: modernStats.evolution_health?.courage_coach },
+    { name: "risk_intelligence_trainer", stats: modernStats.evolution_health?.risk_intelligence_trainer },
+    { name: "vulnerability_builder", stats: modernStats.evolution_health?.vulnerability_builder },
+    { name: "authenticity_amplifier", stats: modernStats.evolution_health?.authenticity_amplifier },
   ].filter(m => m.stats);
 
   return (
