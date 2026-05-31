@@ -554,6 +554,10 @@ async def get_evolution_health():
             "play_coach": {"available": True},
             "adventure_planner": {"available": True},
             "wonder_tracker": {"available": True},
+            "meaning_mapper": {"available": True},
+            "purpose_navigator": {"available": True},
+            "legacy_builder": {"available": True},
+            "death_awareness_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

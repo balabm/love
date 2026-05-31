@@ -221,6 +221,10 @@ class ProactiveHeartbeat:
                 ("play_coach", "Play Coach"),
                 ("adventure_planner", "Adventure Planner"),
                 ("wonder_tracker", "Wonder Tracker"),
+                ("meaning_mapper", "Meaning Mapper"),
+                ("purpose_navigator", "Purpose Navigator"),
+                ("legacy_builder", "Legacy Builder"),
+                ("death_awareness_coach", "Death Awareness Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

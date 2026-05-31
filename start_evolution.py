@@ -108,6 +108,10 @@ Plus Modern AI Subsystems:
 - Play Coach (joy intelligence)
 - Adventure Planner (experience intelligence)
 - Wonder Tracker (awe intelligence)
+- Meaning Mapper (significance intelligence)
+- Purpose Navigator (direction intelligence)
+- Legacy Builder (long-term impact intelligence)
+- Death Awareness Coach (mortality intelligence)
 
 Usage:
     python start_evolution.py
@@ -324,6 +328,10 @@ def start_evolution_systems():
         ("Play Coach", "core.play_coach", "get_play_coach"),
         ("Adventure Planner", "core.adventure_planner", "get_adventure_planner"),
         ("Wonder Tracker", "core.wonder_tracker", "get_wonder_tracker"),
+        ("Meaning Mapper", "core.meaning_mapper", "get_meaning_mapper"),
+        ("Purpose Navigator", "core.purpose_navigator", "get_purpose_navigator"),
+        ("Legacy Builder", "core.legacy_builder", "get_legacy_builder"),
+        ("Death Awareness Coach", "core.death_awareness_coach", "get_death_awareness_coach"),
     ]
 
     initialized = 0

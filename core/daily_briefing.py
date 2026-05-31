@@ -241,6 +241,8 @@ class DailyBriefingSystem:
                 "vulnerability_builder", "trust_builder",
                 "curiosity_spark", "play_coach",
                 "adventure_planner", "wonder_tracker",
+                "meaning_mapper", "purpose_navigator",
+                "legacy_builder", "death_awareness_coach",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)
