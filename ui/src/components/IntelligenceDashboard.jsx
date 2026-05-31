@@ -234,6 +234,10 @@ export default function IntelligenceDashboard() {
     { name: "growth_mindset_coach", stats: modernStats.evolution_health?.growth_mindset_coach },
     { name: "adaptability_trainer", stats: modernStats.evolution_health?.adaptability_trainer },
     { name: "antifragility_tracker", stats: modernStats.evolution_health?.antifragility_tracker },
+    { name: "discipline_trainer", stats: modernStats.evolution_health?.discipline_trainer },
+    { name: "consistency_coach", stats: modernStats.evolution_health?.consistency_coach },
+    { name: "accountability_partner", stats: modernStats.evolution_health?.accountability_partner },
+    { name: "progress_celebrator", stats: modernStats.evolution_health?.progress_celebrator },
   ].filter(m => m.stats);
 
   return (
