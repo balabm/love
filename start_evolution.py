@@ -132,6 +132,10 @@ Plus Modern AI Subsystems:
 - Habit Architect (behavior design intelligence)
 - Environment Curator (context intelligence)
 - Ritual Master (ceremony intelligence)
+- Values Explorer (axiology intelligence)
+- Belief Examiner (epistemology intelligence)
+- Shadow Integrator (unconscious intelligence)
+- Inner Critic Manager (self-talk intelligence)
 
 Usage:
     python start_evolution.py
@@ -372,6 +376,10 @@ def start_evolution_systems():
         ("Habit Architect", "core.habit_architect", "get_habit_architect"),
         ("Environment Curator", "core.environment_curator", "get_environment_curator"),
         ("Ritual Master", "core.ritual_master", "get_ritual_master"),
+        ("Values Explorer", "core.values_explorer", "get_values_explorer"),
+        ("Belief Examiner", "core.belief_examiner", "get_belief_examiner"),
+        ("Shadow Integrator", "core.shadow_integrator", "get_shadow_integrator"),
+        ("Inner Critic Manager", "core.inner_critic_manager", "get_inner_critic_manager"),
     ]
 
     initialized = 0

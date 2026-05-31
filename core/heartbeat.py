@@ -245,6 +245,10 @@ class ProactiveHeartbeat:
                 ("habit_architect", "Habit Architect"),
                 ("environment_curator", "Environment Curator"),
                 ("ritual_master", "Ritual Master"),
+                ("values_explorer", "Values Explorer"),
+                ("belief_examiner", "Belief Examiner"),
+                ("shadow_integrator", "Shadow Integrator"),
+                ("inner_critic_manager", "Inner Critic Manager"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

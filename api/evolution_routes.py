@@ -578,6 +578,10 @@ async def get_evolution_health():
             "habit_architect": {"available": True},
             "environment_curator": {"available": True},
             "ritual_master": {"available": True},
+            "values_explorer": {"available": True},
+            "belief_examiner": {"available": True},
+            "shadow_integrator": {"available": True},
+            "inner_critic_manager": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
