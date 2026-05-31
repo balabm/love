@@ -194,6 +194,10 @@ export default function IntelligenceDashboard() {
     { name: "goal_progress_visualizer", stats: modernStats.evolution_health?.goal_progress_visualizer },
     { name: "life_balance_wheel", stats: modernStats.evolution_health?.life_balance_wheel },
     { name: "productivity_gamifier", stats: modernStats.evolution_health?.productivity_gamifier },
+    { name: "environment_optimizer", stats: modernStats.evolution_health?.environment_optimizer },
+    { name: "weather_suggester", stats: modernStats.evolution_health?.weather_suggester },
+    { name: "travel_planner", stats: modernStats.evolution_health?.travel_planner },
+    { name: "gift_idea_generator", stats: modernStats.evolution_health?.gift_idea_generator },
   ].filter(m => m.stats);
 
   return (
