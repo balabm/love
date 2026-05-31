@@ -186,6 +186,10 @@ export default function IntelligenceDashboard() {
     { name: "nutrition_analyzer", stats: modernStats.evolution_health?.nutrition_analyzer },
     { name: "exercise_optimizer", stats: modernStats.evolution_health?.exercise_optimizer },
     { name: "meditation_coach", stats: modernStats.evolution_health?.meditation_coach },
+    { name: "reading_tracker", stats: modernStats.evolution_health?.reading_tracker },
+    { name: "writing_coach", stats: modernStats.evolution_health?.writing_coach },
+    { name: "creativity_booster", stats: modernStats.evolution_health?.creativity_booster },
+    { name: "stress_response_coach", stats: modernStats.evolution_health?.stress_response_coach },
   ].filter(m => m.stats);
 
   return (
