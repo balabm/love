@@ -487,6 +487,10 @@ def start_evolution_systems():
         ("Experience Maximizer", "core.experience_maximizer", "get_experience_maximizer"),
         ("Wonder Cultivator", "core.wonder_cultivator", "get_wonder_cultivator"),
         ("Travel Optimizer", "core.travel_optimizer", "get_travel_optimizer"),
+        ("Community Builder", "core.community_builder", "get_community_builder"),
+        ("Social Impact Tracker", "core.social_impact_tracker", "get_social_impact_tracker"),
+        ("Volunteer Coordinator", "core.volunteer_coordinator", "get_volunteer_coordinator"),
+        ("Network Weaver", "core.network_weaver", "get_network_weaver"),
     ]
 
     initialized = 0

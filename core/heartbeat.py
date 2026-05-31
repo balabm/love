@@ -316,6 +316,10 @@ class ProactiveHeartbeat:
                 ("experience_maximizer", "Experience Maximizer"),
                 ("wonder_cultivator", "Wonder Cultivator"),
                 ("travel_optimizer", "Travel Optimizer"),
+                ("community_builder", "Community Builder"),
+                ("social_impact_tracker", "Social Impact Tracker"),
+                ("volunteer_coordinator", "Volunteer Coordinator"),
+                ("network_weaver", "Network Weaver"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

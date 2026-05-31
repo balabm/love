@@ -289,6 +289,8 @@ class DailyBriefingSystem:
                 "sacred_ritual_designer", "contemplation_keeper",
                 "experience_maximizer", "wonder_cultivator",
                 "travel_optimizer",
+                "community_builder", "social_impact_tracker",
+                "volunteer_coordinator", "network_weaver",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

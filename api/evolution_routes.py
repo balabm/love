@@ -649,6 +649,10 @@ async def get_evolution_health():
             "experience_maximizer": {"available": True},
             "wonder_cultivator": {"available": True},
             "travel_optimizer": {"available": True},
+            "community_builder": {"available": True},
+            "social_impact_tracker": {"available": True},
+            "volunteer_coordinator": {"available": True},
+            "network_weaver": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
