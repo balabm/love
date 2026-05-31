@@ -286,6 +286,10 @@ export default function IntelligenceDashboard() {
     { name: "risk_intelligence_trainer", stats: modernStats.evolution_health?.risk_intelligence_trainer },
     { name: "vulnerability_builder", stats: modernStats.evolution_health?.vulnerability_builder },
     { name: "authenticity_amplifier", stats: modernStats.evolution_health?.authenticity_amplifier },
+    { name: "humor_playfulness_trainer", stats: modernStats.evolution_health?.humor_playfulness_trainer },
+    { name: "joy_cultivator", stats: modernStats.evolution_health?.joy_cultivator },
+    { name: "celebration_architect", stats: modernStats.evolution_health?.celebration_architect },
+    { name: "spontaneity_generator", stats: modernStats.evolution_health?.spontaneity_generator },
   ].filter(m => m.stats);
 
   return (

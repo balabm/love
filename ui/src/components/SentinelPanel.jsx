@@ -250,6 +250,8 @@ export default function SentinelPanel() {
                 "impact_maximizer", "meaning_amplifier",
                 "courage_coach", "risk_intelligence_trainer",
                 "vulnerability_builder", "authenticity_amplifier",
+                "humor_playfulness_trainer", "joy_cultivator",
+                "celebration_architect", "spontaneity_generator",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -276,6 +278,8 @@ export default function SentinelPanel() {
                 "impact_maximizer", "meaning_amplifier",
                 "courage_coach", "risk_intelligence_trainer",
                 "vulnerability_builder", "authenticity_amplifier",
+                "humor_playfulness_trainer", "joy_cultivator",
+                "celebration_architect", "spontaneity_generator",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
@@ -306,6 +310,8 @@ export default function SentinelPanel() {
                 "impact_maximizer", "meaning_amplifier",
                 "courage_coach", "risk_intelligence_trainer",
                 "vulnerability_builder", "authenticity_amplifier",
+                "humor_playfulness_trainer", "joy_cultivator",
+                "celebration_architect", "spontaneity_generator",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -331,7 +337,9 @@ export default function SentinelPanel() {
                 "purpose_clarity_engine", "legacy_builder",
                 "impact_maximizer", "meaning_amplifier",
                 "courage_coach", "risk_intelligence_trainer",
-                "vulnerability_builder", "authenticity_amplifier"
+                "vulnerability_builder", "authenticity_amplifier",
+                "humor_playfulness_trainer", "joy_cultivator",
+                "celebration_architect", "spontaneity_generator"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>
