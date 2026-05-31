@@ -266,6 +266,10 @@ export default function IntelligenceDashboard() {
     { name: "focus_ritual_designer", stats: modernStats.evolution_health?.focus_ritual_designer },
     { name: "attention_recovery_specialist", stats: modernStats.evolution_health?.attention_recovery_specialist },
     { name: "cognitive_load_manager", stats: modernStats.evolution_health?.cognitive_load_manager },
+    { name: "stress_resilience_trainer", stats: modernStats.evolution_health?.stress_resilience_trainer },
+    { name: "emotional_regulation_coach", stats: modernStats.evolution_health?.emotional_regulation_coach },
+    { name: "mindfulness_trainer", stats: modernStats.evolution_health?.mindfulness_trainer },
+    { name: "presence_amplifier", stats: modernStats.evolution_health?.presence_amplifier },
   ].filter(m => m.stats);
 
   return (
