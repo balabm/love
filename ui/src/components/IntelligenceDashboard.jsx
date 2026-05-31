@@ -202,6 +202,10 @@ export default function IntelligenceDashboard() {
     { name: "home_maintenance_scheduler", stats: modernStats.evolution_health?.home_maintenance_scheduler },
     { name: "career_path_mapper", stats: modernStats.evolution_health?.career_path_mapper },
     { name: "skill_gap_analyzer", stats: modernStats.evolution_health?.skill_gap_analyzer },
+    { name: "document_organizer", stats: modernStats.evolution_health?.document_organizer },
+    { name: "password_health_checker", stats: modernStats.evolution_health?.password_health_checker },
+    { name: "subscription_manager", stats: modernStats.evolution_health?.subscription_manager },
+    { name: "digital_declutterer", stats: modernStats.evolution_health?.digital_declutterer },
   ].filter(m => m.stats);
 
   return (
