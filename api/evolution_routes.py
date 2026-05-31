@@ -598,6 +598,10 @@ async def get_evolution_health():
             "focus_ritual_designer": {"available": True},
             "attention_recovery_specialist": {"available": True},
             "cognitive_load_manager": {"available": True},
+            "stress_resilience_trainer": {"available": True},
+            "emotional_regulation_coach": {"available": True},
+            "mindfulness_trainer": {"available": True},
+            "presence_amplifier": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

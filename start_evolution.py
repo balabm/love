@@ -152,6 +152,10 @@ Plus Modern AI Subsystems:
 - Focus Ritual Designer (ritual intelligence)
 - Attention Recovery Specialist (attention restoration intelligence)
 - Cognitive Load Manager (mental bandwidth intelligence)
+- Stress Resilience Trainer (adaptive capacity intelligence)
+- Emotional Regulation Coach (affective intelligence)
+- Mindfulness Trainer (awareness intelligence)
+- Presence Amplifier (embodied awareness intelligence)
 
 Usage:
     python start_evolution.py
@@ -412,6 +416,10 @@ def start_evolution_systems():
         ("Focus Ritual Designer", "core.focus_ritual_designer", "get_focus_ritual_designer"),
         ("Attention Recovery Specialist", "core.attention_recovery_specialist", "get_attention_recovery_specialist"),
         ("Cognitive Load Manager", "core.cognitive_load_manager", "get_cognitive_load_manager"),
+        ("Stress Resilience Trainer", "core.stress_resilience_trainer", "get_stress_resilience_trainer"),
+        ("Emotional Regulation Coach", "core.emotional_regulation_coach", "get_emotional_regulation_coach"),
+        ("Mindfulness Trainer", "core.mindfulness_trainer", "get_mindfulness_trainer"),
+        ("Presence Amplifier", "core.presence_amplifier", "get_presence_amplifier"),
     ]
 
     initialized = 0

@@ -265,6 +265,10 @@ class ProactiveHeartbeat:
                 ("focus_ritual_designer", "Focus Ritual Designer"),
                 ("attention_recovery_specialist", "Attention Recovery Specialist"),
                 ("cognitive_load_manager", "Cognitive Load Manager"),
+                ("stress_resilience_trainer", "Stress Resilience Trainer"),
+                ("emotional_regulation_coach", "Emotional Regulation Coach"),
+                ("mindfulness_trainer", "Mindfulness Trainer"),
+                ("presence_amplifier", "Presence Amplifier"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
