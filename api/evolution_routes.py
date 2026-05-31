@@ -506,6 +506,10 @@ async def get_evolution_health():
             "decision_journal": {"available": True},
             "mood_journal": {"available": True},
             "values_alignment_checker": {"available": True},
+            "gratitude_tracker": {"available": True},
+            "energy_audit_tool": {"available": True},
+            "time_audit_tool": {"available": True},
+            "reflection_prompt_generator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

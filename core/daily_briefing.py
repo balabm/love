@@ -217,6 +217,8 @@ class DailyBriefingSystem:
                 "social_connection_monitor", "learning_path_optimizer",
                 "focus_recovery_tracker", "decision_journal",
                 "mood_journal", "values_alignment_checker",
+                "gratitude_tracker", "energy_audit_tool",
+                "time_audit_tool", "reflection_prompt_generator",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

@@ -173,6 +173,10 @@ class ProactiveHeartbeat:
                 ("decision_journal", "Decision Journal"),
                 ("mood_journal", "Mood Journal"),
                 ("values_alignment_checker", "Values Alignment Checker"),
+                ("gratitude_tracker", "Gratitude Tracker"),
+                ("energy_audit_tool", "Energy Audit Tool"),
+                ("time_audit_tool", "Time Audit Tool"),
+                ("reflection_prompt_generator", "Reflection Prompt Generator"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

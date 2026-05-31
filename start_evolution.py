@@ -60,6 +60,10 @@ Plus Modern AI Subsystems:
 - Decision Journal (decision quality tracker)
 - Mood Journal (emotional pattern tracker)
 - Values Alignment Checker (integrity monitor)
+- Gratitude Tracker (appreciation and positivity)
+- Energy Audit Tool (personal energy intelligence)
+- Time Audit Tool (temporal intelligence)
+- Reflection Prompt Generator (self-awareness catalyst)
 
 Usage:
     python start_evolution.py
@@ -228,6 +232,10 @@ def start_evolution_systems():
         ("Decision Journal", "core.decision_journal", "get_decision_journal"),
         ("Mood Journal", "core.mood_journal", "get_mood_journal"),
         ("Values Alignment Checker", "core.values_alignment_checker", "get_values_alignment_checker"),
+        ("Gratitude Tracker", "core.gratitude_tracker", "get_gratitude_tracker"),
+        ("Energy Audit Tool", "core.energy_audit_tool", "get_energy_audit_tool"),
+        ("Time Audit Tool", "core.time_audit_tool", "get_time_audit_tool"),
+        ("Reflection Prompt Generator", "core.reflection_prompt_generator", "get_reflection_prompt_generator"),
     ]
 
     initialized = 0
