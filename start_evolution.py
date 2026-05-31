@@ -88,6 +88,10 @@ Plus Modern AI Subsystems:
 - Home Maintenance Scheduler (home intelligence)
 - Career Path Mapper (career intelligence)
 - Skill Gap Analyzer (capability intelligence)
+- Document Organizer (document intelligence)
+- Password Health Checker (security intelligence)
+- Subscription Manager (finance intelligence)
+- Digital Declutterer (digital wellness intelligence)
 
 Usage:
     python start_evolution.py
@@ -284,6 +288,10 @@ def start_evolution_systems():
         ("Home Maintenance Scheduler", "core.home_maintenance_scheduler", "get_home_maintenance_scheduler"),
         ("Career Path Mapper", "core.career_path_mapper", "get_career_path_mapper"),
         ("Skill Gap Analyzer", "core.skill_gap_analyzer", "get_skill_gap_analyzer"),
+        ("Document Organizer", "core.document_organizer", "get_document_organizer"),
+        ("Password Health Checker", "core.password_health_checker", "get_password_health_checker"),
+        ("Subscription Manager", "core.subscription_manager", "get_subscription_manager"),
+        ("Digital Declutterer", "core.digital_declutterer", "get_digital_declutterer"),
     ]
 
     initialized = 0

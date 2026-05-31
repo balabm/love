@@ -231,6 +231,8 @@ class DailyBriefingSystem:
                 "travel_planner", "gift_idea_generator",
                 "emergency_preparedness_tracker", "home_maintenance_scheduler",
                 "career_path_mapper", "skill_gap_analyzer",
+                "document_organizer", "password_health_checker",
+                "subscription_manager", "digital_declutterer",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

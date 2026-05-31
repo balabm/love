@@ -534,6 +534,10 @@ async def get_evolution_health():
             "home_maintenance_scheduler": {"available": True},
             "career_path_mapper": {"available": True},
             "skill_gap_analyzer": {"available": True},
+            "document_organizer": {"available": True},
+            "password_health_checker": {"available": True},
+            "subscription_manager": {"available": True},
+            "digital_declutterer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

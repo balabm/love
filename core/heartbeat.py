@@ -201,6 +201,10 @@ class ProactiveHeartbeat:
                 ("home_maintenance_scheduler", "Home Maintenance Scheduler"),
                 ("career_path_mapper", "Career Path Mapper"),
                 ("skill_gap_analyzer", "Skill Gap Analyzer"),
+                ("document_organizer", "Document Organizer"),
+                ("password_health_checker", "Password Health Checker"),
+                ("subscription_manager", "Subscription Manager"),
+                ("digital_declutterer", "Digital Declutterer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
