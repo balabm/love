@@ -223,6 +223,7 @@ export default function SentinelPanel() {
                 "conflict_resolution_coach", "forgiveness_facilitator", "celebration_architect", "rest_designer",
                 "boundary_coach", "emotional_literacy_trainer", "hope_cultivator", "attention_steward",
                 "identity_explorer", "values_navigator", "belonging_builder", "rejection_resilience_coach",
+                "storytelling_coach", "voice_finder", "transition_companion", "uncertainty_embracer",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
