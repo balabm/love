@@ -189,6 +189,10 @@ class ProactiveHeartbeat:
                 ("writing_coach", "Writing Coach"),
                 ("creativity_booster", "Creativity Booster"),
                 ("stress_response_coach", "Stress Response Coach"),
+                ("communication_analyzer", "Communication Analyzer"),
+                ("goal_progress_visualizer", "Goal Progress Visualizer"),
+                ("life_balance_wheel", "Life Balance Wheel"),
+                ("productivity_gamifier", "Productivity Gamifier"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

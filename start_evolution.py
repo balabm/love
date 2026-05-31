@@ -76,6 +76,10 @@ Plus Modern AI Subsystems:
 - Writing Coach (writing intelligence)
 - Creativity Booster (creative intelligence)
 - Stress Response Coach (resilience intelligence)
+- Communication Analyzer (communication intelligence)
+- Goal Progress Visualizer (goal intelligence)
+- Life Balance Wheel (life intelligence)
+- Productivity Gamifier (gamification intelligence)
 
 Usage:
     python start_evolution.py
@@ -260,6 +264,10 @@ def start_evolution_systems():
         ("Writing Coach", "core.writing_coach", "get_writing_coach"),
         ("Creativity Booster", "core.creativity_booster", "get_creativity_booster"),
         ("Stress Response Coach", "core.stress_response_coach", "get_stress_response_coach"),
+        ("Communication Analyzer", "core.communication_analyzer", "get_communication_analyzer"),
+        ("Goal Progress Visualizer", "core.goal_progress_visualizer", "get_goal_progress_visualizer"),
+        ("Life Balance Wheel", "core.life_balance_wheel", "get_life_balance_wheel"),
+        ("Productivity Gamifier", "core.productivity_gamifier", "get_productivity_gamifier"),
     ]
 
     initialized = 0

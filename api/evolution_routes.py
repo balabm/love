@@ -522,6 +522,10 @@ async def get_evolution_health():
             "writing_coach": {"available": True},
             "creativity_booster": {"available": True},
             "stress_response_coach": {"available": True},
+            "communication_analyzer": {"available": True},
+            "goal_progress_visualizer": {"available": True},
+            "life_balance_wheel": {"available": True},
+            "productivity_gamifier": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
