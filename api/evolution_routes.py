@@ -618,6 +618,10 @@ async def get_evolution_health():
             "risk_intelligence_trainer": {"available": True},
             "vulnerability_builder": {"available": True},
             "authenticity_amplifier": {"available": True},
+            "humor_playfulness_trainer": {"available": True},
+            "joy_cultivator": {"available": True},
+            "celebration_architect": {"available": True},
+            "spontaneity_generator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

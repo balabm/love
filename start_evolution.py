@@ -172,6 +172,10 @@ Plus Modern AI Subsystems:
 - Risk Intelligence Trainer (calculated risk intelligence)
 - Vulnerability Builder (openness intelligence)
 - Authenticity Amplifier (true self intelligence)
+- Humor & Playfulness Trainer (lightness intelligence)
+- Joy Cultivator (delight intelligence)
+- Celebration Architect (recognition intelligence)
+- Spontaneity Generator (surprise intelligence)
 
 Usage:
     python start_evolution.py
@@ -452,6 +456,10 @@ def start_evolution_systems():
         ("Risk Intelligence Trainer", "core.risk_intelligence_trainer", "get_risk_intelligence_trainer"),
         ("Vulnerability Builder", "core.vulnerability_builder", "get_vulnerability_builder"),
         ("Authenticity Amplifier", "core.authenticity_amplifier", "get_authenticity_amplifier"),
+        ("Humor & Playfulness Trainer", "core.humor_playfulness_trainer", "get_humor_playfulness_trainer"),
+        ("Joy Cultivator", "core.joy_cultivator", "get_joy_cultivator"),
+        ("Celebration Architect", "core.celebration_architect", "get_celebration_architect"),
+        ("Spontaneity Generator", "core.spontaneity_generator", "get_spontaneity_generator"),
     ]
 
     initialized = 0

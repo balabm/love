@@ -285,6 +285,10 @@ class ProactiveHeartbeat:
                 ("risk_intelligence_trainer", "Risk Intelligence Trainer"),
                 ("vulnerability_builder", "Vulnerability Builder"),
                 ("authenticity_amplifier", "Authenticity Amplifier"),
+                ("humor_playfulness_trainer", "Humor & Playfulness Trainer"),
+                ("joy_cultivator", "Joy Cultivator"),
+                ("celebration_architect", "Celebration Architect"),
+                ("spontaneity_generator", "Spontaneity Generator"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
