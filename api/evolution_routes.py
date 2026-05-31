@@ -542,6 +542,10 @@ async def get_evolution_health():
             "habit_builder": {"available": True},
             "morning_routine_designer": {"available": True},
             "evening_wind_down_coach": {"available": True},
+            "conflict_resolution_coach": {"available": True},
+            "boundaries_coach": {"available": True},
+            "assertiveness_trainer": {"available": True},
+            "active_listening_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

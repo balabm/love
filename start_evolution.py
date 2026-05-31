@@ -96,6 +96,10 @@ Plus Modern AI Subsystems:
 - Habit Builder (habit intelligence)
 - Morning Routine Designer (morning intelligence)
 - Evening Wind-Down Coach (sleep intelligence)
+- Conflict Resolution Coach (relationship intelligence)
+- Boundaries Coach (self-respect intelligence)
+- Assertiveness Trainer (communication intelligence)
+- Active Listening Coach (connection intelligence)
 
 Usage:
     python start_evolution.py
@@ -300,6 +304,10 @@ def start_evolution_systems():
         ("Habit Builder", "core.habit_builder", "get_habit_builder"),
         ("Morning Routine Designer", "core.morning_routine_designer", "get_morning_routine_designer"),
         ("Evening Wind-Down Coach", "core.evening_wind_down_coach", "get_evening_wind_down_coach"),
+        ("Conflict Resolution Coach", "core.conflict_resolution_coach", "get_conflict_resolution_coach"),
+        ("Boundaries Coach", "core.boundaries_coach", "get_boundaries_coach"),
+        ("Assertiveness Trainer", "core.assertiveness_trainer", "get_assertiveness_trainer"),
+        ("Active Listening Coach", "core.active_listening_coach", "get_active_listening_coach"),
     ]
 
     initialized = 0

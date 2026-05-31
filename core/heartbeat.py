@@ -209,6 +209,10 @@ class ProactiveHeartbeat:
                 ("habit_builder", "Habit Builder"),
                 ("morning_routine_designer", "Morning Routine Designer"),
                 ("evening_wind_down_coach", "Evening Wind-Down Coach"),
+                ("conflict_resolution_coach", "Conflict Resolution Coach"),
+                ("boundaries_coach", "Boundaries Coach"),
+                ("assertiveness_trainer", "Assertiveness Trainer"),
+                ("active_listening_coach", "Active Listening Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
