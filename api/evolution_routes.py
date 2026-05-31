@@ -614,6 +614,10 @@ async def get_evolution_health():
             "legacy_builder": {"available": True},
             "impact_maximizer": {"available": True},
             "meaning_amplifier": {"available": True},
+            "courage_coach": {"available": True},
+            "risk_intelligence_trainer": {"available": True},
+            "vulnerability_builder": {"available": True},
+            "authenticity_amplifier": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

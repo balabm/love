@@ -281,6 +281,10 @@ class ProactiveHeartbeat:
                 ("legacy_builder", "Legacy Builder"),
                 ("impact_maximizer", "Impact Maximizer"),
                 ("meaning_amplifier", "Meaning Amplifier"),
+                ("courage_coach", "Courage Coach"),
+                ("risk_intelligence_trainer", "Risk Intelligence Trainer"),
+                ("vulnerability_builder", "Vulnerability Builder"),
+                ("authenticity_amplifier", "Authenticity Amplifier"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

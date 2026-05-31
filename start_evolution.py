@@ -168,6 +168,10 @@ Plus Modern AI Subsystems:
 - Legacy Builder (long-term impact intelligence)
 - Impact Maximizer (leverage intelligence)
 - Meaning Amplifier (significance intelligence)
+- Courage Coach (brave action intelligence)
+- Risk Intelligence Trainer (calculated risk intelligence)
+- Vulnerability Builder (openness intelligence)
+- Authenticity Amplifier (true self intelligence)
 
 Usage:
     python start_evolution.py
@@ -444,6 +448,10 @@ def start_evolution_systems():
         ("Legacy Builder", "core.legacy_builder", "get_legacy_builder"),
         ("Impact Maximizer", "core.impact_maximizer", "get_impact_maximizer"),
         ("Meaning Amplifier", "core.meaning_amplifier", "get_meaning_amplifier"),
+        ("Courage Coach", "core.courage_coach", "get_courage_coach"),
+        ("Risk Intelligence Trainer", "core.risk_intelligence_trainer", "get_risk_intelligence_trainer"),
+        ("Vulnerability Builder", "core.vulnerability_builder", "get_vulnerability_builder"),
+        ("Authenticity Amplifier", "core.authenticity_amplifier", "get_authenticity_amplifier"),
     ]
 
     initialized = 0
