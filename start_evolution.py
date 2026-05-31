@@ -64,6 +64,10 @@ Plus Modern AI Subsystems:
 - Energy Audit Tool (personal energy intelligence)
 - Time Audit Tool (temporal intelligence)
 - Reflection Prompt Generator (self-awareness catalyst)
+- Proactive Preparation Engine (anticipatory intelligence)
+- Context Switching Minimizer (flow state protector)
+- Task Batch Optimizer (task clustering engine)
+- Meeting Optimizer (meeting intelligence)
 
 Usage:
     python start_evolution.py
@@ -236,6 +240,10 @@ def start_evolution_systems():
         ("Energy Audit Tool", "core.energy_audit_tool", "get_energy_audit_tool"),
         ("Time Audit Tool", "core.time_audit_tool", "get_time_audit_tool"),
         ("Reflection Prompt Generator", "core.reflection_prompt_generator", "get_reflection_prompt_generator"),
+        ("Proactive Preparation Engine", "core.proactive_preparation_engine", "get_proactive_preparation_engine"),
+        ("Context Switching Minimizer", "core.context_switching_minimizer", "get_context_switching_minimizer"),
+        ("Task Batch Optimizer", "core.task_batch_optimizer", "get_task_batch_optimizer"),
+        ("Meeting Optimizer", "core.meeting_optimizer", "get_meeting_optimizer"),
     ]
 
     initialized = 0

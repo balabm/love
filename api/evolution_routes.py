@@ -510,6 +510,10 @@ async def get_evolution_health():
             "energy_audit_tool": {"available": True},
             "time_audit_tool": {"available": True},
             "reflection_prompt_generator": {"available": True},
+            "proactive_preparation_engine": {"available": True},
+            "context_switching_minimizer": {"available": True},
+            "task_batch_optimizer": {"available": True},
+            "meeting_optimizer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -177,6 +177,10 @@ class ProactiveHeartbeat:
                 ("energy_audit_tool", "Energy Audit Tool"),
                 ("time_audit_tool", "Time Audit Tool"),
                 ("reflection_prompt_generator", "Reflection Prompt Generator"),
+                ("proactive_preparation_engine", "Proactive Preparation Engine"),
+                ("context_switching_minimizer", "Context Switching Minimizer"),
+                ("task_batch_optimizer", "Task Batch Optimizer"),
+                ("meeting_optimizer", "Meeting Optimizer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
