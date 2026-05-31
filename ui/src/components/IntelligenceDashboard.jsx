@@ -254,6 +254,10 @@ export default function IntelligenceDashboard() {
     { name: "empathy_builder", stats: modernStats.evolution_health?.empathy_builder },
     { name: "compassion_generator", stats: modernStats.evolution_health?.compassion_generator },
     { name: "gratitude_amplifier", stats: modernStats.evolution_health?.gratitude_amplifier },
+    { name: "deep_work_enabler", stats: modernStats.evolution_health?.deep_work_enabler },
+    { name: "recovery_optimizer", stats: modernStats.evolution_health?.recovery_optimizer },
+    { name: "peak_performance_tracker", stats: modernStats.evolution_health?.peak_performance_tracker },
+    { name: "mindful_productivity_coach", stats: modernStats.evolution_health?.mindful_productivity_coach },
   ].filter(m => m.stats);
 
   return (
