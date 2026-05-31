@@ -606,6 +606,10 @@ async def get_evolution_health():
             "innovation_spark_generator": {"available": True},
             "problem_reframer": {"available": True},
             "perspective_shifter": {"available": True},
+            "curiosity_cultivator": {"available": True},
+            "learning_acceleration_engine": {"available": True},
+            "knowledge_synthesizer": {"available": True},
+            "wisdom_distiller": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

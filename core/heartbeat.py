@@ -273,6 +273,10 @@ class ProactiveHeartbeat:
                 ("innovation_spark_generator", "Innovation Spark Generator"),
                 ("problem_reframer", "Problem Reframer"),
                 ("perspective_shifter", "Perspective Shifter"),
+                ("curiosity_cultivator", "Curiosity Cultivator"),
+                ("learning_acceleration_engine", "Learning Acceleration Engine"),
+                ("knowledge_synthesizer", "Knowledge Synthesizer"),
+                ("wisdom_distiller", "Wisdom Distiller"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

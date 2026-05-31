@@ -160,6 +160,10 @@ Plus Modern AI Subsystems:
 - Innovation Spark Generator (breakthrough intelligence)
 - Problem Reframer (solution intelligence)
 - Perspective Shifter (cognitive flexibility intelligence)
+- Curiosity Cultivator (wonder intelligence)
+- Learning Acceleration Engine (rapid acquisition intelligence)
+- Knowledge Synthesizer (integration intelligence)
+- Wisdom Distiller (deep understanding intelligence)
 
 Usage:
     python start_evolution.py
@@ -428,6 +432,10 @@ def start_evolution_systems():
         ("Innovation Spark Generator", "core.innovation_spark_generator", "get_innovation_spark_generator"),
         ("Problem Reframer", "core.problem_reframer", "get_problem_reframer"),
         ("Perspective Shifter", "core.perspective_shifter", "get_perspective_shifter"),
+        ("Curiosity Cultivator", "core.curiosity_cultivator", "get_curiosity_cultivator"),
+        ("Learning Acceleration Engine", "core.learning_acceleration_engine", "get_learning_acceleration_engine"),
+        ("Knowledge Synthesizer", "core.knowledge_synthesizer", "get_knowledge_synthesizer"),
+        ("Wisdom Distiller", "core.wisdom_distiller", "get_wisdom_distiller"),
     ]
 
     initialized = 0
