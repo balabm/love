@@ -455,6 +455,11 @@ from core.scarcity_healer import get_scarcity_healer
 from core.generosity_cultivator import get_generosity_cultivator
 from core.abundance_architect import get_abundance_architect
 
+from core.decision_quality_tracker import get_decision_quality_tracker
+from core.optionality_maximizer import get_optionality_maximizer
+from core.expected_value_coach import get_expected_value_coach
+from core.regret_minimizer import get_regret_minimizer
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -806,4 +811,57 @@ def abundance_architect_stats():
 @router.get("/abundance_architect/score")
 def abundance_architect_score():
     return {"abundance_score": get_abundance_architect().get_abundance_score()}
+
+
+@router.post("/decision_quality_tracker/record")
+def decision_quality_tracker_record(decision: str = "", decision_type: str = "", quality: float = 0.0, speed: float = 0.0, information: float = 0.0, outcome: float = 0.0, clarity: float = 0.0, values_alignment: float = 0.0, notes: str = ""):
+    entry = get_decision_quality_tracker().record_decision(decision=decision, decision_type=decision_type, quality=quality, speed=speed, information=information, outcome=outcome, clarity=clarity, values_alignment=values_alignment, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/decision_quality_tracker/stats")
+def decision_quality_tracker_stats():
+    return get_decision_quality_tracker().get_decision_stats()
+
+@router.get("/decision_quality_tracker/score")
+def decision_quality_tracker_score():
+    return {"decision_score": get_decision_quality_tracker().get_decision_score()}
+
+@router.post("/optionality_maximizer/record")
+def optionality_maximizer_record(decision: str = "", optionality_type: str = "", doors_opened: float = 0.0, doors_closed: float = 0.0, reversibility: float = 0.0, flexibility: float = 0.0, strategic_value: float = 0.0, notes: str = ""):
+    entry = get_optionality_maximizer().record_optionality(decision=decision, optionality_type=optionality_type, doors_opened=doors_opened, doors_closed=doors_closed, reversibility=reversibility, flexibility=flexibility, strategic_value=strategic_value, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/optionality_maximizer/stats")
+def optionality_maximizer_stats():
+    return get_optionality_maximizer().get_optionality_stats()
+
+@router.get("/optionality_maximizer/score")
+def optionality_maximizer_score():
+    return {"optionality_score": get_optionality_maximizer().get_optionality_score()}
+
+@router.post("/expected_value_coach/record")
+def expected_value_coach_record(decision: str = "", ev_type: str = "", probability: float = 0.0, payoff: float = 0.0, actual_outcome: float = 0.0, emotion_influence: float = 0.0, calibration: float = 0.0, notes: str = ""):
+    entry = get_expected_value_coach().record_ev(decision=decision, ev_type=ev_type, probability=probability, payoff=payoff, actual_outcome=actual_outcome, emotion_influence=emotion_influence, calibration=calibration, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/expected_value_coach/stats")
+def expected_value_coach_stats():
+    return get_expected_value_coach().get_ev_stats()
+
+@router.get("/expected_value_coach/score")
+def expected_value_coach_score():
+    return {"ev_score": get_expected_value_coach().get_ev_score()}
+
+@router.post("/regret_minimizer/record")
+def regret_minimizer_record(regret: str = "", regret_type: str = "", intensity: float = 0.0, learning: float = 0.0, resolution: float = 0.0, anticipation: float = 0.0, action_taken: float = 0.0, notes: str = ""):
+    entry = get_regret_minimizer().record_regret(regret=regret, regret_type=regret_type, intensity=intensity, learning=learning, resolution=resolution, anticipation=anticipation, action_taken=action_taken, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/regret_minimizer/stats")
+def regret_minimizer_stats():
+    return get_regret_minimizer().get_regret_stats()
+
+@router.get("/regret_minimizer/score")
+def regret_minimizer_score():
+    return {"regret_score": get_regret_minimizer().get_regret_score()}
 
