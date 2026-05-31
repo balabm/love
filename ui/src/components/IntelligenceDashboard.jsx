@@ -250,6 +250,10 @@ export default function IntelligenceDashboard() {
     { name: "belief_examiner", stats: modernStats.evolution_health?.belief_examiner },
     { name: "shadow_integrator", stats: modernStats.evolution_health?.shadow_integrator },
     { name: "inner_critic_manager", stats: modernStats.evolution_health?.inner_critic_manager },
+    { name: "emotional_intelligence_trainer", stats: modernStats.evolution_health?.emotional_intelligence_trainer },
+    { name: "empathy_builder", stats: modernStats.evolution_health?.empathy_builder },
+    { name: "compassion_generator", stats: modernStats.evolution_health?.compassion_generator },
+    { name: "gratitude_amplifier", stats: modernStats.evolution_health?.gratitude_amplifier },
   ].filter(m => m.stats);
 
   return (
