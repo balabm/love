@@ -278,6 +278,10 @@ export default function IntelligenceDashboard() {
     { name: "learning_acceleration_engine", stats: modernStats.evolution_health?.learning_acceleration_engine },
     { name: "knowledge_synthesizer", stats: modernStats.evolution_health?.knowledge_synthesizer },
     { name: "wisdom_distiller", stats: modernStats.evolution_health?.wisdom_distiller },
+    { name: "purpose_clarity_engine", stats: modernStats.evolution_health?.purpose_clarity_engine },
+    { name: "legacy_builder", stats: modernStats.evolution_health?.legacy_builder },
+    { name: "impact_maximizer", stats: modernStats.evolution_health?.impact_maximizer },
+    { name: "meaning_amplifier", stats: modernStats.evolution_health?.meaning_amplifier },
   ].filter(m => m.stats);
 
   return (
