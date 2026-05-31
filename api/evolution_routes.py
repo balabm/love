@@ -450,6 +450,11 @@ from core.inner_critic_tamer import get_inner_critic_tamer
 from core.perfectionism_healer import get_perfectionism_healer
 from core.comparison_detoxifier import get_comparison_detoxifier
 
+from core.money_mindset_coach import get_money_mindset_coach
+from core.scarcity_healer import get_scarcity_healer
+from core.generosity_cultivator import get_generosity_cultivator
+from core.abundance_architect import get_abundance_architect
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -748,4 +753,57 @@ def comparison_detoxifier_stats():
 @router.get("/comparison_detoxifier/score")
 def comparison_detoxifier_score():
     return {"comparison_score": get_comparison_detoxifier().get_comparison_score()}
+
+
+@router.post("/money_mindset_coach/record")
+def money_mindset_coach_record(situation: str = "", mindset_type: str = "", clarity: float = 0.0, confidence: float = 0.0, alignment: float = 0.0, generosity: float = 0.0, action_taken: float = 0.0, notes: str = ""):
+    entry = get_money_mindset_coach().record_mindset(situation=situation, mindset_type=mindset_type, clarity=clarity, confidence=confidence, alignment=alignment, generosity=generosity, action_taken=action_taken, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/money_mindset_coach/stats")
+def money_mindset_coach_stats():
+    return get_money_mindset_coach().get_mindset_stats()
+
+@router.get("/money_mindset_coach/score")
+def money_mindset_coach_score():
+    return {"mindset_score": get_money_mindset_coach().get_mindset_score()}
+
+@router.post("/scarcity_healer/record")
+def scarcity_healer_record(situation: str = "", scarcity_type: str = "", distress: float = 0.0, reality: float = 0.0, response: float = 0.0, gratitude: float = 0.0, perspective: float = 0.0, sufficiency: float = 0.0, notes: str = ""):
+    entry = get_scarcity_healer().record_scarcity(situation=situation, scarcity_type=scarcity_type, distress=distress, reality=reality, response=response, gratitude=gratitude, perspective=perspective, sufficiency=sufficiency, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/scarcity_healer/stats")
+def scarcity_healer_stats():
+    return get_scarcity_healer().get_scarcity_stats()
+
+@router.get("/scarcity_healer/score")
+def scarcity_healer_score():
+    return {"scarcity_score": get_scarcity_healer().get_scarcity_score()}
+
+@router.post("/generosity_cultivator/record")
+def generosity_cultivator_record(gift: str = "", generosity_type: str = "", joy: float = 0.0, reciprocity: float = 0.0, sustainability: float = 0.0, boundaries: float = 0.0, receiving: float = 0.0, notes: str = ""):
+    entry = get_generosity_cultivator().record_generosity(gift=gift, generosity_type=generosity_type, joy=joy, reciprocity=reciprocity, sustainability=sustainability, boundaries=boundaries, receiving=receiving, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/generosity_cultivator/stats")
+def generosity_cultivator_stats():
+    return get_generosity_cultivator().get_generosity_stats()
+
+@router.get("/generosity_cultivator/score")
+def generosity_cultivator_score():
+    return {"generosity_score": get_generosity_cultivator().get_generosity_score()}
+
+@router.post("/abundance_architect/record")
+def abundance_architect_record(manifestation: str = "", abundance_type: str = "", recognition: float = 0.0, gratitude: float = 0.0, expansion: float = 0.0, sharing: float = 0.0, blocking: float = 0.0, notes: str = ""):
+    entry = get_abundance_architect().record_abundance(manifestation=manifestation, abundance_type=abundance_type, recognition=recognition, gratitude=gratitude, expansion=expansion, sharing=sharing, blocking=blocking, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/abundance_architect/stats")
+def abundance_architect_stats():
+    return get_abundance_architect().get_abundance_stats()
+
+@router.get("/abundance_architect/score")
+def abundance_architect_score():
+    return {"abundance_score": get_abundance_architect().get_abundance_score()}
 
