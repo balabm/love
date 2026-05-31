@@ -566,6 +566,10 @@ async def get_evolution_health():
             "growth_mindset_coach": {"available": True},
             "adaptability_trainer": {"available": True},
             "antifragility_tracker": {"available": True},
+            "discipline_trainer": {"available": True},
+            "consistency_coach": {"available": True},
+            "accountability_partner": {"available": True},
+            "progress_celebrator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

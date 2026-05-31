@@ -247,6 +247,8 @@ class DailyBriefingSystem:
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
                 "adaptability_trainer", "antifragility_tracker",
+                "discipline_trainer", "consistency_coach",
+                "accountability_partner", "progress_celebrator",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

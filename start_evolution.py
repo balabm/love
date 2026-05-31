@@ -120,6 +120,10 @@ Plus Modern AI Subsystems:
 - Growth Mindset Coach (belief intelligence)
 - Adaptability Trainer (change intelligence)
 - Antifragility Tracker (stress-to-strength intelligence)
+- Discipline Trainer (self-regulation intelligence)
+- Consistency Coach (steady-state intelligence)
+- Accountability Partner (external support intelligence)
+- Progress Celebrator (recognition intelligence)
 
 Usage:
     python start_evolution.py
@@ -348,6 +352,10 @@ def start_evolution_systems():
         ("Growth Mindset Coach", "core.growth_mindset_coach", "get_growth_mindset_coach"),
         ("Adaptability Trainer", "core.adaptability_trainer", "get_adaptability_trainer"),
         ("Antifragility Tracker", "core.antifragility_tracker", "get_antifragility_tracker"),
+        ("Discipline Trainer", "core.discipline_trainer", "get_discipline_trainer"),
+        ("Consistency Coach", "core.consistency_coach", "get_consistency_coach"),
+        ("Accountability Partner", "core.accountability_partner", "get_accountability_partner"),
+        ("Progress Celebrator", "core.progress_celebrator", "get_progress_celebrator"),
     ]
 
     initialized = 0
