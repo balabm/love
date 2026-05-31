@@ -258,6 +258,10 @@ export default function IntelligenceDashboard() {
     { name: "recovery_optimizer", stats: modernStats.evolution_health?.recovery_optimizer },
     { name: "peak_performance_tracker", stats: modernStats.evolution_health?.peak_performance_tracker },
     { name: "mindful_productivity_coach", stats: modernStats.evolution_health?.mindful_productivity_coach },
+    { name: "sleep_optimizer", stats: modernStats.evolution_health?.sleep_optimizer },
+    { name: "nutrition_coach", stats: modernStats.evolution_health?.nutrition_coach },
+    { name: "movement_tracker", stats: modernStats.evolution_health?.movement_tracker },
+    { name: "health_integrator", stats: modernStats.evolution_health?.health_integrator },
   ].filter(m => m.stats);
 
   return (
