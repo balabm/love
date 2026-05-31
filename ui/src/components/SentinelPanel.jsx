@@ -242,6 +242,8 @@ export default function SentinelPanel() {
                 "attention_recovery_specialist", "cognitive_load_manager",
                 "stress_resilience_trainer", "emotional_regulation_coach",
                 "mindfulness_trainer", "presence_amplifier",
+                "creativity_catalyst", "innovation_spark_generator",
+                "problem_reframer", "perspective_shifter",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -260,6 +262,8 @@ export default function SentinelPanel() {
                 "attention_recovery_specialist", "cognitive_load_manager",
                 "stress_resilience_trainer", "emotional_regulation_coach",
                 "mindfulness_trainer", "presence_amplifier",
+                "creativity_catalyst", "innovation_spark_generator",
+                "problem_reframer", "perspective_shifter",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
@@ -282,6 +286,8 @@ export default function SentinelPanel() {
                 "attention_recovery_specialist", "cognitive_load_manager",
                 "stress_resilience_trainer", "emotional_regulation_coach",
                 "mindfulness_trainer", "presence_amplifier",
+                "creativity_catalyst", "innovation_spark_generator",
+                "problem_reframer", "perspective_shifter",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -299,7 +305,9 @@ export default function SentinelPanel() {
                 "digital_minimalism_coach", "focus_ritual_designer",
                 "attention_recovery_specialist", "cognitive_load_manager",
                 "stress_resilience_trainer", "emotional_regulation_coach",
-                "mindfulness_trainer", "presence_amplifier"
+                "mindfulness_trainer", "presence_amplifier",
+                "creativity_catalyst", "innovation_spark_generator",
+                "problem_reframer", "perspective_shifter"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>

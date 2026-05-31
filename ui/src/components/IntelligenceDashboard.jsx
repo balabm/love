@@ -270,6 +270,10 @@ export default function IntelligenceDashboard() {
     { name: "emotional_regulation_coach", stats: modernStats.evolution_health?.emotional_regulation_coach },
     { name: "mindfulness_trainer", stats: modernStats.evolution_health?.mindfulness_trainer },
     { name: "presence_amplifier", stats: modernStats.evolution_health?.presence_amplifier },
+    { name: "creativity_catalyst", stats: modernStats.evolution_health?.creativity_catalyst },
+    { name: "innovation_spark_generator", stats: modernStats.evolution_health?.innovation_spark_generator },
+    { name: "problem_reframer", stats: modernStats.evolution_health?.problem_reframer },
+    { name: "perspective_shifter", stats: modernStats.evolution_health?.perspective_shifter },
   ].filter(m => m.stats);
 
   return (
