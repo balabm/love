@@ -681,6 +681,10 @@ async def get_evolution_health():
             "values_navigator": {"available": True},
             "belonging_builder": {"available": True},
             "rejection_resilience_coach": {"available": True},
+            "storytelling_coach": {"available": True},
+            "voice_finder": {"available": True},
+            "transition_companion": {"available": True},
+            "uncertainty_embracer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

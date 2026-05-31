@@ -519,6 +519,10 @@ def start_evolution_systems():
         ("Values Navigator", "core.values_navigator", "get_values_navigator"),
         ("Belonging Builder", "core.belonging_builder", "get_belonging_builder"),
         ("Rejection Resilience Coach", "core.rejection_resilience_coach", "get_rejection_resilience_coach"),
+        ("Storytelling Coach", "core.storytelling_coach", "get_storytelling_coach"),
+        ("Voice Finder", "core.voice_finder", "get_voice_finder"),
+        ("Transition Companion", "core.transition_companion", "get_transition_companion"),
+        ("Uncertainty Embracer", "core.uncertainty_embracer", "get_uncertainty_embracer"),
     ]
 
     initialized = 0

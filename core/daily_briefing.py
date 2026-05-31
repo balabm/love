@@ -305,6 +305,8 @@ class DailyBriefingSystem:
                 "hope_cultivator", "attention_steward",
                 "identity_explorer", "values_navigator",
                 "belonging_builder", "rejection_resilience_coach",
+                "storytelling_coach", "voice_finder",
+                "transition_companion", "uncertainty_embracer",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

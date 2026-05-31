@@ -348,6 +348,10 @@ class ProactiveHeartbeat:
                 ("values_navigator", "Values Navigator"),
                 ("belonging_builder", "Belonging Builder"),
                 ("rejection_resilience_coach", "Rejection Resilience Coach"),
+                ("storytelling_coach", "Storytelling Coach"),
+                ("voice_finder", "Voice Finder"),
+                ("transition_companion", "Transition Companion"),
+                ("uncertainty_embracer", "Uncertainty Embracer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
