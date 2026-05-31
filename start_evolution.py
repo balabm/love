@@ -491,6 +491,10 @@ def start_evolution_systems():
         ("Social Impact Tracker", "core.social_impact_tracker", "get_social_impact_tracker"),
         ("Volunteer Coordinator", "core.volunteer_coordinator", "get_volunteer_coordinator"),
         ("Network Weaver", "core.network_weaver", "get_network_weaver"),
+        ("Longevity Optimizer", "core.longevity_optimizer", "get_longevity_optimizer"),
+        ("Vitality Tracker", "core.vitality_tracker", "get_vitality_tracker"),
+        ("Age Reversal Coach", "core.age_reversal_coach", "get_age_reversal_coach"),
+        ("Life Phase Navigator", "core.life_phase_navigator", "get_life_phase_navigator"),
     ]
 
     initialized = 0

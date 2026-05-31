@@ -653,6 +653,10 @@ async def get_evolution_health():
             "social_impact_tracker": {"available": True},
             "volunteer_coordinator": {"available": True},
             "network_weaver": {"available": True},
+            "longevity_optimizer": {"available": True},
+            "vitality_tracker": {"available": True},
+            "age_reversal_coach": {"available": True},
+            "life_phase_navigator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

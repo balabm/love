@@ -320,6 +320,10 @@ class ProactiveHeartbeat:
                 ("social_impact_tracker", "Social Impact Tracker"),
                 ("volunteer_coordinator", "Volunteer Coordinator"),
                 ("network_weaver", "Network Weaver"),
+                ("longevity_optimizer", "Longevity Optimizer"),
+                ("vitality_tracker", "Vitality Tracker"),
+                ("age_reversal_coach", "Age Reversal Coach"),
+                ("life_phase_navigator", "Life Phase Navigator"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
