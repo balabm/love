@@ -182,6 +182,10 @@ export default function IntelligenceDashboard() {
     { name: "context_switching_minimizer", stats: modernStats.evolution_health?.context_switching_minimizer },
     { name: "task_batch_optimizer", stats: modernStats.evolution_health?.task_batch_optimizer },
     { name: "meeting_optimizer", stats: modernStats.evolution_health?.meeting_optimizer },
+    { name: "finance_pattern_detector", stats: modernStats.evolution_health?.finance_pattern_detector },
+    { name: "nutrition_analyzer", stats: modernStats.evolution_health?.nutrition_analyzer },
+    { name: "exercise_optimizer", stats: modernStats.evolution_health?.exercise_optimizer },
+    { name: "meditation_coach", stats: modernStats.evolution_health?.meditation_coach },
   ].filter(m => m.stats);
 
   return (
