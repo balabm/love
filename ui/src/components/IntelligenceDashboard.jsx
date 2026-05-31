@@ -178,6 +178,10 @@ export default function IntelligenceDashboard() {
     { name: "energy_audit_tool", stats: modernStats.evolution_health?.energy_audit_tool },
     { name: "time_audit_tool", stats: modernStats.evolution_health?.time_audit_tool },
     { name: "reflection_prompt_generator", stats: modernStats.evolution_health?.reflection_prompt_generator },
+    { name: "proactive_preparation_engine", stats: modernStats.evolution_health?.proactive_preparation_engine },
+    { name: "context_switching_minimizer", stats: modernStats.evolution_health?.context_switching_minimizer },
+    { name: "task_batch_optimizer", stats: modernStats.evolution_health?.task_batch_optimizer },
+    { name: "meeting_optimizer", stats: modernStats.evolution_health?.meeting_optimizer },
   ].filter(m => m.stats);
 
   return (
