@@ -56,6 +56,10 @@ Plus Modern AI Subsystems:
 - Sleep Analyzer (sleep pattern intelligence)
 - Social Connection Monitor (relationship health)
 - Learning Path Optimizer (adaptive learning sequences)
+- Focus Recovery Tracker (focus session intelligence)
+- Decision Journal (decision quality tracker)
+- Mood Journal (emotional pattern tracker)
+- Values Alignment Checker (integrity monitor)
 
 Usage:
     python start_evolution.py
@@ -220,6 +224,10 @@ def start_evolution_systems():
         ("Sleep Analyzer", "core.sleep_analyzer", "get_sleep_analyzer"),
         ("Social Connection Monitor", "core.social_connection_monitor", "get_social_connection_monitor"),
         ("Learning Path Optimizer", "core.learning_path_optimizer", "get_learning_path_optimizer"),
+        ("Focus Recovery Tracker", "core.focus_recovery_tracker", "get_focus_recovery_tracker"),
+        ("Decision Journal", "core.decision_journal", "get_decision_journal"),
+        ("Mood Journal", "core.mood_journal", "get_mood_journal"),
+        ("Values Alignment Checker", "core.values_alignment_checker", "get_values_alignment_checker"),
     ]
 
     initialized = 0

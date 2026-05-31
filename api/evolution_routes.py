@@ -502,6 +502,10 @@ async def get_evolution_health():
             "sleep_analyzer": {"available": True},
             "social_connection_monitor": {"available": True},
             "learning_path_optimizer": {"available": True},
+            "focus_recovery_tracker": {"available": True},
+            "decision_journal": {"available": True},
+            "mood_journal": {"available": True},
+            "values_alignment_checker": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -169,6 +169,10 @@ class ProactiveHeartbeat:
                 ("sleep_analyzer", "Sleep Analyzer"),
                 ("social_connection_monitor", "Social Connection Monitor"),
                 ("learning_path_optimizer", "Learning Path Optimizer"),
+                ("focus_recovery_tracker", "Focus Recovery Tracker"),
+                ("decision_journal", "Decision Journal"),
+                ("mood_journal", "Mood Journal"),
+                ("values_alignment_checker", "Values Alignment Checker"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
