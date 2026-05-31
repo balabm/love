@@ -262,6 +262,10 @@ export default function IntelligenceDashboard() {
     { name: "nutrition_coach", stats: modernStats.evolution_health?.nutrition_coach },
     { name: "movement_tracker", stats: modernStats.evolution_health?.movement_tracker },
     { name: "health_integrator", stats: modernStats.evolution_health?.health_integrator },
+    { name: "digital_minimalism_coach", stats: modernStats.evolution_health?.digital_minimalism_coach },
+    { name: "focus_ritual_designer", stats: modernStats.evolution_health?.focus_ritual_designer },
+    { name: "attention_recovery_specialist", stats: modernStats.evolution_health?.attention_recovery_specialist },
+    { name: "cognitive_load_manager", stats: modernStats.evolution_health?.cognitive_load_manager },
   ].filter(m => m.stats);
 
   return (
