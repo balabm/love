@@ -84,6 +84,10 @@ Plus Modern AI Subsystems:
 - Weather Suggester (weather intelligence)
 - Travel Planner (travel intelligence)
 - Gift Idea Generator (gift intelligence)
+- Emergency Preparedness Tracker (safety intelligence)
+- Home Maintenance Scheduler (home intelligence)
+- Career Path Mapper (career intelligence)
+- Skill Gap Analyzer (capability intelligence)
 
 Usage:
     python start_evolution.py
@@ -276,6 +280,10 @@ def start_evolution_systems():
         ("Weather Suggester", "core.weather_suggester", "get_weather_suggester"),
         ("Travel Planner", "core.travel_planner", "get_travel_planner"),
         ("Gift Idea Generator", "core.gift_idea_generator", "get_gift_idea_generator"),
+        ("Emergency Preparedness Tracker", "core.emergency_preparedness_tracker", "get_emergency_preparedness_tracker"),
+        ("Home Maintenance Scheduler", "core.home_maintenance_scheduler", "get_home_maintenance_scheduler"),
+        ("Career Path Mapper", "core.career_path_mapper", "get_career_path_mapper"),
+        ("Skill Gap Analyzer", "core.skill_gap_analyzer", "get_skill_gap_analyzer"),
     ]
 
     initialized = 0

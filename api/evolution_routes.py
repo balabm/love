@@ -530,6 +530,10 @@ async def get_evolution_health():
             "weather_suggester": {"available": True},
             "travel_planner": {"available": True},
             "gift_idea_generator": {"available": True},
+            "emergency_preparedness_tracker": {"available": True},
+            "home_maintenance_scheduler": {"available": True},
+            "career_path_mapper": {"available": True},
+            "skill_gap_analyzer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

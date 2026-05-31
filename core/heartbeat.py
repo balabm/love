@@ -197,6 +197,10 @@ class ProactiveHeartbeat:
                 ("weather_suggester", "Weather Suggester"),
                 ("travel_planner", "Travel Planner"),
                 ("gift_idea_generator", "Gift Idea Generator"),
+                ("emergency_preparedness_tracker", "Emergency Preparedness Tracker"),
+                ("home_maintenance_scheduler", "Home Maintenance Scheduler"),
+                ("career_path_mapper", "Career Path Mapper"),
+                ("skill_gap_analyzer", "Skill Gap Analyzer"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
