@@ -677,6 +677,10 @@ async def get_evolution_health():
             "emotional_literacy_trainer": {"available": True},
             "hope_cultivator": {"available": True},
             "attention_steward": {"available": True},
+            "identity_explorer": {"available": True},
+            "values_navigator": {"available": True},
+            "belonging_builder": {"available": True},
+            "rejection_resilience_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

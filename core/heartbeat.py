@@ -344,6 +344,10 @@ class ProactiveHeartbeat:
                 ("emotional_literacy_trainer", "Emotional Literacy Trainer"),
                 ("hope_cultivator", "Hope Cultivator"),
                 ("attention_steward", "Attention Steward"),
+                ("identity_explorer", "Identity Explorer"),
+                ("values_navigator", "Values Navigator"),
+                ("belonging_builder", "Belonging Builder"),
+                ("rejection_resilience_coach", "Rejection Resilience Coach"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

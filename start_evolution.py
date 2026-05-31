@@ -515,6 +515,10 @@ def start_evolution_systems():
         ("Emotional Literacy Trainer", "core.emotional_literacy_trainer", "get_emotional_literacy_trainer"),
         ("Hope Cultivator", "core.hope_cultivator", "get_hope_cultivator"),
         ("Attention Steward", "core.attention_steward", "get_attention_steward"),
+        ("Identity Explorer", "core.identity_explorer", "get_identity_explorer"),
+        ("Values Navigator", "core.values_navigator", "get_values_navigator"),
+        ("Belonging Builder", "core.belonging_builder", "get_belonging_builder"),
+        ("Rejection Resilience Coach", "core.rejection_resilience_coach", "get_rejection_resilience_coach"),
     ]
 
     initialized = 0
