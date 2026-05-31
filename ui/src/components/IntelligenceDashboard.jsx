@@ -360,6 +360,10 @@ export default function IntelligenceDashboard() {
     { name: "scarcity_healer", stats: modernStats.evolution_health?.scarcity_healer },
     { name: "generosity_cultivator", stats: modernStats.evolution_health?.generosity_cultivator },
     { name: "abundance_architect", stats: modernStats.evolution_health?.abundance_architect },
+    { name: "decision_quality_tracker", stats: modernStats.evolution_health?.decision_quality_tracker },
+    { name: "optionality_maximizer", stats: modernStats.evolution_health?.optionality_maximizer },
+    { name: "expected_value_coach", stats: modernStats.evolution_health?.expected_value_coach },
+    { name: "regret_minimizer", stats: modernStats.evolution_health?.regret_minimizer },
   ].filter(m => m.stats);
 
   return (
