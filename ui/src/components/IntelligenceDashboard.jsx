@@ -356,6 +356,10 @@ export default function IntelligenceDashboard() {
     { name: "inner_critic_tamer", stats: modernStats.evolution_health?.inner_critic_tamer },
     { name: "perfectionism_healer", stats: modernStats.evolution_health?.perfectionism_healer },
     { name: "comparison_detoxifier", stats: modernStats.evolution_health?.comparison_detoxifier },
+    { name: "money_mindset_coach", stats: modernStats.evolution_health?.money_mindset_coach },
+    { name: "scarcity_healer", stats: modernStats.evolution_health?.scarcity_healer },
+    { name: "generosity_cultivator", stats: modernStats.evolution_health?.generosity_cultivator },
+    { name: "abundance_architect", stats: modernStats.evolution_health?.abundance_architect },
   ].filter(m => m.stats);
 
   return (
