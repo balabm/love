@@ -290,6 +290,10 @@ export default function IntelligenceDashboard() {
     { name: "joy_cultivator", stats: modernStats.evolution_health?.joy_cultivator },
     { name: "celebration_architect", stats: modernStats.evolution_health?.celebration_architect },
     { name: "spontaneity_generator", stats: modernStats.evolution_health?.spontaneity_generator },
+    { name: "forgiveness_coach", stats: modernStats.evolution_health?.forgiveness_coach },
+    { name: "reconciliation_builder", stats: modernStats.evolution_health?.reconciliation_builder },
+    { name: "trust_architect", stats: modernStats.evolution_health?.trust_architect },
+    { name: "repair_specialist", stats: modernStats.evolution_health?.repair_specialist },
   ].filter(m => m.stats);
 
   return (
