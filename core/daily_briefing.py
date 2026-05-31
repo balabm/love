@@ -269,6 +269,8 @@ class DailyBriefingSystem:
                 "problem_reframer", "perspective_shifter",
                 "curiosity_cultivator", "learning_acceleration_engine",
                 "knowledge_synthesizer", "wisdom_distiller",
+                "purpose_clarity_engine", "legacy_builder",
+                "impact_maximizer", "meaning_amplifier",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

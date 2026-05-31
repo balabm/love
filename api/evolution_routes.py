@@ -610,6 +610,10 @@ async def get_evolution_health():
             "learning_acceleration_engine": {"available": True},
             "knowledge_synthesizer": {"available": True},
             "wisdom_distiller": {"available": True},
+            "purpose_clarity_engine": {"available": True},
+            "legacy_builder": {"available": True},
+            "impact_maximizer": {"available": True},
+            "meaning_amplifier": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

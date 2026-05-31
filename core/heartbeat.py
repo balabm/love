@@ -277,6 +277,10 @@ class ProactiveHeartbeat:
                 ("learning_acceleration_engine", "Learning Acceleration Engine"),
                 ("knowledge_synthesizer", "Knowledge Synthesizer"),
                 ("wisdom_distiller", "Wisdom Distiller"),
+                ("purpose_clarity_engine", "Purpose Clarity Engine"),
+                ("legacy_builder", "Legacy Builder"),
+                ("impact_maximizer", "Impact Maximizer"),
+                ("meaning_amplifier", "Meaning Amplifier"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

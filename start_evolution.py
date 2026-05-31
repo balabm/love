@@ -164,6 +164,10 @@ Plus Modern AI Subsystems:
 - Learning Acceleration Engine (rapid acquisition intelligence)
 - Knowledge Synthesizer (integration intelligence)
 - Wisdom Distiller (deep understanding intelligence)
+- Purpose Clarity Engine (direction intelligence)
+- Legacy Builder (long-term impact intelligence)
+- Impact Maximizer (leverage intelligence)
+- Meaning Amplifier (significance intelligence)
 
 Usage:
     python start_evolution.py
@@ -436,6 +440,10 @@ def start_evolution_systems():
         ("Learning Acceleration Engine", "core.learning_acceleration_engine", "get_learning_acceleration_engine"),
         ("Knowledge Synthesizer", "core.knowledge_synthesizer", "get_knowledge_synthesizer"),
         ("Wisdom Distiller", "core.wisdom_distiller", "get_wisdom_distiller"),
+        ("Purpose Clarity Engine", "core.purpose_clarity_engine", "get_purpose_clarity_engine"),
+        ("Legacy Builder", "core.legacy_builder", "get_legacy_builder"),
+        ("Impact Maximizer", "core.impact_maximizer", "get_impact_maximizer"),
+        ("Meaning Amplifier", "core.meaning_amplifier", "get_meaning_amplifier"),
     ]
 
     initialized = 0

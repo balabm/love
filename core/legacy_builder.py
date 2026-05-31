@@ -1,32 +1,32 @@
 """
-LOVE Legacy Builder — Long-Term Impact Intelligence (Modern AI Pattern)
+LOVE Legacy Builder — Long-term Impact Intelligence (Modern AI Pattern)
 
-Most people think about legacy too late. This builder:
+Most people live day-to-day without building lasting impact. This builder:
 
 1. LEGACY TRACKING
-   - Record contributions, creations, and impacts with long-term value
-   - Track relationships nurtured and knowledge shared
-   - Log values transmitted and communities strengthened
+   - Record legacy contributions and their characteristics
+   - Track legacy types (relationships, creations, teaching, service, values)
+   - Log legacy recipients and their feedback
 
 2. PATTERN ANALYSIS
-   - Identify the user's legacy themes (wisdom, kindness, creation, advocacy, mentorship)
-   - Find where legacy is being built vs neglected
-   - Detect legacy gaps and urgencies
+   - Identify the user's legacy style (builder, planter, mentor, catalyst)
+   - Find legacy-building activities that create lasting impact
+   - Detect legacy gaps (areas where impact is temporary)
 
-3. LEGACY GENERATION
-   - Suggest legacy-building actions for today
-   - Provide exercises for documenting wisdom and stories
-   - Recommend legacy experiments (write a letter, mentor someone, create something lasting)
+3. LEGACY DESIGN
+   - Suggest legacy-building activities matched to current capacity
+   - Provide long-term impact planning exercises
+   - Recommend ripple-effect amplification practices
 
-4. MORTALITY INTEGRATION
-   - Help the user act with finite time in mind
-   - Track urgency and importance alignment
+4. IMPACT PRESERVATION
+   - Track the durability of contributions over time
+   - Alert when short-term busyness is displacing legacy work
    - Celebrate legacy milestones
 
 Architecture:
-- record_legacy_action(action, theme, impact_scope, longevity): Log action
+- record_contribution(contribution, type, recipients, durability): Log contribution
 - get_legacy_stats(): Get legacy pattern analysis
-- get_legacy_suggestion(time, theme): Get legacy-building action
+- get_legacy_plan(style, timeframe): Get plan
 - get_legacy_score(): Calculate overall legacy health
 """
 
@@ -43,27 +43,28 @@ from typing import Any, Dict, List, Optional
 DATA_DIR = Path(__file__).parent.parent / "data" / "legacy_builder"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-LEGACY_LOG = DATA_DIR / "legacy.jsonl"
+LEGACY_LOG = DATA_DIR / "contributions.jsonl"
 STATS_DB = DATA_DIR / "stats.json"
 
 
 @dataclass
-class LegacyAction:
-    """A tracked legacy-building action."""
-    action_id: str = ""
-    action: str = ""
-    theme: str = ""  # wisdom, kindness, creation, advocacy, mentorship, stewardship, love
-    impact_scope: str = ""  # self, family, community, world
-    longevity: str = ""  # temporary, lasting, permanent
-    people_affected: int = 0
-    description: str = ""
+class LegacyContribution:
+    """A tracked legacy contribution."""
+    contribution_id: str = ""
+    contribution: str = ""
+    legacy_type: str = ""  # relationships, creations, teaching, service, values, mentorship
+    recipients: List[str] = field(default_factory=list)
+    durability: float = 0.5  # 0-1, how long-lasting
+    impact_depth: float = 0.5  # 0-1
+    personal_cost: float = 0.5  # 0-1
+    satisfaction: float = 0.5  # 0-1
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     notes: str = ""
 
 
 class LegacyBuilder:
     """
-    Intelligent legacy builder with long-term impact tracking and mortality awareness.
+    Intelligent legacy builder with durability tracking and ripple-effect analysis.
     """
 
     _instance = None
@@ -81,215 +82,235 @@ class LegacyBuilder:
             return
         self._initialized = True
         self._lock = threading.Lock()
-        self._actions: deque = deque(maxlen=200)
+        self._contributions: deque = deque(maxlen=300)
         self._stats = {
-            "total_actions": 0,
-            "avg_impact_scope": 0.0,
-            "permanent_actions": 0,
-            "dominant_theme": "",
+            "total_contributions": 0,
+            "avg_durability": 0.0,
+            "avg_impact": 0.0,
+            "dominant_type": "",
+            "short_term_bias": False,
         }
         self._load_stats()
 
     # ── Core Tracking ─────────────────────────────────────────────────────
 
-    def record_legacy_action(self, action: str = "", theme: str = "", impact_scope: str = "", longevity: str = "", people_affected: int = 0, description: str = "", notes: str = "") -> LegacyAction:
-        """Record a legacy-building action."""
-        action_id = f"legacy_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._actions)}"
-        la = LegacyAction(
-            action_id=action_id,
-            action=action or "unspecified",
-            theme=theme or "kindness",
-            impact_scope=impact_scope or "community",
-            longevity=longevity or "lasting",
-            people_affected=people_affected,
-            description=description,
+    def record_contribution(self, contribution: str = "", legacy_type: str = "", recipients: Optional[List[str]] = None, durability: float = 0.5, impact_depth: float = 0.5, personal_cost: float = 0.5, satisfaction: float = 0.5, notes: str = "") -> LegacyContribution:
+        """Record a legacy contribution."""
+        contribution_id = f"leg_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self._contributions)}"
+        entry = LegacyContribution(
+            contribution_id=contribution_id,
+            contribution=contribution or "unspecified",
+            legacy_type=legacy_type or "service",
+            recipients=recipients or [],
+            durability=durability,
+            impact_depth=impact_depth,
+            personal_cost=personal_cost,
+            satisfaction=satisfaction,
             notes=notes,
         )
 
         with self._lock:
-            self._actions.append(la)
-            self._stats["total_actions"] += 1
-            if longevity == "permanent":
-                self._stats["permanent_actions"] += 1
+            self._contributions.append(entry)
+            self._stats["total_contributions"] += 1
             self._update_stats()
 
         self._save_stats()
-        self._log_action(la)
+        self._log_contribution(entry)
 
-        return la
+        return entry
 
     # ── Analysis ──────────────────────────────────────────────────────────
 
     def get_legacy_stats(self) -> Dict[str, Any]:
         """Get legacy pattern analysis."""
-        if not self._actions:
+        if not self._contributions:
             return {"status": "insufficient_data"}
 
-        # Theme analysis
-        by_theme = defaultdict(lambda: {"count": 0, "people": 0, "permanent": 0})
-        for a in self._actions:
-            by_theme[a.theme]["count"] += 1
-            by_theme[a.theme]["people"] += a.people_affected
-            if a.longevity == "permanent":
-                by_theme[a.theme]["permanent"] += 1
+        # Type analysis
+        by_type = defaultdict(lambda: {"count": 0, "durability_sum": 0.0, "impact_sum": 0.0, "satisfaction_sum": 0.0})
+        for c in self._contributions:
+            by_type[c.legacy_type]["count"] += 1
+            by_type[c.legacy_type]["durability_sum"] += c.durability
+            by_type[c.legacy_type]["impact_sum"] += c.impact_depth
+            by_type[c.legacy_type]["satisfaction_sum"] += c.satisfaction
 
-        theme_stats = {}
-        for t, data in by_theme.items():
+        type_stats = {}
+        for t, data in by_type.items():
             count = data["count"]
-            theme_stats[t] = {
+            type_stats[t] = {
                 "count": count,
-                "people_affected": data["people"],
-                "permanent_actions": data["permanent"],
+                "avg_durability": round(data["durability_sum"] / count, 2),
+                "avg_impact": round(data["impact_sum"] / count, 2),
+                "avg_satisfaction": round(data["satisfaction_sum"] / count, 2),
             }
 
-        dominant = max(theme_stats.items(), key=lambda x: x[1]["count"]) if theme_stats else ("", {})
+        dominant_type = max(type_stats.items(), key=lambda x: x[1]["count"]) if type_stats else ("", {})
 
-        # Scope analysis
-        scope_scores = {"self": 1, "family": 2, "community": 3, "world": 4}
-        by_scope = defaultdict(lambda: {"count": 0, "people": 0})
-        for a in self._actions:
-            by_scope[a.impact_scope]["count"] += 1
-            by_scope[a.impact_scope]["people"] += a.people_affected
-
-        scope_stats = {}
-        for s, data in by_scope.items():
-            count = data["count"]
-            scope_stats[s] = {
-                "count": count,
-                "people_affected": data["people"],
-            }
-
-        # Longevity analysis
-        by_longevity = defaultdict(int)
-        for a in self._actions:
-            by_longevity[a.longevity] += 1
-
-        # Total people affected
-        total_people = sum(a.people_affected for a in self._actions)
-
-        # Recent activity
-        recent = [a for a in self._actions if a.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+        # Recipient analysis
+        all_recipients = []
+        for c in self._contributions:
+            all_recipients.extend(c.recipients)
         
-        return {
-            "total_actions": len(self._actions),
-            "theme_stats": theme_stats,
-            "dominant_theme": dominant[0],
-            "scope_stats": scope_stats,
-            "longevity_distribution": dict(by_longevity),
-            "total_people_affected": total_people,
-            "permanent_actions": sum(1 for a in self._actions if a.longevity == "permanent"),
-            "recent_actions": len(recent),
-        }
+        recipient_counts = defaultdict(int)
+        for r in all_recipients:
+            recipient_counts[r] += 1
 
-    def get_legacy_suggestion(self, time: float = 30, theme: str = "", urgency: str = "normal") -> Dict[str, Any]:
-        """Get legacy-building action."""
-        suggestions = {
-            "wisdom": [
-                "Write down one thing you know now that you didn't know at 20",
-                "Record a voice memo of advice for someone you care about",
-                "Start a document: 'Things I Believe But Can't Prove'",
-                "Teach someone a skill that took you years to learn",
-            ],
-            "kindness": [
-                "Do something generous that will never be traced to you",
-                "Pay for someone's coffee anonymously",
-                "Write a thank-you note to someone who shaped you",
-                "Forgive someone. Tell them, or don't. But mean it.",
-            ],
-            "creation": [
-                "Make something physical that could outlast you",
-                "Write a story, poem, or song that captures your perspective",
-                "Start a project that solves a small problem beautifully",
-                "Document a family recipe with the story behind it",
-            ],
-            "advocacy": [
-                "Speak up for someone who can't speak for themselves",
-                "Support a cause with your time, not just money",
-                "Have a difficult conversation that could change a system",
-                "Write to someone in power about something that matters",
-            ],
-            "mentorship": [
-                "Reach out to someone younger who reminds you of yourself",
-                "Offer to mentor someone for 30 minutes a week",
-                "Share a failure story that someone needs to hear",
-                "Recommend someone for an opportunity they'd never ask for",
-            ],
-            "stewardship": [
-                "Plant something native that supports local ecology",
-                "Clean up a shared space without being asked",
-                "Repair something instead of replacing it",
-                "Reduce your footprint in one measurable way",
-            ],
-            "love": [
-                "Tell someone you love them in a way they'll remember",
-                "Create a ritual that your family could continue",
-                "Document your love story for future generations",
-                "Be present with someone who needs your full attention",
-            ],
-        }
+        top_recipients = sorted(recipient_counts.items(), key=lambda x: x[1], reverse=True)[:5]
 
-        if theme and theme in suggestions:
-            selected = random.choice(suggestions[theme])
+        # Cost-benefit analysis
+        high_cost = [c for c in self._contributions if c.personal_cost > 0.7]
+        if high_cost:
+            high_cost_satisfaction = sum(c.satisfaction for c in high_cost) / len(high_cost)
         else:
-            all_suggestions = [s for cat in suggestions.values() for s in cat]
-            selected = random.choice(all_suggestions)
+            high_cost_satisfaction = 0
 
-        if urgency == "high":
-            message = "You don't have infinite tomorrows. This matters now."
-        elif urgency == "medium":
-            message = "Small actions compound. Start the chain today."
+        low_cost = [c for c in self._contributions if c.personal_cost <= 0.4]
+        if low_cost:
+            low_cost_satisfaction = sum(c.satisfaction for c in low_cost) / len(low_cost)
         else:
-            message = "Legacy isn't grand gestures. It's consistent presence."
+            low_cost_satisfaction = 0
+
+        # Short-term bias detection
+        recent = list(self._contributions)[-20:]
+        if recent:
+            short_term = sum(1 for c in recent if c.durability < 0.4) / len(recent)
+            short_term_bias = short_term > 0.5
+        else:
+            short_term_bias = False
+
+        # Durability trend
+        if len(self._contributions) >= 20:
+            first_half = list(self._contributions)[:len(self._contributions)//2]
+            second_half = list(self._contributions)[len(self._contributions)//2:]
+            first_durability = sum(c.durability for c in first_half) / len(first_half)
+            second_durability = sum(c.durability for c in second_half) / len(second_half)
+            durability_trend = second_durability - first_durability
+        else:
+            durability_trend = 0
 
         return {
-            "action": selected,
-            "theme": theme or "mixed",
-            "time": time,
-            "urgency": urgency,
-            "message": message,
-            "reflection": "In 100 years, what will remain of this moment?",
+            "total_contributions": len(self._contributions),
+            "type_stats": type_stats,
+            "dominant_type": dominant_type[0],
+            "top_recipients": top_recipients,
+            "cost_analysis": {
+                "high_cost_satisfaction": round(high_cost_satisfaction, 2),
+                "low_cost_satisfaction": round(low_cost_satisfaction, 2),
+            },
+            "short_term_bias": short_term_bias,
+            "avg_durability": round(sum(c.durability for c in self._contributions) / len(self._contributions), 2),
+            "avg_impact": round(sum(c.impact_depth for c in self._contributions) / len(self._contributions), 2),
+            "avg_satisfaction": round(sum(c.satisfaction for c in self._contributions) / len(self._contributions), 2),
+            "durability_trend": round(durability_trend, 2),
+        }
+
+    def get_legacy_plan(self, style: str = "", timeframe: str = "5_years") -> Dict[str, Any]:
+        """Get plan."""
+        plans = {
+            "builder": [
+                "Create something that outlasts you. A book, a system, a community, a piece of art.",
+                "Document your knowledge. Write it down. Others will build on it.",
+                "Build infrastructure that makes others' lives easier. The builder's legacy is the scaffold.",
+            ],
+            "planter": [
+                "Invest in relationships with people who will outlive you. Young people, children, mentees.",
+                "Plant trees. Literal and metaphorical. Shade you will never sit under.",
+                "Start something that takes decades to mature. Long-term thinking is rare and powerful.",
+            ],
+            "mentor": [
+                "Teach one person deeply. Transfer not just knowledge, but wisdom.",
+                "Share your failures openly. They're more valuable than your successes.",
+                "Create opportunities for others. Open doors you had to break through.",
+            ],
+            "catalyst": [
+                "Spark movements, not just moments. Inspire others to take up the work.",
+                "Connect people who should know each other. The network effect of generosity.",
+                "Challenge the status quo. Ask the question no one else is asking.",
+            ],
+            "general": [
+                "Write a letter to your future great-grandchild. What do you want them to know about you?",
+                "What would you do differently if you knew you'd be remembered for it? Do that.",
+                "Legacy is not about being remembered. It's about being worth remembering.",
+            ],
+        }
+
+        selected = plans.get(style, plans["general"])
+
+        if timeframe == "1_year":
+            time_note = "One year is short. Focus on seeds, not forests. Plant relationships, habits, and ideas."
+        elif timeframe == "5_years":
+            time_note = "Five years is enough for saplings to grow. Build systems, teach people, create enduring work."
+        elif timeframe == "20_years":
+            time_note = "Twenty years is legacy time. What forest do you want to walk through? Plant those trees."
+        else:
+            time_note = "Legacy unfolds on its own timeline. Focus on direction, not destination."
+
+        return {
+            "style": style or "general",
+            "timeframe": timeframe,
+            "plan": random.choice(selected),
+            "time_note": time_note,
+            "principle": "Legacy is not what you accumulate. It's what you leave behind that continues to grow without you. It's the ripple effect of your best self, extended through time by the people and systems you touched.",
         }
 
     def get_legacy_score(self) -> int:
         """Calculate overall legacy health (0-100)."""
-        if not self._actions:
+        if not self._contributions:
             return 30
 
-        # Impact scope
-        scope_scores = {"self": 1, "family": 2, "community": 3, "world": 4}
-        avg_scope = sum(scope_scores.get(a.impact_scope, 1) for a in self._actions) / len(self._actions)
+        # Durability and impact
+        avg_durability = sum(c.durability for c in self._contributions) / len(self._contributions)
+        avg_impact = sum(c.impact_depth for c in self._contributions) / len(self._contributions)
 
-        # Longevity
-        longevity_scores = {"temporary": 1, "lasting": 2, "permanent": 3}
-        avg_longevity = sum(longevity_scores.get(a.longevity, 1) for a in self._actions) / len(self._actions)
+        # Satisfaction
+        avg_satisfaction = sum(c.satisfaction for c in self._contributions) / len(self._contributions)
 
-        # People affected
-        total_people = sum(a.people_affected for a in self._actions)
-        people_score = min(30, total_people / 10)
+        # Low short-term bias
+        short_term = sum(1 for c in self._contributions if c.durability < 0.4) / len(self._contributions)
 
-        # Recent activity
-        recent = [a for a in self._actions if a.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
-        recent_bonus = min(15, len(recent) * 3)
+        # Recipient breadth
+        all_recipients = []
+        for c in self._contributions:
+            all_recipients.extend(c.recipients)
+        unique_recipients = len(set(all_recipients))
 
-        # Theme variety
-        unique_themes = len(set(a.theme for a in self._actions))
+        # Type variety
+        unique_types = len(set(c.legacy_type for c in self._contributions))
 
-        score = (avg_scope / 4 * 20) + (avg_longevity / 3 * 20) + people_score + recent_bonus + (unique_themes * 3)
+        # Recent trend
+        recent = list(self._contributions)[-14:]
+        if recent:
+            recent_durability = sum(c.durability for c in recent) / len(recent)
+            recent_impact = sum(c.impact_depth for c in recent) / len(recent)
+        else:
+            recent_durability = 0
+            recent_impact = 0
+
+        # Cost sustainability
+        avg_cost = sum(c.personal_cost for c in self._contributions) / len(self._contributions)
+
+        score = (avg_durability * 25) + (avg_impact * 20) + (avg_satisfaction * 15) + ((1 - short_term) * 10) + (unique_recipients * 1) + (unique_types * 2) + (recent_durability * 15) + (recent_impact * 10) + ((1 - avg_cost) * 5)
         return max(0, min(100, round(score)))
 
     # ── Private Helpers ─────────────────────────────────────────────────────
 
     def _update_stats(self):
         """Update running statistics."""
-        if self._actions:
-            scope_scores = {"self": 1, "family": 2, "community": 3, "world": 4}
-            self._stats["avg_impact_scope"] = round(sum(scope_scores.get(a.impact_scope, 1) for a in self._actions) / len(self._actions), 2)
+        if self._contributions:
+            self._stats["avg_durability"] = round(sum(c.durability for c in self._contributions) / len(self._contributions), 2)
+            self._stats["avg_impact"] = round(sum(c.impact_depth for c in self._contributions) / len(self._contributions), 2)
 
-            by_theme = defaultdict(int)
-            for a in self._actions:
-                by_theme[a.theme] += 1
-            if by_theme:
-                self._stats["dominant_theme"] = max(by_theme.items(), key=lambda x: x[1])[0]
+            by_type = defaultdict(int)
+            for c in self._contributions:
+                by_type[c.legacy_type] += 1
+            if by_type:
+                dominant = max(by_type.items(), key=lambda x: x[1])
+                self._stats["dominant_type"] = dominant[0]
+
+            recent = [c for c in self._contributions if c.timestamp > (datetime.now() - timedelta(days=30)).isoformat()]
+            if recent:
+                short_term = sum(1 for c in recent if c.durability < 0.4) / len(recent)
+                self._stats["short_term_bias"] = short_term > 0.5
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -306,16 +327,18 @@ class LegacyBuilder:
         except Exception:
             pass
 
-    def _log_action(self, action: LegacyAction):
+    def _log_contribution(self, contribution: LegacyContribution):
         try:
             with open(LEGACY_LOG, "a") as f:
                 f.write(json.dumps({
-                    "timestamp": action.timestamp,
-                    "action": action.action,
-                    "theme": action.theme,
-                    "scope": action.impact_scope,
-                    "longevity": action.longevity,
-                    "people": action.people_affected,
+                    "timestamp": contribution.timestamp,
+                    "contribution": contribution.contribution,
+                    "legacy_type": contribution.legacy_type,
+                    "recipients": contribution.recipients,
+                    "durability": contribution.durability,
+                    "impact_depth": contribution.impact_depth,
+                    "personal_cost": contribution.personal_cost,
+                    "satisfaction": contribution.satisfaction,
                 }) + "\n")
         except Exception:
             pass
