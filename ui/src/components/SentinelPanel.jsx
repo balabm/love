@@ -187,7 +187,15 @@ export default function SentinelPanel() {
                 "intent_predictor", "personality_adapter", "response_cache",
                 "context_window_manager", "user_pattern_detector", "goal_drift_detector",
                 "cross_modal_fusion", "emotional_resonance", "knowledge_graph_builder",
-                "adaptive_learning_rate", "conversation_continuity"
+                "adaptive_learning_rate", "conversation_continuity",
+                "memory_compressor", "semantic_search_optimizer", "emotion_aware_response",
+                "knowledge_injector", "conversation_summarizer", "context_aware_prioritizer",
+                "wellness_nudger", "notification_filter", "deep_work_protector",
+                "energy_forecaster", "smart_break_suggester", "habit_streak_tracker",
+                "sleep_analyzer", "social_connection_monitor", "learning_path_optimizer",
+                "focus_recovery_tracker", "decision_journal", "mood_journal",
+                "values_alignment_checker", "gratitude_tracker", "energy_audit_tool",
+                "time_audit_tool", "reflection_prompt_generator"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>
