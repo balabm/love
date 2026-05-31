@@ -310,6 +310,10 @@ export default function IntelligenceDashboard() {
     { name: "nature_connector", stats: modernStats.evolution_health?.nature_connector },
     { name: "eco_footprint_tracker", stats: modernStats.evolution_health?.eco_footprint_tracker },
     { name: "regenerative_living_guide", stats: modernStats.evolution_health?.regenerative_living_guide },
+    { name: "spiritual_practice_coach", stats: modernStats.evolution_health?.spiritual_practice_coach },
+    { name: "transcendence_guide", stats: modernStats.evolution_health?.transcendence_guide },
+    { name: "sacred_ritual_designer", stats: modernStats.evolution_health?.sacred_ritual_designer },
+    { name: "contemplation_keeper", stats: modernStats.evolution_health?.contemplation_keeper },
   ].filter(m => m.stats);
 
   return (
