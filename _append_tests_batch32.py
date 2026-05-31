@@ -1,198 +1,207 @@
+import re
+
 with open('tests/test_modern_engines.py', 'r', encoding='utf-8') as f:
     content = f.read()
 
-new_tests = '''
+appendix = '''
 
+# -- Forgiveness Coach Tests -------------------------------------------------
 
-# -- Humor & Playfulness Trainer Tests --------------------------------------
+class TestForgivenessCoach:
+    """Test Forgiveness Coach."""
 
-class TestHumorPlayfulnessTrainer:
-    """Test Humor & Playfulness Trainer."""
-    
     def test_singleton(self):
-        from core.humor_playfulness_trainer import get_humor_playfulness_trainer
-        h1 = get_humor_playfulness_trainer()
-        h2 = get_humor_playfulness_trainer()
-        assert h1 is h2
-    
-    def test_record_play(self):
-        from core.humor_playfulness_trainer import get_humor_playfulness_trainer
-        hpt = get_humor_playfulness_trainer()
-        entry = hpt.record_play(
-            "Made a dad joke during serious meeting",
-            "wordplay",
-            0.5,
-            0.7,
-            0.3,
-            "work",
-            0.8,
-        )
-        assert entry is not None
-        assert entry.moment == "Made a dad joke during serious meeting"
-        assert entry.humor_type == "wordplay"
-    
-    def test_get_playfulness_stats(self):
-        from core.humor_playfulness_trainer import get_humor_playfulness_trainer
-        hpt = get_humor_playfulness_trainer()
-        stats = hpt.get_playfulness_stats()
-        assert isinstance(stats, dict)
-    
-    def test_get_playfulness_practice(self):
-        from core.humor_playfulness_trainer import get_humor_playfulness_trainer
-        hpt = get_humor_playfulness_trainer()
-        practice = hpt.get_playfulness_practice(0.8, "work")
-        assert isinstance(practice, dict)
-        assert "practice" in practice
-    
-    def test_get_playfulness_score(self):
-        from core.humor_playfulness_trainer import get_humor_playfulness_trainer
-        hpt = get_humor_playfulness_trainer()
-        score = hpt.get_playfulness_score()
-        assert 0 <= score <= 100
-
-
-# -- Joy Cultivator Tests ---------------------------------------------------
-
-class TestJoyCultivator:
-    """Test Joy Cultivator."""
-    
-    def test_singleton(self):
-        from core.joy_cultivator import get_joy_cultivator
-        j1 = get_joy_cultivator()
-        j2 = get_joy_cultivator()
-        assert j1 is j2
-    
-    def test_record_joy(self):
-        from core.joy_cultivator import get_joy_cultivator
-        jc = get_joy_cultivator()
-        entry = jc.record_joy(
-            "Sunrise over the mountains",
-            "aesthetic",
-            0.9,
-            "Morning walk",
-            15,
-            True,
-        )
-        assert entry is not None
-        assert entry.moment == "Sunrise over the mountains"
-        assert entry.joy_type == "aesthetic"
-    
-    def test_get_joy_stats(self):
-        from core.joy_cultivator import get_joy_cultivator
-        jc = get_joy_cultivator()
-        stats = jc.get_joy_stats()
-        assert isinstance(stats, dict)
-    
-    def test_get_joy_practice(self):
-        from core.joy_cultivator import get_joy_cultivator
-        jc = get_joy_cultivator()
-        practice = jc.get_joy_practice("sensory", 0.5)
-        assert isinstance(practice, dict)
-        assert "practice" in practice
-    
-    def test_get_joy_score(self):
-        from core.joy_cultivator import get_joy_cultivator
-        jc = get_joy_cultivator()
-        score = jc.get_joy_score()
-        assert 0 <= score <= 100
-
-
-# -- Celebration Architect Tests --------------------------------------------
-
-class TestCelebrationArchitect:
-    """Test Celebration Architect."""
-    
-    def test_singleton(self):
-        from core.celebration_architect import get_celebration_architect
-        c1 = get_celebration_architect()
-        c2 = get_celebration_architect()
+        from core.forgiveness_coach import get_forgiveness_coach
+        c1 = get_forgiveness_coach()
+        c2 = get_forgiveness_coach()
         assert c1 is c2
-    
-    def test_record_celebration(self):
-        from core.celebration_architect import get_celebration_architect
-        ca = get_celebration_architect()
-        entry = ca.record_celebration(
-            "Completed marathon",
-            "milestone",
-            "Dinner with friends",
-            0.9,
-            0.7,
-            0.9,
-            0.9,
-            True,
-        )
-        assert entry is not None
-        assert entry.achievement == "Completed marathon"
-        assert entry.celebration_type == "milestone"
-    
-    def test_get_celebration_stats(self):
-        from core.celebration_architect import get_celebration_architect
-        ca = get_celebration_architect()
-        stats = ca.get_celebration_stats()
-        assert isinstance(stats, dict)
-    
-    def test_get_celebration_plan(self):
-        from core.celebration_architect import get_celebration_architect
-        ca = get_celebration_architect()
-        plan = ca.get_celebration_plan(0.8, 0.6)
-        assert isinstance(plan, dict)
-        assert "celebration" in plan
-    
-    def test_get_celebration_score(self):
-        from core.celebration_architect import get_celebration_architect
-        ca = get_celebration_architect()
-        score = ca.get_celebration_score()
-        assert 0 <= score <= 100
 
-
-# -- Spontaneity Generator Tests --------------------------------------------
-
-class TestSpontaneityGenerator:
-    """Test Spontaneity Generator."""
-    
-    def test_singleton(self):
-        from core.spontaneity_generator import get_spontaneity_generator
-        s1 = get_spontaneity_generator()
-        s2 = get_spontaneity_generator()
-        assert s1 is s2
-    
-    def test_record_spontaneity(self):
-        from core.spontaneity_generator import get_spontaneity_generator
-        sg = get_spontaneity_generator()
-        entry = sg.record_spontaneity(
-            "Took unplanned road trip",
-            "experiential",
-            0.6,
+    def test_record_forgiveness(self):
+        from core.forgiveness_coach import get_forgiveness_coach
+        fc = get_forgiveness_coach()
+        entry = fc.record_forgiveness(
+            "Former partner",
+            "other",
+            "understanding",
             0.8,
-            0.9,
+            0.6,
             0.4,
             True,
+            "Let go of resentment",
         )
         assert entry is not None
-        assert entry.moment == "Took unplanned road trip"
-        assert entry.spontaneity_type == "experiential"
-    
-    def test_get_spontaneity_stats(self):
-        from core.spontaneity_generator import get_spontaneity_generator
-        sg = get_spontaneity_generator()
-        stats = sg.get_spontaneity_stats()
+        assert entry.target == "Former partner"
+        assert entry.forgiveness_type == "other"
+
+    def test_get_forgiveness_stats(self):
+        from core.forgiveness_coach import get_forgiveness_coach
+        fc = get_forgiveness_coach()
+        stats = fc.get_forgiveness_stats()
         assert isinstance(stats, dict)
-    
-    def test_get_spontaneous_suggestion(self):
-        from core.spontaneity_generator import get_spontaneity_generator
-        sg = get_spontaneity_generator()
-        suggestion = sg.get_spontaneous_suggestion(0.7, 0.5)
-        assert isinstance(suggestion, dict)
-        assert "suggestion" in suggestion
-    
-    def test_get_spontaneity_score(self):
-        from core.spontaneity_generator import get_spontaneity_generator
-        sg = get_spontaneity_generator()
-        score = sg.get_spontaneity_score()
+
+    def test_get_forgiveness_practice(self):
+        from core.forgiveness_coach import get_forgiveness_coach
+        fc = get_forgiveness_coach()
+        practice = fc.get_forgiveness_practice("other", 0.5)
+        assert isinstance(practice, dict)
+        assert "practice" in practice
+
+    def test_get_forgiveness_score(self):
+        from core.forgiveness_coach import get_forgiveness_coach
+        fc = get_forgiveness_coach()
+        score = fc.get_forgiveness_score()
+        assert 0 <= score <= 100
+
+
+# -- Reconciliation Builder Tests -------------------------------------------
+
+class TestReconciliationBuilder:
+    """Test Reconciliation Builder."""
+
+    def test_singleton(self):
+        from core.reconciliation_builder import get_reconciliation_builder
+        b1 = get_reconciliation_builder()
+        b2 = get_reconciliation_builder()
+        assert b1 is b2
+
+    def test_record_repair(self):
+        from core.reconciliation_builder import get_reconciliation_builder
+        rb = get_reconciliation_builder()
+        entry = rb.record_repair(
+            "Sibling",
+            "conflict",
+            0.7,
+            "apology",
+            0.8,
+            0.5,
+            "restored",
+            0.9,
+            "Made amends",
+        )
+        assert entry is not None
+        assert entry.relationship == "Sibling"
+        assert entry.outcome == "restored"
+
+    def test_get_reconciliation_stats(self):
+        from core.reconciliation_builder import get_reconciliation_builder
+        rb = get_reconciliation_builder()
+        stats = rb.get_reconciliation_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_repair_strategy(self):
+        from core.reconciliation_builder import get_reconciliation_builder
+        rb = get_reconciliation_builder()
+        strategy = rb.get_repair_strategy("conflict", "friend")
+        assert isinstance(strategy, dict)
+        assert "strategy" in strategy
+
+    def test_get_reconciliation_score(self):
+        from core.reconciliation_builder import get_reconciliation_builder
+        rb = get_reconciliation_builder()
+        score = rb.get_reconciliation_score()
+        assert 0 <= score <= 100
+
+
+# -- Trust Architect Tests ---------------------------------------------------
+
+class TestTrustArchitect:
+    """Test Trust Architect."""
+
+    def test_singleton(self):
+        from core.trust_architect import get_trust_architect
+        a1 = get_trust_architect()
+        a2 = get_trust_architect()
+        assert a1 is a2
+
+    def test_record_action(self):
+        from core.trust_architect import get_trust_architect
+        ta = get_trust_architect()
+        entry = ta.record_action(
+            "Delivered project early",
+            "competence",
+            "Client",
+            "Complete by Friday",
+            True,
+            0.8,
+            0.6,
+            0.9,
+            "Kept promise",
+        )
+        assert entry is not None
+        assert entry.action == "Delivered project early"
+        assert entry.commitment_kept is True
+
+    def test_get_trust_stats(self):
+        from core.trust_architect import get_trust_architect
+        ta = get_trust_architect()
+        stats = ta.get_trust_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_trust_action(self):
+        from core.trust_architect import get_trust_architect
+        ta = get_trust_architect()
+        action = ta.get_trust_action("consistency", "work")
+        assert isinstance(action, dict)
+        assert "action" in action
+
+    def test_get_trust_score(self):
+        from core.trust_architect import get_trust_architect
+        ta = get_trust_architect()
+        score = ta.get_trust_score()
+        assert 0 <= score <= 100
+
+
+# -- Repair Specialist Tests -------------------------------------------------
+
+class TestRepairSpecialist:
+    """Test Repair Specialist."""
+
+    def test_singleton(self):
+        from core.repair_specialist import get_repair_specialist
+        s1 = get_repair_specialist()
+        s2 = get_repair_specialist()
+        assert s1 is s2
+
+    def test_record_repair(self):
+        from core.repair_specialist import get_repair_specialist
+        rs = get_repair_specialist()
+        entry = rs.record_repair(
+            "Missed deadlines",
+            "habits",
+            0.7,
+            "Implemented daily planning",
+            False,
+            3.5,
+            "fixed",
+            0.9,
+            0.4,
+            "Back on track",
+        )
+        assert entry is not None
+        assert entry.damage == "Missed deadlines"
+        assert entry.outcome == "fixed"
+
+    def test_get_repair_stats(self):
+        from core.repair_specialist import get_repair_specialist
+        rs = get_repair_specialist()
+        stats = rs.get_repair_stats()
+        assert isinstance(stats, dict)
+
+    def test_get_repair_plan(self):
+        from core.repair_specialist import get_repair_specialist
+        rs = get_repair_specialist()
+        plan = rs.get_repair_plan("procrastination", "habits", 0.8)
+        assert isinstance(plan, dict)
+        assert "plan" in plan
+
+    def test_get_repair_score(self):
+        from core.repair_specialist import get_repair_specialist
+        rs = get_repair_specialist()
+        score = rs.get_repair_score()
         assert 0 <= score <= 100
 '''
 
-with open('tests/test_modern_engines.py', 'w', encoding='utf-8') as f:
-    f.write(content + new_tests)
+with open('tests/test_modern_engines.py', 'a', encoding='utf-8') as f:
+    f.write(appendix)
 
-print('Appended batch 32 tests successfully')
+print('Appended 20 tests for batch 32 (Forgiveness Coach, Reconciliation Builder, Trust Architect, Repair Specialist)')

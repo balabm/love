@@ -460,6 +460,10 @@ def start_evolution_systems():
         ("Joy Cultivator", "core.joy_cultivator", "get_joy_cultivator"),
         ("Celebration Architect", "core.celebration_architect", "get_celebration_architect"),
         ("Spontaneity Generator", "core.spontaneity_generator", "get_spontaneity_generator"),
+        ("Forgiveness Coach", "core.forgiveness_coach", "get_forgiveness_coach"),
+        ("Reconciliation Builder", "core.reconciliation_builder", "get_reconciliation_builder"),
+        ("Trust Architect", "core.trust_architect", "get_trust_architect"),
+        ("Repair Specialist", "core.repair_specialist", "get_repair_specialist"),
     ]
 
     initialized = 0

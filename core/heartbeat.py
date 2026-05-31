@@ -289,6 +289,10 @@ class ProactiveHeartbeat:
                 ("joy_cultivator", "Joy Cultivator"),
                 ("celebration_architect", "Celebration Architect"),
                 ("spontaneity_generator", "Spontaneity Generator"),
+                ("forgiveness_coach", "Forgiveness Coach"),
+                ("reconciliation_builder", "Reconciliation Builder"),
+                ("trust_architect", "Trust Architect"),
+                ("repair_specialist", "Repair Specialist"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
