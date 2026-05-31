@@ -495,6 +495,10 @@ def start_evolution_systems():
         ("Vitality Tracker", "core.vitality_tracker", "get_vitality_tracker"),
         ("Age Reversal Coach", "core.age_reversal_coach", "get_age_reversal_coach"),
         ("Life Phase Navigator", "core.life_phase_navigator", "get_life_phase_navigator"),
+        ("Parenting Coach", "core.parenting_coach", "get_parenting_coach"),
+        ("Family Harmony Builder", "core.family_harmony_builder", "get_family_harmony_builder"),
+        ("Grief Support Companion", "core.grief_support_companion", "get_grief_support_companion"),
+        ("Humor Cultivator", "core.humor_cultivator", "get_humor_cultivator"),
     ]
 
     initialized = 0

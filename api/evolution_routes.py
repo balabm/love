@@ -657,6 +657,10 @@ async def get_evolution_health():
             "vitality_tracker": {"available": True},
             "age_reversal_coach": {"available": True},
             "life_phase_navigator": {"available": True},
+            "parenting_coach": {"available": True},
+            "family_harmony_builder": {"available": True},
+            "grief_support_companion": {"available": True},
+            "humor_cultivator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

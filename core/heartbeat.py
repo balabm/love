@@ -324,6 +324,10 @@ class ProactiveHeartbeat:
                 ("vitality_tracker", "Vitality Tracker"),
                 ("age_reversal_coach", "Age Reversal Coach"),
                 ("life_phase_navigator", "Life Phase Navigator"),
+                ("parenting_coach", "Parenting Coach"),
+                ("family_harmony_builder", "Family Harmony Builder"),
+                ("grief_support_companion", "Grief Support Companion"),
+                ("humor_cultivator", "Humor Cultivator"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
