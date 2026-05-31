@@ -206,6 +206,10 @@ export default function IntelligenceDashboard() {
     { name: "password_health_checker", stats: modernStats.evolution_health?.password_health_checker },
     { name: "subscription_manager", stats: modernStats.evolution_health?.subscription_manager },
     { name: "digital_declutterer", stats: modernStats.evolution_health?.digital_declutterer },
+    { name: "event_planner", stats: modernStats.evolution_health?.event_planner },
+    { name: "habit_builder", stats: modernStats.evolution_health?.habit_builder },
+    { name: "morning_routine_designer", stats: modernStats.evolution_health?.morning_routine_designer },
+    { name: "evening_wind_down_coach", stats: modernStats.evolution_health?.evening_wind_down_coach },
   ].filter(m => m.stats);
 
   return (
