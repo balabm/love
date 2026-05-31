@@ -546,6 +546,10 @@ async def get_evolution_health():
             "boundaries_coach": {"available": True},
             "assertiveness_trainer": {"available": True},
             "active_listening_coach": {"available": True},
+            "self_compassion_coach": {"available": True},
+            "forgiveness_tracker": {"available": True},
+            "vulnerability_builder": {"available": True},
+            "trust_builder": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

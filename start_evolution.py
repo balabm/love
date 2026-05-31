@@ -100,6 +100,10 @@ Plus Modern AI Subsystems:
 - Boundaries Coach (self-respect intelligence)
 - Assertiveness Trainer (communication intelligence)
 - Active Listening Coach (connection intelligence)
+- Self-Compassion Coach (inner kindness intelligence)
+- Forgiveness Tracker (emotional freedom intelligence)
+- Vulnerability Builder (emotional courage intelligence)
+- Trust Builder (relational intelligence)
 
 Usage:
     python start_evolution.py
@@ -308,6 +312,10 @@ def start_evolution_systems():
         ("Boundaries Coach", "core.boundaries_coach", "get_boundaries_coach"),
         ("Assertiveness Trainer", "core.assertiveness_trainer", "get_assertiveness_trainer"),
         ("Active Listening Coach", "core.active_listening_coach", "get_active_listening_coach"),
+        ("Self-Compassion Coach", "core.self_compassion_coach", "get_self_compassion_coach"),
+        ("Forgiveness Tracker", "core.forgiveness_tracker", "get_forgiveness_tracker"),
+        ("Vulnerability Builder", "core.vulnerability_builder", "get_vulnerability_builder"),
+        ("Trust Builder", "core.trust_builder", "get_trust_builder"),
     ]
 
     initialized = 0

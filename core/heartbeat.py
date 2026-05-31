@@ -213,6 +213,10 @@ class ProactiveHeartbeat:
                 ("boundaries_coach", "Boundaries Coach"),
                 ("assertiveness_trainer", "Assertiveness Trainer"),
                 ("active_listening_coach", "Active Listening Coach"),
+                ("self_compassion_coach", "Self-Compassion Coach"),
+                ("forgiveness_tracker", "Forgiveness Tracker"),
+                ("vulnerability_builder", "Vulnerability Builder"),
+                ("trust_builder", "Trust Builder"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
