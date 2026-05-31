@@ -241,6 +241,10 @@ class ProactiveHeartbeat:
                 ("boundary_enforcer", "Boundary Enforcer"),
                 ("time_sovereign", "Time Sovereign"),
                 ("attention_guardian", "Attention Guardian"),
+                ("identity_designer", "Identity Designer"),
+                ("habit_architect", "Habit Architect"),
+                ("environment_curator", "Environment Curator"),
+                ("ritual_master", "Ritual Master"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

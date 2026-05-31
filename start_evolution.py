@@ -128,6 +128,10 @@ Plus Modern AI Subsystems:
 - Boundary Enforcer (limit intelligence)
 - Time Sovereign (temporal autonomy intelligence)
 - Attention Guardian (focus intelligence)
+- Identity Designer (self-concept intelligence)
+- Habit Architect (behavior design intelligence)
+- Environment Curator (context intelligence)
+- Ritual Master (ceremony intelligence)
 
 Usage:
     python start_evolution.py
@@ -364,6 +368,10 @@ def start_evolution_systems():
         ("Boundary Enforcer", "core.boundary_enforcer", "get_boundary_enforcer"),
         ("Time Sovereign", "core.time_sovereign", "get_time_sovereign"),
         ("Attention Guardian", "core.attention_guardian", "get_attention_guardian"),
+        ("Identity Designer", "core.identity_designer", "get_identity_designer"),
+        ("Habit Architect", "core.habit_architect", "get_habit_architect"),
+        ("Environment Curator", "core.environment_curator", "get_environment_curator"),
+        ("Ritual Master", "core.ritual_master", "get_ritual_master"),
     ]
 
     initialized = 0

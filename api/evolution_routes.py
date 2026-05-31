@@ -574,6 +574,10 @@ async def get_evolution_health():
             "boundary_enforcer": {"available": True},
             "time_sovereign": {"available": True},
             "attention_guardian": {"available": True},
+            "identity_designer": {"available": True},
+            "habit_architect": {"available": True},
+            "environment_curator": {"available": True},
+            "ritual_master": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -251,6 +251,8 @@ class DailyBriefingSystem:
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
                 "time_sovereign", "attention_guardian",
+                "identity_designer", "habit_architect",
+                "environment_curator", "ritual_master",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)
