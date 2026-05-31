@@ -218,6 +218,10 @@ export default function IntelligenceDashboard() {
     { name: "forgiveness_tracker", stats: modernStats.evolution_health?.forgiveness_tracker },
     { name: "vulnerability_builder", stats: modernStats.evolution_health?.vulnerability_builder },
     { name: "trust_builder", stats: modernStats.evolution_health?.trust_builder },
+    { name: "curiosity_spark", stats: modernStats.evolution_health?.curiosity_spark },
+    { name: "play_coach", stats: modernStats.evolution_health?.play_coach },
+    { name: "adventure_planner", stats: modernStats.evolution_health?.adventure_planner },
+    { name: "wonder_tracker", stats: modernStats.evolution_health?.wonder_tracker },
   ].filter(m => m.stats);
 
   return (
