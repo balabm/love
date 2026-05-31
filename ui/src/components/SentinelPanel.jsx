@@ -205,7 +205,9 @@ export default function SentinelPanel() {
                 "communication_analyzer", "goal_progress_visualizer",
                 "life_balance_wheel", "productivity_gamifier",
                 "environment_optimizer", "weather_suggester",
-                "travel_planner", "gift_idea_generator"
+                "travel_planner", "gift_idea_generator",
+                "emergency_preparedness_tracker", "home_maintenance_scheduler",
+                "career_path_mapper", "skill_gap_analyzer"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>

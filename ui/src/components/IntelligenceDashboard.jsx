@@ -198,6 +198,10 @@ export default function IntelligenceDashboard() {
     { name: "weather_suggester", stats: modernStats.evolution_health?.weather_suggester },
     { name: "travel_planner", stats: modernStats.evolution_health?.travel_planner },
     { name: "gift_idea_generator", stats: modernStats.evolution_health?.gift_idea_generator },
+    { name: "emergency_preparedness_tracker", stats: modernStats.evolution_health?.emergency_preparedness_tracker },
+    { name: "home_maintenance_scheduler", stats: modernStats.evolution_health?.home_maintenance_scheduler },
+    { name: "career_path_mapper", stats: modernStats.evolution_health?.career_path_mapper },
+    { name: "skill_gap_analyzer", stats: modernStats.evolution_health?.skill_gap_analyzer },
   ].filter(m => m.stats);
 
   return (
