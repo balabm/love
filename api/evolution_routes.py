@@ -570,6 +570,10 @@ async def get_evolution_health():
             "consistency_coach": {"available": True},
             "accountability_partner": {"available": True},
             "progress_celebrator": {"available": True},
+            "energy_protector": {"available": True},
+            "boundary_enforcer": {"available": True},
+            "time_sovereign": {"available": True},
+            "attention_guardian": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

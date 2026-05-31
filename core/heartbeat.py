@@ -237,6 +237,10 @@ class ProactiveHeartbeat:
                 ("consistency_coach", "Consistency Coach"),
                 ("accountability_partner", "Accountability Partner"),
                 ("progress_celebrator", "Progress Celebrator"),
+                ("energy_protector", "Energy Protector"),
+                ("boundary_enforcer", "Boundary Enforcer"),
+                ("time_sovereign", "Time Sovereign"),
+                ("attention_guardian", "Attention Guardian"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

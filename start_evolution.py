@@ -124,6 +124,10 @@ Plus Modern AI Subsystems:
 - Consistency Coach (steady-state intelligence)
 - Accountability Partner (external support intelligence)
 - Progress Celebrator (recognition intelligence)
+- Energy Protector (vitality intelligence)
+- Boundary Enforcer (limit intelligence)
+- Time Sovereign (temporal autonomy intelligence)
+- Attention Guardian (focus intelligence)
 
 Usage:
     python start_evolution.py
@@ -356,6 +360,10 @@ def start_evolution_systems():
         ("Consistency Coach", "core.consistency_coach", "get_consistency_coach"),
         ("Accountability Partner", "core.accountability_partner", "get_accountability_partner"),
         ("Progress Celebrator", "core.progress_celebrator", "get_progress_celebrator"),
+        ("Energy Protector", "core.energy_protector", "get_energy_protector"),
+        ("Boundary Enforcer", "core.boundary_enforcer", "get_boundary_enforcer"),
+        ("Time Sovereign", "core.time_sovereign", "get_time_sovereign"),
+        ("Attention Guardian", "core.attention_guardian", "get_attention_guardian"),
     ]
 
     initialized = 0
