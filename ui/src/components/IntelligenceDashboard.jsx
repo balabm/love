@@ -190,6 +190,10 @@ export default function IntelligenceDashboard() {
     { name: "writing_coach", stats: modernStats.evolution_health?.writing_coach },
     { name: "creativity_booster", stats: modernStats.evolution_health?.creativity_booster },
     { name: "stress_response_coach", stats: modernStats.evolution_health?.stress_response_coach },
+    { name: "communication_analyzer", stats: modernStats.evolution_health?.communication_analyzer },
+    { name: "goal_progress_visualizer", stats: modernStats.evolution_health?.goal_progress_visualizer },
+    { name: "life_balance_wheel", stats: modernStats.evolution_health?.life_balance_wheel },
+    { name: "productivity_gamifier", stats: modernStats.evolution_health?.productivity_gamifier },
   ].filter(m => m.stats);
 
   return (
