@@ -116,6 +116,10 @@ Plus Modern AI Subsystems:
 - Savoring Trainer (positive experience amplification intelligence)
 - Presence Detector (attention intelligence)
 - Intuition Trainer (inner wisdom intelligence)
+- Resilience Builder (bounce-back intelligence)
+- Growth Mindset Coach (belief intelligence)
+- Adaptability Trainer (change intelligence)
+- Antifragility Tracker (stress-to-strength intelligence)
 
 Usage:
     python start_evolution.py
@@ -340,6 +344,10 @@ def start_evolution_systems():
         ("Savoring Trainer", "core.savoring_trainer", "get_savoring_trainer"),
         ("Presence Detector", "core.presence_detector", "get_presence_detector"),
         ("Intuition Trainer", "core.intuition_trainer", "get_intuition_trainer"),
+        ("Resilience Builder", "core.resilience_builder", "get_resilience_builder"),
+        ("Growth Mindset Coach", "core.growth_mindset_coach", "get_growth_mindset_coach"),
+        ("Adaptability Trainer", "core.adaptability_trainer", "get_adaptability_trainer"),
+        ("Antifragility Tracker", "core.antifragility_tracker", "get_antifragility_tracker"),
     ]
 
     initialized = 0

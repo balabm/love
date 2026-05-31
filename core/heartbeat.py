@@ -229,6 +229,10 @@ class ProactiveHeartbeat:
                 ("savoring_trainer", "Savoring Trainer"),
                 ("presence_detector", "Presence Detector"),
                 ("intuition_trainer", "Intuition Trainer"),
+                ("resilience_builder", "Resilience Builder"),
+                ("growth_mindset_coach", "Growth Mindset Coach"),
+                ("adaptability_trainer", "Adaptability Trainer"),
+                ("antifragility_tracker", "Antifragility Tracker"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
