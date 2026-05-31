@@ -550,6 +550,10 @@ async def get_evolution_health():
             "forgiveness_tracker": {"available": True},
             "vulnerability_builder": {"available": True},
             "trust_builder": {"available": True},
+            "curiosity_spark": {"available": True},
+            "play_coach": {"available": True},
+            "adventure_planner": {"available": True},
+            "wonder_tracker": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

@@ -239,6 +239,8 @@ class DailyBriefingSystem:
                 "assertiveness_trainer", "active_listening_coach",
                 "self_compassion_coach", "forgiveness_tracker",
                 "vulnerability_builder", "trust_builder",
+                "curiosity_spark", "play_coach",
+                "adventure_planner", "wonder_tracker",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

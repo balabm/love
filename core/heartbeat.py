@@ -217,6 +217,10 @@ class ProactiveHeartbeat:
                 ("forgiveness_tracker", "Forgiveness Tracker"),
                 ("vulnerability_builder", "Vulnerability Builder"),
                 ("trust_builder", "Trust Builder"),
+                ("curiosity_spark", "Curiosity Spark"),
+                ("play_coach", "Play Coach"),
+                ("adventure_planner", "Adventure Planner"),
+                ("wonder_tracker", "Wonder Tracker"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

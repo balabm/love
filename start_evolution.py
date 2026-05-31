@@ -104,6 +104,10 @@ Plus Modern AI Subsystems:
 - Forgiveness Tracker (emotional freedom intelligence)
 - Vulnerability Builder (emotional courage intelligence)
 - Trust Builder (relational intelligence)
+- Curiosity Spark (wonder intelligence)
+- Play Coach (joy intelligence)
+- Adventure Planner (experience intelligence)
+- Wonder Tracker (awe intelligence)
 
 Usage:
     python start_evolution.py
@@ -316,6 +320,10 @@ def start_evolution_systems():
         ("Forgiveness Tracker", "core.forgiveness_tracker", "get_forgiveness_tracker"),
         ("Vulnerability Builder", "core.vulnerability_builder", "get_vulnerability_builder"),
         ("Trust Builder", "core.trust_builder", "get_trust_builder"),
+        ("Curiosity Spark", "core.curiosity_spark", "get_curiosity_spark"),
+        ("Play Coach", "core.play_coach", "get_play_coach"),
+        ("Adventure Planner", "core.adventure_planner", "get_adventure_planner"),
+        ("Wonder Tracker", "core.wonder_tracker", "get_wonder_tracker"),
     ]
 
     initialized = 0
