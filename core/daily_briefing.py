@@ -279,6 +279,8 @@ class DailyBriefingSystem:
                 "trust_architect", "repair_specialist",
                 "deep_listener", "conflict_navigator",
                 "assertiveness_builder", "boundary_architect",
+                "leadership_coach", "influence_builder",
+                "delegation_trainer", "vision_keeper",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

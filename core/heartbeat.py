@@ -297,6 +297,10 @@ class ProactiveHeartbeat:
                 ("conflict_navigator", "Conflict Navigator"),
                 ("assertiveness_builder", "Assertiveness Builder"),
                 ("boundary_architect", "Boundary Architect"),
+                ("leadership_coach", "Leadership Coach"),
+                ("influence_builder", "Influence Builder"),
+                ("delegation_trainer", "Delegation Trainer"),
+                ("vision_keeper", "Vision Keeper"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

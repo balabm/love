@@ -1,0 +1,13 @@
+feat(modern): Leadership Coach + Influence Builder + Delegation Trainer + Vision Keeper (164 engines total)
+
+Leadership Coach — influence intelligence, team outcome tracking, style optimization
+Influence Builder — persuasion intelligence, ethics detection, strategy matching
+Delegation Trainer — distribution intelligence, capacity optimization, development tracking
+Vision Keeper — direction intelligence, drift detection, alignment optimization
+
+- Wired into API routes, startup, daily briefing, heartbeat
+- 663 tests passing
+
+Generated with [Devin](https://cli.devin.ai/docs)
+
+Co-Authored-By: Devin <158243242+devin-ai-integration[bot]@users.noreply.github.com>

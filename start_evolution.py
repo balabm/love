@@ -468,6 +468,10 @@ def start_evolution_systems():
         ("Conflict Navigator", "core.conflict_navigator", "get_conflict_navigator"),
         ("Assertiveness Builder", "core.assertiveness_builder", "get_assertiveness_builder"),
         ("Boundary Architect", "core.boundary_architect", "get_boundary_architect"),
+        ("Leadership Coach", "core.leadership_coach", "get_leadership_coach"),
+        ("Influence Builder", "core.influence_builder", "get_influence_builder"),
+        ("Delegation Trainer", "core.delegation_trainer", "get_delegation_trainer"),
+        ("Vision Keeper", "core.vision_keeper", "get_vision_keeper"),
     ]
 
     initialized = 0
