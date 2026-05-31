@@ -294,6 +294,10 @@ export default function IntelligenceDashboard() {
     { name: "reconciliation_builder", stats: modernStats.evolution_health?.reconciliation_builder },
     { name: "trust_architect", stats: modernStats.evolution_health?.trust_architect },
     { name: "repair_specialist", stats: modernStats.evolution_health?.repair_specialist },
+    { name: "deep_listener", stats: modernStats.evolution_health?.deep_listener },
+    { name: "conflict_navigator", stats: modernStats.evolution_health?.conflict_navigator },
+    { name: "assertiveness_builder", stats: modernStats.evolution_health?.assertiveness_builder },
+    { name: "boundary_architect", stats: modernStats.evolution_health?.boundary_architect },
   ].filter(m => m.stats);
 
   return (
