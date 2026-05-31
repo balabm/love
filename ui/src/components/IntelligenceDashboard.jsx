@@ -274,6 +274,10 @@ export default function IntelligenceDashboard() {
     { name: "innovation_spark_generator", stats: modernStats.evolution_health?.innovation_spark_generator },
     { name: "problem_reframer", stats: modernStats.evolution_health?.problem_reframer },
     { name: "perspective_shifter", stats: modernStats.evolution_health?.perspective_shifter },
+    { name: "curiosity_cultivator", stats: modernStats.evolution_health?.curiosity_cultivator },
+    { name: "learning_acceleration_engine", stats: modernStats.evolution_health?.learning_acceleration_engine },
+    { name: "knowledge_synthesizer", stats: modernStats.evolution_health?.knowledge_synthesizer },
+    { name: "wisdom_distiller", stats: modernStats.evolution_health?.wisdom_distiller },
   ].filter(m => m.stats);
 
   return (

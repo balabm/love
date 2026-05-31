@@ -244,6 +244,8 @@ export default function SentinelPanel() {
                 "mindfulness_trainer", "presence_amplifier",
                 "creativity_catalyst", "innovation_spark_generator",
                 "problem_reframer", "perspective_shifter",
+                "curiosity_cultivator", "learning_acceleration_engine",
+                "knowledge_synthesizer", "wisdom_distiller",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -264,6 +266,8 @@ export default function SentinelPanel() {
                 "mindfulness_trainer", "presence_amplifier",
                 "creativity_catalyst", "innovation_spark_generator",
                 "problem_reframer", "perspective_shifter",
+                "curiosity_cultivator", "learning_acceleration_engine",
+                "knowledge_synthesizer", "wisdom_distiller",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
@@ -288,6 +292,8 @@ export default function SentinelPanel() {
                 "mindfulness_trainer", "presence_amplifier",
                 "creativity_catalyst", "innovation_spark_generator",
                 "problem_reframer", "perspective_shifter",
+                "curiosity_cultivator", "learning_acceleration_engine",
+                "knowledge_synthesizer", "wisdom_distiller",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
@@ -307,7 +313,9 @@ export default function SentinelPanel() {
                 "stress_resilience_trainer", "emotional_regulation_coach",
                 "mindfulness_trainer", "presence_amplifier",
                 "creativity_catalyst", "innovation_spark_generator",
-                "problem_reframer", "perspective_shifter"
+                "problem_reframer", "perspective_shifter",
+                "curiosity_cultivator", "learning_acceleration_engine",
+                "knowledge_synthesizer", "wisdom_distiller"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>
