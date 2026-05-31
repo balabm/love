@@ -472,6 +472,10 @@ def start_evolution_systems():
         ("Influence Builder", "core.influence_builder", "get_influence_builder"),
         ("Delegation Trainer", "core.delegation_trainer", "get_delegation_trainer"),
         ("Vision Keeper", "core.vision_keeper", "get_vision_keeper"),
+        ("Investment Strategist", "core.investment_strategist", "get_investment_strategist"),
+        ("Wealth Builder", "core.wealth_builder", "get_wealth_builder"),
+        ("Income Diversifier", "core.income_diversifier", "get_income_diversifier"),
+        ("Financial Independence Tracker", "core.financial_independence_tracker", "get_financial_independence_tracker"),
     ]
 
     initialized = 0

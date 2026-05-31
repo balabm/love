@@ -634,6 +634,10 @@ async def get_evolution_health():
             "influence_builder": {"available": True},
             "delegation_trainer": {"available": True},
             "vision_keeper": {"available": True},
+            "investment_strategist": {"available": True},
+            "wealth_builder": {"available": True},
+            "income_diversifier": {"available": True},
+            "financial_independence_tracker": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
