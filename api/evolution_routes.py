@@ -638,6 +638,10 @@ async def get_evolution_health():
             "wealth_builder": {"available": True},
             "income_diversifier": {"available": True},
             "financial_independence_tracker": {"available": True},
+            "sustainability_coach": {"available": True},
+            "nature_connector": {"available": True},
+            "eco_footprint_tracker": {"available": True},
+            "regenerative_living_guide": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

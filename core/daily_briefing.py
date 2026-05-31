@@ -283,6 +283,8 @@ class DailyBriefingSystem:
                 "delegation_trainer", "vision_keeper",
                 "investment_strategist", "wealth_builder",
                 "income_diversifier", "financial_independence_tracker",
+                "sustainability_coach", "nature_connector",
+                "eco_footprint_tracker", "regenerative_living_guide",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

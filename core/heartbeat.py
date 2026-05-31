@@ -305,6 +305,10 @@ class ProactiveHeartbeat:
                 ("wealth_builder", "Wealth Builder"),
                 ("income_diversifier", "Income Diversifier"),
                 ("financial_independence_tracker", "Financial Independence Tracker"),
+                ("sustainability_coach", "Sustainability Coach"),
+                ("nature_connector", "Nature Connector"),
+                ("eco_footprint_tracker", "Eco Footprint Tracker"),
+                ("regenerative_living_guide", "Regenerative Living Guide"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

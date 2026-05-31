@@ -476,6 +476,10 @@ def start_evolution_systems():
         ("Wealth Builder", "core.wealth_builder", "get_wealth_builder"),
         ("Income Diversifier", "core.income_diversifier", "get_income_diversifier"),
         ("Financial Independence Tracker", "core.financial_independence_tracker", "get_financial_independence_tracker"),
+        ("Sustainability Coach", "core.sustainability_coach", "get_sustainability_coach"),
+        ("Nature Connector", "core.nature_connector", "get_nature_connector"),
+        ("Eco Footprint Tracker", "core.eco_footprint_tracker", "get_eco_footprint_tracker"),
+        ("Regenerative Living Guide", "core.regenerative_living_guide", "get_regenerative_living_guide"),
     ]
 
     initialized = 0
