@@ -246,6 +246,10 @@ export default function IntelligenceDashboard() {
     { name: "habit_architect", stats: modernStats.evolution_health?.habit_architect },
     { name: "environment_curator", stats: modernStats.evolution_health?.environment_curator },
     { name: "ritual_master", stats: modernStats.evolution_health?.ritual_master },
+    { name: "values_explorer", stats: modernStats.evolution_health?.values_explorer },
+    { name: "belief_examiner", stats: modernStats.evolution_health?.belief_examiner },
+    { name: "shadow_integrator", stats: modernStats.evolution_health?.shadow_integrator },
+    { name: "inner_critic_manager", stats: modernStats.evolution_health?.inner_critic_manager },
   ].filter(m => m.stats);
 
   return (

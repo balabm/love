@@ -230,12 +230,16 @@ export default function SentinelPanel() {
                 "time_sovereign", "attention_guardian",
                 "identity_designer", "habit_architect",
                 "environment_curator", "ritual_master",
+                "values_explorer", "belief_examiner",
+                "shadow_integrator", "inner_critic_manager",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
                 "time_sovereign", "attention_guardian",
                 "identity_designer", "habit_architect",
                 "environment_curator", "ritual_master",
+                "values_explorer", "belief_examiner",
+                "shadow_integrator", "inner_critic_manager",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
@@ -246,12 +250,16 @@ export default function SentinelPanel() {
                 "time_sovereign", "attention_guardian",
                 "identity_designer", "habit_architect",
                 "environment_curator", "ritual_master",
+                "values_explorer", "belief_examiner",
+                "shadow_integrator", "inner_critic_manager",
                 "discipline_trainer", "consistency_coach",
                 "accountability_partner", "progress_celebrator",
                 "energy_protector", "boundary_enforcer",
                 "time_sovereign", "attention_guardian",
                 "identity_designer", "habit_architect",
-                "environment_curator", "ritual_master"
+                "environment_curator", "ritual_master",
+                "values_explorer", "belief_examiner",
+                "shadow_integrator", "inner_critic_manager"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>
