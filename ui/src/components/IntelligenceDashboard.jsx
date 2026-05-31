@@ -353,6 +353,9 @@ export default function IntelligenceDashboard() {
     { name: "transcendence_guide", stats: modernStats.evolution_health?.transcendence_guide },
     { name: "sacred_ritual_designer", stats: modernStats.evolution_health?.sacred_ritual_designer },
     { name: "contemplation_keeper", stats: modernStats.evolution_health?.contemplation_keeper },
+    { name: "inner_critic_tamer", stats: modernStats.evolution_health?.inner_critic_tamer },
+    { name: "perfectionism_healer", stats: modernStats.evolution_health?.perfectionism_healer },
+    { name: "comparison_detoxifier", stats: modernStats.evolution_health?.comparison_detoxifier },
   ].filter(m => m.stats);
 
   return (
