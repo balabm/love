@@ -302,6 +302,10 @@ export default function IntelligenceDashboard() {
     { name: "influence_builder", stats: modernStats.evolution_health?.influence_builder },
     { name: "delegation_trainer", stats: modernStats.evolution_health?.delegation_trainer },
     { name: "vision_keeper", stats: modernStats.evolution_health?.vision_keeper },
+    { name: "investment_strategist", stats: modernStats.evolution_health?.investment_strategist },
+    { name: "wealth_builder", stats: modernStats.evolution_health?.wealth_builder },
+    { name: "income_diversifier", stats: modernStats.evolution_health?.income_diversifier },
+    { name: "financial_independence_tracker", stats: modernStats.evolution_health?.financial_independence_tracker },
   ].filter(m => m.stats);
 
   return (
