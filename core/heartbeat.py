@@ -332,6 +332,10 @@ class ProactiveHeartbeat:
                 ("mentorship_weaver", "Mentorship Weaver"),
                 ("wisdom_keeper", "Wisdom Keeper"),
                 ("play_architect", "Play Architect"),
+                ("home_environment_optimizer", "Home Environment Optimizer"),
+                ("intergenerational_bridge_builder", "Intergenerational Bridge Builder"),
+                ("aesthetic_life_designer", "Aesthetic Life Designer"),
+                ("comfort_zone_challenger", "Comfort Zone Challenger"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:

@@ -503,6 +503,10 @@ def start_evolution_systems():
         ("Mentorship Weaver", "core.mentorship_weaver", "get_mentorship_weaver"),
         ("Wisdom Keeper", "core.wisdom_keeper", "get_wisdom_keeper"),
         ("Play Architect", "core.play_architect", "get_play_architect"),
+        ("Home Environment Optimizer", "core.home_environment_optimizer", "get_home_environment_optimizer"),
+        ("Intergenerational Bridge Builder", "core.intergenerational_bridge_builder", "get_intergenerational_bridge_builder"),
+        ("Aesthetic Life Designer", "core.aesthetic_life_designer", "get_aesthetic_life_designer"),
+        ("Comfort Zone Challenger", "core.comfort_zone_challenger", "get_comfort_zone_challenger"),
     ]
 
     initialized = 0
