@@ -219,7 +219,7 @@ export default function SentinelPanel() {
                 "curiosity_spark", "play_coach",
                 "adventure_planner", "wonder_tracker",
                 "meaning_mapper", "purpose_navigator",
-                "legacy_builder", "death_awareness_coach", "experience_maximizer", "wonder_cultivator", "travel_optimizer",
+                "legacy_builder", "death_awareness_coach", "experience_maximizer", "wonder_cultivator", "travel_optimizer", "community_builder", "social_impact_tracker", "volunteer_coordinator", "network_weaver",
                 "flow_state_coach", "savoring_trainer",
                 "presence_detector", "intuition_trainer",
                 "resilience_builder", "growth_mindset_coach",
