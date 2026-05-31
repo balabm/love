@@ -511,6 +511,10 @@ def start_evolution_systems():
         ("Forgiveness Facilitator", "core.forgiveness_facilitator", "get_forgiveness_facilitator"),
         ("Celebration Architect", "core.celebration_architect", "get_celebration_architect"),
         ("Rest Designer", "core.rest_designer", "get_rest_designer"),
+        ("Boundary Coach", "core.boundary_coach", "get_boundary_coach"),
+        ("Emotional Literacy Trainer", "core.emotional_literacy_trainer", "get_emotional_literacy_trainer"),
+        ("Hope Cultivator", "core.hope_cultivator", "get_hope_cultivator"),
+        ("Attention Steward", "core.attention_steward", "get_attention_steward"),
     ]
 
     initialized = 0

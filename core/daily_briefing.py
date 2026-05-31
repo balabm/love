@@ -301,6 +301,8 @@ class DailyBriefingSystem:
                 "aesthetic_life_designer", "comfort_zone_challenger",
                 "conflict_resolution_coach", "forgiveness_facilitator",
                 "celebration_architect", "rest_designer",
+                "boundary_coach", "emotional_literacy_trainer",
+                "hope_cultivator", "attention_steward",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)

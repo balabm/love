@@ -673,6 +673,10 @@ async def get_evolution_health():
             "forgiveness_facilitator": {"available": True},
             "celebration_architect": {"available": True},
             "rest_designer": {"available": True},
+            "boundary_coach": {"available": True},
+            "emotional_literacy_trainer": {"available": True},
+            "hope_cultivator": {"available": True},
+            "attention_steward": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
