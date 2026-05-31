@@ -238,6 +238,10 @@ export default function IntelligenceDashboard() {
     { name: "consistency_coach", stats: modernStats.evolution_health?.consistency_coach },
     { name: "accountability_partner", stats: modernStats.evolution_health?.accountability_partner },
     { name: "progress_celebrator", stats: modernStats.evolution_health?.progress_celebrator },
+    { name: "energy_protector", stats: modernStats.evolution_health?.energy_protector },
+    { name: "boundary_enforcer", stats: modernStats.evolution_health?.boundary_enforcer },
+    { name: "time_sovereign", stats: modernStats.evolution_health?.time_sovereign },
+    { name: "attention_guardian", stats: modernStats.evolution_health?.attention_guardian },
   ].filter(m => m.stats);
 
   return (
