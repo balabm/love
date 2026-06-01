@@ -364,6 +364,10 @@ export default function IntelligenceDashboard() {
     { name: "optionality_maximizer", stats: modernStats.evolution_health?.optionality_maximizer },
     { name: "expected_value_coach", stats: modernStats.evolution_health?.expected_value_coach },
     { name: "regret_minimizer", stats: modernStats.evolution_health?.regret_minimizer },
+    { name: "cognitive_bias_detector", stats: modernStats.evolution_health?.cognitive_bias_detector },
+    { name: "mental_model_trainer", stats: modernStats.evolution_health?.mental_model_trainer },
+    { name: "first_principles_thinker", stats: modernStats.evolution_health?.first_principles_thinker },
+    { name: "systems_thinking_coach", stats: modernStats.evolution_health?.systems_thinking_coach },
   ].filter(m => m.stats);
 
   return (
