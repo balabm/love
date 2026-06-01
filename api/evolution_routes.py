@@ -810,6 +810,10 @@ async def get_evolution_health():
             "diy_project_planner": {"available": True},
             "maker_mindset_trainer": {"available": True},
             "handcraft_joy_cultivator": {"available": True},
+            "style_expression_coach": {"available": True},
+            "wardrobe_mindfulness_guide": {"available": True},
+            "personal_brand_designer": {"available": True},
+            "dress_for_joy_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
