@@ -56,6 +56,11 @@ from core.diy_project_planner import get_diy_project_planner
 from core.maker_mindset_trainer import get_maker_mindset_trainer
 from core.handcraft_joy_cultivator import get_handcraft_joy_cultivator
 
+from core.style_expression_coach import get_style_expression_coach
+from core.wardrobe_mindfulness_guide import get_wardrobe_mindfulness_guide
+from core.personal_brand_designer import get_personal_brand_designer
+from core.dress_for_joy_coach import get_dress_for_joy_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1552,4 +1557,57 @@ def handcraft_joy_cultivator_stats():
 @router.get("/handcraft_joy_cultivator/score")
 def handcraft_joy_cultivator_score():
     return {"handcraft_score": get_handcraft_joy_cultivator().get_handcraft_score()}
+
+
+@router.post("/style_expression_coach/record")
+def style_expression_coach_record(choice: str = "", style_type: str = "", authenticity: float = 0.0, confidence: float = 0.0, comfort: float = 0.0, appropriateness: float = 0.0, expression: float = 0.0, experimentation: float = 0.0, notes: str = ""):
+    entry = get_style_expression_coach().record_style(choice=choice, style_type=style_type, authenticity=authenticity, confidence=confidence, comfort=comfort, appropriateness=appropriateness, expression=expression, experimentation=experimentation, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/style_expression_coach/stats")
+def style_expression_coach_stats():
+    return get_style_expression_coach().get_style_stats()
+
+@router.get("/style_expression_coach/score")
+def style_expression_coach_score():
+    return {"style_score": get_style_expression_coach().get_style_score()}
+
+@router.post("/wardrobe_mindfulness_guide/record")
+def wardrobe_mindfulness_guide_record(action: str = "", wardrobe_type: str = "", intention: float = 0.0, quality: float = 0.0, sustainability: float = 0.0, joy: float = 0.0, care: float = 0.0, curation: float = 0.0, notes: str = ""):
+    entry = get_wardrobe_mindfulness_guide().record_wardrobe(action=action, wardrobe_type=wardrobe_type, intention=intention, quality=quality, sustainability=sustainability, joy=joy, care=care, curation=curation, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/wardrobe_mindfulness_guide/stats")
+def wardrobe_mindfulness_guide_stats():
+    return get_wardrobe_mindfulness_guide().get_wardrobe_stats()
+
+@router.get("/wardrobe_mindfulness_guide/score")
+def wardrobe_mindfulness_guide_score():
+    return {"wardrobe_score": get_wardrobe_mindfulness_guide().get_wardrobe_score()}
+
+@router.post("/personal_brand_designer/record")
+def personal_brand_designer_record(moment: str = "", brand_type: str = "", clarity: float = 0.0, consistency: float = 0.0, authenticity: float = 0.0, impact: float = 0.0, alignment: float = 0.0, visibility: float = 0.0, notes: str = ""):
+    entry = get_personal_brand_designer().record_brand(moment=moment, brand_type=brand_type, clarity=clarity, consistency=consistency, authenticity=authenticity, impact=impact, alignment=alignment, visibility=visibility, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/personal_brand_designer/stats")
+def personal_brand_designer_stats():
+    return get_personal_brand_designer().get_brand_stats()
+
+@router.get("/personal_brand_designer/score")
+def personal_brand_designer_score():
+    return {"brand_score": get_personal_brand_designer().get_brand_score()}
+
+@router.post("/dress_for_joy_coach/record")
+def dress_for_joy_coach_record(choice: str = "", dress_type: str = "", joy: float = 0.0, confidence: float = 0.0, energy: float = 0.0, playfulness: float = 0.0, self_love: float = 0.0, intention: float = 0.0, notes: str = ""):
+    entry = get_dress_for_joy_coach().record_dress(choice=choice, dress_type=dress_type, joy=joy, confidence=confidence, energy=energy, playfulness=playfulness, self_love=self_love, intention=intention, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/dress_for_joy_coach/stats")
+def dress_for_joy_coach_stats():
+    return get_dress_for_joy_coach().get_dress_stats()
+
+@router.get("/dress_for_joy_coach/score")
+def dress_for_joy_coach_score():
+    return {"dress_score": get_dress_for_joy_coach().get_dress_score()}
 
