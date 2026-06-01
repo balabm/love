@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import api, { API } from '../api';
-const API_BASE = window.location.origin;
+const API_BASE = "http://localhost:8000";
 import "./SentinelPanel.css";
 
 const STATE_EMOJI = { active: "●", idle: "◐", away: "○", sleeping: "☾", unknown: "?" };

@@ -36,6 +36,11 @@ from core.animal_empathy_trainer import get_animal_empathy_trainer
 from core.pet_loss_support import get_pet_loss_support
 from core.human_animal_connection_guide import get_human_animal_connection_guide
 
+from core.garden_therapy_coach import get_garden_therapy_coach
+from core.plant_parenting_guide import get_plant_parenting_guide
+from core.seasonal_garden_planner import get_seasonal_garden_planner
+from core.urban_gardening_coach import get_urban_gardening_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -488,6 +493,8 @@ async def get_evolution_health():
         from agents.task_evolution_integration import get_task_evolution_integration
         from agents.fitness_evolution_integration import get_fitness_evolution_integration
         from core.mcp_host import get_mcp_host
+        from core.observability import get_observability_engine
+        from core.llm_manager import get_llm_manager
 
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
@@ -729,6 +736,48 @@ async def get_evolution_health():
             "voice_finder": {"available": True},
             "transition_companion": {"available": True},
             "uncertainty_embracer": {"available": True},
+            "perfectionism_healer": {"available": True},
+            "comparison_detoxifier": {"available": True},
+            "money_mindset_coach": {"available": True},
+            "scarcity_healer": {"available": True},
+            "generosity_cultivator": {"available": True},
+            "abundance_architect": {"available": True},
+            "decision_quality_tracker": {"available": True},
+            "optionality_maximizer": {"available": True},
+            "expected_value_coach": {"available": True},
+            "regret_minimizer": {"available": True},
+            "cognitive_bias_detector": {"available": True},
+            "mental_model_trainer": {"available": True},
+            "first_principles_thinker": {"available": True},
+            "systems_thinking_coach": {"available": True},
+            "authentic_expression_coach": {"available": True},
+            "vulnerable_communication_trainer": {"available": True},
+            "difficult_conversation_navigator": {"available": True},
+            "active_listening_master": {"available": True},
+            "body_awareness_trainer": {"available": True},
+            "breath_work_coach": {"available": True},
+            "movement_intelligence": {"available": True},
+            "posture_presence_coach": {"available": True},
+            "intimacy_coach": {"available": True},
+            "sensory_awareness_trainer": {"available": True},
+            "passion_cultivator": {"available": True},
+            "deep_connection_coach": {"available": True},
+            "music_mood_regulator": {"available": True},
+            "sound_healing_guide": {"available": True},
+            "playlist_therapist": {"available": True},
+            "rhythmic_living_coach": {"available": True},
+            "mindful_eating_coach": {"available": True},
+            "cooking_joy_cultivator": {"available": True},
+            "meal_ritual_designer": {"available": True},
+            "food_as_medicine_coach": {"available": True},
+            "pet_bonding_coach": {"available": True},
+            "animal_empathy_trainer": {"available": True},
+            "pet_loss_support": {"available": True},
+            "human_animal_connection_guide": {"available": True},
+            "garden_therapy_coach": {"available": True},
+            "plant_parenting_guide": {"available": True},
+            "seasonal_garden_planner": {"available": True},
+            "urban_gardening_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
@@ -1264,4 +1313,57 @@ def human_animal_connection_guide_stats():
 @router.get("/human_animal_connection_guide/score")
 def human_animal_connection_guide_score():
     return {"connection_score": get_human_animal_connection_guide().get_connection_score()}
+
+
+@router.post("/garden_therapy_coach/record")
+def garden_therapy_coach_record(activity: str = "", garden_type: str = "", presence: float = 0.0, growth: float = 0.0, patience: float = 0.0, healing: float = 0.0, sensory: float = 0.0, notes: str = ""):
+    entry = get_garden_therapy_coach().record_garden(activity=activity, garden_type=garden_type, presence=presence, growth=growth, patience=patience, healing=healing, sensory=sensory, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/garden_therapy_coach/stats")
+def garden_therapy_coach_stats():
+    return get_garden_therapy_coach().get_garden_stats()
+
+@router.get("/garden_therapy_coach/score")
+def garden_therapy_coach_score():
+    return {"garden_score": get_garden_therapy_coach().get_garden_score()}
+
+@router.post("/plant_parenting_guide/record")
+def plant_parenting_guide_record(plant: str = "", care_type: str = "", attentiveness: float = 0.0, health: float = 0.0, learning: float = 0.0, joy: float = 0.0, observation: float = 0.0, notes: str = ""):
+    entry = get_plant_parenting_guide().record_care(plant=plant, care_type=care_type, attentiveness=attentiveness, health=health, learning=learning, joy=joy, observation=observation, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/plant_parenting_guide/stats")
+def plant_parenting_guide_stats():
+    return get_plant_parenting_guide().get_care_stats()
+
+@router.get("/plant_parenting_guide/score")
+def plant_parenting_guide_score():
+    return {"care_score": get_plant_parenting_guide().get_care_score()}
+
+@router.post("/seasonal_garden_planner/record")
+def seasonal_garden_planner_record(phase: str = "", season_type: str = "", planning: float = 0.0, execution: float = 0.0, adaptation: float = 0.0, learning: float = 0.0, harmony: float = 0.0, notes: str = ""):
+    entry = get_seasonal_garden_planner().record_season(phase=phase, season_type=season_type, planning=planning, execution=execution, adaptation=adaptation, learning=learning, harmony=harmony, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/seasonal_garden_planner/stats")
+def seasonal_garden_planner_stats():
+    return get_seasonal_garden_planner().get_season_stats()
+
+@router.get("/seasonal_garden_planner/score")
+def seasonal_garden_planner_score():
+    return {"season_score": get_seasonal_garden_planner().get_season_score()}
+
+@router.post("/urban_gardening_coach/record")
+def urban_gardening_coach_record(garden: str = "", urban_type: str = "", creativity: float = 0.0, resourcefulness: float = 0.0, yield_val: float = 0.0, satisfaction: float = 0.0, community: float = 0.0, notes: str = ""):
+    entry = get_urban_gardening_coach().record_urban(garden=garden, urban_type=urban_type, creativity=creativity, resourcefulness=resourcefulness, yield_val=yield_val, satisfaction=satisfaction, community=community, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/urban_gardening_coach/stats")
+def urban_gardening_coach_stats():
+    return get_urban_gardening_coach().get_urban_stats()
+
+@router.get("/urban_gardening_coach/score")
+def urban_gardening_coach_score():
+    return {"urban_score": get_urban_gardening_coach().get_urban_score()}
 

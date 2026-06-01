@@ -3150,9 +3150,9 @@ async def pending_fixes():
     }
 
 
-@app.get("/evolution/health")
-async def evolution_health():
-    """Health check for Self-Evolution Core."""
+@app.get("/evolution/core-health")
+async def evolution_core_health():
+    """Health check for Self-Evolution Core (separate from full evolution health)."""
     pending = crash_monitor.get_pending_crashes()
     return {
         "status": "Self-Healing active",
