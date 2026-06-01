@@ -828,6 +828,10 @@ async def get_evolution_health():
             "cross_cultural_bridge_builder": {"available": True},
             "conversation_fluency_trainer": {"available": True},
             "vocabulary_growth_coach": {"available": True},
+            "daily_writing_coach": {"available": True},
+            "publishing_navigator": {"available": True},
+            "blog_craft_coach": {"available": True},
+            "newsletter_creator": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health

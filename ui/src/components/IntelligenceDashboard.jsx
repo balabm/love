@@ -416,6 +416,10 @@ export default function IntelligenceDashboard() {
     { name: "cross_cultural_bridge_builder", stats: modernStats.evolution_health?.cross_cultural_bridge_builder },
     { name: "conversation_fluency_trainer", stats: modernStats.evolution_health?.conversation_fluency_trainer },
     { name: "vocabulary_growth_coach", stats: modernStats.evolution_health?.vocabulary_growth_coach },
+    { name: "daily_writing_coach", stats: modernStats.evolution_health?.daily_writing_coach },
+    { name: "publishing_navigator", stats: modernStats.evolution_health?.publishing_navigator },
+    { name: "blog_craft_coach", stats: modernStats.evolution_health?.blog_craft_coach },
+    { name: "newsletter_creator", stats: modernStats.evolution_health?.newsletter_creator },
   ].filter(m => m.stats);
 
   return (
