@@ -376,6 +376,7 @@ _isg_instance: Optional[InnovationSparkGenerator] = None
 _isg_lock = threading.Lock()
 
 
+    
 def get_innovation_spark_generator() -> InnovationSparkGenerator:
     global _isg_instance
     with _isg_lock:

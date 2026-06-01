@@ -598,9 +598,9 @@ class Sentinel:
                 decisions.append({
                     "category": "wellbeing",
                     "type": "warning",
-                    "title": warning["title"],
-                    "message": f"{warning['message']} {warning['suggestion']}",
-                    "priority": warning["severity"],
+                    "title": warning.get("title", "Guardrails Warning"),
+                    "message": f"{warning.get('message', '')} {warning.get('suggestion', '')}".strip(),
+                    "priority": warning.get("severity", "normal"),
                 })
         except Exception as e:
             print(f"[Sentinel] Guardrails check error: {e}")

@@ -33,7 +33,6 @@ Architecture:
 import ast
 import json
 import os
-import resource
 import signal
 import subprocess
 import sys
@@ -46,6 +45,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+try:
+    import resource
+except ImportError:
+    resource = None
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "sandbox"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -296,8 +300,11 @@ print("TEST_RESULTS:", json.dumps(results))
         return f"""
 import sys
 import json
-import resource
 import builtins
+try:
+    import resource
+except ImportError:
+    resource = None
 
 # Restrict builtins
 for name in {list(BLOCKED_BUILTINS)!r}:
@@ -305,8 +312,12 @@ for name in {list(BLOCKED_BUILTINS)!r}:
         delattr(builtins, name)
 
 # Set resource limits
-resource.setrlimit(resource.RLIMIT_CPU, (30, 30))
-resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+if resource:
+    try:
+        resource.setrlimit(resource.RLIMIT_CPU, (30, 30))
+        resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
+    except Exception:
+        pass
 
 # Execute code
 code = {escaped_code}

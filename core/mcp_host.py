@@ -104,8 +104,8 @@ class MCPHost:
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._load_state()
-        # Auto-discover known MCP servers
-        self._auto_discover()
+        # Auto-discover known MCP servers in a background thread to prevent blocking
+        threading.Thread(target=self._auto_discover, daemon=True, name="MCP-AutoDiscover").start()
 
     # ── Discovery ───────────────────────────────────────────────────────────────
 

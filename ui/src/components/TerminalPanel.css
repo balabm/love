@@ -2,12 +2,20 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #090912;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--r, 12px);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
   padding: 16px;
   gap: 16px;
   overflow: hidden;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .terminal-header {
@@ -48,7 +56,8 @@
 
 .clear-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #f3f4f6;
+  color: var(--text, #f3f4f6);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);
 }
 
 .cancel-btn {
@@ -65,12 +74,13 @@
 .cancel-btn:hover {
   background: rgba(239, 68, 68, 0.25);
   color: #fca5a5;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
 }
 
 /* Output Console */
 .terminal-output {
   flex: 1;
-  background: #05050b;
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   padding: 14px;
@@ -131,11 +141,17 @@
 .terminal-input-bar {
   display: flex;
   align-items: center;
-  background: #05050b;
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 6px 12px;
   gap: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.terminal-input-bar:focus-within {
+  border-color: var(--love, rgba(192, 132, 252, 0.5));
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);
 }
 
 .terminal-input-bar .prompt {
@@ -168,6 +184,7 @@
 
 .terminal-input-bar button:hover {
   opacity: 0.9;
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
 }
 
 .terminal-input-bar button:disabled {
@@ -219,9 +236,10 @@
 }
 
 .shortcut-btn:hover {
-  background: rgba(139, 92, 246, 0.08);
-  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(192, 132, 252, 0.1);
+  border-color: rgba(192, 132, 252, 0.4);
   transform: translateY(-1px);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);
 }
 
 .btn-icon {

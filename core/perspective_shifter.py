@@ -362,6 +362,7 @@ _ps_instance: Optional[PerspectiveShifter] = None
 _ps_lock = threading.Lock()
 
 
+    
 def get_perspective_shifter() -> PerspectiveShifter:
     global _ps_instance
     with _ps_lock:

@@ -8,7 +8,7 @@ export default function AutonomyPanel() {
 
   useEffect(() => {
     let mounted = true;
-    api.get("/evolution/status")
+    api.get("/orchestrator/master/status")
       .then(r => { if (mounted) setStatus(r.data); })
       .catch(e => { if (mounted) setError(e.message); })
       .finally(() => { if (mounted) setLoading(false); });
@@ -32,9 +32,9 @@ export default function AutonomyPanel() {
     );
   }
 
-  const systems = status?.systems || [];
-  const ready = systems.filter(s => s.status === "ready").length;
-  const failed = systems.filter(s => s.status === "failed").length;
+  const systems = Object.values(status?.modules || {});
+  const ready = systems.filter(s => s.state === "ready").length;
+  const failed = systems.filter(s => s.state === "failed").length;
 
   return (
     <div style={{ padding: 24 }}>
@@ -73,8 +73,8 @@ export default function AutonomyPanel() {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {systems.slice(0, 20).map((s, i) => {
-          const isReady = s.status === "ready";
-          const isFailed = s.status === "failed";
+          const isReady = s.state === "ready";
+          const isFailed = s.state === "failed";
           return (
             <div key={i} style={{
               display: "flex",
@@ -93,7 +93,7 @@ export default function AutonomyPanel() {
                 background: isReady ? "rgba(52,211,153,0.12)" : isFailed ? "rgba(248,113,113,0.12)" : "rgba(255,255,255,0.05)",
                 color: isReady ? "#34d399" : isFailed ? "#f87171" : "rgba(226,224,238,0.38)",
               }}>
-                {s.status}
+                {s.state}
               </span>
             </div>
           );

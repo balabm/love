@@ -377,6 +377,7 @@ _frd_instance: Optional[FocusRitualDesigner] = None
 _frd_lock = threading.Lock()
 
 
+    
 def get_focus_ritual_designer() -> FocusRitualDesigner:
     global _frd_instance
     with _frd_lock:

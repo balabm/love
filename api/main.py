@@ -14,7 +14,7 @@ def safe_print(*args, **kwargs):
     msg = sep.join(str(arg) for arg in args)
     try:
         _original_print(msg, end=end, file=file, flush=flush)
-    except UnicodeEncodeError:
+    except (UnicodeEncodeError, OSError):
         replacements = {
             "❌": "[X]",
             "⚠️": "[!]",
@@ -49,6 +49,8 @@ def safe_print(*args, **kwargs):
                 _original_print(ascii_msg, end=end, file=file, flush=flush)
             except Exception:
                 pass
+    except Exception:
+        pass
 
 builtins.print = safe_print
 
@@ -614,6 +616,20 @@ def register_all_modules(lm, _loop=None):
         depends_on=[], optional=True, description="Mobile companion connection"
     ))
 
+    def start_ntfy_bridge_module():
+        from integrations.ntfy_bridge import start_ntfy_bridge
+        bridge = start_ntfy_bridge()
+        return {"status": "ready", "connected": bridge.is_connected() if bridge else False}
+
+    def stop_ntfy_bridge_module():
+        from integrations.ntfy_bridge import stop_ntfy_bridge
+        stop_ntfy_bridge()
+
+    lm.register(ModuleDescriptor(
+        name="ntfy_bridge", wave=1, start_fn=start_ntfy_bridge_module, stop_fn=stop_ntfy_bridge_module,
+        depends_on=[], optional=True, description="ntfy.sh background listener"
+    ))
+
     def start_notification_ingestion_module():
         from core.notification_ingestion import start_ingestion
         engine = start_ingestion()
@@ -981,8 +997,9 @@ def register_all_modules(lm, _loop=None):
 
     def start_mission_queue_module():
         from core.autonomous_mission_queue import get_mission_queue
-        result = get_mission_queue().bootstrap_key_missions()
-        return {"status": "ready", "bootstrapped": result.get("count", 0)}
+        # Just initialize it
+        get_mission_queue()
+        return {"status": "ready"}
 
     def start_autonomy_supervisor_module():
         if AUTONOMY_SUPERVISOR_AVAILABLE:
@@ -1320,7 +1337,12 @@ async def lifespan(app: FastAPI):
     _loop = asyncio.get_event_loop()
     register_all_modules(lm, _loop=_loop)
 
-    await lm.start_all()
+    try:
+        await asyncio.wait_for(lm.start_all(), timeout=45)
+    except asyncio.TimeoutError:
+        print("[API] Module startup timed out after 45s — continuing with partial startup")
+    except BaseException as e:
+        print(f"[API] Module startup error ({type(e).__name__}): {e} — continuing with partial startup")
 
     # ── Post-startup AGI notification ───────────────────────────────────────
     try:
@@ -2641,9 +2663,8 @@ async def chat_endpoint(msg: Message):
     # so we must run the fast path directly in the event loop.
     text_lower = msg.text.lower().strip().rstrip("!?.") if msg.text else ""
     is_greeting = text_lower in ("hi", "hey", "hello", "yo", "sup", "hiya", "howdy", "hola", "heyy")
-    is_trivial = len(msg.text.strip()) < 10 if msg.text else False and not any(c in msg.text for c in "?")
     is_common = text_lower in ("how are you", "how r u", "how are u", "what's up", "whats up", "how is it going", "hows it going", "hows your day", "how is your day", "are you there", "u there")
-    if is_greeting or is_trivial or is_common:
+    if is_greeting or is_common:
         import random
         fallbacks = [
             "Hey! I'm here. What's on your mind?",
@@ -2662,6 +2683,15 @@ async def chat_endpoint(msg: Message):
         "response": result["response"],
         "thinking": result.get("thinking", "")
     }
+
+@app.get("/notifications/recent")
+async def get_recent_notifications():
+    try:
+        from core.notification_ingestion import NotificationIngestionEngine
+        engine = NotificationIngestionEngine.get_instance()
+        return {"notifications": list(engine._recent_notifications)}
+    except Exception as e:
+        return {"notifications": [], "error": str(e)}
 
 @app.get("/health")
 async def health():
@@ -6465,7 +6495,6 @@ def get_self_evolution_status():
                 "code_sandbox": {"available": True},
                 "observability": {"running": get_observability_engine()._running},
                 "guardrails": {"available": True},
-                "llm_manager": {"available": len(get_llm_manager()._models) > 0},
                 "graph_rag": {"available": True},
                 "prompt_optimizer": {"available": True},
                 "self_reflection": {"available": True},
@@ -7658,9 +7687,22 @@ def _redirect_stderr_to_log():
                 pass
 
         def flush(self):
-            self._orig.flush()
+            try:
+                self._orig.flush()
+            except Exception:
+                pass
             try:
                 self._log.flush()
+            except Exception:
+                pass
+
+        def close(self):
+            try:
+                self._orig.close()
+            except Exception:
+                pass
+            try:
+                self._log.close()
             except Exception:
                 pass
 
@@ -7804,19 +7846,7 @@ async def lora_peft_status():
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-#  SERVE REACT UI (built to ui/dist) — mount AFTER all API routes so
-#  regular endpoints take precedence, and the React SPA handles unknown paths.
-# ═══════════════════════════════════════════════════════════════════════════════
-UI_DIST_DIR = _os.path.join(BASE_DIR, "ui", "dist")
-if _os.path.isdir(UI_DIST_DIR) and _os.path.isfile(_os.path.join(UI_DIST_DIR, "index.html")):
-    app.mount("/", StaticFiles(directory=UI_DIST_DIR, html=True), name="ui")
-    print(f"[API] React UI mounted from {UI_DIST_DIR}")
-else:
-    print(f"[API] React UI not found at {UI_DIST_DIR} — run `npm run build` in ui/")
 
-if __name__ == "__main__":
-    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
 
 # ========== ORCHESTRATION MASTER ENDPOINTS ==========
 
@@ -7887,3 +7917,18 @@ try:
     print('[API] Wave 33 Modern AI routes loaded')
 except Exception as e:
     print(f'[API] Modern routes error: {e}')
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  SERVE REACT UI (built to ui/dist) — mount AFTER all API routes so
+#  regular endpoints take precedence, and the React SPA handles unknown paths.
+# ═══════════════════════════════════════════════════════════════════════════════
+UI_DIST_DIR = _os.path.join(BASE_DIR, "ui", "dist")
+if _os.path.isdir(UI_DIST_DIR) and _os.path.isfile(_os.path.join(UI_DIST_DIR, "index.html")):
+    app.mount("/", StaticFiles(directory=UI_DIST_DIR, html=True), name="ui")
+    print(f"[API] React UI mounted from {UI_DIST_DIR}")
+else:
+    print(f"[API] React UI not found at {UI_DIST_DIR} — run `npm run build` in ui/")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)

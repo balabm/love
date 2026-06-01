@@ -1,0 +1,135 @@
+[
+  {
+    "page": "Chat Stream",
+    "view": "chat",
+    "sub": null,
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Swarm Panel",
+    "view": "swarm",
+    "sub": null,
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Autonomy Wave",
+    "view": "mind",
+    "sub": "wave",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Autonomy Supervisor",
+    "view": "mind",
+    "sub": "supervisor",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Autonomy Sentinel",
+    "view": "mind",
+    "sub": "sentinel",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Autonomy Orchestrator",
+    "view": "mind",
+    "sub": "orchestrator",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Autonomy Intelligence",
+    "view": "mind",
+    "sub": "intelligence",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Evolution Matrix",
+    "view": "evolution",
+    "sub": "matrix",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Neural Terminal",
+    "view": "evolution",
+    "sub": "terminal",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Pulse Lifelog",
+    "view": "biometrics",
+    "sub": "lifelog",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Pulse Focus",
+    "view": "biometrics",
+    "sub": "focus",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Pulse Ritual",
+    "view": "biometrics",
+    "sub": "ritual",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Pulse Homeostasis",
+    "view": "biometrics",
+    "sub": "homeostasis",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Finance Manager",
+    "view": "finance",
+    "sub": null,
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Cosmos Map",
+    "view": "constellation",
+    "sub": "map",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Cosmos Notifications",
+    "view": "constellation",
+    "sub": "notifications",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Cosmos Integrations",
+    "view": "constellation",
+    "sub": "integrations",
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Settings Manager",
+    "view": "settings",
+    "sub": null,
+    "status": "OK",
+    "errors": []
+  },
+  {
+    "page": "Static Evolution Dashboard",
+    "view": "static",
+    "sub": null,
+    "status": "OK",
+    "errors": []
+  }
+]

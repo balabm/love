@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api, { API } from "../api";
+import "./ConstellationMap.css";
 
 export default function ConstellationMap({ compact = false }) {
   const [nodes, setNodes] = useState([
@@ -24,10 +25,10 @@ export default function ConstellationMap({ compact = false }) {
         const y = 50 + radius * Math.sin(angle);
 
         mapped.push({
-          id: int.name,
-          label: int.name.toUpperCase(),
+          id: int.name || 'node-' + i,
+          label: (int.name || "unknown").toUpperCase(),
           type: "peripheral",
-          status: int.status,
+          status: int.status || "unknown",
           x, y
         });
       });
@@ -53,25 +54,15 @@ export default function ConstellationMap({ compact = false }) {
     const peripheralCount = nodes.filter(n => n.type !== "core").length;
     const connectedCount = nodes.filter(n => n.type !== "core" && (n.status === "connected" || n.status === "online")).length;
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 8, padding: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{
-            width: 32, height: 32, borderRadius: "50%",
-            background: "rgba(192, 132, 252, 0.2)",
-            border: "2px solid #c084fc",
-            boxShadow: "0 0 12px rgba(192,132,252,0.4)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 14
-          }}>🧠</div>
-          <div style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>LOVE AGI CORE</div>
+      <div className="cm-compact">
+        <div className="cm-compact-core">
+          <div className="cm-compact-icon">🧠</div>
+          <div className="cm-compact-label">LOVE AGI CORE</div>
         </div>
-        <div style={{ fontSize: 10, color: "var(--muted)", textAlign: "center" }}>
+        <div className="cm-compact-stats">
           {connectedCount}/{peripheralCount} peripherals online
         </div>
-        <button onClick={pingNodes} disabled={loading} style={{
-          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-          color: "#fff", padding: "4px 10px", borderRadius: 4, cursor: "pointer", fontSize: 10
-        }}>
+        <button className="cm-ping-btn" onClick={pingNodes} disabled={loading}>
           {loading ? "Scanning..." : "Ping"}
         </button>
       </div>
@@ -79,16 +70,13 @@ export default function ConstellationMap({ compact = false }) {
   }
 
   return (
-    <div style={{ flex: 1, position: "relative", width: "100%", height: "100%", padding: 32 }}>
-      <div style={{ position: "absolute", top: 24, left: 24, zIndex: 10 }}>
-        <h2 style={{ margin: 0, color: "#fff", letterSpacing: 2, fontSize: 20 }}>DEVICE CONSTELLATION</h2>
-        <div style={{ color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontSize: 12, marginTop: 4 }}>
+    <div className="cm-container">
+      <div className="cm-header">
+        <h2>DEVICE CONSTELLATION</h2>
+        <div className="cm-subtitle">
           Mapping neural peripheral interfaces
         </div>
-        <button onClick={pingNodes} disabled={loading} style={{
-          marginTop: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-          color: "#fff", padding: "8px 16px", borderRadius: 4, cursor: "pointer", fontFamily: "var(--font-mono)", fontSize: 12
-        }}>
+        <button className="cm-ping-btn-large" onClick={pingNodes} disabled={loading}>
           {loading ? "SCANNING PING..." : "PING ALL INTERFACES"}
         </button>
       </div>
@@ -112,40 +100,17 @@ export default function ConstellationMap({ compact = false }) {
           const isConnected = n.status === "connected" || n.status === "online";
 
           return (
-            <div key={n.id} style={{
-              position: "absolute",
+            <div key={n.id} className={`cm-node ${isCore ? 'core' : 'peripheral'} ${isConnected ? 'connected' : 'disconnected'}`} style={{
               left: `${n.x}%`,
               top: `${n.y}%`,
-              transform: "translate(-50%, -50%)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
               zIndex: isCore ? 5 : 2
             }}>
-              <div style={{
-                width: isCore ? 60 : 40,
-                height: isCore ? 60 : 40,
-                borderRadius: "50%",
-                background: isConnected ? (isCore ? "rgba(192, 132, 252, 0.2)" : "rgba(74, 222, 128, 0.1)") : "rgba(255, 255, 255, 0.05)",
-                border: `2px solid ${isConnected ? (isCore ? "#c084fc" : "#4ade80") : "rgba(255,255,255,0.2)"}`,
-                boxShadow: isConnected ? `0 0 20px ${isCore ? "rgba(192,132,252,0.5)" : "rgba(74, 222, 128, 0.3)"}` : "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                transition: "all 0.3s ease",
-              }}>
+              <div className="cm-node-icon">
                 {isCore ? "🧠" : (n.id.includes("phone") ? "📱" : "🔌")}
               </div>
-              <div style={{
-                background: "rgba(0,0,0,0.8)",
-                padding: "4px 8px",
-                borderRadius: 4,
-                border: "1px solid rgba(255,255,255,0.1)",
-                textAlign: "center"
-              }}>
-                <div style={{ color: "#fff", fontSize: 11, fontWeight: "bold", letterSpacing: 1 }}>{n.label}</div>
-                <div style={{ color: isConnected ? "#4ade80" : "#f87171", fontFamily: "var(--font-mono)", fontSize: 9, marginTop: 2 }}>
+              <div className="cm-node-label">
+                <div className="cm-node-name">{n.label}</div>
+                <div className={`cm-node-status ${isConnected ? 'online' : 'offline'}`}>
                   {n.status.toUpperCase()}
                 </div>
               </div>

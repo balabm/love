@@ -402,6 +402,7 @@ _hi_instance: Optional[HealthIntegrator] = None
 _hi_lock = threading.Lock()
 
 
+    
 def get_health_integrator() -> HealthIntegrator:
     global _hi_instance
     with _hi_lock:

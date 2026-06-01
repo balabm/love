@@ -369,6 +369,7 @@ _dmc_instance: Optional[DigitalMinimalismCoach] = None
 _dmc_lock = threading.Lock()
 
 
+    
 def get_digital_minimalism_coach() -> DigitalMinimalismCoach:
     global _dmc_instance
     with _dmc_lock:

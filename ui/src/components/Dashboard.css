@@ -10,10 +10,14 @@
 .hero {
   margin-bottom: 20px;
   padding: 28px 32px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  animation: fadeUp 0.5s ease-out;
 }
 
 .hero::before {
@@ -148,7 +152,14 @@
   padding: 16px 18px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+.metric-card:hover {
+  border-color: rgba(192, 132, 252, 0.4);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
 }
 
 .metric-header {
@@ -226,14 +237,18 @@
 .dash-card {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   overflow: hidden;
-  transition: transform 0.2s, border-color 0.2s;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  animation: fadeIn 0.6s ease-out;
 }
 
 .dash-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  border-color: rgba(192, 132, 252, 0.4);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
 }
 
 .dash-card-top {
@@ -326,10 +341,23 @@
 }
 
 .dash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-size: 12px;
-  color: rgba(255,255,255,0.3);
+  color: var(--muted, rgba(255,255,255,0.4));
   font-style: italic;
-  margin: 10px 0;
+  margin: 20px 0;
+  text-align: center;
+}
+.dash-empty::before {
+  content: "✧";
+  font-size: 18px;
+  color: var(--love, #c084fc);
+  opacity: 0.7;
+  text-shadow: 0 0 8px rgba(192, 132, 252, 0.5);
 }
 
 .dash-tags {
@@ -509,4 +537,14 @@
   .metrics-grid { grid-template-columns: 1fr; }
   .hero-main { flex-direction: column; gap: 24px; }
   .hero-number { font-size: 48px; }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

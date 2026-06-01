@@ -371,6 +371,7 @@ _pa_instance: Optional[PresenceAmplifier] = None
 _pa_lock = threading.Lock()
 
 
+    
 def get_presence_amplifier() -> PresenceAmplifier:
     global _pa_instance
     with _pa_lock:

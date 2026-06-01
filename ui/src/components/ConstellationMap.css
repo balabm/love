@@ -1,0 +1,202 @@
+/* Premium Glassmorphic Constellation Map */
+.cm-container {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 32px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--r, 12px);
+  overflow: hidden;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.cm-header {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 10;
+}
+
+.cm-header h2 {
+  margin: 0;
+  color: var(--text, #fff);
+  letter-spacing: 2px;
+  font-size: 20px;
+}
+
+.cm-subtitle {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.cm-ping-btn-large {
+  margin-top: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  color: var(--text, #fff);
+  padding: 8px 16px;
+  border-radius: var(--r, 12px);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.cm-ping-btn-large:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
+  border-color: rgba(192, 132, 252, 0.5);
+}
+
+.cm-ping-btn-large:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cm-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--r, 12px);
+}
+
+.cm-compact-core {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cm-compact-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(192, 132, 252, 0.2);
+  border: 2px solid var(--love, #c084fc);
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.cm-compact-label {
+  font-size: 11px;
+  color: var(--text, #fff);
+  font-weight: 600;
+}
+
+.cm-compact-stats {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.cm-ping-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  color: var(--text, #fff);
+  padding: 4px 10px;
+  border-radius: var(--r, 12px);
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.cm-ping-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.3);
+}
+
+.cm-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cm-node-icon {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.cm-node.core .cm-node-icon {
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
+}
+
+.cm-node.peripheral .cm-node-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 18px;
+}
+
+.cm-node.core.connected .cm-node-icon {
+  background: rgba(192, 132, 252, 0.2);
+  border-color: var(--love, #c084fc);
+  box-shadow: 0 0 20px rgba(192, 132, 252, 0.5);
+}
+
+.cm-node.peripheral.connected .cm-node-icon {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: #4ade80;
+  box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+}
+
+.cm-node-label {
+  background: rgba(0, 0, 0, 0.8);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.cm-node-name {
+  color: var(--text, #fff);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.cm-node-status {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.cm-node-status.online {
+  color: #4ade80;
+  text-shadow: 0 0 5px rgba(74, 222, 128, 0.5);
+}
+
+.cm-node-status.offline {
+  color: #f87171;
+}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api";
+import "./SwarmPanel.css";
 
 export default function SwarmPanel() {
   const [swarm, setSwarm] = useState(null);
@@ -17,17 +18,17 @@ export default function SwarmPanel() {
 
   if (loading) {
     return (
-      <div style={{ padding: 24, color: "rgba(226,224,238,0.38)" }}>
-        Loading swarm data...
+      <div className="swarm-panel">
+        <div className="swarm-empty">Loading swarm data...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Swarm Intelligence</h2>
-        <p style={{ color: "rgba(226,224,238,0.38)" }}>Swarm offline. Backend not reachable.</p>
+      <div className="swarm-panel">
+        <h2 className="swarm-header">Swarm Intelligence</h2>
+        <div className="swarm-empty">Swarm offline. Backend not reachable.</div>
       </div>
     );
   }
@@ -36,35 +37,26 @@ export default function SwarmPanel() {
 
   if (agents.length === 0) {
     return (
-      <div style={{ padding: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Swarm Intelligence</h2>
-        <p style={{ color: "rgba(226,224,238,0.38)" }}>No swarm agents active. The swarm will form as modules come online.</p>
+      <div className="swarm-panel">
+        <h2 className="swarm-header">Swarm Intelligence</h2>
+        <div className="swarm-empty">No swarm agents active. The swarm will form as modules come online.</div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Swarm Intelligence</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 12 }}>
+    <div className="swarm-panel">
+      <h2 className="swarm-header">Swarm Intelligence</h2>
+      <div className="swarm-grid">
         {agents.map((agent, i) => (
-          <div key={i} style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.06)",
-            borderRadius: 12,
-            padding: 16,
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: agent.active ? "#34d399" : "#6b7280",
-                display: "inline-block",
-              }} />
-              <span style={{ fontWeight: 500 }}>{agent.name || `Agent ${i + 1}`}</span>
+          <div key={i} className="swarm-agent">
+            <div className="swarm-agent-header">
+              <span className={`swarm-dot ${agent.active ? 'active' : 'inactive'}`} />
+              <span className="swarm-agent-name">{agent.name || `Agent ${i + 1}`}</span>
             </div>
-            <div style={{ fontSize: 13, color: "rgba(226,224,238,0.38)" }}>{agent.role || "swarm node"}</div>
+            <div className="swarm-agent-role">{agent.role || "swarm node"}</div>
             {agent.load !== undefined && (
-              <div style={{ marginTop: 8, fontSize: 11, color: "rgba(226,224,238,0.25)" }}>
+              <div className="swarm-agent-load">
                 Load: {Math.round(agent.load * 100)}%
               </div>
             )}
@@ -72,15 +64,9 @@ export default function SwarmPanel() {
         ))}
       </div>
       {swarm?.coordinator && (
-        <div style={{
-          marginTop: 16,
-          padding: 12,
-          background: "rgba(255,255,255,0.03)",
-          borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>Coordinator</div>
-          <div style={{ fontSize: 12, color: "rgba(226,224,238,0.38)" }}>{swarm.coordinator}</div>
+        <div className="swarm-coordinator">
+          <div className="swarm-coord-title">Coordinator</div>
+          <div className="swarm-coord-name">{swarm.coordinator}</div>
         </div>
       )}
     </div>

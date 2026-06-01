@@ -459,8 +459,13 @@ class OrchestrationMaster:
             # Actually execute restart
             import asyncio
             if asyncio.iscoroutinefunction(mod.start_fn):
-                # Can't await in sync thread easily; schedule it
-                pass
+                # Schedule coroutine execution
+                if self._async_loop and self._async_loop.is_running():
+                    asyncio.run_coroutine_threadsafe(mod.start_fn(), self._async_loop)
+                else:
+                    def run_it():
+                        asyncio.run(mod.start_fn())
+                    threading.Thread(target=run_it, daemon=True).start()
             else:
                 mod.start_fn()
             health = self._state.modules.get(name)
@@ -473,13 +478,20 @@ class OrchestrationMaster:
 
     def _manage_focus_mode(self):
         if self._state.user_focus_mode:
-            # Already handled by heartbeat focus-aware gating, but log it
-            pass
+            # Already handled by heartbeat focus-aware gating, but log it periodically
+            if len(self._state.narrative) == 0 or self._state.narrative[-1].event != "focus_mode":
+                self._narrate("focus_mode", "Maintaining focus mode. Suppressing ambient notifications.", "action", importance="low")
 
     def _manage_system_load(self):
         if self._state.system_under_load:
             # Reduce polling frequencies, suppress non-critical work
-            pass
+            if len(self._state.narrative) == 0 or self._state.narrative[-1].event != "system_load":
+                self._narrate("system_load", "System is under load. Reducing autonomous polling frequencies.", "action", importance="normal")
+                try:
+                    from core.neural_bus import get_neural_bus
+                    get_neural_bus().publish(domain="system", event_type="load_management_active", payload={"status": "reducing_activity"}, source_module="master_orchestrator")
+                except Exception:
+                    pass
 
     def request_coordination(self, module: str, action: str, parameters: Dict = None) -> str:
         with self._lock:
@@ -691,7 +703,33 @@ class OrchestrationMaster:
 
     def _generate_periodic_narrative(self):
         # Every so often, generate a periodic "thought" about what's happening
-        pass  # Reserved for future LLM-generated narrative
+        now = datetime.now()
+        last_thought = getattr(self, '_last_thought_time', None)
+        if last_thought and (now - last_thought).seconds < 600:
+            return  # Max once every 10 minutes
+            
+        summary = self._generate_narrative_summary()
+        
+        # Don't say we are just watching quietly if that was the last thing we said
+        if "monitoring quietly" in summary.lower() and getattr(self, '_last_thought', '') == summary:
+            return
+            
+        self._last_thought_time = now
+        self._last_thought = summary
+        
+        # We push this to the UI as a subtle background thought
+        if self._async_loop and self._async_loop.is_running():
+            payload = {
+                "type": "monologue",
+                "thought": f"🧠 {summary}",
+                "timestamp": now.isoformat(),
+            }
+            for cb in self._callbacks:
+                try:
+                    import asyncio
+                    asyncio.run_coroutine_threadsafe(cb(payload), self._async_loop)
+                except Exception:
+                    pass
 
     def get_narrative(self, limit: int = 50, since_hours: Optional[float] = None) -> List[Dict]:
         with self._lock:

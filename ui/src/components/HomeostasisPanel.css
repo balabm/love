@@ -7,13 +7,18 @@
 }
 
 .hms-loading, .hms-offline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 64px;
   text-align: center;
-  opacity: 0.5;
+  color: var(--muted, rgba(255,255,255,0.5));
   font-size: 16px;
 }
-.hms-offline-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.3; }
-.hms-offline-hint { font-size: 12px; margin-top: 6px; opacity: 0.6; }
+.hms-offline-icon { font-size: 40px; margin-bottom: 12px; color: var(--love, #c084fc); text-shadow: 0 0 10px rgba(192,132,252,0.4); }
+.hms-offline-hint { font-size: 12px; margin-top: 6px; opacity: 0.8; }
 
 /* Header */
 .hms-header {
@@ -42,11 +47,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  border: 1px solid;
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   padding: 10px 14px;
   background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
   min-width: 200px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 .hms-phase-icon {
   font-size: 24px;
@@ -119,15 +126,21 @@
   gap: 10px;
 }
 .hms-drive {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid #1f2937;
-  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
   padding: 10px 14px;
-  transition: border-color 0.2s;
+  backdrop-filter: blur(12px);
+  transition: all 0.2s ease;
+}
+.hms-drive:hover {
+  border-color: rgba(192, 132, 252, 0.4);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);
 }
 .hms-drive-dominant {
-  border-color: #374151;
-  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06);
+  box-shadow: 0 0 10px rgba(255,255,255,0.05);
 }
 .hms-drive-header {
   display: flex;
@@ -219,10 +232,15 @@
   grid-template-columns: 1fr 2fr auto;
   align-items: center;
   gap: 12px;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid #1f2937;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
   padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+.hms-energy-row:hover {
+  border-color: rgba(192, 132, 252, 0.3);
 }
 .hms-throttled { border-color: #f871713a; }
 .hms-energy-name {
@@ -271,10 +289,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid #1f2937;
-  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
   padding: 10px 14px;
+  transition: all 0.2s ease;
+}
+.hms-autophagy-row:hover {
+  border-color: rgba(192, 132, 252, 0.3);
 }
 .hms-autophagy-ready { border-color: #f871713a; }
 .hms-autophagy-info {
@@ -320,10 +343,22 @@
   margin-bottom: 10px;
 }
 .hms-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-size: 13px;
-  color: #4b5563;
+  color: var(--muted, rgba(255,255,255,0.5));
   padding: 24px;
   text-align: center;
+}
+.hms-empty::before {
+  content: "✧";
+  font-size: 20px;
+  color: var(--love, #c084fc);
+  opacity: 0.6;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
 }
 
 /* Running indicator */

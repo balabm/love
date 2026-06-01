@@ -470,11 +470,19 @@ class IntelligenceHub:
 
         def _loop():
             time.sleep(10)  # Brief init delay
+            consecutive_errors = 0
             while self._running:
                 try:
                     self.poll_all()
+                    consecutive_errors = 0
                 except Exception as e:
+                    consecutive_errors += 1
+                    logger.error(f"[IntelligenceHub] Poll error: {e}", exc_info=True)
                     print(f"[IntelligenceHub] Poll error: {e}")
+                    backoff = min(300, 10 * (2 ** (consecutive_errors - 1)))
+                    time.sleep(backoff)
+                    continue
+
                 for _ in range(interval):
                     if not self._running:
                         break

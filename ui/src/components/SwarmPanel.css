@@ -1,0 +1,123 @@
+/* ── Swarm Panel ── */
+
+.swarm-panel {
+  padding: 24px;
+}
+
+.swarm-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.swarm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.swarm-agent {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.swarm-agent:hover {
+  border-color: rgba(192, 132, 252, 0.4);
+  box-shadow: 0 0 10px rgba(192, 132, 252, 0.3);
+  transform: translateY(-2px);
+}
+
+.swarm-agent-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.swarm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.swarm-dot.active {
+  background: #34d399;
+  color: #34d399;
+}
+
+.swarm-dot.inactive {
+  background: #6b7280;
+  color: transparent;
+  box-shadow: none;
+}
+
+.swarm-agent-name {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.swarm-agent-role {
+  font-size: 13px;
+  color: var(--muted, rgba(226, 224, 238, 0.5));
+}
+
+.swarm-agent-load {
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(226, 224, 238, 0.4);
+}
+
+.swarm-coordinator {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.swarm-coord-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.swarm-coord-name {
+  font-size: 12px;
+  color: var(--muted, rgba(226, 224, 238, 0.5));
+  margin-top: 2px;
+}
+
+.swarm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--muted, rgba(226, 224, 238, 0.5));
+  text-align: center;
+  font-size: 13px;
+}
+
+.swarm-empty::before {
+  content: "✧";
+  font-size: 20px;
+  color: var(--love, #c084fc);
+  opacity: 0.6;
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.4);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

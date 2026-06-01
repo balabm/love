@@ -1,26 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-:root {
-  --bg:      #07070f;
-  --surface: #0d0d1a;
-  --border:  rgba(255,255,255,0.06);
-  --text:    #e2e0ee;
-  --muted:   rgba(226,224,238,0.38);
-  --love:    #c084fc;
-  --r:       14px;
-}
-
-html, body, #root { height: 100%; overflow: hidden; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 400;
-  font-size: 14px;
-}
+/* ── Background orbs ── */
 
 /* ── Background orbs ── */
 .orb {

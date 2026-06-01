@@ -373,6 +373,7 @@ _mt_instance: Optional[MindfulnessTrainer] = None
 _mt_lock = threading.Lock()
 
 
+    
 def get_mindfulness_trainer() -> MindfulnessTrainer:
     global _mt_instance
     with _mt_lock:

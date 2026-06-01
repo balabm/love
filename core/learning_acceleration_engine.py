@@ -366,6 +366,7 @@ _lae_instance: Optional[LearningAccelerationEngine] = None
 _lae_lock = threading.Lock()
 
 
+    
 def get_learning_acceleration_engine() -> LearningAccelerationEngine:
     global _lae_instance
     with _lae_lock:

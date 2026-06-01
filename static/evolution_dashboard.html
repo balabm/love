@@ -775,7 +775,7 @@
                 const container = document.getElementById('experiment-list');
                 container.innerHTML = '';
                 
-                if (experiments.length === 0) {
+                if (!Array.isArray(experiments) || experiments.length === 0) {
                     container.innerHTML = '<div class="loading">No active experiments</div>';
                     return;
                 }
@@ -809,7 +809,7 @@
                 const container = document.getElementById('swarm-grid');
                 container.innerHTML = '';
                 
-                if (swarms.length === 0) {
+                if (!Array.isArray(swarms) || swarms.length === 0) {
                     container.innerHTML = '<div class="loading">No active swarms</div>';
                     return;
                 }
@@ -856,7 +856,7 @@
                 const container = document.getElementById('timeline');
                 container.innerHTML = '';
                 
-                if (data.history.length === 0) {
+                if (!Array.isArray(data.history) || data.history.length === 0) {
                     container.innerHTML = '<div class="loading">No evolution history</div>';
                     return;
                 }

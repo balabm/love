@@ -8,7 +8,7 @@ import re
 load_dotenv()
 SETTINGS = get_settings()
 
-FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "qwen2.5-coder:1.5b")
+FALLBACK_MODEL = os.getenv("FALLBACK_MODEL", "qwen2.5-coder:7b")
 FALLBACK_SYSTEM_PREFIX = "[SYSTEM UNDER LOAD - keep answer to 1-2 sentences, no deep reasoning] "
 OLLAMA_AUTO_FALLBACK = os.getenv("OLLAMA_AUTO_FALLBACK", "false").lower() in ("1", "true", "yes")
 OLLAMA_FORCE_HIGH_QUALITY = os.getenv("OLLAMA_FORCE_HIGH_QUALITY", "false").lower() in ("1", "true", "yes")

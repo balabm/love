@@ -368,6 +368,7 @@ _cc_instance: Optional[CuriosityCultivator] = None
 _cc_lock = threading.Lock()
 
 
+    
 def get_curiosity_cultivator() -> CuriosityCultivator:
     global _cc_instance
     with _cc_lock:

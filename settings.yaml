@@ -95,8 +95,8 @@ devices:
 # === MODELS ===
 # Configure which models LOVE uses
 models:
-  reasoning: "llama3.2:1b"     # For complex reasoning (highly efficient, low memory)
-  coding: "qwen2.5-coder:1.5b"      # For code generation (highly efficient, fast)
+  reasoning: "llama3.1:8b"     # For complex reasoning (upgraded for AGI intelligence)
+  coding: "qwen2.5-coder:7b"      # For code generation (highly efficient, fast)
   embedding: "nomic-embed-text"  # For memory/vector search
   base_url: "http://127.0.0.1:11434"  # Ollama URL
 

@@ -399,6 +399,7 @@ _cc_instance: Optional[CreativityCatalyst] = None
 _cc_lock = threading.Lock()
 
 
+    
 def get_creativity_catalyst() -> CreativityCatalyst:
     global _cc_instance
     with _cc_lock:

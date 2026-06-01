@@ -242,9 +242,27 @@ class AGISpine:
         For example: if heartbeat detects stress + finance detects volatility,
         the orchestrator should block trading and suggest a walk.
         """
-        # This is handled by the orchestrator's neural bus subscription.
-        # The spine ensures the orchestrator has the full picture.
-        pass
+        if not ORCHESTRATOR_AVAILABLE or not NEURAL_BUS_AVAILABLE:
+            return
+            
+        try:
+            om = get_orchestration_master()
+            bus = get_neural_bus()
+            
+            # Example cross-module insight: Focus mode + high notifications
+            if om._state.user_focus_mode and om._state.notifications_queued > 5:
+                bus.publish(
+                    domain="system",
+                    event_type="cross_module_insight",
+                    payload={
+                        "insight": "User is in focus mode but notifications are piling up.",
+                        "action": "Consider stricter gating or a summary briefing."
+                    },
+                    source_module="agi_spine",
+                    priority=EventPriority.NORMAL
+                )
+        except Exception as e:
+            print(f"[AGISpine] Cross module intelligence error: {e}")
 
     def get_status(self) -> Dict[str, Any]:
         return {
@@ -285,279 +303,13 @@ def stop_agi_spine():
 
 
 def get_agi_system_flags():
-    """Return status flags for all AGI-level subsystems."""
-    flags = {
-        "neural_bus": False,
-        "orchestrator": False,
-        "sentinel": False,
-        "evolution": False,
-        "capability_gap": False,
-        "mission_queue": False,
-    }
+    """Return status flags for all AGI-level subsystems using the lifecycle registry."""
+    flags = {}
     try:
-        from core.neural_bus import get_neural_bus
-        bus = get_neural_bus()
-        flags["neural_bus"] = True
-    except Exception:
-        pass
-    try:
-        from core.master_orchestrator import get_orchestration_master
-        om = get_orchestration_master()
-        flags["orchestrator"] = getattr(om, '_running', False)
-    except Exception:
-        pass
-    try:
-        from core.sentinel import get_sentinel
-        s = get_sentinel()
-        flags["sentinel"] = getattr(s, '_running', False)
-    except Exception:
-        pass
-    try:
-        from core.evolution_integration import get_evolution_integration
-        evo = get_evolution_integration()
-        flags["evolution"] = evo.get_integration_status().get("running", False)
-    except Exception:
-        pass
-    try:
-        from core.capability_gap_detector import get_capability_gap_detector
-        detector = get_capability_gap_detector()
-        flags["capability_gap"] = getattr(detector, "_running", False)
-    except Exception:
-        pass
-    try:
-        from core.autonomous_mission_queue import get_mission_queue
-        mq = get_mission_queue()
-        flags["mission_queue"] = getattr(mq, "_running", False)
-    except Exception:
-        pass
-    try:
-        from core.mcp_host import get_mcp_host
-        mcp = get_mcp_host()
-        flags["mcp_host"] = mcp.get_health().get("sdk_available", False)
-    except Exception:
-        pass
-    try:
-        from core.reasoning_engine import get_reasoning_engine
-        re = get_reasoning_engine()
-        flags["reasoning_engine"] = True
-    except Exception:
-        pass
-    try:
-        from core.neural_architecture_search import get_neural_architecture_search
-        nas = get_neural_architecture_search()
-        flags["neural_architecture_search"] = getattr(nas, '_running', False)
-    except Exception:
-        pass
-    try:
-        from core.multimodal_evolution import get_multimodal_evolution
-        mme = get_multimodal_evolution()
-        flags["multimodal_evolution"] = getattr(mme, '_running', False)
-    except Exception:
-        pass
-    try:
-        from agents.task_evolution_integration import get_task_evolution_integration
-        te = get_task_evolution_integration()
-        flags["task_evolution"] = getattr(te, '_running', False)
-    except Exception:
-        pass
-    try:
-        from agents.fitness_evolution_integration import get_fitness_evolution_integration
-        fe = get_fitness_evolution_integration()
-        flags["fitness_evolution"] = getattr(fe, '_running', False)
-    except Exception:
-        pass
-    try:
-        from core.code_sandbox import get_code_sandbox
-        sb = get_code_sandbox()
-        flags["code_sandbox"] = True
-    except Exception:
-        pass
-    try:
-        from core.observability import get_observability_engine
-        obs = get_observability_engine()
-        flags["observability"] = getattr(obs, '_running', False)
-    except Exception:
-        pass
-    try:
-        from core.guardrails import get_guardrails_engine
-        gr = get_guardrails_engine()
-        flags["guardrails"] = True
-    except Exception:
-        pass
-    try:
-        from core.llm_manager import get_llm_manager
-        mgr = get_llm_manager()
-        flags["llm_manager"] = len(mgr._models) > 0
-    except Exception:
-        pass
-    try:
-        from core.graph_rag import get_graph_rag_engine
-        gr = get_graph_rag_engine()
-        flags["graph_rag"] = True
-    except Exception:
-        pass
-    try:
-        from core.prompt_optimizer import get_prompt_optimizer
-        po = get_prompt_optimizer()
-        flags["prompt_optimizer"] = len(po._templates) > 0
-    except Exception:
-        pass
-    try:
-        from core.self_reflection import get_self_reflection_engine
-        sr = get_self_reflection_engine()
-        flags["self_reflection"] = getattr(sr, '_running', False)
-    except Exception:
-        pass
-    try:
-        from core.conversation_quality import get_conversation_quality_analyzer
-        cq = get_conversation_quality_analyzer()
-        flags["conversation_quality"] = True
-    except Exception:
-        pass
-    try:
-        from core.predictive_maintenance import get_predictive_maintenance_engine
-        pm = get_predictive_maintenance_engine()
-        flags["predictive_maintenance"] = True
-    except Exception:
-        pass
-    try:
-        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
-        ma = get_multi_agent_orchestrator()
-        flags["multi_agent"] = len(ma._agents) > 0
-    except Exception:
-        pass
-    try:
-        from core.intent_predictor import get_intent_predictor
-        ip = get_intent_predictor()
-        flags["intent_predictor"] = True
-    except Exception:
-        pass
-    try:
-        from core.personality_adapter import get_personality_adapter
-        pa = get_personality_adapter()
-        flags["personality_adapter"] = True
-    except Exception:
-        pass
-    try:
-        from core.response_cache import get_response_cache
-        rc = get_response_cache()
-        flags["response_cache"] = True
-    except Exception:
-        pass
-    try:
-        from core.context_window_manager import get_context_window_manager
-        cwm = get_context_window_manager()
-        flags["context_window_manager"] = True
-    except Exception:
-        pass
-    try:
-        from core.user_pattern_detector import get_user_pattern_detector
-        upd = get_user_pattern_detector()
-        flags["user_pattern_detector"] = True
-    except Exception:
-        pass
-    try:
-        from core.goal_drift_detector import get_goal_drift_detector
-        gd = get_goal_drift_detector()
-        flags["goal_drift_detector"] = True
-    except Exception:
-        pass
-
-    try:
-        from core.cross_modal_fusion import get_cross_modal_fusion_engine
-        cm = get_cross_modal_fusion_engine()
-        flags["cross_modal_fusion"] = True
-    except Exception:
-        pass
-    try:
-        from core.emotional_resonance import get_emotional_resonance_engine
-        er = get_emotional_resonance_engine()
-        flags["emotional_resonance"] = True
-    except Exception:
-        pass
-    try:
-        from core.knowledge_graph_builder import get_knowledge_graph_builder
-        kgb = get_knowledge_graph_builder()
-        flags["knowledge_graph_builder"] = True
-    except Exception:
-        pass
-    try:
-        from core.adaptive_learning_rate import get_adaptive_learning_engine
-        alr = get_adaptive_learning_engine()
-        flags["adaptive_learning_rate"] = True
-    except Exception:
-        pass
-    try:
-        from core.conversation_continuity import get_conversation_continuity_manager
-        ccm = get_conversation_continuity_manager()
-        flags["conversation_continuity"] = True
-    except Exception:
-        pass
-    try:
-        from core.memory_compressor import get_memory_compressor
-        mc = get_memory_compressor()
-        flags["memory_compressor"] = True
-    except Exception:
-        pass
-    try:
-        from core.semantic_search_optimizer import get_semantic_search_optimizer
-        sso = get_semantic_search_optimizer()
-        flags["semantic_search_optimizer"] = True
-    except Exception:
-        pass
-    try:
-        from core.emotion_aware_response import get_emotion_aware_response_generator
-        ear = get_emotion_aware_response_generator()
-        flags["emotion_aware_response"] = True
-    except Exception:
-        pass
-    try:
-        from core.knowledge_injector import get_knowledge_injector
-        ki = get_knowledge_injector()
-        flags["knowledge_injector"] = True
-    except Exception:
-        pass
-    try:
-        from core.conversation_summarizer import get_conversation_summarizer
-        cs = get_conversation_summarizer()
-        flags["conversation_summarizer"] = True
-    except Exception:
-        pass
-    try:
-        from core.context_aware_prioritizer import get_context_aware_prioritizer
-        cap = get_context_aware_prioritizer()
-        flags["context_aware_prioritizer"] = True
-    except Exception:
-        pass
-    try:
-        from core.wellness_nudger import get_wellness_nudger
-        wn = get_wellness_nudger()
-        flags["wellness_nudger"] = True
-    except Exception:
-        pass
-    try:
-        from core.notification_filter import get_notification_filter
-        nf = get_notification_filter()
-        flags["notification_filter"] = True
-    except Exception:
-        pass
-    try:
-        from core.deep_work_protector import get_deep_work_protector
-        dwp = get_deep_work_protector()
-        flags["deep_work_protector"] = True
-    except Exception:
-        pass
-    try:
-        from core.energy_forecaster import get_energy_forecaster
-        ef = get_energy_forecaster()
-        flags["energy_forecaster"] = True
-    except Exception:
-        pass
-    try:
-        from core.smart_break_suggester import get_smart_break_suggester
-        sbs = get_smart_break_suggester()
-        flags["smart_break_suggester"] = True
-    except Exception:
-        pass
-
+        from core.module_lifecycle import get_lifecycle, ModuleState
+        lm = get_lifecycle()
+        for name, mod in lm.modules.items():
+            flags[name] = mod.state in (ModuleState.READY, ModuleState.DEGRADED, "ready", "degraded")
+    except Exception as e:
+        print(f"[AGISpine] get_agi_system_flags error: {e}")
     return flags

@@ -588,6 +588,19 @@ class NotificationIngestionEngine:
         except Exception:
             pass
 
+        # 7. Ntfy Bridge
+        try:
+            from integrations.ntfy_bridge import NtfyBridge
+            ntfy = NtfyBridge.get_instance()
+            if ntfy.is_connected():
+                msgs = ntfy.get_messages(limit=10)
+                for msg in msgs:
+                    text = msg.get("text", "")
+                    if text:
+                        self._ingest_notification(text, "ntfy", extra_meta={"type": "ntfy", "raw": msg})
+        except Exception:
+            pass
+
         # Keep sets from growing indefinitely
         if len(self._seen_hashes) > 10000:
             self._seen_hashes = set(list(self._seen_hashes)[-5000:])

@@ -243,12 +243,50 @@ export default function IntegrationsPanel() {
       <div className="int-section-label">Phone Connection</div>
       <PhoneConnectCard tunnel={tunnel} />
 
+      {/* Ntfy Connection Section */}
+      <div className="int-section-label">Ntfy Notifications</div>
+      <NtfyConnectCard data={data} />
+
       {/* Setup hint */}
       {optional.some(i => !i.configured) && (
         <div className="int-setup-hint">
           Some integrations need credentials. Open the <strong>Setup</strong> tab in the sidebar to connect them.
         </div>
       )}
+    </div>
+  );
+}
+
+function NtfyConnectCard({ data }) {
+  const ntfyModule = (data?.integrations || []).find(i => i.id === "ntfy_bridge");
+  
+  return (
+    <div className={`int-phone-card ${ntfyModule?.connected ? "int-phone-live" : "int-phone-missing"}`}>
+      <div className="int-phone-header">
+        <span className="int-phone-icon">🔔</span>
+        <div className="int-phone-title">
+          <strong>Ntfy Listener</strong>
+          <span className="int-phone-sub">
+            {ntfyModule?.connected ? "Listening for push notifications" : "NTFY_TOPIC not configured or listening failed"}
+          </span>
+        </div>
+        <span className={`int-phone-status int-phone-status-${ntfyModule?.connected ? "live" : "missing"}`}>
+          {ntfyModule?.connected ? "LIVE" : "MISSING"}
+        </span>
+      </div>
+
+      <div className="int-phone-steps">
+        <details>
+          <summary>Setup steps</summary>
+          <ol>
+            <li>Install the <strong>ntfy</strong> app on your Android or iOS device</li>
+            <li>In the app, subscribe to a unique topic (e.g. <code>love_agi_yourname</code>)</li>
+            <li>In LOVE's <code>.env</code> file, set <code>NTFY_TOPIC=love_agi_yourname</code></li>
+            <li>Restart LOVE. It will automatically connect and listen to that topic.</li>
+            <li>(Optional) In ntfy app settings, enable "Forward incoming notifications" to send all your phone notifications to this topic.</li>
+          </ol>
+        </details>
+      </div>
     </div>
   );
 }

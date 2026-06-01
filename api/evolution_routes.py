@@ -71,6 +71,76 @@ from core.publishing_navigator import get_publishing_navigator
 from core.blog_craft_coach import get_blog_craft_coach
 from core.newsletter_creator import get_newsletter_creator
 
+from core.active_listening_coach import get_active_listening_coach
+from core.aesthetic_life_designer import get_aesthetic_life_designer
+from core.age_reversal_coach import get_age_reversal_coach
+from core.antifragility_tracker import get_antifragility_tracker
+from core.assertiveness_builder import get_assertiveness_builder
+from core.attention_guardian import get_attention_guardian
+from core.attention_recovery_specialist import get_attention_recovery_specialist
+from core.authenticity_amplifier import get_authenticity_amplifier
+from core.belonging_builder import get_belonging_builder
+from core.boundaries_coach import get_boundaries_coach
+from core.boundary_coach import get_boundary_coach
+from core.civic_engagement_tracker import get_civic_engagement_tracker
+from core.communication_analyzer import get_communication_analyzer
+from core.community_builder import get_community_builder
+from core.conflict_navigator import get_conflict_navigator
+from core.conflict_resolution_coach import get_conflict_resolution_coach
+from core.consistency_coach import get_consistency_coach
+from core.contemplation_keeper import get_contemplation_keeper
+from core.courage_coach import get_courage_coach
+from core.creativity_catalyst import get_creativity_catalyst
+from core.curiosity_cultivator import get_curiosity_cultivator
+from core.death_awareness_coach import get_death_awareness_coach
+from core.digital_minimalism_coach import get_digital_minimalism_coach
+from core.eco_footprint_tracker import get_eco_footprint_tracker
+from core.emotional_regulation_coach import get_emotional_regulation_coach
+from core.empathy_builder import get_empathy_builder
+from core.family_harmony_builder import get_family_harmony_builder
+from core.financial_independence_tracker import get_financial_independence_tracker
+from core.flow_state_coach import get_flow_state_coach
+from core.forgiveness_coach import get_forgiveness_coach
+from core.forgiveness_tracker import get_forgiveness_tracker
+from core.gratitude_amplifier import get_gratitude_amplifier
+from core.growth_mindset_coach import get_growth_mindset_coach
+from core.habit_streak_tracker import get_habit_streak_tracker
+from core.hope_cultivator import get_hope_cultivator
+from core.humor_cultivator import get_humor_cultivator
+from core.influence_builder import get_influence_builder
+from core.intergenerational_bridge_builder import get_intergenerational_bridge_builder
+from core.leadership_coach import get_leadership_coach
+from core.learning_acceleration_engine import get_learning_acceleration_engine
+from core.life_phase_navigator import get_life_phase_navigator
+from core.life_transition_navigator import get_life_transition_navigator
+from core.meaning_amplifier import get_meaning_amplifier
+from core.meditation_coach import get_meditation_coach
+from core.movement_tracker import get_movement_tracker
+from core.parenting_coach import get_parenting_coach
+from core.peak_performance_tracker import get_peak_performance_tracker
+from core.predictive_maintenance import get_predictive_maintenance_engine
+from core.purpose_clarity_engine import get_purpose_clarity_engine
+from core.purpose_navigator import get_purpose_navigator
+from core.reconciliation_builder import get_reconciliation_builder
+from core.rejection_resilience_coach import get_rejection_resilience_coach
+from core.repair_specialist import get_repair_specialist
+from core.rest_designer import get_rest_designer
+from core.sacred_ritual_designer import get_sacred_ritual_designer
+from core.second_act_designer import get_second_act_designer
+from core.self_compassion_coach import get_self_compassion_coach
+from core.sleep_analyzer import get_sleep_analyzer
+from core.social_impact_tracker import get_social_impact_tracker
+from core.spiritual_practice_coach import get_spiritual_practice_coach
+from core.sustainability_coach import get_sustainability_coach
+from core.trust_builder import get_trust_builder
+from core.values_navigator import get_values_navigator
+from core.vision_keeper import get_vision_keeper
+from core.vitality_tracker import get_vitality_tracker
+from core.vulnerability_builder import get_vulnerability_builder
+from core.wealth_builder import get_wealth_builder
+from core.wisdom_keeper import get_wisdom_keeper
+from core.wonder_cultivator import get_wonder_cultivator
+from core.wonder_tracker import get_wonder_tracker
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -328,7 +398,7 @@ async def get_experiments():
         
         for exp in engine._experiments.values():
             info = ExperimentInfo(
-                id=exp.id,
+                id=str(exp.id),
                 hypothesis=engine._hypotheses.get(exp.hypothesis_id, {}).claim if exp.hypothesis_id in engine._hypotheses else "",
                 proposed_change=engine._mutations.get(exp.id, {}).description if exp.id in engine._mutations else "",
                 status=exp.status,
@@ -832,6 +902,9 @@ async def get_evolution_health():
             "publishing_navigator": {"available": True},
             "blog_craft_coach": {"available": True},
             "newsletter_creator": {"available": True},
+            "inner_critic_tamer": {"available": True},
+            "life_transition_navigator": {"available": True},
+            "second_act_designer": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
@@ -1738,4 +1811,983 @@ def newsletter_creator_stats():
 @router.get("/newsletter_creator/score")
 def newsletter_creator_score():
     return {"newsletter_score": get_newsletter_creator().get_newsletter_score()}
+
+@router.post("/active_listening_coach/record")
+def active_listening_coach_record(person: str = "", relationship: str = "", duration: float = 0, attention: float = 0.5, interruptions: int = 0, advice: int = 0, questions: int = 0, reflections: int = 0, attunement: float = 0.5, wandered: bool = False, fatigue: float = 0.3, notes: str = ""):
+    entry = get_active_listening_coach().record_session(person=person, relationship=relationship, duration=duration, attention=attention, interruptions=interruptions, advice=advice, questions=questions, reflections=reflections, attunement=attunement, wandered=wandered, fatigue=fatigue, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/active_listening_coach/stats")
+def active_listening_coach_stats():
+    return get_active_listening_coach().get_listening_stats()
+
+@router.get("/active_listening_coach/score")
+def active_listening_coach_score():
+    return {"session_score": get_active_listening_coach().get_listening_score()}
+
+
+@router.post("/aesthetic_life_designer/record")
+def aesthetic_life_designer_record(experience: str = "", aesthetic_type: str = "", beauty: float = 0.5, meaning: float = 0.0, inspiration: float = 0.0, awe: float = 0.0, novelty: float = 0.0, notes: str = ""):
+    entry = get_aesthetic_life_designer().record_experience(experience=experience, aesthetic_type=aesthetic_type, beauty=beauty, meaning=meaning, inspiration=inspiration, awe=awe, novelty=novelty, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/aesthetic_life_designer/stats")
+def aesthetic_life_designer_stats():
+    return get_aesthetic_life_designer().get_aesthetic_stats()
+
+@router.get("/aesthetic_life_designer/score")
+def aesthetic_life_designer_score():
+    return {"experience_score": get_aesthetic_life_designer().get_aesthetic_score()}
+
+
+@router.post("/age_reversal_coach/record")
+def age_reversal_coach_record(practice: str = "", practice_type: str = "", intensity: float = 0.5, youth_effect: float = 0.0, recovery_speed: float = 0.0, energy_boost: float = 0.0, adherence: float = 0.0, notes: str = ""):
+    entry = get_age_reversal_coach().record_practice(practice=practice, practice_type=practice_type, intensity=intensity, youth_effect=youth_effect, recovery_speed=recovery_speed, energy_boost=energy_boost, adherence=adherence, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/age_reversal_coach/stats")
+def age_reversal_coach_stats():
+    return get_age_reversal_coach().get_reversal_stats()
+
+@router.get("/age_reversal_coach/score")
+def age_reversal_coach_score():
+    return {"practice_score": get_age_reversal_coach().get_reversal_score()}
+
+
+@router.post("/antifragility_tracker/record")
+def antifragility_tracker_record(stressor: str = "", stressor_type: str = "", dose: str = "", duration: float = 0, effect: str = "", recovery_quality: float = 0.5, recovery_time: float = 0, pre_capacity: float = 0.5, post_capacity: float = 0.5, notes: str = ""):
+    entry = get_antifragility_tracker().record_stressor(stressor=stressor, stressor_type=stressor_type, dose=dose, duration=duration, effect=effect, recovery_quality=recovery_quality, recovery_time=recovery_time, pre_capacity=pre_capacity, post_capacity=post_capacity, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/antifragility_tracker/stats")
+def antifragility_tracker_stats():
+    return get_antifragility_tracker().get_antifragility_stats()
+
+@router.get("/antifragility_tracker/score")
+def antifragility_tracker_score():
+    return {"stressor_score": get_antifragility_tracker().get_antifragility_score()}
+
+
+@router.post("/assertiveness_builder/record")
+def assertiveness_builder_record(situation: str = "", assertiveness_type: str = "", approach: str = "", anxiety_before: float = 0.5, self_respect_after: float = 0.5, relationship_after: float = 0.5, outcome: str = "", notes: str = ""):
+    entry = get_assertiveness_builder().record_interaction(situation=situation, assertiveness_type=assertiveness_type, approach=approach, anxiety_before=anxiety_before, self_respect_after=self_respect_after, relationship_after=relationship_after, outcome=outcome, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/assertiveness_builder/stats")
+def assertiveness_builder_stats():
+    return get_assertiveness_builder().get_assertiveness_stats()
+
+@router.get("/assertiveness_builder/score")
+def assertiveness_builder_score():
+    return {"interaction_score": get_assertiveness_builder().get_assertiveness_score()}
+
+
+@router.post("/attention_guardian/record")
+def attention_guardian_record(investment: str = "", category: str = "", duration: float = 0, depth: float = 0.5, return_value: float = 0.5, fragmented: bool = False, hijacker: str = "", intentionality: float = 0.5, notes: str = ""):
+    entry = get_attention_guardian().record_attention(investment=investment, category=category, duration=duration, depth=depth, return_value=return_value, fragmented=fragmented, hijacker=hijacker, intentionality=intentionality, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/attention_guardian/stats")
+def attention_guardian_stats():
+    return get_attention_guardian().get_attention_stats()
+
+@router.get("/attention_guardian/score")
+def attention_guardian_score():
+    return {"attention_score": get_attention_guardian().get_attention_score()}
+
+
+@router.post("/attention_recovery_specialist/record")
+def attention_recovery_specialist_record(focus_level: float = 0.5, attention_type: str = "", source: str = "", duration: float = 0, energy_level: float = 0.5, recovery_activity: str = "", recovery_effectiveness: float = 0.0, notes: str = ""):
+    entry = get_attention_recovery_specialist().record_attention_state(focus_level=focus_level, attention_type=attention_type, source=source, duration=duration, energy_level=energy_level, recovery_activity=recovery_activity, recovery_effectiveness=recovery_effectiveness, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/attention_recovery_specialist/stats")
+def attention_recovery_specialist_stats():
+    return get_attention_recovery_specialist().get_attention_stats()
+
+@router.get("/attention_recovery_specialist/score")
+def attention_recovery_specialist_score():
+    return {"attention_state_score": get_attention_recovery_specialist().get_attention_score()}
+
+
+@router.post("/authenticity_amplifier/record")
+def authenticity_amplifier_record(context: str = "", authenticity: float = 0.5, performance: float = 0.5, energy_cost: float = 0.0, values_alignment: float = 0.5, desired_response: str = "", true_self: str = "", satisfaction: float = 0.5, notes: str = ""):
+    entry = get_authenticity_amplifier().record_moment(context=context, authenticity=authenticity, performance=performance, energy_cost=energy_cost, values_alignment=values_alignment, desired_response=desired_response, true_self=true_self, satisfaction=satisfaction, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/authenticity_amplifier/stats")
+def authenticity_amplifier_stats():
+    return get_authenticity_amplifier().get_authenticity_stats()
+
+@router.get("/authenticity_amplifier/score")
+def authenticity_amplifier_score():
+    return {"moment_score": get_authenticity_amplifier().get_authenticity_score()}
+
+
+@router.post("/belonging_builder/record")
+def belonging_builder_record(experience: str = "", belonging_type: str = "", acceptance: float = 0.0, safety: float = 0.0, mattering: float = 0.0, vulnerability: float = 0.0, reciprocity: float = 0.0, notes: str = ""):
+    entry = get_belonging_builder().record_experience(experience=experience, belonging_type=belonging_type, acceptance=acceptance, safety=safety, mattering=mattering, vulnerability=vulnerability, reciprocity=reciprocity, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/belonging_builder/stats")
+def belonging_builder_stats():
+    return get_belonging_builder().get_belonging_stats()
+
+@router.get("/belonging_builder/score")
+def belonging_builder_score():
+    return {"experience_score": get_belonging_builder().get_belonging_score()}
+
+
+@router.post("/boundaries_coach/record")
+def boundaries_coach_record(area: str = "", boundary_text: str = "", context: str = "", enforcement: str = "medium", outcome: str = "", emotional_cost: float = 0.3, confidence: float = 0.5, consequences_set: bool = False, notes: str = ""):
+    entry = get_boundaries_coach().record_boundary(area=area, boundary_text=boundary_text, context=context, enforcement=enforcement, outcome=outcome, emotional_cost=emotional_cost, confidence=confidence, consequences_set=consequences_set, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/boundaries_coach/stats")
+def boundaries_coach_stats():
+    return get_boundaries_coach().get_boundary_stats()
+
+@router.get("/boundaries_coach/score")
+def boundaries_coach_score():
+    return {"boundary_score": get_boundaries_coach().get_boundary_strength_score()}
+
+
+@router.post("/boundary_coach/record")
+def boundary_coach_record(situation: str = "", boundary_type: str = "", clarity: float = 0.5, enforced: float = 0.0, comfort: float = 0.0, consequence: float = 0.0, respect_received: float = 0.0, notes: str = ""):
+    entry = get_boundary_coach().record_boundary(situation=situation, boundary_type=boundary_type, clarity=clarity, enforced=enforced, comfort=comfort, consequence=consequence, respect_received=respect_received, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/boundary_coach/stats")
+def boundary_coach_stats():
+    return get_boundary_coach().get_boundary_stats()
+
+@router.get("/boundary_coach/score")
+def boundary_coach_score():
+    return {"boundary_score": get_boundary_coach().get_boundary_score()}
+
+
+@router.post("/civic_engagement_tracker/record")
+def civic_engagement_tracker_record(activity: str = "", activity_type: str = "", impact: float = 0.0, learning: float = 0.0, connection: float = 0.0, empowerment: float = 0.0, sustainability: float = 0.0, hours: float = 0.0, notes: str = ""):
+    entry = get_civic_engagement_tracker().record_activity(activity=activity, activity_type=activity_type, impact=impact, learning=learning, connection=connection, empowerment=empowerment, sustainability=sustainability, hours=hours, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/civic_engagement_tracker/stats")
+def civic_engagement_tracker_stats():
+    return get_civic_engagement_tracker().get_civic_stats()
+
+@router.get("/civic_engagement_tracker/score")
+def civic_engagement_tracker_score():
+    return {"activity_score": get_civic_engagement_tracker().get_civic_score()}
+
+
+@router.post("/communication_analyzer/record")
+def communication_analyzer_record(channel: str = "", recipient: str = "", purpose: str = "", duration: float = 0, effectiveness: float = 0.5, clarity: float = 0.5, tone: str = "", response_time: float = 0, misunderstanding: bool = False, follow_up: bool = False, notes: str = ""):
+    entry = get_communication_analyzer().record_communication(channel=channel, recipient=recipient, purpose=purpose, duration=duration, effectiveness=effectiveness, clarity=clarity, tone=tone, response_time=response_time, misunderstanding=misunderstanding, follow_up=follow_up, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/communication_analyzer/stats")
+def communication_analyzer_stats():
+    return get_communication_analyzer().get_communication_stats()
+
+@router.get("/communication_analyzer/score")
+def communication_analyzer_score():
+    return {"communication_score": get_communication_analyzer().get_communication_load_score()}
+
+
+@router.post("/community_builder/record")
+def community_builder_record(community: str = "", interaction_type: str = "", belonging: float = 0.5, contribution: float = 0.0, support_received: float = 0.0, support_given: float = 0.0, new_connection: bool = False, duration_minutes: float = 0.0, notes: str = ""):
+    entry = get_community_builder().record_interaction(community=community, interaction_type=interaction_type, belonging=belonging, contribution=contribution, support_received=support_received, support_given=support_given, new_connection=new_connection, duration_minutes=duration_minutes, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/community_builder/stats")
+def community_builder_stats():
+    return get_community_builder().get_community_stats()
+
+@router.get("/community_builder/score")
+def community_builder_score():
+    return {"interaction_score": get_community_builder().get_community_score()}
+
+
+@router.post("/conflict_navigator/record")
+def conflict_navigator_record(party: str = "", conflict_type: str = "", intensity: float = 0.5, strategy: str = "", de_escalation: float = 0.5, outcome: str = "", durability: float = 0.5, lessons: str = ""):
+    entry = get_conflict_navigator().record_conflict(party=party, conflict_type=conflict_type, intensity=intensity, strategy=strategy, de_escalation=de_escalation, outcome=outcome, durability=durability, lessons=lessons)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/conflict_navigator/stats")
+def conflict_navigator_stats():
+    return get_conflict_navigator().get_conflict_stats()
+
+@router.get("/conflict_navigator/score")
+def conflict_navigator_score():
+    return {"conflict_score": get_conflict_navigator().get_conflict_score()}
+
+
+@router.post("/conflict_resolution_coach/record")
+def conflict_resolution_coach_record(conflict: str = "", conflict_type: str = "", resolution: float = 0.0, repair: float = 0.0, learning: float = 0.0, relationship_impact: float = 0.0, self_awareness: float = 0.0, notes: str = ""):
+    entry = get_conflict_resolution_coach().record_conflict(conflict=conflict, conflict_type=conflict_type, resolution=resolution, repair=repair, learning=learning, relationship_impact=relationship_impact, self_awareness=self_awareness, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/conflict_resolution_coach/stats")
+def conflict_resolution_coach_stats():
+    return get_conflict_resolution_coach().get_conflict_stats()
+
+@router.get("/conflict_resolution_coach/score")
+def conflict_resolution_coach_score():
+    return {"conflict_score": get_conflict_resolution_coach().get_conflict_score()}
+
+
+@router.post("/consistency_coach/record")
+def consistency_coach_record(action: str = "", domain: str = "", done: bool = False, quality: float = 0.5, duration: float = 0, resistance: float = 0.0, enjoyment: float = 0.5, recovery_needed: bool = False, notes: str = ""):
+    entry = get_consistency_coach().record_action(action=action, domain=domain, done=done, quality=quality, duration=duration, resistance=resistance, enjoyment=enjoyment, recovery_needed=recovery_needed, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/consistency_coach/stats")
+def consistency_coach_stats():
+    return get_consistency_coach().get_consistency_stats()
+
+@router.get("/consistency_coach/score")
+def consistency_coach_score():
+    return {"action_score": get_consistency_coach().get_consistency_score()}
+
+
+@router.post("/contemplation_keeper/record")
+def contemplation_keeper_record(practice: str = "", cont_type: str = "", duration: float = 0.0, depth: float = 0.5, insight: float = 0.0, integration: float = 0.5, question: str = "", performative: bool = False, notes: str = ""):
+    entry = get_contemplation_keeper().record_session(practice=practice, cont_type=cont_type, duration=duration, depth=depth, insight=insight, integration=integration, question=question, performative=performative, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/contemplation_keeper/stats")
+def contemplation_keeper_stats():
+    return get_contemplation_keeper().get_contemplation_stats()
+
+@router.get("/contemplation_keeper/score")
+def contemplation_keeper_score():
+    return {"session_score": get_contemplation_keeper().get_contemplation_score()}
+
+
+@router.post("/courage_coach/record")
+def courage_coach_record(action: str = "", fear_level: float = 0.5, courage_type: str = "", trigger: str = "", preparation: float = 0.5, outcome: str = "", outcome_quality: float = 0.5, growth: float = 0.5, notes: str = ""):
+    entry = get_courage_coach().record_action(action=action, fear_level=fear_level, courage_type=courage_type, trigger=trigger, preparation=preparation, outcome=outcome, outcome_quality=outcome_quality, growth=growth, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/courage_coach/stats")
+def courage_coach_stats():
+    return get_courage_coach().get_courage_stats()
+
+@router.get("/courage_coach/score")
+def courage_coach_score():
+    return {"action_score": get_courage_coach().get_courage_score()}
+
+
+@router.post("/creativity_catalyst/record")
+def creativity_catalyst_record(activity: str = "", domain: str = "", output_count: int = 0, output_quality: float = 0.5, block_type: str = "", trigger: str = "", energy_before: float = 0.5, energy_after: float = 0.5, flow_score: float = 0.0, notes: str = ""):
+    entry = get_creativity_catalyst().record_session(activity=activity, domain=domain, output_count=output_count, output_quality=output_quality, block_type=block_type, trigger=trigger, energy_before=energy_before, energy_after=energy_after, flow_score=flow_score, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/creativity_catalyst/stats")
+def creativity_catalyst_stats():
+    return get_creativity_catalyst().get_creative_stats()
+
+@router.get("/creativity_catalyst/score")
+def creativity_catalyst_score():
+    return {"session_score": get_creativity_catalyst().get_creative_score()}
+
+
+@router.post("/curiosity_cultivator/record")
+def curiosity_cultivator_record(topic: str = "", curiosity_type: str = "", depth: float = 0.5, trigger: str = "", action_taken: str = "", satisfaction: float = 0.5, notes: str = ""):
+    entry = get_curiosity_cultivator().record_curiosity(topic=topic, curiosity_type=curiosity_type, depth=depth, trigger=trigger, action_taken=action_taken, satisfaction=satisfaction, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/curiosity_cultivator/stats")
+def curiosity_cultivator_stats():
+    return get_curiosity_cultivator().get_curiosity_stats()
+
+@router.get("/curiosity_cultivator/score")
+def curiosity_cultivator_score():
+    return {"curiosity_score": get_curiosity_cultivator().get_curiosity_score()}
+
+
+@router.post("/death_awareness_coach/record")
+def death_awareness_coach_record(trigger: str = "", emotional_response: str = "", insight: str = "", life_change: str = "", time_sense: str = "", practice_type: str = "", notes: str = ""):
+    entry = get_death_awareness_coach().record_memento(trigger=trigger, emotional_response=emotional_response, insight=insight, life_change=life_change, time_sense=time_sense, practice_type=practice_type, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/death_awareness_coach/stats")
+def death_awareness_coach_stats():
+    return get_death_awareness_coach().get_death_awareness_stats()
+
+@router.get("/death_awareness_coach/score")
+def death_awareness_coach_score():
+    return {"memento_score": get_death_awareness_coach().get_death_awareness_score()}
+
+
+@router.post("/digital_minimalism_coach/record")
+def digital_minimalism_coach_record(app_or_site: str = "", category: str = "", duration: float = 0, value_score: float = 0.5, intentionality: float = 0.5, energy_before: float = 0.5, energy_after: float = 0.5, mood_after: float = 0.5, compulsive: bool = False, notes: str = ""):
+    entry = get_digital_minimalism_coach().record_session(app_or_site=app_or_site, category=category, duration=duration, value_score=value_score, intentionality=intentionality, energy_before=energy_before, energy_after=energy_after, mood_after=mood_after, compulsive=compulsive, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/digital_minimalism_coach/stats")
+def digital_minimalism_coach_stats():
+    return get_digital_minimalism_coach().get_digital_stats()
+
+@router.get("/digital_minimalism_coach/score")
+def digital_minimalism_coach_score():
+    return {"session_score": get_digital_minimalism_coach().get_digital_score()}
+
+
+@router.post("/eco_footprint_tracker/record")
+def eco_footprint_tracker_record(category: str = "", amount: float = 0.0, unit: str = "", reduction: float = 0.0, reduction_action: str = "", global_average: float = 0.0, notes: str = ""):
+    entry = get_eco_footprint_tracker().record_measurement(category=category, amount=amount, unit=unit, reduction=reduction, reduction_action=reduction_action, global_average=global_average, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/eco_footprint_tracker/stats")
+def eco_footprint_tracker_stats():
+    return get_eco_footprint_tracker().get_footprint_stats()
+
+@router.get("/eco_footprint_tracker/score")
+def eco_footprint_tracker_score():
+    return {"measurement_score": get_eco_footprint_tracker().get_footprint_score()}
+
+
+@router.post("/emotional_regulation_coach/record")
+def emotional_regulation_coach_record(emotion: str = "", trigger: str = "", intensity: float = 0.5, regulation_strategy: str = "", strategy_effectiveness: float = 0.5, context: str = "", body_sensation: str = "", outcome: str = "", notes: str = ""):
+    entry = get_emotional_regulation_coach().record_emotion(emotion=emotion, trigger=trigger, intensity=intensity, regulation_strategy=regulation_strategy, strategy_effectiveness=strategy_effectiveness, context=context, body_sensation=body_sensation, outcome=outcome, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/emotional_regulation_coach/stats")
+def emotional_regulation_coach_stats():
+    return get_emotional_regulation_coach().get_regulation_stats()
+
+@router.get("/emotional_regulation_coach/score")
+def emotional_regulation_coach_score():
+    return {"emotion_score": get_emotional_regulation_coach().get_regulation_score()}
+
+
+@router.post("/empathy_builder/record")
+def empathy_builder_record(situation: str = "", target: str = "", target_type: str = "", accuracy: float = 0.5, emotional_resonance: float = 0.5, action_taken: str = "", block: str = "", cost: float = 0.0, notes: str = ""):
+    entry = get_empathy_builder().record_empathy_attempt(situation=situation, target=target, target_type=target_type, accuracy=accuracy, emotional_resonance=emotional_resonance, action_taken=action_taken, block=block, cost=cost, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/empathy_builder/stats")
+def empathy_builder_stats():
+    return get_empathy_builder().get_empathy_stats()
+
+@router.get("/empathy_builder/score")
+def empathy_builder_score():
+    return {"empathy_attempt_score": get_empathy_builder().get_empathy_score()}
+
+
+@router.post("/family_harmony_builder/record")
+def family_harmony_builder_record(member: str = "", interaction_type: str = "", harmony: float = 0.5, communication: float = 0.5, support: float = 0.0, repair: float = 0.0, fun: float = 0.0, notes: str = ""):
+    entry = get_family_harmony_builder().record_interaction(member=member, interaction_type=interaction_type, harmony=harmony, communication=communication, support=support, repair=repair, fun=fun, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/family_harmony_builder/stats")
+def family_harmony_builder_stats():
+    return get_family_harmony_builder().get_family_stats()
+
+@router.get("/family_harmony_builder/score")
+def family_harmony_builder_score():
+    return {"interaction_score": get_family_harmony_builder().get_family_score()}
+
+
+@router.post("/financial_independence_tracker/record")
+def financial_independence_tracker_record(net_worth: float = 0.0, monthly_expenses: float = 0.0, monthly_income: float = 0.0, fi_number: float = 0.0, fi_progress: float = 0.0, fi_type: str = "", stage: str = "", years_to_fi: float = 0.0, savings_rate: float = 0.0, notes: str = ""):
+    entry = get_financial_independence_tracker().record_snapshot(net_worth=net_worth, monthly_expenses=monthly_expenses, monthly_income=monthly_income, fi_number=fi_number, fi_progress=fi_progress, fi_type=fi_type, stage=stage, years_to_fi=years_to_fi, savings_rate=savings_rate, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/financial_independence_tracker/stats")
+def financial_independence_tracker_stats():
+    return get_financial_independence_tracker().get_fi_stats()
+
+@router.get("/financial_independence_tracker/score")
+def financial_independence_tracker_score():
+    return {"snapshot_score": get_financial_independence_tracker().get_fi_score()}
+
+
+@router.post("/flow_state_coach/record")
+def flow_state_coach_record(activity: str = "", challenge: float = 0.5, skill: float = 0.5, immersion: float = 0.5, timelessness: float = 0.5, clarity: float = 0.5, energy_after: float = 0.5, interruptions: int = 0, duration: float = 0, ritual: str = "", notes: str = ""):
+    entry = get_flow_state_coach().record_flow_session(activity=activity, challenge=challenge, skill=skill, immersion=immersion, timelessness=timelessness, clarity=clarity, energy_after=energy_after, interruptions=interruptions, duration=duration, ritual=ritual, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/flow_state_coach/stats")
+def flow_state_coach_stats():
+    return get_flow_state_coach().get_flow_stats()
+
+@router.get("/flow_state_coach/score")
+def flow_state_coach_score():
+    return {"flow_session_score": get_flow_state_coach().get_flow_score()}
+
+
+@router.post("/forgiveness_coach/record")
+def forgiveness_coach_record(target: str = "", forgiveness_type: str = "", method: str = "", resentment_before: float = 0.5, release_after: float = 0.5, energy_change: float = 0.0, genuine: bool = False, notes: str = ""):
+    entry = get_forgiveness_coach().record_forgiveness(target=target, forgiveness_type=forgiveness_type, method=method, resentment_before=resentment_before, release_after=release_after, energy_change=energy_change, genuine=genuine, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/forgiveness_coach/stats")
+def forgiveness_coach_stats():
+    return get_forgiveness_coach().get_forgiveness_stats()
+
+@router.get("/forgiveness_coach/score")
+def forgiveness_coach_score():
+    return {"forgiveness_score": get_forgiveness_coach().get_forgiveness_score()}
+
+
+@router.post("/forgiveness_tracker/record")
+def forgiveness_tracker_record(who: str = "", what: str = "", forgiveness_type: str = "", weight_before: float = 0.5, weight_after: float = 0.5, method: str = "", stage: str = "", blocked_by: str = "", notes: str = ""):
+    entry = get_forgiveness_tracker().record_forgiveness(who=who, what=what, forgiveness_type=forgiveness_type, weight_before=weight_before, weight_after=weight_after, method=method, stage=stage, blocked_by=blocked_by, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/forgiveness_tracker/stats")
+def forgiveness_tracker_stats():
+    return get_forgiveness_tracker().get_forgiveness_stats()
+
+@router.get("/forgiveness_tracker/score")
+def forgiveness_tracker_score():
+    return {"forgiveness_score": get_forgiveness_tracker().get_forgiveness_score()}
+
+
+@router.post("/gratitude_amplifier/record")
+def gratitude_amplifier_record(target: str = "", target_type: str = "", depth: float = 0.5, novelty: float = 0.5, practice: str = "", expressed: bool = False, mood_before: float = 0.5, mood_after: float = 0.5, notes: str = ""):
+    entry = get_gratitude_amplifier().record_gratitude(target=target, target_type=target_type, depth=depth, novelty=novelty, practice=practice, expressed=expressed, mood_before=mood_before, mood_after=mood_after, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/gratitude_amplifier/stats")
+def gratitude_amplifier_stats():
+    return get_gratitude_amplifier().get_gratitude_stats()
+
+@router.get("/gratitude_amplifier/score")
+def gratitude_amplifier_score():
+    return {"gratitude_score": get_gratitude_amplifier().get_gratitude_score()}
+
+
+@router.post("/growth_mindset_coach/record")
+def growth_mindset_coach_record(trigger: str = "", trigger_type: str = "", fixed_response: str = "", growth_response: str = "", domain: str = "", mindset_used: str = "", outcome: str = "", effort: float = 0.0, strategies: int = 0, help_seeking: bool = False, notes: str = ""):
+    entry = get_growth_mindset_coach().record_mindset_moment(trigger=trigger, trigger_type=trigger_type, fixed_response=fixed_response, growth_response=growth_response, domain=domain, mindset_used=mindset_used, outcome=outcome, effort=effort, strategies=strategies, help_seeking=help_seeking, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/growth_mindset_coach/stats")
+def growth_mindset_coach_stats():
+    return get_growth_mindset_coach().get_mindset_stats()
+
+@router.get("/growth_mindset_coach/score")
+def growth_mindset_coach_score():
+    return {"mindset_moment_score": get_growth_mindset_coach().get_growth_mindset_score()}
+
+
+@router.post("/habit_streak_tracker/record")
+def habit_streak_tracker_record(habit_id: str = "", habit_name: str = "", completed: bool = True):
+    entry = get_habit_streak_tracker().record_habit(habit_id=habit_id, habit_name=habit_name, completed=completed)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/habit_streak_tracker/stats")
+def habit_streak_tracker_stats():
+    return get_habit_streak_tracker().get_habit_stats()
+
+@router.get("/habit_streak_tracker/score")
+def habit_streak_tracker_score():
+    return {"habit_score": get_habit_streak_tracker().get_momentum_score()}
+
+
+@router.post("/hope_cultivator/record")
+def hope_cultivator_record(hope: str = "", hope_type: str = "", strength: float = 0.5, clarity: float = 0.0, action: float = 0.0, support: float = 0.0, meaning: float = 0.0, notes: str = ""):
+    entry = get_hope_cultivator().record_hope(hope=hope, hope_type=hope_type, strength=strength, clarity=clarity, action=action, support=support, meaning=meaning, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/hope_cultivator/stats")
+def hope_cultivator_stats():
+    return get_hope_cultivator().get_hope_stats()
+
+@router.get("/hope_cultivator/score")
+def hope_cultivator_score():
+    return {"hope_score": get_hope_cultivator().get_hope_score()}
+
+
+@router.post("/humor_cultivator/record")
+def humor_cultivator_record(moment: str = "", humor_type: str = "", lightness: float = 0.5, connection: float = 0.0, stress_relief: float = 0.0, creativity_boost: float = 0.0, duration_minutes: float = 0.0, notes: str = ""):
+    entry = get_humor_cultivator().record_laughter(moment=moment, humor_type=humor_type, lightness=lightness, connection=connection, stress_relief=stress_relief, creativity_boost=creativity_boost, duration_minutes=duration_minutes, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/humor_cultivator/stats")
+def humor_cultivator_stats():
+    return get_humor_cultivator().get_humor_stats()
+
+@router.get("/humor_cultivator/score")
+def humor_cultivator_score():
+    return {"laughter_score": get_humor_cultivator().get_humor_score()}
+
+
+@router.post("/influence_builder/record")
+def influence_builder_record(audience: str = "", goal: str = "", influence_type: str = "", approach: str = "", trust_before: float = 0.5, commitment: float = 0.5, durability: float = 0.5, ethical: bool = True, notes: str = ""):
+    entry = get_influence_builder().record_attempt(audience=audience, goal=goal, influence_type=influence_type, approach=approach, trust_before=trust_before, commitment=commitment, durability=durability, ethical=ethical, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/influence_builder/stats")
+def influence_builder_stats():
+    return get_influence_builder().get_influence_stats()
+
+@router.get("/influence_builder/score")
+def influence_builder_score():
+    return {"attempt_score": get_influence_builder().get_influence_score()}
+
+
+@router.post("/intergenerational_bridge_builder/record")
+def intergenerational_bridge_builder_record(generation: str = "", person: str = "", interaction_type: str = "", mutual_benefit: float = 0.0, respect: float = 0.5, understanding: float = 0.0, wisdom_shared: float = 0.0, energy_received: float = 0.0, notes: str = ""):
+    entry = get_intergenerational_bridge_builder().record_interaction(generation=generation, person=person, interaction_type=interaction_type, mutual_benefit=mutual_benefit, respect=respect, understanding=understanding, wisdom_shared=wisdom_shared, energy_received=energy_received, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/intergenerational_bridge_builder/stats")
+def intergenerational_bridge_builder_stats():
+    return get_intergenerational_bridge_builder().get_bridge_stats()
+
+@router.get("/intergenerational_bridge_builder/score")
+def intergenerational_bridge_builder_score():
+    return {"interaction_score": get_intergenerational_bridge_builder().get_bridge_score()}
+
+
+@router.post("/leadership_coach/record")
+def leadership_coach_record(action: str = "", leadership_type: str = "", team: str = "", team_size: int = 0, autonomy_given: float = 0.5, support_provided: float = 0.5, clarity: float = 0.5, team_performance: float = 0.5, team_morale: float = 0.5, notes: str = ""):
+    entry = get_leadership_coach().record_action(action=action, leadership_type=leadership_type, team=team, team_size=team_size, autonomy_given=autonomy_given, support_provided=support_provided, clarity=clarity, team_performance=team_performance, team_morale=team_morale, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/leadership_coach/stats")
+def leadership_coach_stats():
+    return get_leadership_coach().get_leadership_stats()
+
+@router.get("/leadership_coach/score")
+def leadership_coach_score():
+    return {"action_score": get_leadership_coach().get_leadership_score()}
+
+
+@router.post("/learning_acceleration_engine/record")
+def learning_acceleration_engine_record(topic: str = "", technique: str = "", duration: float = 0, difficulty: float = 0.5, retention_immediate: float = 0.5, retention_delayed: float = 0.0, engagement: float = 0.5, notes: str = ""):
+    entry = get_learning_acceleration_engine().record_session(topic=topic, technique=technique, duration=duration, difficulty=difficulty, retention_immediate=retention_immediate, retention_delayed=retention_delayed, engagement=engagement, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/learning_acceleration_engine/stats")
+def learning_acceleration_engine_stats():
+    return get_learning_acceleration_engine().get_learning_stats()
+
+@router.get("/learning_acceleration_engine/score")
+def learning_acceleration_engine_score():
+    return {"session_score": get_learning_acceleration_engine().get_learning_score()}
+
+
+@router.post("/life_phase_navigator/record")
+def life_phase_navigator_record(phase: str = "", phase_type: str = "", satisfaction: float = 0.5, growth: float = 0.0, readiness: float = 0.0, duration_months: float = 0.0, integration: float = 0.0, fear_of_change: float = 0.0, notes: str = ""):
+    entry = get_life_phase_navigator().record_phase(phase=phase, phase_type=phase_type, satisfaction=satisfaction, growth=growth, readiness=readiness, duration_months=duration_months, integration=integration, fear_of_change=fear_of_change, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/life_phase_navigator/stats")
+def life_phase_navigator_stats():
+    return get_life_phase_navigator().get_phase_stats()
+
+@router.get("/life_phase_navigator/score")
+def life_phase_navigator_score():
+    return {"phase_score": get_life_phase_navigator().get_phase_score()}
+
+
+@router.post("/life_transition_navigator/record")
+def life_transition_navigator_record(change: str = "", transition_type: str = "", awareness: float = 0.0, acceptance: float = 0.0, planning: float = 0.0, support: float = 0.0, growth: float = 0.0, courage: float = 0.0, notes: str = ""):
+    entry = get_life_transition_navigator().record_transition(change=change, transition_type=transition_type, awareness=awareness, acceptance=acceptance, planning=planning, support=support, growth=growth, courage=courage, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/life_transition_navigator/stats")
+def life_transition_navigator_stats():
+    return get_life_transition_navigator().get_transition_stats()
+
+@router.get("/life_transition_navigator/score")
+def life_transition_navigator_score():
+    return {"transition_score": get_life_transition_navigator().get_transition_score()}
+
+
+@router.post("/meaning_amplifier/record")
+def meaning_amplifier_record(experience: str = "", meaning: str = "", meaning_type: str = "", significance: float = 0.5, wellbeing_before: float = 0.5, wellbeing_after: float = 0.5, context: str = "", notes: str = ""):
+    entry = get_meaning_amplifier().record_experience(experience=experience, meaning=meaning, meaning_type=meaning_type, significance=significance, wellbeing_before=wellbeing_before, wellbeing_after=wellbeing_after, context=context, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/meaning_amplifier/stats")
+def meaning_amplifier_stats():
+    return get_meaning_amplifier().get_meaning_stats()
+
+@router.get("/meaning_amplifier/score")
+def meaning_amplifier_score():
+    return {"experience_score": get_meaning_amplifier().get_meaning_score()}
+
+
+@router.post("/meditation_coach/record")
+def meditation_coach_record(duration: float = 0.0, meditation_type: str = "mindfulness", quality: float = 0.5, stress_before: float = 0.5, stress_after: float = 0.5, mood_before: str = "", mood_after: str = "", notes: str = "", interruptions: int = 0):
+    entry = get_meditation_coach().record_session(duration=duration, meditation_type=meditation_type, quality=quality, stress_before=stress_before, stress_after=stress_after, mood_before=mood_before, mood_after=mood_after, notes=notes, interruptions=interruptions)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/meditation_coach/stats")
+def meditation_coach_stats():
+    return get_meditation_coach().get_progress_stats()
+
+@router.get("/meditation_coach/score")
+def meditation_coach_score():
+    return {"session_score": get_meditation_coach().get_mindfulness_score()}
+
+
+@router.post("/movement_tracker/record")
+def movement_tracker_record(activity: str = "", movement_type: str = "", duration: float = 0, intensity: float = 0.5, energy_before: float = 0.5, energy_after: float = 0.5, mood_after: float = 0.5, body_feedback: str = "", social: bool = False, outdoors: bool = False, notes: str = ""):
+    entry = get_movement_tracker().record_session(activity=activity, movement_type=movement_type, duration=duration, intensity=intensity, energy_before=energy_before, energy_after=energy_after, mood_after=mood_after, body_feedback=body_feedback, social=social, outdoors=outdoors, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/movement_tracker/stats")
+def movement_tracker_stats():
+    return get_movement_tracker().get_movement_stats()
+
+@router.get("/movement_tracker/score")
+def movement_tracker_score():
+    return {"session_score": get_movement_tracker().get_movement_score()}
+
+
+@router.post("/parenting_coach/record")
+def parenting_coach_record(child: str = "", interaction_type: str = "", connection: float = 0.5, patience: float = 0.5, warmth: float = 0.0, boundaries: float = 0.0, repair_after_rupture: float = 0.0, child_response: float = 0.0, notes: str = ""):
+    entry = get_parenting_coach().record_interaction(child=child, interaction_type=interaction_type, connection=connection, patience=patience, warmth=warmth, boundaries=boundaries, repair_after_rupture=repair_after_rupture, child_response=child_response, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/parenting_coach/stats")
+def parenting_coach_stats():
+    return get_parenting_coach().get_parenting_stats()
+
+@router.get("/parenting_coach/score")
+def parenting_coach_score():
+    return {"interaction_score": get_parenting_coach().get_parenting_score()}
+
+
+@router.post("/peak_performance_tracker/record")
+def peak_performance_tracker_record(task: str = "", output_score: float = 0.5, quality_score: float = 0.5, flow_score: float = 0.0, energy_level: float = 0.5, sleep_hours: float = 0.0, stress_level: float = 0.5, preparation: float = 0.0, recovery: float = 0.0, time_of_day: str = "", environment: str = "", notes: str = ""):
+    entry = get_peak_performance_tracker().record_performance(task=task, output_score=output_score, quality_score=quality_score, flow_score=flow_score, energy_level=energy_level, sleep_hours=sleep_hours, stress_level=stress_level, preparation=preparation, recovery=recovery, time_of_day=time_of_day, environment=environment, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/peak_performance_tracker/stats")
+def peak_performance_tracker_stats():
+    return get_peak_performance_tracker().get_performance_stats()
+
+@router.get("/peak_performance_tracker/score")
+def peak_performance_tracker_score():
+    return {"performance_score": get_peak_performance_tracker().get_performance_score()}
+
+
+@router.post("/predictive_maintenance/record")
+def predictive_maintenance_record(subsystem: str = "", health_score: float = 0.0, latency_ms: float = 0.0, error_rate: float = 0.0, memory_mb: float = 0.0, cpu_percent: float = 0.0):
+    entry = get_predictive_maintenance_engine().record_snapshot(subsystem=subsystem, health_score=health_score, latency_ms=latency_ms, error_rate=error_rate, memory_mb=memory_mb, cpu_percent=cpu_percent)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/predictive_maintenance/stats")
+def predictive_maintenance_stats():
+    return get_predictive_maintenance_engine().get_snapshot_stats()
+
+@router.get("/predictive_maintenance/score")
+def predictive_maintenance_score():
+    return {"snapshot_score": get_predictive_maintenance_engine().get_snapshot_score()}
+
+
+@router.post("/purpose_clarity_engine/record")
+def purpose_clarity_engine_record(theme: str = "", clarity_before: float = 0.5, clarity_after: float = 0.5, alignment: float = 0.5, action_taken: str = "", action_quality: float = 0.5, energy_before: float = 0.5, energy_after: float = 0.5, notes: str = ""):
+    entry = get_purpose_clarity_engine().record_exploration(theme=theme, clarity_before=clarity_before, clarity_after=clarity_after, alignment=alignment, action_taken=action_taken, action_quality=action_quality, energy_before=energy_before, energy_after=energy_after, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/purpose_clarity_engine/stats")
+def purpose_clarity_engine_stats():
+    return get_purpose_clarity_engine().get_purpose_stats()
+
+@router.get("/purpose_clarity_engine/score")
+def purpose_clarity_engine_score():
+    return {"exploration_score": get_purpose_clarity_engine().get_purpose_score()}
+
+
+@router.post("/purpose_navigator/record")
+def purpose_navigator_record(activity: str = "", aligned: bool = True, purpose_theme: str = "", felt_sense: float = 0.5, life_area: str = "", hours: float = 0, notes: str = ""):
+    entry = get_purpose_navigator().record_alignment(activity=activity, aligned=aligned, purpose_theme=purpose_theme, felt_sense=felt_sense, life_area=life_area, hours=hours, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/purpose_navigator/stats")
+def purpose_navigator_stats():
+    return get_purpose_navigator().get_purpose_stats()
+
+@router.get("/purpose_navigator/score")
+def purpose_navigator_score():
+    return {"alignment_score": get_purpose_navigator().get_purpose_score()}
+
+
+@router.post("/reconciliation_builder/record")
+def reconciliation_builder_record(relationship: str = "", damage_type: str = "", severity: float = 0.5, repair_type: str = "", repair_quality: float = 0.5, timing: float = 0.5, outcome: str = "", relationship_quality_after: float = 0.5, notes: str = ""):
+    entry = get_reconciliation_builder().record_repair(relationship=relationship, damage_type=damage_type, severity=severity, repair_type=repair_type, repair_quality=repair_quality, timing=timing, outcome=outcome, relationship_quality_after=relationship_quality_after, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/reconciliation_builder/stats")
+def reconciliation_builder_stats():
+    return get_reconciliation_builder().get_reconciliation_stats()
+
+@router.get("/reconciliation_builder/score")
+def reconciliation_builder_score():
+    return {"repair_score": get_reconciliation_builder().get_reconciliation_score()}
+
+
+@router.post("/rejection_resilience_coach/record")
+def rejection_resilience_coach_record(rejection: str = "", rejection_type: str = "", impact: float = 0.5, learning: float = 0.0, recovery: float = 0.0, self_worth: float = 0.0, courage: float = 0.0, notes: str = ""):
+    entry = get_rejection_resilience_coach().record_rejection(rejection=rejection, rejection_type=rejection_type, impact=impact, learning=learning, recovery=recovery, self_worth=self_worth, courage=courage, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/rejection_resilience_coach/stats")
+def rejection_resilience_coach_stats():
+    return get_rejection_resilience_coach().get_rejection_stats()
+
+@router.get("/rejection_resilience_coach/score")
+def rejection_resilience_coach_score():
+    return {"rejection_score": get_rejection_resilience_coach().get_rejection_score()}
+
+
+@router.post("/repair_specialist/record")
+def repair_specialist_record(damage: str = "", domain: str = "", severity: float = 0.5, repair_action: str = "", proactive: bool = False, time_to_repair: float = 0, outcome: str = "", durability: float = 0.5, cost: float = 0.5, notes: str = ""):
+    entry = get_repair_specialist().record_repair(damage=damage, domain=domain, severity=severity, repair_action=repair_action, proactive=proactive, time_to_repair=time_to_repair, outcome=outcome, durability=durability, cost=cost, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/repair_specialist/stats")
+def repair_specialist_stats():
+    return get_repair_specialist().get_repair_stats()
+
+@router.get("/repair_specialist/score")
+def repair_specialist_score():
+    return {"repair_score": get_repair_specialist().get_repair_score()}
+
+
+@router.post("/rest_designer/record")
+def rest_designer_record(activity: str = "", rest_type: str = "", restoration: float = 0.0, depth: float = 0.0, quality: float = 0.5, guilt: float = 0.0, duration_minutes: float = 0.0, notes: str = ""):
+    entry = get_rest_designer().record_rest(activity=activity, rest_type=rest_type, restoration=restoration, depth=depth, quality=quality, guilt=guilt, duration_minutes=duration_minutes, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/rest_designer/stats")
+def rest_designer_stats():
+    return get_rest_designer().get_rest_stats()
+
+@router.get("/rest_designer/score")
+def rest_designer_score():
+    return {"rest_score": get_rest_designer().get_rest_score()}
+
+
+@router.post("/sacred_ritual_designer/record")
+def sacred_ritual_designer_record(name: str = "", ritual_type: str = "", elements: int = 0, engagement: float = 0.5, intention: float = 0.5, transformation: float = 0.0, rote: bool = False, participants: int = 1, notes: str = ""):
+    entry = get_sacred_ritual_designer().record_ritual(name=name, ritual_type=ritual_type, elements=elements, engagement=engagement, intention=intention, transformation=transformation, rote=rote, participants=participants, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/sacred_ritual_designer/stats")
+def sacred_ritual_designer_stats():
+    return get_sacred_ritual_designer().get_ritual_stats()
+
+@router.get("/sacred_ritual_designer/score")
+def sacred_ritual_designer_score():
+    return {"ritual_score": get_sacred_ritual_designer().get_ritual_score()}
+
+
+@router.post("/second_act_designer/record")
+def second_act_designer_record(action: str = "", reinvention_type: str = "", vision: float = 0.0, courage: float = 0.0, skill: float = 0.0, network: float = 0.0, momentum: float = 0.0, joy: float = 0.0, notes: str = ""):
+    entry = get_second_act_designer().record_reinvention(action=action, reinvention_type=reinvention_type, vision=vision, courage=courage, skill=skill, network=network, momentum=momentum, joy=joy, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/second_act_designer/stats")
+def second_act_designer_stats():
+    return get_second_act_designer().get_reinvention_stats()
+
+@router.get("/second_act_designer/score")
+def second_act_designer_score():
+    return {"reinvention_score": get_second_act_designer().get_reinvention_score()}
+
+
+@router.post("/self_compassion_coach/record")
+def self_compassion_coach_record(thought: str = "", talk_type: str = "", trigger: str = "", life_area: str = "", intensity: float = 0.5, would_say_to_friend: bool = False, notes: str = ""):
+    entry = get_self_compassion_coach().record_thought(thought=thought, talk_type=talk_type, trigger=trigger, life_area=life_area, intensity=intensity, would_say_to_friend=would_say_to_friend, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/self_compassion_coach/stats")
+def self_compassion_coach_stats():
+    return get_self_compassion_coach().get_self_compassion_stats()
+
+@router.get("/self_compassion_coach/score")
+def self_compassion_coach_score():
+    return {"thought_score": get_self_compassion_coach().get_self_compassion_score()}
+
+
+@router.post("/sleep_analyzer/record")
+def sleep_analyzer_record(start: str = "", end: str = "", quality: float = 0.5):
+    entry = get_sleep_analyzer().record_sleep(start=start, end=end, quality=quality)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/sleep_analyzer/stats")
+def sleep_analyzer_stats():
+    return get_sleep_analyzer().get_sleep_stats()
+
+@router.get("/sleep_analyzer/score")
+def sleep_analyzer_score():
+    return {"sleep_score": get_sleep_analyzer().get_sleep_score()}
+
+
+@router.post("/social_impact_tracker/record")
+def social_impact_tracker_record(action: str = "", impact_type: str = "", reach: float = 0.0, depth: float = 0.0, sustainability: float = 0.0, alignment: float = 0.0, effort: float = 0.5, ripple: float = 0.0, notes: str = ""):
+    entry = get_social_impact_tracker().record_impact(action=action, impact_type=impact_type, reach=reach, depth=depth, sustainability=sustainability, alignment=alignment, effort=effort, ripple=ripple, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/social_impact_tracker/stats")
+def social_impact_tracker_stats():
+    return get_social_impact_tracker().get_impact_stats()
+
+@router.get("/social_impact_tracker/score")
+def social_impact_tracker_score():
+    return {"impact_score": get_social_impact_tracker().get_impact_score()}
+
+
+@router.post("/spiritual_practice_coach/record")
+def spiritual_practice_coach_record(practice: str = "", practice_type: str = "", duration: float = 0.0, depth: float = 0.5, integration: float = 0.5, meaning_felt: float = 0.5, bypassing: bool = False, notes: str = ""):
+    entry = get_spiritual_practice_coach().record_practice(practice=practice, practice_type=practice_type, duration=duration, depth=depth, integration=integration, meaning_felt=meaning_felt, bypassing=bypassing, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/spiritual_practice_coach/stats")
+def spiritual_practice_coach_stats():
+    return get_spiritual_practice_coach().get_spiritual_stats()
+
+@router.get("/spiritual_practice_coach/score")
+def spiritual_practice_coach_score():
+    return {"practice_score": get_spiritual_practice_coach().get_spiritual_score()}
+
+
+@router.post("/sustainability_coach/record")
+def sustainability_coach_record(action: str = "", domain: str = "", impact: float = 0.0, effort: float = 0.5, consistency: float = 0.5, genuine: bool = True, notes: str = ""):
+    entry = get_sustainability_coach().record_action(action=action, domain=domain, impact=impact, effort=effort, consistency=consistency, genuine=genuine, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/sustainability_coach/stats")
+def sustainability_coach_stats():
+    return get_sustainability_coach().get_sustainability_stats()
+
+@router.get("/sustainability_coach/score")
+def sustainability_coach_score():
+    return {"action_score": get_sustainability_coach().get_sustainability_score()}
+
+
+@router.post("/trust_builder/record")
+def trust_builder_record(person: str = "", event_type: str = "", dimension: str = "", impact: float = 0.0, description: str = "", repair_attempted: bool = False, repair_successful: bool = False, notes: str = ""):
+    entry = get_trust_builder().record_trust_event(person=person, event_type=event_type, dimension=dimension, impact=impact, description=description, repair_attempted=repair_attempted, repair_successful=repair_successful, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/trust_builder/stats")
+def trust_builder_stats():
+    return get_trust_builder().get_trust_stats()
+
+@router.get("/trust_builder/score")
+def trust_builder_score():
+    return {"trust_event_score": get_trust_builder().get_trust_score()}
+
+
+@router.post("/values_navigator/record")
+def values_navigator_record(decision: str = "", value: str = "", alignment: float = 0.0, cost: float = 0.0, satisfaction: float = 0.0, integrity: float = 0.0, pride: float = 0.0, notes: str = ""):
+    entry = get_values_navigator().record_decision(decision=decision, value=value, alignment=alignment, cost=cost, satisfaction=satisfaction, integrity=integrity, pride=pride, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/values_navigator/stats")
+def values_navigator_stats():
+    return get_values_navigator().get_values_stats()
+
+@router.get("/values_navigator/score")
+def values_navigator_score():
+    return {"decision_score": get_values_navigator().get_values_score()}
+
+
+@router.post("/vision_keeper/record")
+def vision_keeper_record(action: str = "", vision_type: str = "", vision_statement: str = "", alignment: float = 0.5, motivation: float = 0.5, clarity: float = 0.5, communication: float = 0.5, notes: str = ""):
+    entry = get_vision_keeper().record_action(action=action, vision_type=vision_type, vision_statement=vision_statement, alignment=alignment, motivation=motivation, clarity=clarity, communication=communication, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/vision_keeper/stats")
+def vision_keeper_stats():
+    return get_vision_keeper().get_vision_stats()
+
+@router.get("/vision_keeper/score")
+def vision_keeper_score():
+    return {"action_score": get_vision_keeper().get_vision_score()}
+
+
+@router.post("/vitality_tracker/record")
+def vitality_tracker_record(vitality: float = 0.5, physical_energy: float = 0.5, mental_clarity: float = 0.5, emotional_resilience: float = 0.5, motivation: float = 0.5, sleep_quality: float = 0.0, movement: float = 0.0, nutrition: float = 0.0, joy: float = 0.0, drains: float = 0.0, peak_hours: float = 0.0, notes: str = ""):
+    entry = get_vitality_tracker().record_vitality(vitality=vitality, physical_energy=physical_energy, mental_clarity=mental_clarity, emotional_resilience=emotional_resilience, motivation=motivation, sleep_quality=sleep_quality, movement=movement, nutrition=nutrition, joy=joy, drains=drains, peak_hours=peak_hours, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/vitality_tracker/stats")
+def vitality_tracker_stats():
+    return get_vitality_tracker().get_vitality_stats()
+
+@router.get("/vitality_tracker/score")
+def vitality_tracker_score():
+    return {"vitality_score": get_vitality_tracker().get_vitality_score()}
+
+
+@router.post("/vulnerability_builder/record")
+def vulnerability_builder_record(moment: str = "", vulnerability_type: str = "", context: str = "", safety_level: float = 0.5, response_received: str = "", connection_depth: float = 0.5, shame: float = 0.0, pride: float = 0.0, notes: str = ""):
+    entry = get_vulnerability_builder().record_vulnerability(moment=moment, vulnerability_type=vulnerability_type, context=context, safety_level=safety_level, response_received=response_received, connection_depth=connection_depth, shame=shame, pride=pride, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/vulnerability_builder/stats")
+def vulnerability_builder_stats():
+    return get_vulnerability_builder().get_vulnerability_stats()
+
+@router.get("/vulnerability_builder/score")
+def vulnerability_builder_score():
+    return {"vulnerability_score": get_vulnerability_builder().get_vulnerability_score()}
+
+
+@router.post("/wealth_builder/record")
+def wealth_builder_record(action: str = "", wealth_type: str = "", amount: float = 0.0, income_before: float = 0.0, savings_rate: float = 0.0, net_worth_change: float = 0.0, lifestyle_inflation: bool = False, notes: str = ""):
+    entry = get_wealth_builder().record_action(action=action, wealth_type=wealth_type, amount=amount, income_before=income_before, savings_rate=savings_rate, net_worth_change=net_worth_change, lifestyle_inflation=lifestyle_inflation, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/wealth_builder/stats")
+def wealth_builder_stats():
+    return get_wealth_builder().get_wealth_stats()
+
+@router.get("/wealth_builder/score")
+def wealth_builder_score():
+    return {"action_score": get_wealth_builder().get_wealth_score()}
+
+
+@router.post("/wisdom_keeper/record")
+def wisdom_keeper_record(insight: str = "", insight_type: str = "", depth: float = 0.0, applicability: float = 0.0, integration: float = 0.0, source: str = "", notes: str = ""):
+    entry = get_wisdom_keeper().record_insight(insight=insight, insight_type=insight_type, depth=depth, applicability=applicability, integration=integration, source=source, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/wisdom_keeper/stats")
+def wisdom_keeper_stats():
+    return get_wisdom_keeper().get_wisdom_stats()
+
+@router.get("/wisdom_keeper/score")
+def wisdom_keeper_score():
+    return {"insight_score": get_wisdom_keeper().get_wisdom_score()}
+
+
+@router.post("/wonder_cultivator/record")
+def wonder_cultivator_record(moment: str = "", source: str = "", intensity: float = 0.5, perspective_shift: float = 0.0, beauty: float = 0.0, duration_minutes: float = 0.0, gratitude: float = 0.0, notes: str = ""):
+    entry = get_wonder_cultivator().record_wonder(moment=moment, source=source, intensity=intensity, perspective_shift=perspective_shift, beauty=beauty, duration_minutes=duration_minutes, gratitude=gratitude, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/wonder_cultivator/stats")
+def wonder_cultivator_stats():
+    return get_wonder_cultivator().get_wonder_stats()
+
+@router.get("/wonder_cultivator/score")
+def wonder_cultivator_score():
+    return {"wonder_score": get_wonder_cultivator().get_wonder_score()}
+
+
+@router.post("/wonder_tracker/record")
+def wonder_tracker_record(trigger: str = "", trigger_type: str = "", intensity: float = 0.5, duration: float = 0, after_effect: str = "", mood_before: float = 0.5, mood_after: float = 0.5, location: str = "", time_of_day: str = "", notes: str = ""):
+    entry = get_wonder_tracker().record_wonder(trigger=trigger, trigger_type=trigger_type, intensity=intensity, duration=duration, after_effect=after_effect, mood_before=mood_before, mood_after=mood_after, location=location, time_of_day=time_of_day, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/wonder_tracker/stats")
+def wonder_tracker_stats():
+    return get_wonder_tracker().get_wonder_stats()
+
+@router.get("/wonder_tracker/score")
+def wonder_tracker_score():
+    return {"wonder_score": get_wonder_tracker().get_wonder_score()}
 

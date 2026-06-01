@@ -151,7 +151,8 @@ class CapabilityGapDetector:
         try:
             from core.self_coder import get_self_coder
             sc = get_self_coder()
-            for gap in high_impact[:1]:  # Trigger at most 1 per scan
+            high_impact_gaps = [g for g in new_gaps if g.impact > 0.6 and g.urgency > 0.5]
+            for gap in high_impact_gaps[:1]:  # Trigger at most 1 per scan
                 domain_file_map = {
                     "health": "core/heartbeat.py",
                     "career": "core/daily_briefing.py",
@@ -689,9 +690,9 @@ Focus on interconnected improvements rather than isolated fixes."""
         try:
             data = {
                 "last_updated": datetime.now().isoformat(),
-                "gaps": {gid: asdict(g) for gid, g in self._gaps.items()},
-                "cross_domain_gaps": {cid: asdict(c) for cid, c in self._cross_domain_gaps.items()},
-                "trends": {tid: asdict(t) for tid, t in self._gap_trends.items()},
+                "gaps": {gid: asdict(g) for gid, g in list(self._gaps.items())},
+                "cross_domain_gaps": {cid: asdict(c) for cid, c in list(self._cross_domain_gaps.items())},
+                "trends": {tid: asdict(t) for tid, t in list(self._gap_trends.items())},
             }
             GAPS_FILE.write_text(json.dumps(data, indent=2, default=str))
         except Exception as e:

@@ -126,7 +126,8 @@ export default function App() {
           setMessages(p => [...p, { role: "love", text, time: ts(), push: true, thinking: "" }]);
         }
         if (msg.type === "monologue") {
-          setMessages(p => [...p, { role: "monologue", text: msg.thought, time: ts(), thinking: "" }]);
+          // Do not spam the main chat with internal monologues. 
+          // They are logged to file and can be viewed elsewhere.
         }
         if (msg.type === "state_sync") {
           if (msg.context) {

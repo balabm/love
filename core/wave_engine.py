@@ -356,6 +356,23 @@ class WaveEngine:
         _log("wave_proposed", {"wave": proposal["title"], "trigger": proposal["trigger_category"]})
         log_activity("wave_engine", "wave_proposed", f"Proposed {proposal['title']}", {"wave": proposal["title"], "trigger": proposal["trigger_category"], "gaps": len(scan.get("gaps", []))}, importance="high")
 
+        # Close the loop by pushing the wave proposal into the execution queue
+        try:
+            from core.autonomous_mission_queue import get_mission_queue
+            mq = get_mission_queue()
+            mq.add_mission(
+                title=proposal["title"],
+                description=f"{proposal['description']}\nFeatures: {', '.join(proposal.get('features', []))}",
+                domain=proposal.get("trigger_category", "system"),
+                priority=proposal.get("priority", "medium"),
+                source="wave_engine"
+            )
+            print(f"[WaveEngine] Queued execution mission for {proposal['title']}", flush=True)
+        except ImportError:
+            print("[WaveEngine] autonomous_mission_queue not available, wave remains a proposal", flush=True)
+        except Exception as e:
+            print(f"[WaveEngine] Failed to queue mission: {e}", flush=True)
+
         # Update status
         self._update_status({
             "last_cycle": datetime.now().isoformat(),

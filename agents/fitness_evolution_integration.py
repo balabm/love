@@ -232,7 +232,11 @@ class FitnessEvolutionIntegration:
         while self._running:
             try:
                 # Periodic fitness pattern analysis
-                self.analyze_fitness_patterns()
+               if hasattr(self, 'analyze_fitness_patterns'):
+                try:
+                    self.analyze_fitness_patterns(workouts=[])
+                except TypeError:
+                    pass
                 self.track_fitness_metrics()
             except Exception as e:
                 print(f"[FitnessEvolution] Loop error: {e}")
