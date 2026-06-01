@@ -233,7 +233,9 @@ class GoogleServices:
 
             return events
         except Exception as e:
-            self._last_error = str(e)
+            err_msg = f"[Google] Calendar API error: {e}"
+            self._last_error = err_msg
+            print(err_msg)
             return []
 
     def get_upcoming_events(self, days: int = 7) -> List[Dict]:
