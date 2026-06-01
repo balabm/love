@@ -404,6 +404,10 @@ export default function IntelligenceDashboard() {
     { name: "visual_storytelling_coach", stats: modernStats.evolution_health?.visual_storytelling_coach },
     { name: "mindful_photography_guide", stats: modernStats.evolution_health?.mindful_photography_guide },
     { name: "memory_curation_coach", stats: modernStats.evolution_health?.memory_curation_coach },
+    { name: "home_repair_coach", stats: modernStats.evolution_health?.home_repair_coach },
+    { name: "diy_project_planner", stats: modernStats.evolution_health?.diy_project_planner },
+    { name: "maker_mindset_trainer", stats: modernStats.evolution_health?.maker_mindset_trainer },
+    { name: "handcraft_joy_cultivator", stats: modernStats.evolution_health?.handcraft_joy_cultivator },
   ].filter(m => m.stats);
 
   return (
