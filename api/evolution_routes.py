@@ -470,6 +470,11 @@ from core.vulnerable_communication_trainer import get_vulnerable_communication_t
 from core.difficult_conversation_navigator import get_difficult_conversation_navigator
 from core.active_listening_master import get_active_listening_master
 
+from core.body_awareness_trainer import get_body_awareness_trainer
+from core.breath_work_coach import get_breath_work_coach
+from core.movement_intelligence import get_movement_intelligence
+from core.posture_presence_coach import get_posture_presence_coach
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -980,4 +985,57 @@ def active_listening_master_stats():
 @router.get("/active_listening_master/score")
 def active_listening_master_score():
     return {"listening_score": get_active_listening_master().get_listening_score()}
+
+
+@router.post("/body_awareness_trainer/record")
+def body_awareness_trainer_record(sensation: str = "", body_area: str = "", awareness: float = 0.0, response: float = 0.0, integration: float = 0.0, grounding: float = 0.0, notes: str = ""):
+    entry = get_body_awareness_trainer().record_body(sensation=sensation, body_area=body_area, awareness=awareness, response=response, integration=integration, grounding=grounding, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/body_awareness_trainer/stats")
+def body_awareness_trainer_stats():
+    return get_body_awareness_trainer().get_body_stats()
+
+@router.get("/body_awareness_trainer/score")
+def body_awareness_trainer_score():
+    return {"body_score": get_body_awareness_trainer().get_body_score()}
+
+@router.post("/breath_work_coach/record")
+def breath_work_coach_record(technique: str = "", breath_type: str = "", calm: float = 0.0, energy: float = 0.0, clarity: float = 0.0, practice: float = 0.0, duration: float = 0.0, notes: str = ""):
+    entry = get_breath_work_coach().record_breath(technique=technique, breath_type=breath_type, calm=calm, energy=energy, clarity=clarity, practice=practice, duration=duration, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/breath_work_coach/stats")
+def breath_work_coach_stats():
+    return get_breath_work_coach().get_breath_stats()
+
+@router.get("/breath_work_coach/score")
+def breath_work_coach_score():
+    return {"breath_score": get_breath_work_coach().get_breath_score()}
+
+@router.post("/movement_intelligence/record")
+def movement_intelligence_record(activity: str = "", movement_type: str = "", joy: float = 0.0, energy: float = 0.0, ease: float = 0.0, integration: float = 0.0, duration: float = 0.0, notes: str = ""):
+    entry = get_movement_intelligence().record_movement(activity=activity, movement_type=movement_type, joy=joy, energy=energy, ease=ease, integration=integration, duration=duration, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/movement_intelligence/stats")
+def movement_intelligence_stats():
+    return get_movement_intelligence().get_movement_stats()
+
+@router.get("/movement_intelligence/score")
+def movement_intelligence_score():
+    return {"movement_score": get_movement_intelligence().get_movement_score()}
+
+@router.post("/posture_presence_coach/record")
+def posture_presence_coach_record(situation: str = "", presence_type: str = "", posture: float = 0.0, presence: float = 0.0, confidence: float = 0.0, energy: float = 0.0, openness: float = 0.0, notes: str = ""):
+    entry = get_posture_presence_coach().record_presence(situation=situation, presence_type=presence_type, posture=posture, presence=presence, confidence=confidence, energy=energy, openness=openness, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/posture_presence_coach/stats")
+def posture_presence_coach_stats():
+    return get_posture_presence_coach().get_presence_stats()
+
+@router.get("/posture_presence_coach/score")
+def posture_presence_coach_score():
+    return {"presence_score": get_posture_presence_coach().get_presence_score()}
 
