@@ -26,6 +26,11 @@ from core.sound_healing_guide import get_sound_healing_guide
 from core.playlist_therapist import get_playlist_therapist
 from core.rhythmic_living_coach import get_rhythmic_living_coach
 
+from core.mindful_eating_coach import get_mindful_eating_coach
+from core.cooking_joy_cultivator import get_cooking_joy_cultivator
+from core.meal_ritual_designer import get_meal_ritual_designer
+from core.food_as_medicine_coach import get_food_as_medicine_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1148,4 +1153,57 @@ def rhythmic_living_coach_stats():
 @router.get("/rhythmic_living_coach/score")
 def rhythmic_living_coach_score():
     return {"rhythm_score": get_rhythmic_living_coach().get_rhythm_score()}
+
+
+@router.post("/mindful_eating_coach/record")
+def mindful_eating_coach_record(food: str = "", eating_type: str = "", awareness: float = 0.0, satisfaction: float = 0.0, hunger_accuracy: float = 0.0, digestion_comfort: float = 0.0, savoring: float = 0.0, notes: str = ""):
+    entry = get_mindful_eating_coach().record_eating(food=food, eating_type=eating_type, awareness=awareness, satisfaction=satisfaction, hunger_accuracy=hunger_accuracy, digestion_comfort=digestion_comfort, savoring=savoring, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/mindful_eating_coach/stats")
+def mindful_eating_coach_stats():
+    return get_mindful_eating_coach().get_eating_stats()
+
+@router.get("/mindful_eating_coach/score")
+def mindful_eating_coach_score():
+    return {"eating_score": get_mindful_eating_coach().get_eating_score()}
+
+@router.post("/cooking_joy_cultivator/record")
+def cooking_joy_cultivator_record(dish: str = "", cooking_type: str = "", joy: float = 0.0, creativity: float = 0.0, skill: float = 0.0, nourishment: float = 0.0, sharing: float = 0.0, notes: str = ""):
+    entry = get_cooking_joy_cultivator().record_cooking(dish=dish, cooking_type=cooking_type, joy=joy, creativity=creativity, skill=skill, nourishment=nourishment, sharing=sharing, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/cooking_joy_cultivator/stats")
+def cooking_joy_cultivator_stats():
+    return get_cooking_joy_cultivator().get_cooking_stats()
+
+@router.get("/cooking_joy_cultivator/score")
+def cooking_joy_cultivator_score():
+    return {"cooking_score": get_cooking_joy_cultivator().get_cooking_score()}
+
+@router.post("/meal_ritual_designer/record")
+def meal_ritual_designer_record(meal: str = "", ritual_type: str = "", intention: float = 0.0, atmosphere: float = 0.0, meaning: float = 0.0, continuity: float = 0.0, presence: float = 0.0, notes: str = ""):
+    entry = get_meal_ritual_designer().record_ritual(meal=meal, ritual_type=ritual_type, intention=intention, atmosphere=atmosphere, meaning=meaning, continuity=continuity, presence=presence, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/meal_ritual_designer/stats")
+def meal_ritual_designer_stats():
+    return get_meal_ritual_designer().get_ritual_stats()
+
+@router.get("/meal_ritual_designer/score")
+def meal_ritual_designer_score():
+    return {"ritual_score": get_meal_ritual_designer().get_ritual_score()}
+
+@router.post("/food_as_medicine_coach/record")
+def food_as_medicine_coach_record(food: str = "", food_type: str = "", effect: float = 0.0, symptom: float = 0.0, intention: float = 0.0, healing: float = 0.0, prevention: float = 0.0, notes: str = ""):
+    entry = get_food_as_medicine_coach().record_food(food=food, food_type=food_type, effect=effect, symptom=symptom, intention=intention, healing=healing, prevention=prevention, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/food_as_medicine_coach/stats")
+def food_as_medicine_coach_stats():
+    return get_food_as_medicine_coach().get_food_stats()
+
+@router.get("/food_as_medicine_coach/score")
+def food_as_medicine_coach_score():
+    return {"food_score": get_food_as_medicine_coach().get_food_score()}
 
