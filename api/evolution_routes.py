@@ -475,6 +475,11 @@ from core.breath_work_coach import get_breath_work_coach
 from core.movement_intelligence import get_movement_intelligence
 from core.posture_presence_coach import get_posture_presence_coach
 
+from core.intimacy_coach import get_intimacy_coach
+from core.sensory_awareness_trainer import get_sensory_awareness_trainer
+from core.passion_cultivator import get_passion_cultivator
+from core.deep_connection_coach import get_deep_connection_coach
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -1038,4 +1043,57 @@ def posture_presence_coach_stats():
 @router.get("/posture_presence_coach/score")
 def posture_presence_coach_score():
     return {"presence_score": get_posture_presence_coach().get_presence_score()}
+
+
+@router.post("/intimacy_coach/record")
+def intimacy_coach_record(moment: str = "", intimacy_type: str = "", depth: float = 0.0, safety: float = 0.0, reciprocity: float = 0.0, satisfaction: float = 0.0, repair: float = 0.0, notes: str = ""):
+    entry = get_intimacy_coach().record_intimacy(moment=moment, intimacy_type=intimacy_type, depth=depth, safety=safety, reciprocity=reciprocity, satisfaction=satisfaction, repair=repair, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/intimacy_coach/stats")
+def intimacy_coach_stats():
+    return get_intimacy_coach().get_intimacy_stats()
+
+@router.get("/intimacy_coach/score")
+def intimacy_coach_score():
+    return {"intimacy_score": get_intimacy_coach().get_intimacy_score()}
+
+@router.post("/sensory_awareness_trainer/record")
+def sensory_awareness_trainer_record(experience: str = "", sensory_type: str = "", vividness: float = 0.0, presence: float = 0.0, pleasure: float = 0.0, curiosity: float = 0.0, notes: str = ""):
+    entry = get_sensory_awareness_trainer().record_sensory(experience=experience, sensory_type=sensory_type, vividness=vividness, presence=presence, pleasure=pleasure, curiosity=curiosity, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/sensory_awareness_trainer/stats")
+def sensory_awareness_trainer_stats():
+    return get_sensory_awareness_trainer().get_sensory_stats()
+
+@router.get("/sensory_awareness_trainer/score")
+def sensory_awareness_trainer_score():
+    return {"sensory_score": get_sensory_awareness_trainer().get_sensory_score()}
+
+@router.post("/passion_cultivator/record")
+def passion_cultivator_record(activity: str = "", passion_type: str = "", intensity: float = 0.0, duration: float = 0.0, satisfaction: float = 0.0, integration: float = 0.0, vitality: float = 0.0, notes: str = ""):
+    entry = get_passion_cultivator().record_passion(activity=activity, passion_type=passion_type, intensity=intensity, duration=duration, satisfaction=satisfaction, integration=integration, vitality=vitality, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/passion_cultivator/stats")
+def passion_cultivator_stats():
+    return get_passion_cultivator().get_passion_stats()
+
+@router.get("/passion_cultivator/score")
+def passion_cultivator_score():
+    return {"passion_score": get_passion_cultivator().get_passion_score()}
+
+@router.post("/deep_connection_coach/record")
+def deep_connection_coach_record(person: str = "", connection_type: str = "", depth: float = 0.0, authenticity: float = 0.0, reciprocity: float = 0.0, meaning: float = 0.0, maintenance: float = 0.0, notes: str = ""):
+    entry = get_deep_connection_coach().record_connection(person=person, connection_type=connection_type, depth=depth, authenticity=authenticity, reciprocity=reciprocity, meaning=meaning, maintenance=maintenance, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/deep_connection_coach/stats")
+def deep_connection_coach_stats():
+    return get_deep_connection_coach().get_connection_stats()
+
+@router.get("/deep_connection_coach/score")
+def deep_connection_coach_score():
+    return {"connection_score": get_deep_connection_coach().get_connection_score()}
 
