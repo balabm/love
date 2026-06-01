@@ -392,6 +392,10 @@ export default function IntelligenceDashboard() {
     { name: "animal_empathy_trainer", stats: modernStats.evolution_health?.animal_empathy_trainer },
     { name: "pet_loss_support", stats: modernStats.evolution_health?.pet_loss_support },
     { name: "human_animal_connection_guide", stats: modernStats.evolution_health?.human_animal_connection_guide },
+    { name: "garden_therapy_coach", stats: modernStats.evolution_health?.garden_therapy_coach },
+    { name: "plant_parenting_guide", stats: modernStats.evolution_health?.plant_parenting_guide },
+    { name: "seasonal_garden_planner", stats: modernStats.evolution_health?.seasonal_garden_planner },
+    { name: "urban_gardening_coach", stats: modernStats.evolution_health?.urban_gardening_coach },
   ].filter(m => m.stats);
 
   return (
