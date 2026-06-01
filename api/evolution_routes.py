@@ -61,6 +61,11 @@ from core.wardrobe_mindfulness_guide import get_wardrobe_mindfulness_guide
 from core.personal_brand_designer import get_personal_brand_designer
 from core.dress_for_joy_coach import get_dress_for_joy_coach
 
+from core.language_immersion_coach import get_language_immersion_coach
+from core.cross_cultural_bridge_builder import get_cross_cultural_bridge_builder
+from core.conversation_fluency_trainer import get_conversation_fluency_trainer
+from core.vocabulary_growth_coach import get_vocabulary_growth_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1614,4 +1619,57 @@ def dress_for_joy_coach_stats():
 @router.get("/dress_for_joy_coach/score")
 def dress_for_joy_coach_score():
     return {"dress_score": get_dress_for_joy_coach().get_dress_score()}
+
+
+@router.post("/language_immersion_coach/record")
+def language_immersion_coach_record(activity: str = "", immersion_type: str = "", exposure: float = 0.0, comprehension: float = 0.0, courage: float = 0.0, consistency: float = 0.0, joy: float = 0.0, authenticity: float = 0.0, notes: str = ""):
+    entry = get_language_immersion_coach().record_immersion(activity=activity, immersion_type=immersion_type, exposure=exposure, comprehension=comprehension, courage=courage, consistency=consistency, joy=joy, authenticity=authenticity, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/language_immersion_coach/stats")
+def language_immersion_coach_stats():
+    return get_language_immersion_coach().get_immersion_stats()
+
+@router.get("/language_immersion_coach/score")
+def language_immersion_coach_score():
+    return {"immersion_score": get_language_immersion_coach().get_immersion_score()}
+
+@router.post("/cross_cultural_bridge_builder/record")
+def cross_cultural_bridge_builder_record(situation: str = "", interaction_type: str = "", curiosity: float = 0.0, respect: float = 0.0, empathy: float = 0.0, adaptability: float = 0.0, openness: float = 0.0, humility: float = 0.0, notes: str = ""):
+    entry = get_cross_cultural_bridge_builder().record_interaction(situation=situation, interaction_type=interaction_type, curiosity=curiosity, respect=respect, empathy=empathy, adaptability=adaptability, openness=openness, humility=humility, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/cross_cultural_bridge_builder/stats")
+def cross_cultural_bridge_builder_stats():
+    return get_cross_cultural_bridge_builder().get_interaction_stats()
+
+@router.get("/cross_cultural_bridge_builder/score")
+def cross_cultural_bridge_builder_score():
+    return {"interaction_score": get_cross_cultural_bridge_builder().get_interaction_score()}
+
+@router.post("/conversation_fluency_trainer/record")
+def conversation_fluency_trainer_record(topic: str = "", conversation_type: str = "", fluency: float = 0.0, vocabulary: float = 0.0, grammar: float = 0.0, listening: float = 0.0, confidence: float = 0.0, connection: float = 0.0, notes: str = ""):
+    entry = get_conversation_fluency_trainer().record_conversation(topic=topic, conversation_type=conversation_type, fluency=fluency, vocabulary=vocabulary, grammar=grammar, listening=listening, confidence=confidence, connection=connection, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/conversation_fluency_trainer/stats")
+def conversation_fluency_trainer_stats():
+    return get_conversation_fluency_trainer().get_conversation_stats()
+
+@router.get("/conversation_fluency_trainer/score")
+def conversation_fluency_trainer_score():
+    return {"conversation_score": get_conversation_fluency_trainer().get_conversation_score()}
+
+@router.post("/vocabulary_growth_coach/record")
+def vocabulary_growth_coach_record(word: str = "", vocabulary_type: str = "", retention: float = 0.0, usage: float = 0.0, context: float = 0.0, depth: float = 0.0, joy: float = 0.0, connection: float = 0.0, notes: str = ""):
+    entry = get_vocabulary_growth_coach().record_vocabulary(word=word, vocabulary_type=vocabulary_type, retention=retention, usage=usage, context=context, depth=depth, joy=joy, connection=connection, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/vocabulary_growth_coach/stats")
+def vocabulary_growth_coach_stats():
+    return get_vocabulary_growth_coach().get_vocabulary_stats()
+
+@router.get("/vocabulary_growth_coach/score")
+def vocabulary_growth_coach_score():
+    return {"vocabulary_score": get_vocabulary_growth_coach().get_vocabulary_score()}
 
