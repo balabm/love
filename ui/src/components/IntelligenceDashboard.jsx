@@ -380,6 +380,10 @@ export default function IntelligenceDashboard() {
     { name: "sensory_awareness_trainer", stats: modernStats.evolution_health?.sensory_awareness_trainer },
     { name: "passion_cultivator", stats: modernStats.evolution_health?.passion_cultivator },
     { name: "deep_connection_coach", stats: modernStats.evolution_health?.deep_connection_coach },
+    { name: "music_mood_regulator", stats: modernStats.evolution_health?.music_mood_regulator },
+    { name: "sound_healing_guide", stats: modernStats.evolution_health?.sound_healing_guide },
+    { name: "playlist_therapist", stats: modernStats.evolution_health?.playlist_therapist },
+    { name: "rhythmic_living_coach", stats: modernStats.evolution_health?.rhythmic_living_coach },
   ].filter(m => m.stats);
 
   return (
