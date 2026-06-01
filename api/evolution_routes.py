@@ -41,6 +41,11 @@ from core.plant_parenting_guide import get_plant_parenting_guide
 from core.seasonal_garden_planner import get_seasonal_garden_planner
 from core.urban_gardening_coach import get_urban_gardening_coach
 
+from core.voice_presence_coach import get_voice_presence_coach
+from core.stage_confidence_builder import get_stage_confidence_builder
+from core.audience_connection_trainer import get_audience_connection_trainer
+from core.speech_craft_coach import get_speech_craft_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1366,4 +1371,57 @@ def urban_gardening_coach_stats():
 @router.get("/urban_gardening_coach/score")
 def urban_gardening_coach_score():
     return {"urban_score": get_urban_gardening_coach().get_urban_score()}
+
+
+@router.post("/voice_presence_coach/record")
+def voice_presence_coach_record(context: str = "", voice_type: str = "", presence: float = 0.0, power: float = 0.0, clarity: float = 0.0, warmth: float = 0.0, authenticity: float = 0.0, breath: float = 0.0, notes: str = ""):
+    entry = get_voice_presence_coach().record_voice(context=context, voice_type=voice_type, presence=presence, power=power, clarity=clarity, warmth=warmth, authenticity=authenticity, breath=breath, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/voice_presence_coach/stats")
+def voice_presence_coach_stats():
+    return get_voice_presence_coach().get_voice_stats()
+
+@router.get("/voice_presence_coach/score")
+def voice_presence_coach_score():
+    return {"voice_score": get_voice_presence_coach().get_voice_score()}
+
+@router.post("/stage_confidence_builder/record")
+def stage_confidence_builder_record(event: str = "", stage_type: str = "", confidence: float = 0.0, preparation: float = 0.0, delivery: float = 0.0, recovery: float = 0.0, impact: float = 0.0, fear: float = 0.0, notes: str = ""):
+    entry = get_stage_confidence_builder().record_stage(event=event, stage_type=stage_type, confidence=confidence, preparation=preparation, delivery=delivery, recovery=recovery, impact=impact, fear=fear, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/stage_confidence_builder/stats")
+def stage_confidence_builder_stats():
+    return get_stage_confidence_builder().get_stage_stats()
+
+@router.get("/stage_confidence_builder/score")
+def stage_confidence_builder_score():
+    return {"stage_score": get_stage_confidence_builder().get_stage_score()}
+
+@router.post("/audience_connection_trainer/record")
+def audience_connection_trainer_record(moment: str = "", connection_type: str = "", engagement: float = 0.0, empathy: float = 0.0, responsiveness: float = 0.0, reciprocity: float = 0.0, energy: float = 0.0, adaptation: float = 0.0, notes: str = ""):
+    entry = get_audience_connection_trainer().record_connection(moment=moment, connection_type=connection_type, engagement=engagement, empathy=empathy, responsiveness=responsiveness, reciprocity=reciprocity, energy=energy, adaptation=adaptation, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/audience_connection_trainer/stats")
+def audience_connection_trainer_stats():
+    return get_audience_connection_trainer().get_connection_stats()
+
+@router.get("/audience_connection_trainer/score")
+def audience_connection_trainer_score():
+    return {"connection_score": get_audience_connection_trainer().get_connection_score()}
+
+@router.post("/speech_craft_coach/record")
+def speech_craft_coach_record(section: str = "", speech_type: str = "", structure: float = 0.0, clarity: float = 0.0, persuasion: float = 0.0, memorability: float = 0.0, impact: float = 0.0, intention: float = 0.0, notes: str = ""):
+    entry = get_speech_craft_coach().record_speech(section=section, speech_type=speech_type, structure=structure, clarity=clarity, persuasion=persuasion, memorability=memorability, impact=impact, intention=intention, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/speech_craft_coach/stats")
+def speech_craft_coach_stats():
+    return get_speech_craft_coach().get_speech_stats()
+
+@router.get("/speech_craft_coach/score")
+def speech_craft_coach_score():
+    return {"speech_score": get_speech_craft_coach().get_speech_score()}
 
