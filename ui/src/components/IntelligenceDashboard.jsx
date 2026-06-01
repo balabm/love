@@ -400,6 +400,10 @@ export default function IntelligenceDashboard() {
     { name: "stage_confidence_builder", stats: modernStats.evolution_health?.stage_confidence_builder },
     { name: "audience_connection_trainer", stats: modernStats.evolution_health?.audience_connection_trainer },
     { name: "speech_craft_coach", stats: modernStats.evolution_health?.speech_craft_coach },
+    { name: "photo_memory_keeper", stats: modernStats.evolution_health?.photo_memory_keeper },
+    { name: "visual_storytelling_coach", stats: modernStats.evolution_health?.visual_storytelling_coach },
+    { name: "mindful_photography_guide", stats: modernStats.evolution_health?.mindful_photography_guide },
+    { name: "memory_curation_coach", stats: modernStats.evolution_health?.memory_curation_coach },
   ].filter(m => m.stats);
 
   return (
