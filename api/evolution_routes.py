@@ -819,6 +819,10 @@ async def get_evolution_health():
             "wardrobe_mindfulness_guide": {"available": True},
             "personal_brand_designer": {"available": True},
             "dress_for_joy_coach": {"available": True},
+            "language_immersion_coach": {"available": True},
+            "cross_cultural_bridge_builder": {"available": True},
+            "conversation_fluency_trainer": {"available": True},
+            "vocabulary_growth_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
