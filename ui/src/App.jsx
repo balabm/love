@@ -163,7 +163,7 @@ export default function App() {
     ping();
     loadLive();
     connectWS();
-    const t = setInterval(loadLive, 15000); // Poll more frequently for alive feel
+    const t = setInterval(loadLive, 60000); // Poll every 60s to reduce backend load
     return () => {
       clearInterval(t);
       if (wsRef.current) wsRef.current.close();

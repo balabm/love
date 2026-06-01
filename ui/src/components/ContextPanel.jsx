@@ -57,7 +57,7 @@ export default function ContextPanel({ collapsed: externalCollapsed }) {
 
   useEffect(() => {
     fetchContext();
-    const t = setInterval(fetchContext, 10000); // poll every 10s
+    const t = setInterval(fetchContext, 60000); // poll every 60s
     return () => clearInterval(t);
   }, []);
 
@@ -270,7 +270,7 @@ function DevicesTab() {
 
   useEffect(() => {
     load();
-    const t = setInterval(load, 15000);
+    const t = setInterval(load, 60000);
     return () => clearInterval(t);
   }, []);
 

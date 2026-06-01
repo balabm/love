@@ -37,6 +37,28 @@ def _should_use_fallback() -> bool:
     return OLLAMA_AUTO_FALLBACK and _is_system_under_load()
 
 
+_available_models: set = set()
+_model_check_done: bool = False
+
+def _check_model_exists(model: str, base_url: str) -> bool:
+    """Check if a model is available in Ollama, with caching."""
+    global _available_models, _model_check_done
+    if _model_check_done and _available_models:
+        return model in _available_models
+    try:
+        import requests
+        resp = requests.get(f"{base_url}/api/tags", timeout=3, proxies={"http": None, "https": None})
+        if resp.status_code == 200:
+            data = resp.json()
+            _available_models = {m.get("name", "") for m in data.get("models", [])}
+            _model_check_done = True
+            return model in _available_models
+    except Exception:
+        pass
+    # If we can't check, assume it exists (fail open)
+    return True
+
+
 def _effective_prompt_limit() -> int:
     """
     Cap prompt chars using both explicit override and ctx window approximation.
@@ -128,6 +150,12 @@ def get_reasoning_llm(temperature: float = None, max_tokens: int = None):
         model = FALLBACK_MODEL
         system_prefix = FALLBACK_SYSTEM_PREFIX
         print(f"[LLM] System under load - downgrading to {model}")
+    elif not _check_model_exists(model, base_url):
+        # Model not available, fall back to a known working model
+        available_fallbacks = ["deepseek-r1:7b", "qwen2.5:0.5b", "llama3.2:1b", "qwen2.5-coder:1.5b"]
+        fallback = next((m for m in available_fallbacks if _check_model_exists(m, base_url)), FALLBACK_MODEL)
+        print(f"[LLM] Model '{model}' not found in Ollama. Falling back to: {fallback}")
+        model = fallback
     else:
         print(f"[LLM] Selected reasoning model: {model}")
     return DirectOllama(base_url=base_url, model=model, temperature=temperature, system_prefix=system_prefix)
@@ -141,6 +169,11 @@ def get_coding_llm(temperature: float = 0.3, max_tokens: int = None):
         model = FALLBACK_MODEL
         system_prefix = FALLBACK_SYSTEM_PREFIX
         print(f"[LLM] System under load - downgrading coding model to {model}")
+    elif not _check_model_exists(model, base_url):
+        available_fallbacks = ["qwen2.5-coder:7b", "qwen2.5-coder:1.5b", "deepseek-r1:7b"]
+        fallback = next((m for m in available_fallbacks if _check_model_exists(m, base_url)), FALLBACK_MODEL)
+        print(f"[LLM] Coding model '{model}' not found. Falling back to: {fallback}")
+        model = fallback
     else:
         print(f"[LLM] Selected coding model: {model}")
     return DirectOllama(base_url=base_url, model=model, temperature=temperature, system_prefix=system_prefix)

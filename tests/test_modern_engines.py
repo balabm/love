@@ -21345,3 +21345,9 @@ class TestGiftIdeaGenerator:
         gig = get_gift_idea_generator()
         reminders = gig.get_occasion_reminders()
         assert isinstance(reminders, list)
+
+
+# -- Batch 65: Life Transitions ------------------------------------------
+
+class TestLifeTransitionNavigator:
+    """Test Life Transition Navigator."""

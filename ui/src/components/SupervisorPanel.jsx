@@ -67,7 +67,7 @@ export default function SupervisorPanel() {
   useEffect(() => {
     fetchAll();
     if (!autoRefresh) return;
-    const id = setInterval(fetchAll, 10000);
+    const id = setInterval(fetchAll, 60000);
     return () => clearInterval(id);
   }, [fetchAll, autoRefresh]);
 

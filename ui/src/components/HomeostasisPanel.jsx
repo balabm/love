@@ -102,7 +102,7 @@ export default function HomeostasisPanel() {
 
   useEffect(() => {
     load();
-    pollRef.current = setInterval(load, 15000); // refresh every 15s
+    pollRef.current = setInterval(load, 60000); // refresh every 60s
     return () => clearInterval(pollRef.current);
   }, [load]);
 

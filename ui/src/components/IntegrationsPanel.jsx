@@ -141,7 +141,7 @@ export default function IntegrationsPanel() {
 
   useEffect(() => {
     fetchStatus();
-    const t = setInterval(fetchStatus, 30000);
+    const t = setInterval(fetchStatus, 60000);
     return () => clearInterval(t);
   }, [fetchStatus]);
 

@@ -101,7 +101,7 @@ export default function EvolutionPanel() {
 
   useEffect(() => {
     fetchAllTelemetry();
-    const interval = setInterval(() => fetchAllTelemetry(true), 15000); // refresh silently every 15s
+    const interval = setInterval(() => fetchAllTelemetry(true), 60000); // refresh silently every 60s
     return () => clearInterval(interval);
   }, []);
 

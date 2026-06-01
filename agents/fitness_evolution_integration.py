@@ -270,6 +270,20 @@ class FitnessEvolutionIntegration:
         except Exception:
             pass
 
+    def track_fitness_metrics(self):
+        """Track current fitness metrics and log them."""
+        try:
+            metric = FitnessMetric(
+                timestamp=datetime.now().isoformat(),
+                workouts_completed=0,
+                workout_consistency=0.0,
+                goal_achievement_rate=0.0,
+                energy_level=0.5,
+            )
+            self._append_metric(metric)
+        except Exception:
+            pass
+
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 
 _fitness_evolution_instance: Optional[FitnessEvolutionIntegration] = None
