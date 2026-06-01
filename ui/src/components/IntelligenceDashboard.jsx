@@ -372,6 +372,10 @@ export default function IntelligenceDashboard() {
     { name: "vulnerable_communication_trainer", stats: modernStats.evolution_health?.vulnerable_communication_trainer },
     { name: "difficult_conversation_navigator", stats: modernStats.evolution_health?.difficult_conversation_navigator },
     { name: "active_listening_master", stats: modernStats.evolution_health?.active_listening_master },
+    { name: "body_awareness_trainer", stats: modernStats.evolution_health?.body_awareness_trainer },
+    { name: "breath_work_coach", stats: modernStats.evolution_health?.breath_work_coach },
+    { name: "movement_intelligence", stats: modernStats.evolution_health?.movement_intelligence },
+    { name: "posture_presence_coach", stats: modernStats.evolution_health?.posture_presence_coach },
   ].filter(m => m.stats);
 
   return (
