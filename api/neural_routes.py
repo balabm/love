@@ -1338,6 +1338,19 @@ _INTEGRATIONS = [
              "placeholder": "08:00", "hint": "24h format, local time"},
         ],
     },
+    {
+        "id": "ntfy_bridge",
+        "label": "Ntfy Notifications",
+        "icon": "N",
+        "description": "Receive phone notifications via ntfy.sh push service",
+        "docs_url": "https://ntfy.sh",
+        "fields": [
+            {"key": "NTFY_TOPIC", "label": "Ntfy Topic",
+             "placeholder": "love_agi_yourname", "hint": "Subscribe to this topic in the ntfy app"},
+            {"key": "NTFY_SERVER", "label": "Ntfy Server",
+             "placeholder": "https://ntfy.sh", "hint": "Leave default for public server"},
+        ],
+    },
 ]
 
 

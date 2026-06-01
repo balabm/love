@@ -26,6 +26,7 @@ import NotificationDashboard from "./components/NotificationDashboard";
 import TerminalPanel from "./components/TerminalPanel";
 import HomeostasisPanel from "./components/HomeostasisPanel";
 import IntegrationsPanel from "./components/IntegrationsPanel";
+import SetupWizard from "./components/SetupWizard";
 
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -339,6 +340,9 @@ export default function App() {
           <button className={`nav-tab-btn ${view === "constellation" ? "active" : ""}`} onClick={() => setView("constellation")} title="Connected Device topology">
             🔌 COSMOS
           </button>
+          <button className={`nav-tab-btn ${view === "setup" ? "active" : ""}`} onClick={() => setView("setup")} title="Setup Wizard — Connect integrations">
+            🔧 SETUP
+          </button>
           <button className={`nav-tab-btn ${view === "settings" ? "active" : ""}`} onClick={() => setView("settings")} title="Settings Controller">
             ⚙️ SETTINGS
           </button>
@@ -528,6 +532,10 @@ export default function App() {
                 </div>
               </div>
             </ErrorBoundary>
+          )}
+
+          {view === "setup" && (
+            <ErrorBoundary name="Setup"><div className="view-scroll"><SetupWizard /></div></ErrorBoundary>
           )}
 
           {view === "settings" && (

@@ -97,6 +97,10 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
+
+# Load .env file so integrations can read their config
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent.parent / ".env")
 from fastapi import FastAPI, BackgroundTasks, HTTPException, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

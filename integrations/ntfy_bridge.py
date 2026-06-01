@@ -25,6 +25,11 @@ class NtfyBridge:
         return self.running and bool(self.topic)
 
     def start(self):
+        # Re-read env vars in case .env was loaded after singleton creation
+        if not self.topic:
+            self.topic = os.getenv("NTFY_TOPIC")
+            self.server = os.getenv("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
+
         if not self.topic:
             print("[NtfyBridge] NTFY_TOPIC not set in environment. Ntfy integration disabled.")
             return
