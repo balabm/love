@@ -23,6 +23,35 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
+from core.shadow_integrator import get_shadow_integrator
+from core.inner_critic_tamer import get_inner_critic_tamer
+from core.perfectionism_healer import get_perfectionism_healer
+from core.comparison_detoxifier import get_comparison_detoxifier
+from core.money_mindset_coach import get_money_mindset_coach
+from core.scarcity_healer import get_scarcity_healer
+from core.generosity_cultivator import get_generosity_cultivator
+from core.abundance_architect import get_abundance_architect
+from core.decision_quality_tracker import get_decision_quality_tracker
+from core.optionality_maximizer import get_optionality_maximizer
+from core.expected_value_coach import get_expected_value_coach
+from core.regret_minimizer import get_regret_minimizer
+from core.cognitive_bias_detector import get_cognitive_bias_detector
+from core.mental_model_trainer import get_mental_model_trainer
+from core.first_principles_thinker import get_first_principles_thinker
+from core.systems_thinking_coach import get_systems_thinking_coach
+from core.authentic_expression_coach import get_authentic_expression_coach
+from core.vulnerable_communication_trainer import get_vulnerable_communication_trainer
+from core.difficult_conversation_navigator import get_difficult_conversation_navigator
+from core.active_listening_master import get_active_listening_master
+from core.body_awareness_trainer import get_body_awareness_trainer
+from core.breath_work_coach import get_breath_work_coach
+from core.movement_intelligence import get_movement_intelligence
+from core.posture_presence_coach import get_posture_presence_coach
+from core.intimacy_coach import get_intimacy_coach
+from core.sensory_awareness_trainer import get_sensory_awareness_trainer
+from core.passion_cultivator import get_passion_cultivator
+from core.deep_connection_coach import get_deep_connection_coach
+
 # ── Data Models ─────────────────────────────────────────────────────────────
 
 class EvolutionStatus(BaseModel):
@@ -444,41 +473,6 @@ async def get_evolution_health():
         from agents.task_evolution_integration import get_task_evolution_integration
         from agents.fitness_evolution_integration import get_fitness_evolution_integration
         from core.mcp_host import get_mcp_host
-
-from core.shadow_integrator import get_shadow_integrator
-from core.inner_critic_tamer import get_inner_critic_tamer
-from core.perfectionism_healer import get_perfectionism_healer
-from core.comparison_detoxifier import get_comparison_detoxifier
-
-from core.money_mindset_coach import get_money_mindset_coach
-from core.scarcity_healer import get_scarcity_healer
-from core.generosity_cultivator import get_generosity_cultivator
-from core.abundance_architect import get_abundance_architect
-
-from core.decision_quality_tracker import get_decision_quality_tracker
-from core.optionality_maximizer import get_optionality_maximizer
-from core.expected_value_coach import get_expected_value_coach
-from core.regret_minimizer import get_regret_minimizer
-
-from core.cognitive_bias_detector import get_cognitive_bias_detector
-from core.mental_model_trainer import get_mental_model_trainer
-from core.first_principles_thinker import get_first_principles_thinker
-from core.systems_thinking_coach import get_systems_thinking_coach
-
-from core.authentic_expression_coach import get_authentic_expression_coach
-from core.vulnerable_communication_trainer import get_vulnerable_communication_trainer
-from core.difficult_conversation_navigator import get_difficult_conversation_navigator
-from core.active_listening_master import get_active_listening_master
-
-from core.body_awareness_trainer import get_body_awareness_trainer
-from core.breath_work_coach import get_breath_work_coach
-from core.movement_intelligence import get_movement_intelligence
-from core.posture_presence_coach import get_posture_presence_coach
-
-from core.intimacy_coach import get_intimacy_coach
-from core.sensory_awareness_trainer import get_sensory_awareness_trainer
-from core.passion_cultivator import get_passion_cultivator
-from core.deep_connection_coach import get_deep_connection_coach
 
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
