@@ -396,6 +396,10 @@ export default function IntelligenceDashboard() {
     { name: "plant_parenting_guide", stats: modernStats.evolution_health?.plant_parenting_guide },
     { name: "seasonal_garden_planner", stats: modernStats.evolution_health?.seasonal_garden_planner },
     { name: "urban_gardening_coach", stats: modernStats.evolution_health?.urban_gardening_coach },
+    { name: "voice_presence_coach", stats: modernStats.evolution_health?.voice_presence_coach },
+    { name: "stage_confidence_builder", stats: modernStats.evolution_health?.stage_confidence_builder },
+    { name: "audience_connection_trainer", stats: modernStats.evolution_health?.audience_connection_trainer },
+    { name: "speech_craft_coach", stats: modernStats.evolution_health?.speech_craft_coach },
   ].filter(m => m.stats);
 
   return (
