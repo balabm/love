@@ -788,6 +788,14 @@ async def get_evolution_health():
             "plant_parenting_guide": {"available": True},
             "seasonal_garden_planner": {"available": True},
             "urban_gardening_coach": {"available": True},
+            "voice_presence_coach": {"available": True},
+            "stage_confidence_builder": {"available": True},
+            "audience_connection_trainer": {"available": True},
+            "speech_craft_coach": {"available": True},
+            "photo_memory_keeper": {"available": True},
+            "visual_storytelling_coach": {"available": True},
+            "mindful_photography_guide": {"available": True},
+            "memory_curation_coach": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
