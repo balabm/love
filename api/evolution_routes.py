@@ -465,6 +465,11 @@ from core.mental_model_trainer import get_mental_model_trainer
 from core.first_principles_thinker import get_first_principles_thinker
 from core.systems_thinking_coach import get_systems_thinking_coach
 
+from core.authentic_expression_coach import get_authentic_expression_coach
+from core.vulnerable_communication_trainer import get_vulnerable_communication_trainer
+from core.difficult_conversation_navigator import get_difficult_conversation_navigator
+from core.active_listening_master import get_active_listening_master
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -922,4 +927,57 @@ def systems_thinking_coach_stats():
 @router.get("/systems_thinking_coach/score")
 def systems_thinking_coach_score():
     return {"systems_score": get_systems_thinking_coach().get_systems_score()}
+
+
+@router.post("/authentic_expression_coach/record")
+def authentic_expression_coach_record(expression: str = "", expression_type: str = "", authenticity: float = 0.0, fear: float = 0.0, reception: float = 0.0, satisfaction: float = 0.0, kindness: float = 0.0, notes: str = ""):
+    entry = get_authentic_expression_coach().record_expression(expression=expression, expression_type=expression_type, authenticity=authenticity, fear=fear, reception=reception, satisfaction=satisfaction, kindness=kindness, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/authentic_expression_coach/stats")
+def authentic_expression_coach_stats():
+    return get_authentic_expression_coach().get_expression_stats()
+
+@router.get("/authentic_expression_coach/score")
+def authentic_expression_coach_score():
+    return {"expression_score": get_authentic_expression_coach().get_expression_score()}
+
+@router.post("/vulnerable_communication_trainer/record")
+def vulnerable_communication_trainer_record(vulnerability: str = "", vulnerability_type: str = "", courage: float = 0.0, reception: float = 0.0, connection: float = 0.0, safety: float = 0.0, reciprocity: float = 0.0, notes: str = ""):
+    entry = get_vulnerable_communication_trainer().record_vulnerability(vulnerability=vulnerability, vulnerability_type=vulnerability_type, courage=courage, reception=reception, connection=connection, safety=safety, reciprocity=reciprocity, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/vulnerable_communication_trainer/stats")
+def vulnerable_communication_trainer_stats():
+    return get_vulnerable_communication_trainer().get_vulnerability_stats()
+
+@router.get("/vulnerable_communication_trainer/score")
+def vulnerable_communication_trainer_score():
+    return {"vulnerability_score": get_vulnerable_communication_trainer().get_vulnerability_score()}
+
+@router.post("/difficult_conversation_navigator/record")
+def difficult_conversation_navigator_record(topic: str = "", conversation_type: str = "", preparation: float = 0.0, delivery: float = 0.0, reception: float = 0.0, outcome: float = 0.0, emotion_management: float = 0.0, follow_up: float = 0.0, notes: str = ""):
+    entry = get_difficult_conversation_navigator().record_conversation(topic=topic, conversation_type=conversation_type, preparation=preparation, delivery=delivery, reception=reception, outcome=outcome, emotion_management=emotion_management, follow_up=follow_up, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/difficult_conversation_navigator/stats")
+def difficult_conversation_navigator_stats():
+    return get_difficult_conversation_navigator().get_conversation_stats()
+
+@router.get("/difficult_conversation_navigator/score")
+def difficult_conversation_navigator_score():
+    return {"conversation_score": get_difficult_conversation_navigator().get_conversation_score()}
+
+@router.post("/active_listening_master/record")
+def active_listening_master_record(situation: str = "", listening_type: str = "", presence: float = 0.0, understanding: float = 0.0, impact: float = 0.0, no_fixing: float = 0.0, no_judging: float = 0.0, notes: str = ""):
+    entry = get_active_listening_master().record_listening(situation=situation, listening_type=listening_type, presence=presence, understanding=understanding, impact=impact, no_fixing=no_fixing, no_judging=no_judging, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/active_listening_master/stats")
+def active_listening_master_stats():
+    return get_active_listening_master().get_listening_stats()
+
+@router.get("/active_listening_master/score")
+def active_listening_master_score():
+    return {"listening_score": get_active_listening_master().get_listening_score()}
 
