@@ -46,6 +46,11 @@ from core.stage_confidence_builder import get_stage_confidence_builder
 from core.audience_connection_trainer import get_audience_connection_trainer
 from core.speech_craft_coach import get_speech_craft_coach
 
+from core.photo_memory_keeper import get_photo_memory_keeper
+from core.visual_storytelling_coach import get_visual_storytelling_coach
+from core.mindful_photography_guide import get_mindful_photography_guide
+from core.memory_curation_coach import get_memory_curation_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1424,4 +1429,57 @@ def speech_craft_coach_stats():
 @router.get("/speech_craft_coach/score")
 def speech_craft_coach_score():
     return {"speech_score": get_speech_craft_coach().get_speech_score()}
+
+
+@router.post("/photo_memory_keeper/record")
+def photo_memory_keeper_record(photo: str = "", photo_type: str = "", intention: float = 0.0, quality: float = 0.0, emotion: float = 0.0, story: float = 0.0, preservation: float = 0.0, curation: float = 0.0, notes: str = ""):
+    entry = get_photo_memory_keeper().record_photo(photo=photo, photo_type=photo_type, intention=intention, quality=quality, emotion=emotion, story=story, preservation=preservation, curation=curation, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/photo_memory_keeper/stats")
+def photo_memory_keeper_stats():
+    return get_photo_memory_keeper().get_photo_stats()
+
+@router.get("/photo_memory_keeper/score")
+def photo_memory_keeper_score():
+    return {"photo_score": get_photo_memory_keeper().get_photo_score()}
+
+@router.post("/visual_storytelling_coach/record")
+def visual_storytelling_coach_record(series: str = "", story_type: str = "", narrative: float = 0.0, composition: float = 0.0, emotion: float = 0.0, continuity: float = 0.0, impact: float = 0.0, intention: float = 0.0, notes: str = ""):
+    entry = get_visual_storytelling_coach().record_story(series=series, story_type=story_type, narrative=narrative, composition=composition, emotion=emotion, continuity=continuity, impact=impact, intention=intention, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/visual_storytelling_coach/stats")
+def visual_storytelling_coach_stats():
+    return get_visual_storytelling_coach().get_story_stats()
+
+@router.get("/visual_storytelling_coach/score")
+def visual_storytelling_coach_score():
+    return {"story_score": get_visual_storytelling_coach().get_story_score()}
+
+@router.post("/mindful_photography_guide/record")
+def mindful_photography_guide_record(session: str = "", practice_type: str = "", attention: float = 0.0, patience: float = 0.0, stillness: float = 0.0, seeing: float = 0.0, presence: float = 0.0, surrender: float = 0.0, notes: str = ""):
+    entry = get_mindful_photography_guide().record_practice(session=session, practice_type=practice_type, attention=attention, patience=patience, stillness=stillness, seeing=seeing, presence=presence, surrender=surrender, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/mindful_photography_guide/stats")
+def mindful_photography_guide_stats():
+    return get_mindful_photography_guide().get_practice_stats()
+
+@router.get("/mindful_photography_guide/score")
+def mindful_photography_guide_score():
+    return {"practice_score": get_mindful_photography_guide().get_practice_score()}
+
+@router.post("/memory_curation_coach/record")
+def memory_curation_coach_record(moment: str = "", curation_type: str = "", intention: float = 0.0, selectivity: float = 0.0, care: float = 0.0, meaning: float = 0.0, preservation: float = 0.0, ritual: float = 0.0, notes: str = ""):
+    entry = get_memory_curation_coach().record_curation(moment=moment, curation_type=curation_type, intention=intention, selectivity=selectivity, care=care, meaning=meaning, preservation=preservation, ritual=ritual, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/memory_curation_coach/stats")
+def memory_curation_coach_stats():
+    return get_memory_curation_coach().get_curation_stats()
+
+@router.get("/memory_curation_coach/score")
+def memory_curation_coach_score():
+    return {"curation_score": get_memory_curation_coach().get_curation_score()}
 
