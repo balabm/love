@@ -81,7 +81,7 @@ class ResonanceReading:
 class ShiftAlert:
     """An alert about a meaningful emotional shift."""
     alert_id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat()))
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     shift_type: str = ""  # e.g., "energy_drop", "irritability_spike", "withdrawal"
     severity: float = 0.5  # 0-1
     description: str = ""
