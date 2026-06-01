@@ -31,6 +31,11 @@ from core.cooking_joy_cultivator import get_cooking_joy_cultivator
 from core.meal_ritual_designer import get_meal_ritual_designer
 from core.food_as_medicine_coach import get_food_as_medicine_coach
 
+from core.pet_bonding_coach import get_pet_bonding_coach
+from core.animal_empathy_trainer import get_animal_empathy_trainer
+from core.pet_loss_support import get_pet_loss_support
+from core.human_animal_connection_guide import get_human_animal_connection_guide
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1206,4 +1211,57 @@ def food_as_medicine_coach_stats():
 @router.get("/food_as_medicine_coach/score")
 def food_as_medicine_coach_score():
     return {"food_score": get_food_as_medicine_coach().get_food_score()}
+
+
+@router.post("/pet_bonding_coach/record")
+def pet_bonding_coach_record(activity: str = "", bonding_type: str = "", quality: float = 0.0, reciprocity: float = 0.0, joy: float = 0.0, depth: float = 0.0, attention: float = 0.0, notes: str = ""):
+    entry = get_pet_bonding_coach().record_bonding(activity=activity, bonding_type=bonding_type, quality=quality, reciprocity=reciprocity, joy=joy, depth=depth, attention=attention, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/pet_bonding_coach/stats")
+def pet_bonding_coach_stats():
+    return get_pet_bonding_coach().get_bonding_stats()
+
+@router.get("/pet_bonding_coach/score")
+def pet_bonding_coach_score():
+    return {"bonding_score": get_pet_bonding_coach().get_bonding_score()}
+
+@router.post("/animal_empathy_trainer/record")
+def animal_empathy_trainer_record(animal: str = "", empathy_type: str = "", accuracy: float = 0.0, connection: float = 0.0, understanding: float = 0.0, growth: float = 0.0, patience: float = 0.0, notes: str = ""):
+    entry = get_animal_empathy_trainer().record_empathy(animal=animal, empathy_type=empathy_type, accuracy=accuracy, connection=connection, understanding=understanding, growth=growth, patience=patience, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/animal_empathy_trainer/stats")
+def animal_empathy_trainer_stats():
+    return get_animal_empathy_trainer().get_empathy_stats()
+
+@router.get("/animal_empathy_trainer/score")
+def animal_empathy_trainer_score():
+    return {"empathy_score": get_animal_empathy_trainer().get_empathy_score()}
+
+@router.post("/pet_loss_support/record")
+def pet_loss_support_record(moment: str = "", grief_type: str = "", intensity: float = 0.0, processing: float = 0.0, support: float = 0.0, integration: float = 0.0, memorial: float = 0.0, notes: str = ""):
+    entry = get_pet_loss_support().record_grief(moment=moment, grief_type=grief_type, intensity=intensity, processing=processing, support=support, integration=integration, memorial=memorial, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/pet_loss_support/stats")
+def pet_loss_support_stats():
+    return get_pet_loss_support().get_grief_stats()
+
+@router.get("/pet_loss_support/score")
+def pet_loss_support_score():
+    return {"grief_score": get_pet_loss_support().get_grief_score()}
+
+@router.post("/human_animal_connection_guide/record")
+def human_animal_connection_guide_record(animal: str = "", connection_type: str = "", wonder: float = 0.0, respect: float = 0.0, reciprocity: float = 0.0, expansion: float = 0.0, ethical: float = 0.0, notes: str = ""):
+    entry = get_human_animal_connection_guide().record_connection(animal=animal, connection_type=connection_type, wonder=wonder, respect=respect, reciprocity=reciprocity, expansion=expansion, ethical=ethical, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/human_animal_connection_guide/stats")
+def human_animal_connection_guide_stats():
+    return get_human_animal_connection_guide().get_connection_stats()
+
+@router.get("/human_animal_connection_guide/score")
+def human_animal_connection_guide_score():
+    return {"connection_score": get_human_animal_connection_guide().get_connection_score()}
 
