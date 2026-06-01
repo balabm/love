@@ -1,35 +1,57 @@
 import { useState, useEffect } from "react";
-import api, { API } from '../api';
+import api from "../api";
 
 export default function NotificationDashboard() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
-    api.get(API.notifications.recent)
+    api.get("/notifications/recent")
       .then(r => { if (mounted) setNotifications(r.data?.notifications || []); })
-      .catch(() => { if (mounted) setNotifications([]); })
+      .catch(e => { if (mounted) setError(e.message); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
-  if (loading) return <div className="p-6 text-gray-400">Loading notifications...</div>;
+  if (loading) {
+    return (
+      <div style={{ padding: 24, color: "rgba(226,224,238,0.38)" }}>
+        Loading notifications...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Notifications</h2>
+        <p style={{ color: "rgba(226,224,238,0.38)" }}>Notification service offline.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      <h2 className="text-lg font-semibold mb-4">Notifications</h2>
+    <div style={{ padding: 24 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Notifications</h2>
       {notifications.length === 0 ? (
-        <p className="text-gray-400">No recent notifications.</p>
+        <p style={{ color: "rgba(226,224,238,0.38)" }}>No recent notifications.</p>
       ) : (
-        <div className="space-y-2">
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {notifications.map((n, i) => (
-            <div key={i} className="bg-gray-800 rounded p-3 border border-gray-700 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{n.category || "notification"}</span>
-                <span className="text-xs text-gray-500">{n.ts?.slice(0, 16) || ""}</span>
+            <div key={i} style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 8,
+              padding: 12,
+              fontSize: 13,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontWeight: 500 }}>{n.category || "notification"}</span>
+                <span style={{ fontSize: 11, color: "rgba(226,224,238,0.25)" }}>{n.ts?.slice(0, 16) || ""}</span>
               </div>
-              <p className="text-gray-300 mt-1">{n.message}</p>
+              <p style={{ color: "rgba(226,224,238,0.6)" }}>{n.message}</p>
             </div>
           ))}
         </div>

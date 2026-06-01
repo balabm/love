@@ -247,6 +247,7 @@ body {
   padding: 16px 28px 20px;
   border-top: 1px solid var(--border);
   background: rgba(7,7,15,.85); backdrop-filter: blur(12px);
+  flex-shrink: 0;
 }
 .input-field {
   flex: 1; background: rgba(255,255,255,.05); border: 1px solid var(--border);
@@ -271,3 +272,341 @@ body {
 .view-centered { flex: 1; display: flex; align-items: center; justify-content: center; padding: 32px; overflow-y: auto; }
 .view-ritual { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent; }
 .view-focus  { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.06) transparent; }
+
+/* ── NEW HUD LAYOUT (was missing, causing collapsed UI) ── */
+.app-container {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.horizon-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,20,0.92);
+  backdrop-filter: blur(24px);
+  flex-shrink: 0;
+  min-height: 56px;
+}
+
+.logo-group { display: flex; align-items: center; }
+
+.logo-sub {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--love);
+  margin-left: 6px;
+  opacity: 0.8;
+}
+
+.global-hud-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.stat-capsule {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.val-glowing {
+  font-weight: 600;
+  color: #34d399;
+  text-shadow: 0 0 8px rgba(52,211,153,0.3);
+}
+.val-glowing.pink { color: #f472b6; text-shadow: 0 0 8px rgba(244,114,182,0.3); }
+
+.policy-select {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+.policy-select.safe { color: #34d399; }
+.policy-select.balanced { color: #fbbf24; }
+.policy-select.aggressive { color: #f87171; }
+
+.ws-dot { width: 6px; height: 6px; border-radius: 50%; }
+.ws-dot.online { background: #34d399; box-shadow: 0 0 6px #34d399; }
+.ws-dot.offline { background: #f87171; }
+
+.hidden-mobile { display: flex; }
+@media (max-width: 768px) { .hidden-mobile { display: none; } }
+
+.horizon-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.nav-tab-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.nav-tab-btn:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.nav-tab-btn.active { background: rgba(192,132,252,.12); color: var(--love); }
+
+.hud-content-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 260px;
+  overflow: hidden;
+}
+.hud-content-container.left-collapsed { grid-template-columns: 44px 1fr 260px; }
+.hud-content-container.right-collapsed { grid-template-columns: 260px 1fr 44px; }
+.hud-content-container.left-collapsed.right-collapsed { grid-template-columns: 44px 1fr 44px; }
+
+@media (max-width: 1024px) {
+  .hud-content-container { grid-template-columns: 200px 1fr 200px; }
+  .hud-content-container.left-collapsed { grid-template-columns: 44px 1fr 200px; }
+  .hud-content-container.right-collapsed { grid-template-columns: 200px 1fr 44px; }
+}
+
+@media (max-width: 768px) {
+  .hud-content-container { grid-template-columns: 1fr; }
+  .hud-content-container.left-collapsed,
+  .hud-content-container.right-collapsed,
+  .hud-content-container.left-collapsed.right-collapsed { grid-template-columns: 1fr; }
+  .hud-wing { display: none; }
+}
+
+.hud-wing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(10,10,20,0.85);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.right-wing {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+.hud-wing.collapsed {
+  padding: 8px 4px;
+  align-items: center;
+  min-width: 44px;
+  width: 44px;
+  overflow: visible;
+}
+
+.wing-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  color: var(--muted);
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.left-wing .wing-toggle { right: 8px; }
+.right-wing .wing-toggle { left: 8px; right: auto; }
+
+.wing-collapsed-indicators {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 32px;
+  align-items: center;
+}
+
+.wci-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.wci-dot:hover { background: rgba(192,132,252,.12); border-color: rgba(192,132,252,.25); }
+
+.hud-center-stage {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg);
+  min-width: 0;
+  min-height: 0;
+}
+
+.glass-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.alerts-panel { gap: 8px; }
+
+.sub-view-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sub-nav-header {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,20,0.6);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.sub-nav-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.sub-nav-btn:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.sub-nav-btn.active { background: rgba(192,132,252,.12); color: var(--love); }
+
+/* ── NeuralStream (was completely unstyled) ── */
+.hud-stream {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.08) transparent;
+}
+
+.stream-event {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: fadeUp .25s ease;
+}
+.stream-event.user { align-items: flex-end; }
+
+.stream-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 0 2px;
+}
+.stream-role {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--love);
+}
+.stream-event.user .stream-role { color: #34d399; }
+
+.stream-bubble {
+  padding: 12px 16px;
+  border-radius: var(--r);
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  max-width: 72%;
+}
+.stream-event.love .stream-bubble {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-top-left-radius: 4px;
+  color: var(--text);
+}
+.stream-event.user .stream-bubble {
+  background: rgba(192,132,252,.13);
+  border: 1px solid rgba(192,132,252,.22);
+  border-top-right-radius: 4px;
+  color: var(--text);
+}
+.stream-bubble.push-event {
+  border-left: 2px solid var(--love);
+}
+
+/* Glass panel overflow containment in wings */
+.hud-wing .glass-panel {
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.hud-wing .glass-panel > * {
+  min-height: 0;
+}
+
+/* EvolutionHUD metrics */
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 12px;
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-label { color: var(--muted); font-size: 11px; letter-spacing: 0.3px; }
+.metric-val { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+.metric-val.low { color: #34d399; }
+.metric-val.med { color: #fbbf24; }
+.metric-val.high { color: #f87171; }
+
+/* FIX: ensure right wing panels don't overflow */
+.cosmos-mini { max-height: 200px; min-height: 0; }

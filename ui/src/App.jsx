@@ -547,10 +547,10 @@ export default function App() {
             <>
               <EvolutionHUD evolution={evolution} predictions={predictions} />
               {view !== "constellation" && (
-                <div className="glass-panel" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 280, padding: 12 }}>
+                <div className="glass-panel" style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 120, padding: 8 }}>
                   <h3 style={{ margin: "0 0 8px 0" }}>Cosmos Topology Map</h3>
                   <div style={{ flex: 1, position: "relative", overflow: "hidden", borderRadius: 8, background: "rgba(0,0,0,0.2)", border: "1px solid rgba(255,255,255,0.03)" }}>
-                    <ConstellationMap />
+                    <ConstellationMap compact />
                   </div>
                 </div>
               )}

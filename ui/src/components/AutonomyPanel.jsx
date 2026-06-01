@@ -1,53 +1,107 @@
 import { useState, useEffect } from "react";
-import api, { API } from '../api';
+import api from "../api";
 
 export default function AutonomyPanel() {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
-    api.get(API.evolution.status)
+    api.get("/evolution/status")
       .then(r => { if (mounted) setStatus(r.data); })
-      .catch(() => { if (mounted) setStatus({ systems: [] }); })
+      .catch(e => { if (mounted) setError(e.message); })
       .finally(() => { if (mounted) setLoading(false); });
     return () => { mounted = false; };
   }, []);
 
-  if (loading) return <div className="p-6 text-gray-400">Loading autonomy data...</div>;
+  if (loading) {
+    return (
+      <div style={{ padding: 24, color: "rgba(226,224,238,0.38)" }}>
+        Loading autonomy data...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Autonomy Supervisor</h2>
+        <p style={{ color: "rgba(226,224,238,0.38)" }}>Autonomy data unavailable. Backend not reachable.</p>
+      </div>
+    );
+  }
 
   const systems = status?.systems || [];
-  const ready = systems.filter(s => s.status === 'ready').length;
-  const failed = systems.filter(s => s.status === 'failed').length;
+  const ready = systems.filter(s => s.status === "ready").length;
+  const failed = systems.filter(s => s.status === "failed").length;
 
   return (
-    <div className="p-6">
-      <h2 className="text-lg font-semibold mb-4">Autonomy Supervisor</h2>
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 text-center">
-          <div className="text-2xl font-bold text-green-400">{ready}</div>
-          <div className="text-xs text-gray-400">Ready</div>
+    <div style={{ padding: 24 }}>
+      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Autonomy Supervisor</h2>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+        <div style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 12,
+          padding: 12,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#34d399" }}>{ready}</div>
+          <div style={{ fontSize: 11, color: "rgba(226,224,238,0.38)" }}>Ready</div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 text-center">
-          <div className="text-2xl font-bold text-yellow-400">{systems.length - ready - failed}</div>
-          <div className="text-xs text-gray-400">Other</div>
+        <div style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 12,
+          padding: 12,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#fbbf24" }}>{systems.length - ready - failed}</div>
+          <div style={{ fontSize: 11, color: "rgba(226,224,238,0.38)" }}>Other</div>
         </div>
-        <div className="bg-gray-800 rounded-lg p-3 border border-gray-700 text-center">
-          <div className="text-2xl font-bold text-red-400">{failed}</div>
-          <div className="text-xs text-gray-400">Failed</div>
+        <div style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 12,
+          padding: 12,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#f87171" }}>{failed}</div>
+          <div style={{ fontSize: 11, color: "rgba(226,224,238,0.38)" }}>Failed</div>
         </div>
       </div>
-      <div className="space-y-2">
-        {systems.slice(0, 20).map((s, i) => (
-          <div key={i} className="flex items-center justify-between bg-gray-800/50 rounded p-2 text-sm">
-            <span className="font-medium">{s.name || s.module || `Module ${i + 1}`}</span>
-            <span className={`px-2 py-0.5 rounded text-xs ${s.status === 'ready' ? 'bg-green-900/50 text-green-400' : s.status === 'failed' ? 'bg-red-900/50 text-red-400' : 'bg-gray-700 text-gray-400'}`}>
-              {s.status}
-            </span>
-          </div>
-        ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {systems.slice(0, 20).map((s, i) => {
+          const isReady = s.status === "ready";
+          const isFailed = s.status === "failed";
+          return (
+            <div key={i} style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "rgba(255,255,255,0.03)",
+              borderRadius: 8,
+              padding: "8px 12px",
+              fontSize: 13,
+            }}>
+              <span style={{ fontWeight: 500 }}>{s.name || s.module || `Module ${i + 1}`}</span>
+              <span style={{
+                padding: "2px 8px",
+                borderRadius: 6,
+                fontSize: 11,
+                background: isReady ? "rgba(52,211,153,0.12)" : isFailed ? "rgba(248,113,113,0.12)" : "rgba(255,255,255,0.05)",
+                color: isReady ? "#34d399" : isFailed ? "#f87171" : "rgba(226,224,238,0.38)",
+              }}>
+                {s.status}
+              </span>
+            </div>
+          );
+        })}
         {systems.length > 20 && (
-          <div className="text-center text-xs text-gray-500">+ {systems.length - 20} more modules</div>
+          <div style={{ textAlign: "center", fontSize: 11, color: "rgba(226,224,238,0.25)" }}>
+            + {systems.length - 20} more modules
+          </div>
         )}
       </div>
     </div>

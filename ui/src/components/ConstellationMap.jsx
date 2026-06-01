@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import api, { API } from "../api";
 
-export default function ConstellationMap() {
+export default function ConstellationMap({ compact = false }) {
   const [nodes, setNodes] = useState([
     { id: "core", label: "LOVE AGI CORE", type: "core", status: "online", x: 50, y: 50 }
   ]);
@@ -13,26 +13,25 @@ export default function ConstellationMap() {
       const mapped = [
         { id: "core", label: "LOVE NEURAL CORE", type: "core", status: "online", x: 50, y: 50 }
       ];
-      
+
       const ints = res.data.integrations || [];
       const count = ints.length;
-      
+
       ints.forEach((int, i) => {
-        // Distribute around the core in a circle
         const angle = (i / count) * Math.PI * 2;
-        const radius = 25; // % from center
+        const radius = 25;
         const x = 50 + radius * Math.cos(angle);
         const y = 50 + radius * Math.sin(angle);
-        
+
         mapped.push({
           id: int.name,
           label: int.name.toUpperCase(),
           type: "peripheral",
-          status: int.status, // "connected", "not configured", etc.
+          status: int.status,
           x, y
         });
       });
-      
+
       setNodes(mapped);
     } catch (e) {
       console.error(e);
@@ -50,6 +49,35 @@ export default function ConstellationMap() {
     await fetchIntegrations();
   };
 
+  if (compact) {
+    const peripheralCount = nodes.filter(n => n.type !== "core").length;
+    const connectedCount = nodes.filter(n => n.type !== "core" && (n.status === "connected" || n.status === "online")).length;
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 8, padding: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: "50%",
+            background: "rgba(192, 132, 252, 0.2)",
+            border: "2px solid #c084fc",
+            boxShadow: "0 0 12px rgba(192,132,252,0.4)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 14
+          }}>🧠</div>
+          <div style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>LOVE AGI CORE</div>
+        </div>
+        <div style={{ fontSize: 10, color: "var(--muted)", textAlign: "center" }}>
+          {connectedCount}/{peripheralCount} peripherals online
+        </div>
+        <button onClick={pingNodes} disabled={loading} style={{
+          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+          color: "#fff", padding: "4px 10px", borderRadius: 4, cursor: "pointer", fontSize: 10
+        }}>
+          {loading ? "Scanning..." : "Ping"}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ flex: 1, position: "relative", width: "100%", height: "100%", padding: 32 }}>
       <div style={{ position: "absolute", top: 24, left: 24, zIndex: 10 }}>
@@ -66,10 +94,9 @@ export default function ConstellationMap() {
       </div>
 
       <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-        {/* Draw lines from core to peripherals */}
         <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
           {nodes.filter(n => n.type !== "core").map(n => (
-            <line 
+            <line
               key={`line-${n.id}`}
               x1="50%" y1="50%"
               x2={`${n.x}%`} y2={`${n.y}%`}
@@ -80,11 +107,10 @@ export default function ConstellationMap() {
           ))}
         </svg>
 
-        {/* Draw Nodes */}
         {nodes.map(n => {
           const isCore = n.type === "core";
           const isConnected = n.status === "connected" || n.status === "online";
-          
+
           return (
             <div key={n.id} style={{
               position: "absolute",
