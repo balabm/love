@@ -368,6 +368,10 @@ export default function IntelligenceDashboard() {
     { name: "mental_model_trainer", stats: modernStats.evolution_health?.mental_model_trainer },
     { name: "first_principles_thinker", stats: modernStats.evolution_health?.first_principles_thinker },
     { name: "systems_thinking_coach", stats: modernStats.evolution_health?.systems_thinking_coach },
+    { name: "authentic_expression_coach", stats: modernStats.evolution_health?.authentic_expression_coach },
+    { name: "vulnerable_communication_trainer", stats: modernStats.evolution_health?.vulnerable_communication_trainer },
+    { name: "difficult_conversation_navigator", stats: modernStats.evolution_health?.difficult_conversation_navigator },
+    { name: "active_listening_master", stats: modernStats.evolution_health?.active_listening_master },
   ].filter(m => m.stats);
 
   return (
