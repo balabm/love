@@ -460,6 +460,11 @@ from core.optionality_maximizer import get_optionality_maximizer
 from core.expected_value_coach import get_expected_value_coach
 from core.regret_minimizer import get_regret_minimizer
 
+from core.cognitive_bias_detector import get_cognitive_bias_detector
+from core.mental_model_trainer import get_mental_model_trainer
+from core.first_principles_thinker import get_first_principles_thinker
+from core.systems_thinking_coach import get_systems_thinking_coach
+
         integration = get_evolution_integration()
         integration_status = integration.get_integration_status()
 
@@ -864,4 +869,57 @@ def regret_minimizer_stats():
 @router.get("/regret_minimizer/score")
 def regret_minimizer_score():
     return {"regret_score": get_regret_minimizer().get_regret_score()}
+
+
+@router.post("/cognitive_bias_detector/record")
+def cognitive_bias_detector_record(situation: str = "", bias_type: str = "", detection: float = 0.0, severity: float = 0.0, correction: float = 0.0, emotion_level: float = 0.0, outcome: float = 0.0, notes: str = ""):
+    entry = get_cognitive_bias_detector().record_bias(situation=situation, bias_type=bias_type, detection=detection, severity=severity, correction=correction, emotion_level=emotion_level, outcome=outcome, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/cognitive_bias_detector/stats")
+def cognitive_bias_detector_stats():
+    return get_cognitive_bias_detector().get_bias_stats()
+
+@router.get("/cognitive_bias_detector/score")
+def cognitive_bias_detector_score():
+    return {"bias_score": get_cognitive_bias_detector().get_bias_score()}
+
+@router.post("/mental_model_trainer/record")
+def mental_model_trainer_record(situation: str = "", model_type: str = "", application: float = 0.0, effectiveness: float = 0.0, integration: float = 0.0, cross_domain: float = 0.0, outcome: float = 0.0, notes: str = ""):
+    entry = get_mental_model_trainer().record_model(situation=situation, model_type=model_type, application=application, effectiveness=effectiveness, integration=integration, cross_domain=cross_domain, outcome=outcome, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/mental_model_trainer/stats")
+def mental_model_trainer_stats():
+    return get_mental_model_trainer().get_model_stats()
+
+@router.get("/mental_model_trainer/score")
+def mental_model_trainer_score():
+    return {"model_score": get_mental_model_trainer().get_model_score()}
+
+@router.post("/first_principles_thinker/record")
+def first_principles_thinker_record(problem: str = "", thinking_type: str = "", depth: float = 0.0, clarity: float = 0.0, application: float = 0.0, assumption_challenged: float = 0.0, novelty: float = 0.0, notes: str = ""):
+    entry = get_first_principles_thinker().record_thinking(problem=problem, thinking_type=thinking_type, depth=depth, clarity=clarity, application=application, assumption_challenged=assumption_challenged, novelty=novelty, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/first_principles_thinker/stats")
+def first_principles_thinker_stats():
+    return get_first_principles_thinker().get_thinking_stats()
+
+@router.get("/first_principles_thinker/score")
+def first_principles_thinker_score():
+    return {"thinking_score": get_first_principles_thinker().get_thinking_score()}
+
+@router.post("/systems_thinking_coach/record")
+def systems_thinking_coach_record(situation: str = "", systems_type: str = "", interconnection: float = 0.0, perspective: float = 0.0, intervention: float = 0.0, feedback_seen: float = 0.0, leverage_found: float = 0.0, notes: str = ""):
+    entry = get_systems_thinking_coach().record_systems(situation=situation, systems_type=systems_type, interconnection=interconnection, perspective=perspective, intervention=intervention, feedback_seen=feedback_seen, leverage_found=leverage_found, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/systems_thinking_coach/stats")
+def systems_thinking_coach_stats():
+    return get_systems_thinking_coach().get_systems_stats()
+
+@router.get("/systems_thinking_coach/score")
+def systems_thinking_coach_score():
+    return {"systems_score": get_systems_thinking_coach().get_systems_score()}
 
