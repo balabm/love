@@ -66,6 +66,11 @@ from core.cross_cultural_bridge_builder import get_cross_cultural_bridge_builder
 from core.conversation_fluency_trainer import get_conversation_fluency_trainer
 from core.vocabulary_growth_coach import get_vocabulary_growth_coach
 
+from core.daily_writing_coach import get_daily_writing_coach
+from core.publishing_navigator import get_publishing_navigator
+from core.blog_craft_coach import get_blog_craft_coach
+from core.newsletter_creator import get_newsletter_creator
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1676,4 +1681,57 @@ def vocabulary_growth_coach_stats():
 @router.get("/vocabulary_growth_coach/score")
 def vocabulary_growth_coach_score():
     return {"vocabulary_score": get_vocabulary_growth_coach().get_vocabulary_score()}
+
+
+@router.post("/daily_writing_coach/record")
+def daily_writing_coach_record(piece: str = "", writing_type: str = "", flow: float = 0.0, clarity: float = 0.0, courage: float = 0.0, consistency: float = 0.0, joy: float = 0.0, voice: float = 0.0, notes: str = ""):
+    entry = get_daily_writing_coach().record_writing(piece=piece, writing_type=writing_type, flow=flow, clarity=clarity, courage=courage, consistency=consistency, joy=joy, voice=voice, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/daily_writing_coach/stats")
+def daily_writing_coach_stats():
+    return get_daily_writing_coach().get_writing_stats()
+
+@router.get("/daily_writing_coach/score")
+def daily_writing_coach_score():
+    return {"writing_score": get_daily_writing_coach().get_writing_score()}
+
+@router.post("/publishing_navigator/record")
+def publishing_navigator_record(work: str = "", publishing_type: str = "", readiness: float = 0.0, clarity: float = 0.0, courage: float = 0.0, strategy: float = 0.0, impact: float = 0.0, audience: float = 0.0, notes: str = ""):
+    entry = get_publishing_navigator().record_publishing(work=work, publishing_type=publishing_type, readiness=readiness, clarity=clarity, courage=courage, strategy=strategy, impact=impact, audience=audience, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/publishing_navigator/stats")
+def publishing_navigator_stats():
+    return get_publishing_navigator().get_publishing_stats()
+
+@router.get("/publishing_navigator/score")
+def publishing_navigator_score():
+    return {"publishing_score": get_publishing_navigator().get_publishing_score()}
+
+@router.post("/blog_craft_coach/record")
+def blog_craft_coach_record(post: str = "", blog_type: str = "", clarity: float = 0.0, voice: float = 0.0, structure: float = 0.0, value: float = 0.0, resonance: float = 0.0, consistency: float = 0.0, notes: str = ""):
+    entry = get_blog_craft_coach().record_blog(post=post, blog_type=blog_type, clarity=clarity, voice=voice, structure=structure, value=value, resonance=resonance, consistency=consistency, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/blog_craft_coach/stats")
+def blog_craft_coach_stats():
+    return get_blog_craft_coach().get_blog_stats()
+
+@router.get("/blog_craft_coach/score")
+def blog_craft_coach_score():
+    return {"blog_score": get_blog_craft_coach().get_blog_score()}
+
+@router.post("/newsletter_creator/record")
+def newsletter_creator_record(issue: str = "", newsletter_type: str = "", clarity: float = 0.0, value: float = 0.0, voice: float = 0.0, consistency: float = 0.0, engagement: float = 0.0, growth: float = 0.0, notes: str = ""):
+    entry = get_newsletter_creator().record_newsletter(issue=issue, newsletter_type=newsletter_type, clarity=clarity, value=value, voice=voice, consistency=consistency, engagement=engagement, growth=growth, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/newsletter_creator/stats")
+def newsletter_creator_stats():
+    return get_newsletter_creator().get_newsletter_stats()
+
+@router.get("/newsletter_creator/score")
+def newsletter_creator_score():
+    return {"newsletter_score": get_newsletter_creator().get_newsletter_score()}
 
