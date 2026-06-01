@@ -21,6 +21,11 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
+from core.music_mood_regulator import get_music_mood_regulator
+from core.sound_healing_guide import get_sound_healing_guide
+from core.playlist_therapist import get_playlist_therapist
+from core.rhythmic_living_coach import get_rhythmic_living_coach
+
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -1090,4 +1095,57 @@ def deep_connection_coach_stats():
 @router.get("/deep_connection_coach/score")
 def deep_connection_coach_score():
     return {"connection_score": get_deep_connection_coach().get_connection_score()}
+
+
+@router.post("/music_mood_regulator/record")
+def music_mood_regulator_record(song: str = "", music_type: str = "", mood_before: float = 0.0, mood_after: float = 0.0, regulation: float = 0.0, intention: float = 0.0, duration: float = 0.0, notes: str = ""):
+    entry = get_music_mood_regulator().record_music(song=song, music_type=music_type, mood_before=mood_before, mood_after=mood_after, regulation=regulation, intention=intention, duration=duration, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/music_mood_regulator/stats")
+def music_mood_regulator_stats():
+    return get_music_mood_regulator().get_music_stats()
+
+@router.get("/music_mood_regulator/score")
+def music_mood_regulator_score():
+    return {"music_score": get_music_mood_regulator().get_music_score()}
+
+@router.post("/sound_healing_guide/record")
+def sound_healing_guide_record(sound: str = "", sound_type: str = "", relaxation: float = 0.0, clarity: float = 0.0, restoration: float = 0.0, healing: float = 0.0, intention: float = 0.0, notes: str = ""):
+    entry = get_sound_healing_guide().record_sound(sound=sound, sound_type=sound_type, relaxation=relaxation, clarity=clarity, restoration=restoration, healing=healing, intention=intention, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/sound_healing_guide/stats")
+def sound_healing_guide_stats():
+    return get_sound_healing_guide().get_sound_stats()
+
+@router.get("/sound_healing_guide/score")
+def sound_healing_guide_score():
+    return {"sound_score": get_sound_healing_guide().get_sound_score()}
+
+@router.post("/playlist_therapist/record")
+def playlist_therapist_record(song: str = "", playlist_type: str = "", match: float = 0.0, transition: float = 0.0, arc: float = 0.0, therapeutic: float = 0.0, notes: str = ""):
+    entry = get_playlist_therapist().record_playlist(song=song, playlist_type=playlist_type, match=match, transition=transition, arc=arc, therapeutic=therapeutic, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/playlist_therapist/stats")
+def playlist_therapist_stats():
+    return get_playlist_therapist().get_playlist_stats()
+
+@router.get("/playlist_therapist/score")
+def playlist_therapist_score():
+    return {"playlist_score": get_playlist_therapist().get_playlist_score()}
+
+@router.post("/rhythmic_living_coach/record")
+def rhythmic_living_coach_record(period: str = "", rhythm_type: str = "", alignment: float = 0.0, energy: float = 0.0, sustainability: float = 0.0, flow: float = 0.0, rest: float = 0.0, notes: str = ""):
+    entry = get_rhythmic_living_coach().record_rhythm(period=period, rhythm_type=rhythm_type, alignment=alignment, energy=energy, sustainability=sustainability, flow=flow, rest=rest, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/rhythmic_living_coach/stats")
+def rhythmic_living_coach_stats():
+    return get_rhythmic_living_coach().get_rhythm_stats()
+
+@router.get("/rhythmic_living_coach/score")
+def rhythmic_living_coach_score():
+    return {"rhythm_score": get_rhythmic_living_coach().get_rhythm_score()}
 
