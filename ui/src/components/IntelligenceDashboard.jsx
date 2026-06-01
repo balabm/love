@@ -384,6 +384,10 @@ export default function IntelligenceDashboard() {
     { name: "sound_healing_guide", stats: modernStats.evolution_health?.sound_healing_guide },
     { name: "playlist_therapist", stats: modernStats.evolution_health?.playlist_therapist },
     { name: "rhythmic_living_coach", stats: modernStats.evolution_health?.rhythmic_living_coach },
+    { name: "mindful_eating_coach", stats: modernStats.evolution_health?.mindful_eating_coach },
+    { name: "cooking_joy_cultivator", stats: modernStats.evolution_health?.cooking_joy_cultivator },
+    { name: "meal_ritual_designer", stats: modernStats.evolution_health?.meal_ritual_designer },
+    { name: "food_as_medicine_coach", stats: modernStats.evolution_health?.food_as_medicine_coach },
   ].filter(m => m.stats);
 
   return (
