@@ -23,6 +23,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 BRIEF_LOG = DATA_DIR / "daily_briefs.jsonl"
@@ -65,8 +66,9 @@ class DailyBriefingSystem:
                 self._last_brief = state.get("last_brief")
                 self._last_brief_date = state.get("last_brief_date")
                 self._brief_time = state.get("brief_time", DEFAULT_BRIEF_TIME)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
     def _save_state(self):
         try:
@@ -75,8 +77,9 @@ class DailyBriefingSystem:
                 "last_brief_date": self._last_brief_date,
                 "brief_time": self._brief_time,
             }, indent=2, default=str))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
     # ── Data gathering ────────────────────────────────────────────────────────
 
@@ -100,8 +103,9 @@ class DailyBriefingSystem:
                 email = gs.get_email_summary()
                 data["gmail_unread"] = email.get("unread_important", 0)
                 data["gmail_urgent"] = email.get("urgent", [])[:3]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Microsoft
         try:
@@ -112,8 +116,9 @@ class DailyBriefingSystem:
                 data["ms_events"] = ms.get_todays_events()
                 data["ms_next_event"] = ms.get_next_event()
                 data["ms_presence"] = ms.get_my_presence()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Finance
         try:
@@ -124,8 +129,9 @@ class DailyBriefingSystem:
                                       for k, v in prices.items()}
             data["finance_alerts"] = fi.get_alerts(5)
             data["finance_summary"] = fi.get_price_summary()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # GitHub
         try:
@@ -135,8 +141,9 @@ class DailyBriefingSystem:
                 notifs = gh.get_notifications(10)
                 data["github_notifications"] = len(notifs)
                 data["github_recent"] = gh.get_recent_events(3)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Goals
         try:
@@ -144,8 +151,9 @@ class DailyBriefingSystem:
             status = get_goal_status()
             data["goals"] = status.get("goals", [])[:5]
             data["goals_active"] = status.get("active_count", 0)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # System awareness
         try:
@@ -153,17 +161,19 @@ class DailyBriefingSystem:
             snap = get_full_snapshot()
             data["system_battery"] = snap.get("battery_percent")
             data["system_cpu"] = snap.get("cpu_percent")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Yesterday memory recall
         try:
             from core.memory import recall_memory
             yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-            mem = recall_memory(f"what happened on {yesterday_str}", limit=3)
+            mem = recall_memory(f"what happened on {yesterday_str}", n=3)
             data["yesterday_memory"] = str(mem)[:500] if mem else ""
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
 
         # Life Domains -- hydration, sleep, nutrition, skincare
@@ -179,15 +189,17 @@ class DailyBriefingSystem:
             data["life_meals_logged"] = dash.get("nutrition", {}).get("meal_count", 0)
             data["life_skincare_done"] = dash.get("skincare", {}).get("daily_score", 0)
             data["life_streaks"] = engine.get_streaks()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Cross-domain correlations
         try:
             from core.cross_domain_intelligence import get_correlations
             data["cross_domain_insights"] = get_correlations()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Evolution activity (overnight self-improvement)
         try:
@@ -197,8 +209,9 @@ class DailyBriefingSystem:
             data["evo_code_mods"] = stats.get("total_code_modifications", 0)
             data["evo_mutations"] = stats.get("total_mutations_applied", 0)
             data["evo_adoptions"] = stats.get("successful_cross_adoptions", 0)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Modern AI module status
         try:
@@ -325,6 +338,8 @@ class DailyBriefingSystem:
                 "belonging_builder", "rejection_resilience_coach",
                 "storytelling_coach", "voice_finder",
                 "transition_companion", "uncertainty_embracer",
+                "life_transition_navigator", "second_act_designer",
+                "empty_nest_companion", "retirement_meaning_architect",
             ]
             active_modern = [m for m in modern_modules if flags.get(m, False)]
             data["modern_modules_active"] = len(active_modern)
@@ -341,17 +356,19 @@ class DailyBriefingSystem:
             traj = ear.get_emotional_trajectory()
             data["emotion_trend"] = traj.get("trend", "unknown")
             data["emotion_recent_avg"] = traj.get("recent_avg", 0)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Predictive maintenance alerts
         try:
             from core.predictive_maintenance import get_predictive_maintenance_engine
             pme = get_predictive_maintenance_engine()
-            predictions = pme.get_predictions()
+            predictions = pme.get_all_predictions()
             data["predictive_alerts"] = len([p for p in predictions if p.get("severity") == "high"])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Goal drift detection
         try:
@@ -359,8 +376,9 @@ class DailyBriefingSystem:
             gdd = get_goal_drift_detector()
             alerts = gdd.get_drift_alerts()
             data["goal_drift_alerts"] = len(alerts)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         return data
 
@@ -394,8 +412,9 @@ class DailyBriefingSystem:
         try:
             with open(BRIEF_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps({"date": today, "text": brief_text}, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Push as notification
         try:
@@ -407,8 +426,9 @@ class DailyBriefingSystem:
                 priority="high",
                 metadata={"type": "morning_brief"},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         # Publish to neural bus
         try:
@@ -418,8 +438,9 @@ class DailyBriefingSystem:
                 domain="briefing",
                 payload={"date": today, "preview": brief_text[:100]},
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.daily_briefing")
 
         return brief
 

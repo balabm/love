@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from core.settings import get_settings
 from core.memory import save_log
 from core.central_logger import get_logger
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -68,8 +69,9 @@ class ProactiveHeartbeat:
                     'event': 'heartbeat_started',
                     'interval_minutes': self.interval // 60
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.heartbeat")
         threading.Thread(target=_log_start, daemon=True).start()
         logger.info(f"Proactive intelligence started ({self.interval // 60}min interval)")
     
@@ -132,8 +134,9 @@ class ProactiveHeartbeat:
                 logger.warning(f"Self-Healing: {alert}")
                 # Also log the error for tracking
                 detect_and_fix_error(alert)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
         # Deduplicate and filter (focus-aware, Wave 27)
         active_triggers = self._filter_triggers(triggers)
@@ -375,18 +378,10 @@ class ProactiveHeartbeat:
                 ("voice_finder", "Voice Finder"),
                 ("transition_companion", "Transition Companion"),
                 ("uncertainty_embracer", "Uncertainty Embracer"),
-                ("boundary_coach", "Boundary Coach"),
-                ("emotional_literacy_trainer", "Emotional Literacy Trainer"),
-                ("hope_cultivator", "Hope Cultivator"),
-                ("attention_steward", "Attention Steward"),
-                ("identity_explorer", "Identity Explorer"),
-                ("values_navigator", "Values Navigator"),
-                ("belonging_builder", "Belonging Builder"),
-                ("rejection_resilience_coach", "Rejection Resilience Coach"),
-                ("storytelling_coach", "Storytelling Coach"),
-                ("voice_finder", "Voice Finder"),
-                ("transition_companion", "Transition Companion"),
-                ("uncertainty_embracer", "Uncertainty Embracer"),
+                ("life_transition_navigator", "Life Transition Navigator"),
+                ("second_act_designer", "Second Act Designer"),
+                ("empty_nest_companion", "Empty Nest Companion"),
+                ("retirement_meaning_architect", "Retirement Meaning Architect"),
             ]
             offline = [name for key, name in modern_modules if not flags.get(key, False)]
             if offline:
@@ -397,8 +392,9 @@ class ProactiveHeartbeat:
                     message=f"Modern modules offline: {', '.join(offline)}",
                     action_suggestion="Check module initialization",
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
         # Emotional decline monitoring
         try:
@@ -413,8 +409,9 @@ class ProactiveHeartbeat:
                     message="Emotional trend is declining. Consider a break or conversation.",
                     action_suggestion="Take a break or discuss feelings",
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
         # Predictive maintenance alerts
         try:
@@ -430,8 +427,9 @@ class ProactiveHeartbeat:
                     message=f"Predicted issue: {pred.get('issue', 'unknown')}",
                     action_suggestion="Review system health",
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
         return triggers
 
@@ -444,8 +442,9 @@ class ProactiveHeartbeat:
             # This would integrate with actual price APIs
             # For now, placeholder logic
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         
         return triggers
     
@@ -467,8 +466,9 @@ class ProactiveHeartbeat:
                     action_suggestion='Take 5 minutes for flashcard review',
                     metadata={'count': len(due_reviews)}
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         
         return triggers
     
@@ -515,8 +515,9 @@ class ProactiveHeartbeat:
                         message=f"You've been working for {hours_today:.1f} hours. Take a 5-min stretch break.",
                         action_suggestion='Stand up, stretch, look away from screen'
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         
         return triggers
     
@@ -581,8 +582,9 @@ class ProactiveHeartbeat:
                     action_suggestion='Channel this momentum into something meaningful'
                 ))
 
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
         return triggers
     
@@ -605,8 +607,9 @@ class ProactiveHeartbeat:
                         message="No workouts this week. Body needs movement to support your mind.",
                         action_suggestion='10-minute walk, 5 pushups, anything to start'
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         
         return triggers
     
@@ -632,8 +635,9 @@ class ProactiveHeartbeat:
                         message=f"'{critical_due[0].get('title', 'Task')}' is due soon and marked critical.",
                         action_suggestion='Focus on this task now, block distractions'
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         
         return triggers
 
@@ -681,8 +685,9 @@ class ProactiveHeartbeat:
                 except Exception as e:
                     logger.error(f"Self-improve failed: {e}")
             threading.Thread(target=_run, daemon=True).start()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
     def _scan_memory_consolidation(self) -> List[TriggerEvent]:
         """Check if nightly memory consolidation should run."""
@@ -701,12 +706,22 @@ class ProactiveHeartbeat:
                         action_suggestion="Review your Life timeline",
                         metadata=result,
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         return triggers
 
     def _scan_dream_engine(self) -> List[TriggerEvent]:
         """Trigger deep dream processing during idle periods."""
+        # Skip if Ollama is in circuit-breaker cooldown
+        try:
+            from core.llm import _circuit_cooldown_until
+            import time as _t
+            if _t.time() < _circuit_cooldown_until:
+                return []
+        except Exception:
+            pass
+
         triggers = []
         try:
             from core.dream_engine import run_dream, get_active_predictions
@@ -730,12 +745,22 @@ class ProactiveHeartbeat:
                         action_suggestion="Ask me what I learned",
                         metadata={"insights": len(insights), "predictions": len(predictions)},
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         return triggers
 
     def _scan_evolution_idle(self) -> List[TriggerEvent]:
         """Trigger evolution self-improvement during idle periods."""
+        # Skip if Ollama is in circuit-breaker cooldown
+        try:
+            from core.llm import _circuit_cooldown_until
+            import time as _t
+            if _t.time() < _circuit_cooldown_until:
+                return []
+        except Exception:
+            pass
+
         triggers = []
         try:
             from core.idle_mind import is_idle
@@ -756,16 +781,40 @@ class ProactiveHeartbeat:
                         action_suggestion="Check evolution dashboard",
                         metadata={"code_mods": stats.get("total_code_modifications", 0), "mutations": stats.get("total_mutations_applied", 0)},
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         return triggers
 
     def _scan_prediction_market(self) -> List[TriggerEvent]:
         """Auto-generate predictions from world model and expire old ones."""
+        # Skip if Ollama is in circuit-breaker cooldown
+        try:
+            from core.llm import _circuit_cooldown_until
+            import time as _t
+            if _t.time() < _circuit_cooldown_until:
+                return []
+        except Exception:
+            pass
+
         triggers = []
         try:
-            from core.prediction_market import auto_resolve_expired, generate_predictions_from_world
+            from core.prediction_market import auto_resolve_expired, auto_resolve_from_snapshot, generate_predictions_from_world
             from core.dream_engine import get_world_model
+
+            # Resolve predictions against current biometrics
+            try:
+                from core.agi_kernel import get_agi_kernel
+                kernel = get_agi_kernel()
+                snap = kernel.get_snapshot()
+                if snap:
+                    auto_resolve_from_snapshot(
+                        stress=snap.user_stress,
+                        energy=snap.user_energy,
+                        work_hours=snap.work_hours_today,
+                    )
+            except Exception:
+                pass  # kernel may not be running yet
 
             # Clean up expired predictions
             auto_resolve_expired()
@@ -783,12 +832,22 @@ class ProactiveHeartbeat:
                     action_suggestion="Ask me what I'm predicting",
                     metadata={"count": len(new_preds)},
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         return triggers
 
     def _scan_context_engine(self) -> List[TriggerEvent]:
         """Jarvis-level proactive scans: calendar, phone, battery, environment."""
+        # Skip if Ollama is in circuit-breaker cooldown
+        try:
+            from core.llm import _circuit_cooldown_until
+            import time as _t
+            if _t.time() < _circuit_cooldown_until:
+                return []
+        except Exception:
+            pass
+
         triggers = []
         try:
             from core.context_engine import get_live_context
@@ -1001,16 +1060,18 @@ class ProactiveHeartbeat:
                     started = data.get("started_at", 0)
                     if time.time() - started < 4 * 3600:
                         return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         try:
             from core.work_tracker import get_work_tracker
             tracker = get_work_tracker()
             status = tracker.get_status()
             if status.get("focus_active", False):
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
         return False
 
     def _filter_triggers(self, triggers: List[TriggerEvent]) -> List[TriggerEvent]:
@@ -1059,8 +1120,9 @@ class ProactiveHeartbeat:
                 })
             existing = existing[-20:]
             queue_file.write_text(_json.dumps(existing, indent=2), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.heartbeat")
 
     def _deliver_suppressed(self) -> List[TriggerEvent]:
         """Deliver queued triggers when focus mode ends."""
@@ -1136,8 +1198,9 @@ class ProactiveHeartbeat:
             try:
                 from core.voice_loop import speak_proactive_alert
                 speak_proactive_alert(trigger.message, trigger.severity)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.heartbeat")
 
         # Print to console (ASCII-safe for Windows cp1252 console)
         icon = {
@@ -1155,8 +1218,9 @@ class ProactiveHeartbeat:
                 from core.agent import chat
                 # Send as a proactive message to the user
                 logger.info(f"Autonomous initiative: {trigger.message}")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.heartbeat")
 
 
 # Singleton instance

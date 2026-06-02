@@ -281,7 +281,7 @@ export default function SentinelPanel() {
                 "diy_project_planner", "maker_mindset_trainer", "handcraft_joy_cultivator", "style_expression_coach", 
                 "wardrobe_mindfulness_guide", "personal_brand_designer", "dress_for_joy_coach", "language_immersion_coach", 
                 "cross_cultural_bridge_builder", "conversation_fluency_trainer", "vocabulary_growth_coach", "daily_writing_coach", 
-                "publishing_navigator", "blog_craft_coach", "newsletter_creator"
+                "publishing_navigator", "blog_craft_coach", "newsletter_creator", "empty_nest_companion", "retirement_meaning_architect"
               ].includes(name))
               .map(([name, info]) => (
                 <div key={name} className={`snt-health-item snt-health-${info.status}`}>

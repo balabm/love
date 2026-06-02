@@ -627,6 +627,9 @@ def start_evolution_systems():
         ("Voice Presence Coach", "core.voice_presence_coach", "get_voice_presence_coach"),
         ("Vulnerable Communication Trainer", "core.vulnerable_communication_trainer", "get_vulnerable_communication_trainer"),
         ("Wardrobe Mindfulness Guide", "core.wardrobe_mindfulness_guide", "get_wardrobe_mindfulness_guide"),
+        ("Empty Nest Companion", "core.empty_nest_companion", "get_empty_nest_companion"),
+        ("Retirement Meaning Architect", "core.retirement_meaning_architect", "get_retirement_meaning_architect"),
+
 
     ]
 

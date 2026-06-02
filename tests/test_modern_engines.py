@@ -21351,3 +21351,148 @@ class TestGiftIdeaGenerator:
 
 class TestLifeTransitionNavigator:
     """Test Life Transition Navigator."""
+
+
+# -- Batch 65: Life Transitions ------------------------------------------
+
+class TestLifeTransitionNavigator:
+    """Test Life Transition Navigator."""
+
+
+    def test_record_transition(self):
+        from core.life_transition_navigator import get_life_transition_navigator
+        svc = get_life_transition_navigator()
+        entry = svc.record_transition(
+            change="job loss", transition_type="career",
+            awareness=0.8, acceptance=0.6, planning=0.5,
+            support=0.4, growth=0.3, courage=0.7
+        )
+        assert entry.entry_id.startswith("trn_")
+        assert entry.change == "job loss"
+
+
+    def test_get_transition_score(self):
+        from core.life_transition_navigator import get_life_transition_navigator
+        svc = get_life_transition_navigator()
+        svc.record_transition(
+            change="move", transition_type="location",
+            awareness=0.5, acceptance=0.5, planning=0.5,
+            support=0.5, growth=0.5, courage=0.5
+        )
+        score = svc.get_transition_score()
+        assert 0 <= score <= 100
+
+
+    def test_get_transition_suggestion(self):
+        from core.life_transition_navigator import get_life_transition_navigator
+        svc = get_life_transition_navigator()
+        result = svc.get_transition_suggestion(capacity=0.5)
+        assert "suggestion" in result
+
+
+
+class TestSecondActDesigner:
+    """Test Second Act Designer."""
+
+
+    def test_record_reinvention(self):
+        from core.second_act_designer import get_second_act_designer
+        svc = get_second_act_designer()
+        entry = svc.record_reinvention(
+            action="started painting", reinvention_type="creative",
+            vision=0.8, courage=0.7, skill=0.5,
+            network=0.4, momentum=0.6, joy=0.8
+        )
+        assert entry.entry_id.startswith("act_")
+        assert entry.action == "started painting"
+
+
+    def test_get_reinvention_score(self):
+        from core.second_act_designer import get_second_act_designer
+        svc = get_second_act_designer()
+        svc.record_reinvention(
+            action="new hobby", reinvention_type="personal",
+            vision=0.5, courage=0.5, skill=0.5,
+            network=0.5, momentum=0.5, joy=0.5
+        )
+        score = svc.get_reinvention_score()
+        assert 0 <= score <= 100
+
+
+    def test_get_reinvention_suggestion(self):
+        from core.second_act_designer import get_second_act_designer
+        svc = get_second_act_designer()
+        result = svc.get_reinvention_suggestion(capacity=0.5)
+        assert "suggestion" in result
+
+
+
+class TestEmptyNestCompanion:
+    """Test Empty Nest Companion."""
+
+
+    def test_record_nest(self):
+        from core.empty_nest_companion import get_empty_nest_companion
+        svc = get_empty_nest_companion()
+        entry = svc.record_nest(
+            moment="first quiet morning", nest_type="grief",
+            grief=0.8, hope=0.3, rediscovery=0.2,
+            relationship=0.4, identity=0.3, growth=0.2, courage=0.6
+        )
+        assert entry.entry_id.startswith("nst_")
+        assert entry.moment == "first quiet morning"
+
+
+    def test_get_nest_score(self):
+        from core.empty_nest_companion import get_empty_nest_companion
+        svc = get_empty_nest_companion()
+        svc.record_nest(
+            moment="called friend", nest_type="rediscovery",
+            grief=0.3, hope=0.7, rediscovery=0.6,
+            relationship=0.6, identity=0.5, growth=0.5, courage=0.6
+        )
+        score = svc.get_nest_score()
+        assert 0 <= score <= 100
+
+
+    def test_get_nest_suggestion(self):
+        from core.empty_nest_companion import get_empty_nest_companion
+        svc = get_empty_nest_companion()
+        result = svc.get_nest_suggestion(capacity=0.5)
+        assert "suggestion" in result
+
+
+
+class TestRetirementMeaningArchitect:
+    """Test Retirement Meaning Architect."""
+
+
+    def test_record_retirement(self):
+        from core.retirement_meaning_architect import get_retirement_meaning_architect
+        svc = get_retirement_meaning_architect()
+        entry = svc.record_retirement(
+            activity="mentoring", retirement_type="contribution",
+            structure=0.6, contribution=0.9, learning=0.5,
+            connection=0.7, health=0.6, legacy=0.8, joy=0.9
+        )
+        assert entry.entry_id.startswith("rtm_")
+        assert entry.activity == "mentoring"
+
+
+    def test_get_retirement_score(self):
+        from core.retirement_meaning_architect import get_retirement_meaning_architect
+        svc = get_retirement_meaning_architect()
+        svc.record_retirement(
+            activity="walking", retirement_type="health",
+            structure=0.5, contribution=0.3, learning=0.4,
+            connection=0.5, health=0.7, legacy=0.3, joy=0.6
+        )
+        score = svc.get_retirement_score()
+        assert 0 <= score <= 100
+
+
+    def test_get_retirement_suggestion(self):
+        from core.retirement_meaning_architect import get_retirement_meaning_architect
+        svc = get_retirement_meaning_architect()
+        result = svc.get_retirement_suggestion(capacity=0.5)
+        assert "suggestion" in result

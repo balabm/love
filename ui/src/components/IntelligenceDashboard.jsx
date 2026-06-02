@@ -420,6 +420,8 @@ export default function IntelligenceDashboard() {
     { name: "life_transition_navigator", stats: modernStats.evolution_health?.life_transition_navigator },
     { name: "observability", stats: modernStats.evolution_health?.observability },
     { name: "second_act_designer", stats: modernStats.evolution_health?.second_act_designer },
+    { name: "empty_nest_companion", stats: modernStats.evolution_health?.empty_nest_companion },
+    { name: "retirement_meaning_architect", stats: modernStats.evolution_health?.retirement_meaning_architect },
   ].filter(m => m.stats);
 
   return (

@@ -141,6 +141,8 @@ from core.wealth_builder import get_wealth_builder
 from core.wisdom_keeper import get_wisdom_keeper
 from core.wonder_cultivator import get_wonder_cultivator
 from core.wonder_tracker import get_wonder_tracker
+from core.empty_nest_companion import get_empty_nest_companion
+from core.retirement_meaning_architect import get_retirement_meaning_architect
 router = APIRouter(prefix="/evolution", tags=["evolution"])
 
 from core.shadow_integrator import get_shadow_integrator
@@ -901,6 +903,8 @@ async def get_evolution_health():
             "inner_critic_tamer": {"available": True},
             "life_transition_navigator": {"available": True},
             "second_act_designer": {"available": True},
+            "empty_nest_companion": {"available": True},
+            "retirement_meaning_architect": {"available": True},
             "overall": "healthy" if integration._running else "degraded",
         }
         return health
@@ -2786,4 +2790,31 @@ def wonder_tracker_stats():
 @router.get("/wonder_tracker/score")
 def wonder_tracker_score():
     return {"wonder_score": get_wonder_tracker().get_wonder_score()}
+
+@router.post("/empty_nest_companion/record")
+def empty_nest_companion_record(moment: str = "", nest_type: str = "", grief: float = 0.0, hope: float = 0.0, rediscovery: float = 0.0, relationship: float = 0.0, identity: float = 0.0, growth: float = 0.0, courage: float = 0.0, notes: str = ""):
+    entry = get_empty_nest_companion().record_nest(moment=moment, nest_type=nest_type, grief=grief, hope=hope, rediscovery=rediscovery, relationship=relationship, identity=identity, growth=growth, courage=courage, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/empty_nest_companion/stats")
+def empty_nest_companion_stats():
+    return get_empty_nest_companion().get_nest_stats()
+
+@router.get("/empty_nest_companion/score")
+def empty_nest_companion_score():
+    return {"nest_score": get_empty_nest_companion().get_nest_score()}
+
+
+@router.post("/retirement_meaning_architect/record")
+def retirement_meaning_architect_record(activity: str = "", retirement_type: str = "", structure: float = 0.0, contribution: float = 0.0, learning: float = 0.0, connection: float = 0.0, health: float = 0.0, legacy: float = 0.0, joy: float = 0.0, notes: str = ""):
+    entry = get_retirement_meaning_architect().record_retirement(activity=activity, retirement_type=retirement_type, structure=structure, contribution=contribution, learning=learning, connection=connection, health=health, legacy=legacy, joy=joy, notes=notes)
+    return {"status": "recorded", "entry_id": entry.entry_id}
+
+@router.get("/retirement_meaning_architect/stats")
+def retirement_meaning_architect_stats():
+    return get_retirement_meaning_architect().get_retirement_stats()
+
+@router.get("/retirement_meaning_architect/score")
+def retirement_meaning_architect_score():
+    return {"retirement_score": get_retirement_meaning_architect().get_retirement_score()}
 
