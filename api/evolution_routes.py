@@ -508,7 +508,7 @@ async def trigger_evolution():
         # Trigger base evolution
         try:
             base_engine = EvolutionEngine()
-            base_engine.run_evolution_cycle()
+            base_engine._run_evolution_cycle()
         except Exception as e:
             print(f"Base evolution trigger error: {e}")
         
