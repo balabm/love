@@ -60,8 +60,9 @@ def _log(entry: Dict[str, Any]):
     try:
         with open(PLAN_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.planner")
 
 
 def _get_llm():
@@ -407,3 +408,4 @@ def is_complex_query(user_input: str) -> bool:
 
 
 import re
+from core.execution_guard import log_error

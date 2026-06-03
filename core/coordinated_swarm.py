@@ -30,6 +30,7 @@ from pathlib import Path
 from core.llm import get_reasoning_llm, get_coding_llm
 from core.tool_registry import get_tool_registry
 from core.central_logger import get_logger
+from core.execution_guard import log_error
 
 logger = get_logger(__name__)
 
@@ -331,8 +332,9 @@ FINAL CONSENSUS:"""
                     "success": success,
                     "quality": quality
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.coordinated_swarm")
 
 
 class CoordinatedSwarm:
@@ -505,8 +507,9 @@ Begin:"""
                             post_data.get("content", ""),
                             {"iteration": iteration}
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.coordinated_swarm")
 
                 # Check for tool call
                 json_start = text.find("```json")
@@ -525,8 +528,9 @@ Begin:"""
                                     result = f"Error: Tool {t_name} not available."
                                 current_prompt += f"\n\nTool Result ({t_name}): {result}\nContinue:"
                                 continue
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.coordinated_swarm")
 
                 # Check for final answer
                 fa_start = text.find("<FINAL_ANSWER>")

@@ -20,6 +20,7 @@ from enum import Enum
 
 from core.llm import get_reasoning_llm
 from core.consciousness import get_consciousness
+from core.execution_guard import log_error
 
 
 class ReasoningStrategy(Enum):
@@ -269,8 +270,9 @@ Give a concise answer with your reasoning. Be honest about uncertainty."""
             try:
                 response = str(llm.invoke(prompt))
                 answers.append(response)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.reasoning_chain")
 
         if answers:
             # Use LLM to synthesize

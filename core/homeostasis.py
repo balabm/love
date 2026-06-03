@@ -43,6 +43,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta, time as dtime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "homeostasis"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -225,8 +226,9 @@ class Homeostasis:
             wm = get_world_model_latent()
             if wm._recent_obs:
                 return time.time() - wm._recent_obs[-1].t
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
         return 0.0
 
     def _seconds_since_user_contact(self) -> float:
@@ -236,8 +238,9 @@ class Homeostasis:
             for o in reversed(wm._recent_obs):
                 if o.source == "user":
                     return time.time() - o.t
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
         return 0.0
 
     # ── circadian rhythm ─────────────────────────────────────────────────────
@@ -283,27 +286,31 @@ class Homeostasis:
             try:
                 if (datetime.now() - datetime.fromisoformat(last)).total_seconds() < 3600:
                     return
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.homeostasis")
         self._state.last_sleep = datetime.now().isoformat()
         # 1) Reset world model free energy
         try:
             from core.world_model_latent import get_world_model_latent
             get_world_model_latent().reset_after_consolidation()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
         # 2) Soft-reset SSM state
         try:
             from core.state_space_memory import get_ssm_memory
             get_ssm_memory().soft_reset()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
         # 3) Memory consolidation
         try:
             from core.memory_consolidation import consolidate_period
             consolidate_period("daily")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
         print("[Homeostasis] sleep cycle: consolidation complete")
 
     def _trigger_proactive_ping(self):
@@ -314,23 +321,27 @@ class Homeostasis:
                       "Been quiet for a while. Thinking about you.",
                       priority="low",
                       metadata={"trigger": "loneliness_drive"})
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
 
     def _trigger_evolution(self):
         try:
             from core.evolution_integration import get_evolution_integration
             get_evolution_integration().trigger_manual_cycle()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
 
     def _trigger_exploration(self):
         # signal idle_mind / curiosity_engine to pick a topic
         try:
-            from core.curiosity_engine import probe as curiosity_probe   # if exists
-            curiosity_probe()
+            from core.curiosity_engine import get_top_gaps_for_prompt
+            gaps = get_top_gaps_for_prompt()
+            if gaps:
+                print(f"[Homeostasis] Top curiosity gaps: {gaps[:80]}")
         except Exception:
-            pass
+            pass  # curiosity engine optional
 
     # ── energy accounting ────────────────────────────────────────────────────
 
@@ -385,8 +396,9 @@ class Homeostasis:
                             "reason": f"idle_{int(idle_seconds/86400)}d_reward_{s.ema_reward:.2f}",
                             "grace_until": (datetime.now() + timedelta(days=7)).isoformat(),
                         }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
 
     def autophagy_ready_to_remove(self) -> List[str]:
         ready = []
@@ -395,23 +407,38 @@ class Homeostasis:
             try:
                 if now > datetime.fromisoformat(info["grace_until"]):
                     ready.append(module)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.homeostasis")
         return ready
 
     # ── persistence + introspection ──────────────────────────────────────────
 
     def _log_drives(self):
+        entry = {
+            "t": datetime.now().isoformat(),
+            "phase": self._state.circadian_phase,
+            "drives": {k: round(v, 3) for k, v in self._drives.as_dict().items()},
+            "dominant": self._drives.dominant(),
+        }
         try:
             with open(DRIVES_LOG, "a", encoding="utf-8") as f:
-                f.write(json.dumps({
-                    "t": datetime.now().isoformat(),
-                    "phase": self._state.circadian_phase,
-                    "drives": {k: round(v, 3) for k, v in self._drives.as_dict().items()},
-                    "dominant": self._drives.dominant(),
-                }) + "\n")
-        except Exception:
-            pass
+                f.write(json.dumps(entry) + "\n")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
+        # Write to Consolidated Memory for unified persistence
+        try:
+            from core.consolidated_memory import get_consolidated_memory
+            get_consolidated_memory().write(
+                domain="biometrics",
+                event_type="drive_snapshot",
+                payload=entry,
+                text_for_search=f"Circadian phase {entry['phase']} drives {entry['drives']}",
+            )
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
 
     def _save(self):
         try:
@@ -421,8 +448,9 @@ class Homeostasis:
                 "accounts": {k: asdict(v) for k, v in self._accounts.items()},
             }, indent=2))
             AUTOPHAGY_LIST.write_text(json.dumps(self._autophagy, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.homeostasis")
 
     def _load(self):
         if STATE_FILE.exists():
@@ -435,13 +463,15 @@ class Homeostasis:
                         setattr(self._drives, k, drv[k])
                 for k, v in d.get("accounts", {}).items():
                     self._accounts[k] = EnergyAccount(**v)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.homeostasis")
         if AUTOPHAGY_LIST.exists():
             try:
                 self._autophagy = json.loads(AUTOPHAGY_LIST.read_text())
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.homeostasis")
 
     def snapshot(self) -> Dict[str, Any]:
         return {

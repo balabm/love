@@ -30,6 +30,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 # ------------------------------------------------------------------
 # Paths
@@ -651,8 +652,9 @@ Output ONLY the JSON, no other text."""
                     suggestions=data.get("suggestions", []),
                     reasoning_trace=data.get("reasoning_trace", ""),
                 )
-        except (json.JSONDecodeError, ValueError, KeyError):
-            pass
+        except (json.JSONDecodeError, ValueError, KeyError) as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.constitution")
 
         # Fallback: treat raw text as reasoning trace
         return CritiqueResult(
@@ -974,8 +976,9 @@ Output ONLY JSON."""
             end = raw.rfind("}") + 1
             if start >= 0 and end > start:
                 return json.loads(raw[start:end])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.constitution")
         return None
 
     def _generate_drift_recommendations(

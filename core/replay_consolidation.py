@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from core.execution_guard import log_error
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -66,24 +67,27 @@ def _load_state() -> Dict[str, Any]:
     if STATE_FILE.exists():
         try:
             return json.loads(STATE_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.replay_consolidation")
     return _default_state()
 
 
 def _save_state(state: Dict[str, Any]) -> None:
     try:
         STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.replay_consolidation")
 
 
 def _append_log(entry: Dict[str, Any]) -> None:
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.replay_consolidation")
 
 
 # ── ChromaDB client (lazy) ────────────────────────────────────────────────────
@@ -177,8 +181,9 @@ class ReplayConsolidation:
                             "embedding": embeddings[i],
                         })
                     return memories
-            except Exception:
-                pass   # field not indexed or doesn't exist — fall through
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.replay_consolidation")
 
         # --- Fallback: get all recent memories (last 24 h) sorted by any numeric field ---
         try:
@@ -224,8 +229,9 @@ class ReplayConsolidation:
                         fv = float(v)        # only works for scalars
                         if fv > score:
                             score = fv
-                    except (TypeError, ValueError, OverflowError):
-                        pass
+                    except (TypeError, ValueError, OverflowError) as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.replay_consolidation")
 
                 candidates.append((score, mid, docs[i] or "", m, embeddings[i]))
 
@@ -328,8 +334,9 @@ class ReplayConsolidation:
                         if ssm is not None:
                             try:
                                 ssm.step(vec)
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="core.replay_consolidation")
 
                 # Call world model observe (always — it does the weight update)
                 obs = wm.observe(doc if doc else " ", source="replay")
@@ -344,8 +351,9 @@ class ReplayConsolidation:
                     try:
                         with wm._mu:
                             wm._state.lr = orig_lr
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.replay_consolidation")
 
             errors_before.append(err_before_obs)
             errors_after.append(err_after_obs)
@@ -394,8 +402,9 @@ class ReplayConsolidation:
                     surprise_val = float(meta.get(fk, 0.0))
                     if surprise_val > 0:
                         break
-                except (TypeError, ValueError):
-                    pass
+                except (TypeError, ValueError) as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.replay_consolidation")
 
             # Build updated metadata
             new_meta = dict(meta)
@@ -410,8 +419,9 @@ class ReplayConsolidation:
                 # ChromaDB 0.4+ API
                 doc = mem.get("document", "") or " "
                 coll.update(ids=[mid], metadatas=[new_meta], documents=[doc])
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.replay_consolidation")
 
         return marked
 
@@ -462,8 +472,9 @@ class ReplayConsolidation:
                         try:
                             ssm.step(vec)
                             ssm_steps += 1
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.replay_consolidation")
 
             # Soft-reset if state norm has saturated
             try:
@@ -475,11 +486,13 @@ class ReplayConsolidation:
                         try:
                             with ssm._mu:
                                 ssm._h = ssm._h * 0.5
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.replay_consolidation")
                     ssm_reset = True
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.replay_consolidation")
 
         except Exception as e:
             report["ssm_error"] = str(e)
@@ -495,8 +508,9 @@ class ReplayConsolidation:
         try:
             from core.world_model_latent import get_world_model_latent
             get_world_model_latent().reset_after_consolidation()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.replay_consolidation")
 
         # 6. Update internal state (use .get() with defaults for forward-compat)
         gain = traj_stats.get("gain", 0.0)
@@ -565,8 +579,9 @@ class ReplayConsolidation:
                 # Check fatigue mid-interval too
                 try:
                     self._check_and_run_if_tired()
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.replay_consolidation")
 
     def _check_and_run_if_tired(self) -> None:
         """Fire consolidation immediately if LOVE is fatigued (homeostasis drive > 0.7)."""
@@ -575,8 +590,9 @@ class ReplayConsolidation:
             from core.homeostasis import get_homeostasis
             h = get_homeostasis()
             fatigue = getattr(h._drives, "fatigue", 0.0)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.replay_consolidation")
 
         if fatigue > 0.7:
             # Avoid rapid re-triggering: check last run time
@@ -588,8 +604,9 @@ class ReplayConsolidation:
                     ).total_seconds()
                     if secs_since < 1800:   # don't re-run within 30 min
                         return
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.replay_consolidation")
             print(f"[ReplayConsolidation] fatigue={fatigue:.2f} > 0.7 - triggering consolidation")
             self.consolidate_now()
 

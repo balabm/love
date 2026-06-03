@@ -1,161 +1,81 @@
-# Project LOVE - Open Source Configuration
-# Copy this file to settings.yaml and customize for your setup
-
-# === CORE IDENTITY ===
-user:
-  name: "Karthi"                    # Your name (replaces "Karthi")
-  timezone: "Asia/Kolkata"                 # Your timezone
-  language: "en"                  # Primary language
-
 companion:
-  name: "Love"                    # AI companion name
-  # Personality Presets:
-  #   "best_friend"    - Warm, sharp, calls you out, celebrates wins (default)
-  #   "hype_man"       - Eminem energy, rap metaphors, never calm
-  #   "stoic"          - Marcus Aurelius calm, logic over emotion
-  #   "mentor"         - Strategic, career-focused, systems thinker
-  #   "assistant"      - Professional, efficient, helpful
-  #   "coach"          - Accountability partner, pushes hard
-  personality_preset: "best_friend"
-  # Custom personality overrides (optional)
   custom_traits:
-    tone: "warm, witty, direct"
-    style: "companion-like"
+    directness: 0.8
     humor: true
-    directness: 0.8               # 0-1, higher = more blunt
-
-# === WORK & PRODUCTIVITY ===
-work:
-  daily_limit_hours: 9              # Your daily work limit
-  warning_threshold: 0.8            # Warn at 80% of limit
-  hard_stop_enabled: true         # Enable physical enforcement
-  auto_commit_message: "Love-Auto-Save: End of workday"
-  
-  dev_folders: []                 # List of folders to track
-  # Example:
-  # dev_folders:
-  #   - "C:/Users/YourName/Projects"
-  #   - "D:/Code"
-
-# === FINANCE ===
-finance:
-  watchlist:
-    - "BTCUSDT"
-    - "ETHUSDT"
-  risk_profile: "moderate"        # conservative, moderate, aggressive
-  max_position_size: 50000        # In your local currency
-  default_currency: "INR"
-  # Optional: Add your exchange API keys (store securely!)
-  # exchange_api_key: ""
-  # exchange_api_secret: ""
-
-# === DEV ENVIRONMENT ===
+    style: companion-like
+    tone: warm, witty, direct
+  name: Love
+  personality_preset: best_friend
 development:
-  work_project: ""                # Path to main work project
-  dotnet_project: ""              # Path to .NET backend
-  flutter_project: ""             # Path to Flutter app
-  docs_url: "https://docs.google.com"
-  
-  # Ghost Developer settings
-  auto_tests: true                # Auto-draft tests for new classes
-  suggest_architecture: true      # Suggest Clean Architecture boilerplate
-
-# === HARDWARE & DEVICES ===
-# LOVE auto-detects your hardware, but you can override:
+  auto_tests: true
+  docs_url: https://docs.google.com
+  dotnet_project: ''
+  flutter_project: ''
+  suggest_architecture: true
+  work_project: ''
 devices:
-  primary_device_id: ""           # Auto-detected from hostname
-  primary_device_type: ""         # "desktop", "laptop", "gaming", "mobile"
-  
-  # Power profiles per device type
   power_profiles:
     desktop:
-      llm_temperature: 0.4
-      llm_max_tokens: 2048
-      market_scan_interval: 5
-      use_quantized: false
       background_tasks: true
       gpu_acceleration: true
-    
+      llm_max_tokens: 2048
+      llm_temperature: 0.4
+      market_scan_interval: 5
+      use_quantized: false
+    gaming:
+      background_tasks: true
+      gpu_acceleration: true
+      llm_max_tokens: 2048
+      llm_temperature: 0.4
+      market_scan_interval: 5
+      use_quantized: false
     laptop:
-      llm_temperature: 0.5
-      llm_max_tokens: 1024
-      market_scan_interval: 15
-      use_quantized: true
       background_tasks: false
       gpu_acceleration: false
-    
-    gaming:
-      llm_temperature: 0.4
-      llm_max_tokens: 2048
-      market_scan_interval: 5
-      use_quantized: false
-      background_tasks: true
-      gpu_acceleration: true
-
-# === MODELS ===
-# Configure which models LOVE uses
-models:
-  reasoning: "llama3.1:8b"     # For complex reasoning (upgraded for AGI intelligence)
-  coding: "qwen2.5-coder:7b"      # For code generation (highly efficient, fast)
-  embedding: "nomic-embed-text"  # For memory/vector search
-  base_url: "http://127.0.0.1:11434"  # Ollama URL
-
-# === MEMORY & SYNC ===
-memory:
-  sync_enabled: true              # Enable multi-device sync
-  sync_db_path: "./data/love_os.db"
-  memory_path: "./data/memory"
-  
-# === VOICE ===
-voice:
-  wake_word: "Hey Love"           # Customize wake word
-  stt_enabled: true
-  tts_enabled: true
-  tts_engine: "auto"              # auto, gtts, pyttsx
-
-# === JARVIS INTEGRATIONS ===
-# Real-time awareness, Google services, phone bridge, document analysis
-
-awareness:
-  enabled: true
-  scan_interval_seconds: 300       # How often to scan system state
-
-google:
-  enabled: false                  # Set to true after running POST /integrations/google/auth
-  # credentials_path: ./credentials.json   # Download from Google Cloud Console
-  # token_path: ./data/google_token.json   # Auto-saved after first auth
-
-phone:
-  enabled: false                  # Set to true after pairing
-  # Android: Install KDE Connect, set device_id below
-  # iOS: Use Shortcuts app + webhook POST /integrations/phone/update
-  device_id: ""                   # KDE Connect device name (e.g., "Pixel 8")
-  # Known locations (LOVE will label your location by name)
-  known_locations: {}
-  # Example:
-  # known_locations:
-  #   home: { lat: 12.9716, lon: 77.5946 }
-  #   office: { lat: 12.9352, lon: 77.6245 }
-  #   gym: { lat: 12.9580, lon: 77.6410 }
-
-doc_analyst:
-  enabled: true
-  scan_interval_seconds: 1200      # How often to scan docs/code
-  watch_folders: []               # Additional folders to watch
-  # Example:
-  # watch_folders:
-  #   - "C:/Users/YourName/Projects"
-  #   - "D:/Work"
-
-# === SELF-EVOLUTION ===
+      llm_max_tokens: 1024
+      llm_temperature: 0.5
+      market_scan_interval: 15
+      use_quantized: true
+  primary_device_id: ''
+  primary_device_type: ''
 evolution:
   auto_heal_enabled: true
-  weekly_optimization: true       # Sunday midnight self-review
-  auto_install_deps: true         # Auto-install packages for features
-
-# === PRIVACY ===
-# All data stays local by default. No cloud.
+  auto_install_deps: true
+  weekly_optimization: true
+finance:
+  default_currency: INR
+  exchange_api_key: ''
+  exchange_api_secret: ''
+  max_position_size: 50000
+  risk_profile: moderate
+  watchlist:
+  - BTCUSDT
+  - ETHUSDT
+memory:
+  memory_path: ./data/memory
+  sync_db_path: ./data/love_os.db
+  sync_enabled: true
+models:
+  base_url: http://127.0.0.1:11434
+  coding: qwen2.5-coder:7b
+  embedding: nomic-embed-text
+  reasoning: llama3.1:8b
 privacy:
-  local_only: true
-  cloud_sync: false
   anonymize_logs: false
+  cloud_sync: false
+  local_only: true
+user:
+  language: en
+  name: Karthi
+  timezone: Asia/Kolkata
+voice:
+  stt_enabled: true
+  tts_enabled: true
+  tts_engine: auto
+  wake_word: Hey Love
+work:
+  auto_commit_message: 'Love-Auto-Save: End of workday'
+  daily_limit_hours: 9
+  dev_folders: []
+  hard_stop_enabled: true
+  warning_threshold: 0.8

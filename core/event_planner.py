@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "event_planner"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -289,8 +290,9 @@ class EventPlanner:
                 } for k, v in self._preferences.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.event_planner")
 
     def _load_stats(self):
         try:
@@ -299,8 +301,9 @@ class EventPlanner:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("preferences", {}).items():
                     self._preferences[k] = EventPreference(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.event_planner")
 
     def _log_event(self, event: Event):
         try:
@@ -316,8 +319,9 @@ class EventPlanner:
                     "stress": event.stress_level,
                     "energy_change": event.energy_after - event.energy_before,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.event_planner")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

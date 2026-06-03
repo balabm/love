@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass, field, asdict
 from enum import Enum
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 ECOSYSTEM_DIR = DATA_DIR / "ecosystem"
@@ -155,28 +156,32 @@ class EcosystemController:
         try:
             dev_data = {k: asdict(v) for k, v in self._devices.items()}
             DEVICES_STATE.write_text(json.dumps(dev_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ecosystem_controller")
 
         try:
             cmd_data = [asdict(c) for c in self._command_queue[-100:]]
             COMMAND_QUEUE.write_text(json.dumps(cmd_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ecosystem_controller")
 
         try:
             wf_data = {k: asdict(v) for k, v in self._workflows.items()}
             WORKFLOW_STATE.write_text(json.dumps(wf_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ecosystem_controller")
 
     def _log(self, entry: Dict):
         entry["ts"] = datetime.now().isoformat()
         try:
             with open(ECOSYSTEM_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ecosystem_controller")
 
     # ── Device Management ────────────────────────────────────────────────────
 
@@ -211,8 +216,9 @@ class EcosystemController:
             bus.emit_device_event(device_id, "registered", {
                 "name": name, "role": role, "capabilities": capabilities
             }, "ecosystem_controller")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ecosystem_controller")
 
         return {"success": True, "device": asdict(device)}
 

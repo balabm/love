@@ -85,6 +85,10 @@ class LifecycleManager:
             raise ValueError(f"Module '{descriptor.name}' is already registered.")
         self.modules[descriptor.name] = descriptor
 
+    def clear_modules(self):
+        """Reset all module registrations — useful on Uvicorn reload."""
+        self.modules.clear()
+
     def get(self, name: str) -> Optional[ModuleDescriptor]:
         return self.modules.get(name)
 

@@ -16,7 +16,8 @@ import json
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, Union
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -37,12 +38,17 @@ def _retry_with_backoff(func: Callable, max_retries: int = 3) -> Any:
             time.sleep(wait_time)
 
 
-def _get_recent_conversations(hours: int = 24) -> List[Dict[str, Any]]:
+def _get_recent_conversations(hours: Union[int, str] = 24) -> List[Dict[str, Any]]:
     """Pull recent conversation turns from the structured conversation log."""
     log_file = DATA_DIR / "conversations.jsonl"
     if not log_file.exists():
         return []
 
+    # Defensive cast: ensure hours is numeric
+    try:
+        hours = int(hours)
+    except (TypeError, ValueError):
+        hours = 24
     cutoff = datetime.now() - timedelta(hours=hours)
     conversations = []
     try:
@@ -56,8 +62,9 @@ def _get_recent_conversations(hours: int = 24) -> List[Dict[str, Any]]:
                     dt = datetime.fromisoformat(ts)
                     if dt >= cutoff:
                         conversations.append(entry)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.memory_consolidation")
     except Exception as e:
         print(f"[Consolidation] Error reading log file: {e}")
     return conversations
@@ -215,8 +222,9 @@ Format: One paragraph, past tense, specific, 2-3 sentences max."""
             llm_summary = _retry_with_backoff(lambda: future.result(timeout=45))
             if llm_summary and len(llm_summary) > 20:
                 summary = llm_summary
-    except Exception:
-        pass  # Use rule-based summary
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory_consolidation")
 
     return {
         "summary": summary,
@@ -305,8 +313,9 @@ def _extract_semantic_facts(conversations: List[Dict]) -> List[Dict[str, Any]]:
                     "object": obj,
                     "confidence": 0.7,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.memory_consolidation")
 
     # Relationship inference from co-mentions
     people = set()
@@ -394,11 +403,20 @@ def _learn_procedures(conversations: List[Dict]) -> List[Dict[str, Any]]:
 
 # ── Main consolidation routine ──────────────────────────────────────────────
 
-def consolidate_period(hours: int = 24) -> Dict[str, Any]:
+_PERIOD_MAP = {
+    "daily": 24,
+    "weekly": 168,
+    "hourly": 1,
+}
+
+def consolidate_period(hours: Union[int, str] = 24) -> Dict[str, Any]:
     """
     Run memory consolidation for the last N hours.
+    Accepts an int (hours) or a string label like 'daily', 'weekly'.
     Returns summary of what was learned.
     """
+    if isinstance(hours, str):
+        hours = _PERIOD_MAP.get(hours.lower(), 24)
     conversations = _get_recent_conversations(hours)
     if not conversations:
         return {"processed": 0, "created": 0, "message": "No conversations to consolidate"}
@@ -444,8 +462,9 @@ def consolidate_period(hours: int = 24) -> Dict[str, Any]:
                     for fact in facts:
                         if fact["category"] == "work":
                             fact["project_context"] = project
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.memory_consolidation")
             
             for fact in facts:
                 add_semantic(
@@ -504,8 +523,9 @@ def consolidate_period(hours: int = 24) -> Dict[str, Any]:
                     created_memories,
                     json.dumps(types_breakdown),
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.memory_consolidation")
 
         return {
             "processed": len(conversations),
@@ -565,8 +585,9 @@ def should_run_consolidation() -> bool:
             hours_since = (datetime.now() - last).total_seconds() / 3600
             if hours_since < 20:
                 return False
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory_consolidation")
     hour = datetime.now().hour
     if 6 <= hour < 22:
         return False  # Only run 10 PM - 6 AM

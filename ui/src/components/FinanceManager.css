@@ -1077,6 +1077,104 @@
   color: #e2e8f0;
 }
 
+/* Transaction Actions */
+.fm-tx-actions {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.fm-action-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.fm-action-btn:hover {
+  opacity: 1;
+  background: rgba(255,255,255,0.06);
+}
+
+.fm-tx-dismissed {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.fm-tx-dismissed .fm-tx-amt {
+  color: #64748b;
+}
+
+/* Live Signal Card */
+.fm-signal-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.fm-signal-main {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fm-signal-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+}
+
+.fm-signal-badge {
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.fm-signal-buy .fm-signal-badge {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.fm-signal-sell .fm-signal-badge {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.fm-signal-hold .fm-signal-badge {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.fm-signal-strat {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.fm-signal-price {
+  font-size: 0.8rem;
+  color: #60a5fa;
+  font-family: monospace;
+}
+
+.fm-signal-meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
 /* Responsive */
 @media (max-width: 800px) {
   .fm-stats-row {

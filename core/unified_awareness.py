@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -41,8 +42,9 @@ def _load_json(path: Path) -> Optional[Dict]:
     if path.exists():
         try:
             return json.loads(path.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.unified_awareness")
     return None
 
 
@@ -51,8 +53,9 @@ def _log_fusion(entry: Dict[str, Any]):
     try:
         with open(FUSION_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
 
 
 def _get_pc_snapshot() -> List[Situation]:
@@ -96,8 +99,9 @@ def _get_pc_snapshot() -> List[Situation]:
                 urgency="low", relevance_score=0.3,
                 timestamp=datetime.now(), raw_data=snap
             ))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
     return situations
 
 
@@ -163,8 +167,9 @@ def _get_phone_state() -> List[Situation]:
                 timestamp=datetime.now(),
                 raw_data={"notification": notif}
             ))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
     return situations
 
 
@@ -189,8 +194,9 @@ def _get_office_state() -> List[Situation]:
                     urgency="high", relevance_score=0.8,
                     timestamp=datetime.now(), raw_data=event
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.unified_awareness")
 
         # Check unread email details
         try:
@@ -209,8 +215,9 @@ def _get_office_state() -> List[Situation]:
                     timestamp=datetime.now(),
                     raw_data=em
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.unified_awareness")
 
         # Check Teams messages
         try:
@@ -225,10 +232,12 @@ def _get_office_state() -> List[Situation]:
                     timestamp=datetime.now(),
                     raw_data=msg
                 ))
-        except Exception:
-            pass
-    except Exception:
-        pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.unified_awareness")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
     return situations
 
 
@@ -250,8 +259,9 @@ def _get_github_state() -> List[Situation]:
                 relevance_score=0.6 if urgency == "high" else 0.4,
                 timestamp=datetime.now(), raw_data=n
             ))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
     return situations
 
 
@@ -288,10 +298,12 @@ def _get_recent_notifications() -> List[Situation]:
                     urgency=urgency, relevance_score=0.45,
                     timestamp=datetime.now(), raw_data=entry
                 ))
-            except Exception:
-                pass
-    except Exception:
-        pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.unified_awareness")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
     return situations
 
 
@@ -310,8 +322,9 @@ def _get_file_activity() -> List[Situation]:
                         urgency="low", relevance_score=0.35,
                         timestamp=datetime.now(), raw_data=f
                     ))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.unified_awareness")
     return situations
 
 

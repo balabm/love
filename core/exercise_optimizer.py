@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "exercise_optimizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -318,8 +319,9 @@ class ExerciseOptimizer:
                         "suggestion": "Consider reducing intensity or taking a rest day.",
                     },
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.exercise_optimizer")
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -336,8 +338,9 @@ class ExerciseOptimizer:
                 } for k, v in self._muscle_recovery.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.exercise_optimizer")
 
     def _load_stats(self):
         try:
@@ -346,8 +349,9 @@ class ExerciseOptimizer:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("muscle_recovery", {}).items():
                     self._muscle_recovery[k] = MuscleRecovery(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.exercise_optimizer")
 
     def _log_workout(self, workout: Workout):
         try:
@@ -360,8 +364,9 @@ class ExerciseOptimizer:
                     "exertion": workout.perceived_exertion,
                     "muscles": workout.muscle_groups,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.exercise_optimizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

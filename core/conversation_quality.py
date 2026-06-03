@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "conversation_quality"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -351,16 +352,18 @@ class ConversationQualityAnalyzer:
                 ],
             }
             QUALITY_DB.write_text(json.dumps(data, indent=2, default=str))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.conversation_quality")
 
     def _load_db(self):
         try:
             if QUALITY_DB.exists():
                 data = json.loads(QUALITY_DB.read_text())
                 self._stats = data.get("stats", self._stats)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.conversation_quality")
 
     def _log_trend(self, summary: ConversationSummary):
         try:
@@ -372,8 +375,9 @@ class ConversationQualityAnalyzer:
                     "turn_count": summary.turn_count,
                     "dominant_emotion": summary.dominant_emotion,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.conversation_quality")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

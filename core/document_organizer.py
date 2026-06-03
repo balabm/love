@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "document_organizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -296,8 +297,9 @@ class DocumentOrganizer:
                 } for k, v in self._documents.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.document_organizer")
 
     def _load_stats(self):
         try:
@@ -306,8 +308,9 @@ class DocumentOrganizer:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("documents", {}).items():
                     self._documents[k] = Document(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.document_organizer")
 
     def _log_document(self, doc: Document):
         try:
@@ -320,8 +323,9 @@ class DocumentOrganizer:
                     "importance": doc.importance,
                     "size_kb": doc.size_kb,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.document_organizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

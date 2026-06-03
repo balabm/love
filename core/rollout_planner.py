@@ -32,6 +32,7 @@ from typing import Any, Deque, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from core.execution_guard import log_error
 from core.world_model_latent import (
     LatentWorldModel,
     get_world_model_latent,
@@ -516,8 +517,9 @@ class RolloutPlanner:
         try:
             if CALIBRATION_FILE.exists():
                 return json.loads(CALIBRATION_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.rollout_planner")
         return {"confidence": 0.5, "total_outcomes": 0}
 
     def _save_calibration(self) -> None:
@@ -525,15 +527,17 @@ class RolloutPlanner:
             CALIBRATION_FILE.write_text(
                 json.dumps(self._calibration, indent=2), encoding="utf-8"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.rollout_planner")
 
     def _persist_outcome(self, outcome: Dict[str, Any]) -> None:
         try:
             with OUTCOMES_FILE.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(outcome) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.rollout_planner")
 
     # ── Active planning context (replaces passive hint) ──────────────────
 

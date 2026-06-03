@@ -18,6 +18,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from threading import Lock
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -192,8 +193,9 @@ class GoogleServices:
                 try:
                     start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00")).astimezone()
                     end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00")).astimezone()
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.google_services")
 
                 minutes_away = None
                 if start_dt:
@@ -483,15 +485,17 @@ class GoogleServices:
                         when = 'NOW' if mins <= 0 else 'in ' + str(mins) + 'min'
                         meet = ' (Meet)' if ev.get('meet_link') else ''
                         parts.append('[CALENDAR] ' + ev['title'] + ' ' + when + meet)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.google_services")
         try:
             email = self.get_email_summary()
             unread = email.get('unread_important', 0)
             if unread:
                 parts.append('[GMAIL] ' + str(unread) + ' important unread emails')
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.google_services")
         return chr(10).join(parts)
 
     def get_proactive_alerts(self) -> list:
@@ -505,8 +509,9 @@ class GoogleServices:
                 if mins is not None and 0 < mins <= 10:
                     meet = ' - Meet link ready' if ev.get('meet_link') else ''
                     alerts.append("Meeting '" + ev['title'] + "' starts in " + str(mins) + 'min' + meet)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.google_services")
         try:
             email = self.get_email_summary()
             for msg in email.get('urgent', [])[:2]:
@@ -515,8 +520,9 @@ class GoogleServices:
                 triggers = ['urgent', 'asap', 'immediately', 'action required']
                 if any(kw in subj.lower() for kw in triggers):
                     alerts.append('Urgent email from ' + sender + ': ' + subj[:50])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.google_services")
         return alerts
 
     def get_full_snapshot(self) -> dict:

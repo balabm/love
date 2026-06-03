@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 import numpy as np
+from core.execution_guard import log_error
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -203,23 +204,26 @@ class FeedbackCollector:
                 try:
                     d = json.loads(line)
                     loaded.append(FeedbackSignal(**d))
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.feedback_collector")
             self._signals = loaded
             self._explicit_count = sum(
                 1 for s in loaded if s.source.startswith("explicit"))
             self._implicit_count = sum(
                 1 for s in loaded if s.source.startswith("implicit"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
     def _persist_signal(self, sig: FeedbackSignal) -> None:
         """Append one signal to signals.jsonl."""
         try:
             with SIGNALS_FILE.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(sig.to_dict()) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
     # ── Episode watcher ────────────────────────────────────────────────────────
 
@@ -230,8 +234,9 @@ class FeedbackCollector:
                 time.sleep(300)  # check every 5 min
                 try:
                     self.maybe_close_episode(silence_minutes=30)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.feedback_collector")
         t = threading.Thread(target=_watch, daemon=True)
         t.start()
 
@@ -326,15 +331,17 @@ class FeedbackCollector:
         try:
             with EPISODES_FILE.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(record.to_dict()) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
         # Propagate episode-level signal to LoRA evolution (higher confidence)
         try:
             from core.lora_evolution import get_lora_evolution
             get_lora_evolution().receive_feedback(episode_fitness, confidence=0.85)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
         # Reset episode buffer
         self._episode_start = time.time()
@@ -500,22 +507,25 @@ class FeedbackCollector:
             get_evolution_engine().record_interaction(
                 user_satisfaction=signal.satisfaction,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
         # 2. LoRA evolution — new receive_feedback hook
         try:
             from core.lora_evolution import get_lora_evolution
             get_lora_evolution().receive_feedback(signal.satisfaction, signal.confidence)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
         # 3. Autonomous self-improvement — new receive_feedback hook
         try:
             from core.autonomous_self_improvement import get_autonomous_self_improvement
             get_autonomous_self_improvement().receive_feedback(signal)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_collector")
 
     # ── Query helpers ─────────────────────────────────────────────────────────
 

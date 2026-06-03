@@ -1,5 +1,6 @@
 import os
 import re
+from core.execution_guard import log_error
 
 agent_path = r'c:\Users\balab\OneDrive\Documents\Projects\LLove\love\core\agent.py'
 context_path = r'c:\Users\balab\OneDrive\Documents\Projects\LLove\love\core\context_engine.py'
@@ -83,8 +84,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         ltm_text = format_memory_for_chat(ltm_result)
         if ltm_text:
             blocks.append(ltm_text)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
 
     # 3. User profile
     try:
@@ -92,8 +94,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         profile_ctx = enrich_prompt_context()
         if profile_ctx:
             blocks.append(f"=== WHAT I KNOW ABOUT KARTHI ===\\n{profile_ctx}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
 
     # 4. AGI-Level Systems
     try:
@@ -106,8 +109,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
             agi_context_parts.append(f"Psychological Profile: {json.dumps(profile, indent=2)[:200]}...")
         if agi_context_parts:
             blocks.append("=== AGI-LEVEL INSIGHTS ===\\n" + "\\n".join(agi_context_parts))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
 
     # 5. Web Search
     try:
@@ -115,8 +119,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         web_results = auto_search_for_query(user_input)
         if web_results:
             blocks.append(f"REAL-TIME WEB DATA:\\n{web_results}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
 
     # 6. Temporal Memory
     try:
@@ -125,8 +130,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         temporal_ctx = tmem.get_temporal_context(query=user_input, limit=3)
         if temporal_ctx:
             blocks.append(f"=== MY AUTOBIOGRAPHICAL MEMORY ===\\n{temporal_ctx}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
         
     # 7. Intelligence Hub
     try:
@@ -135,8 +141,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         intel_ctx = hub.get_context_for_prompt()
         if intel_ctx:
             blocks.append("=== LIVE INTELLIGENCE ===\\n" + intel_ctx)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
         
     # 8. Agent Registry
     try:
@@ -145,8 +152,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         agent_ctx = registry.get_all_context(user_input)
         if agent_ctx:
             blocks.append("=== LIVE LIFE CONTEXT ===\\n" + agent_ctx)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
         
     # 9. Active Goals
     try:
@@ -156,8 +164,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         if active_goals:
             goal_lines = [f"  • {g['title']} [{g['priority']}] {g['progress']:.0f}% done" for g in active_goals[:3]]
             blocks.append("=== ACTIVE GOALS ===\\n" + "\\n".join(goal_lines))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="scratch.refactor_agent")
         
     # Join and enforce a hard limit to avoid prompt truncation upstream
     unified = "\\n\\n".join(blocks)

@@ -33,6 +33,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 GOALS_DIR = DATA_DIR / "autonomous_goals"
@@ -82,8 +83,9 @@ def _load_goals() -> Dict[str, Goal]:
         if GOALS_FILE.exists():
             raw = json.loads(GOALS_FILE.read_text())
             return {k: Goal(**v) for k, v in raw.items()}
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous_goal_engine")
     return {}
 
 
@@ -97,8 +99,9 @@ def _log_action(action: GoalAction):
     try:
         with open(EXECUTION_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous_goal_engine")
 
 
 # ── Goal API ──────────────────────────────────────────────────────────────────
@@ -194,8 +197,9 @@ def _execute_research_action(goal: Goal) -> GoalAction:
                     event=f"Researched goal '{goal.title}': {action.result[:200]}",
                     importance=0.6,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.autonomous_goal_engine")
         else:
             action.result = "Research returned no results"
             action.status = "done"
@@ -268,8 +272,9 @@ def _execute_monitoring_action(goal: Goal) -> GoalAction:
                 update_goal_progress(goal.id, progress, f"Task monitoring: {len(done_related)}/{len(related)} done")
                 action.status = "done"
                 return action
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous_goal_engine")
     action.result = "Monitoring check complete — no strong signals"
     action.status = "done"
     action.completed_at = datetime.now().isoformat()
@@ -350,8 +355,9 @@ def _execute_action_action(goal: Goal) -> GoalAction:
         try:
             from core.consciousness import get_consciousness
             get_consciousness().think(f"[GoalEngine] Working on goal '{goal.title}': {', '.join(results)}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_goal_engine")
 
         # Update goal progress
         update_goal_progress(goal.id, min(100, goal.progress_pct + 5), f"Executed: {', '.join(results)}")
@@ -435,8 +441,9 @@ def run_goal_cycle() -> Dict[str, Any]:
                 last = datetime.fromisoformat(goal.last_worked_on)
                 if (datetime.now() - last).total_seconds() < 21600:
                     continue
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.autonomous_goal_engine")
 
         actions = work_on_goal(goal)
         total_actions += len(actions)
@@ -459,8 +466,9 @@ def run_goal_cycle() -> Dict[str, Any]:
                     priority="low",
                     metadata={"goal_id": goal.id, "actions": len(successful)},
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_goal_engine")
 
     log_activity("goal_engine", "cycle_complete", f"Worked on {goals_worked} goals, {total_actions} actions", {"goals": goals_worked, "actions": total_actions}, importance="normal")
 

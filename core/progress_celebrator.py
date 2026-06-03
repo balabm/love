@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "progress_celebrator"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -322,15 +323,17 @@ class ProgressCelebrator:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.progress_celebrator")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.progress_celebrator")
 
     def _log_win(self, win: Win):
         try:
@@ -344,8 +347,9 @@ class ProgressCelebrator:
                     "celebration": win.celebration,
                     "significance": win.significance,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.progress_celebrator")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

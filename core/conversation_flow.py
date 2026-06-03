@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from collections import deque
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -32,8 +33,9 @@ def _load_flow() -> Dict[str, Any]:
     if FLOW_FILE.exists():
         try:
             return json.loads(FLOW_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.conversation_flow")
     return {
         "session_id": None,
         "session_started": None,
@@ -48,8 +50,9 @@ def _load_flow() -> Dict[str, Any]:
 def _save_flow(flow: Dict[str, Any]):
     try:
         FLOW_FILE.write_text(json.dumps(flow, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.conversation_flow")
 
 
 def _is_session_active(flow: Dict[str, Any]) -> bool:

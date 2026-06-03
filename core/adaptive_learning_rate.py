@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "adaptive_learning"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -255,8 +256,9 @@ class AdaptiveLearningRateEngine:
                 "stats": self._stats,
             }
             PARAM_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.adaptive_learning_rate")
 
     def _load_params(self):
         try:
@@ -265,8 +267,9 @@ class AdaptiveLearningRateEngine:
                 for name, p_data in data.get("parameters", {}).items():
                     self._parameters[name] = ParameterState(**p_data)
                 self._stats.update(data.get("stats", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.adaptive_learning_rate")
 
     def _log_adjustment(self, feedback: Dict[str, Any], adjustments: Dict[str, float]):
         try:
@@ -276,8 +279,9 @@ class AdaptiveLearningRateEngine:
                     "feedback": feedback,
                     "adjustments": adjustments,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.adaptive_learning_rate")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "creativity_booster"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -178,8 +179,9 @@ class CreativityBooster:
             try:
                 hour = datetime.fromisoformat(s.timestamp).hour
                 by_hour[hour].append(s.output_quality)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.creativity_booster")
 
         best_hour = max(by_hour.items(), key=lambda x: sum(x[1])/len(x[1]))[0] if by_hour else None
 
@@ -339,8 +341,9 @@ class CreativityBooster:
                 } for k, v in self._techniques.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.creativity_booster")
 
     def _load_stats(self):
         try:
@@ -349,8 +352,9 @@ class CreativityBooster:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("techniques", {}).items():
                     self._techniques[k] = TechniqueEffectiveness(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.creativity_booster")
 
     def _log_session(self, session: CreativeSession):
         try:
@@ -365,8 +369,9 @@ class CreativityBooster:
                     "block_broken": session.block_broken,
                     "technique": session.technique_used,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.creativity_booster")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from urllib.parse import quote_plus, urlparse
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 CACHE_DIR = PROJECT_ROOT / "data" / "internet_cache"
@@ -52,8 +53,9 @@ def _cache_set(key: str, data: Any):
     try:
         with open(CACHE_DIR / f"{key}.json", "w") as f:
             json.dump(data, f)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.internet")
 
 
 # ── Core fetch ────────────────────────────────────────────────────────────────

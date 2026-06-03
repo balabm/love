@@ -23,6 +23,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from collections import deque
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 RESEARCH_DIR = DATA_DIR / "research"
@@ -147,20 +148,23 @@ class ResearchEngine:
         try:
             queue_data = {"tasks": [asdict(t) for t in self._queue[-100:]]}
             RESEARCH_QUEUE.write_text(json.dumps(queue_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
         try:
             kb_data = {k: asdict(v) for k, v in self._knowledge.items()}
             KNOWLEDGE_BASE.write_text(json.dumps(kb_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
         try:
             mon_data = [asdict(t) for t in self._monitored]
             MONITORED_TOPICS.write_text(json.dumps(mon_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
     def _log(self, entry: Dict):
         """Append to research log."""
@@ -168,8 +172,9 @@ class ResearchEngine:
         try:
             with open(RESEARCH_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
     # ── Queue Management ─────────────────────────────────────────────────────
 
@@ -223,8 +228,9 @@ class ResearchEngine:
                 source_module="research_engine",
                 priority=EventPriority.NORMAL,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
         self._log({"event": "task_queued", "task_id": task_id, "topic": topic})
         return task_id
@@ -440,8 +446,9 @@ Format as JSON: {{"summary": "...", "takeaways": [...], "applications": [...], "
                 if json_match:
                     parsed = json.loads(json_match.group())
                     return parsed
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.research_engine")
 
             # Fallback: use raw response as summary
             return {
@@ -500,8 +507,9 @@ Format as JSON: {{"summary": "...", "takeaways": [...], "applications": [...], "
                     source="research_engine",
                 )
 
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
     # ── Topic Monitoring ─────────────────────────────────────────────────────
 
@@ -644,8 +652,9 @@ Format as JSON: {{"summary": "...", "takeaways": [...], "applications": [...], "
                         source="curiosity_gap",
                         context=gap.get("context", ""),
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.research_engine")
 
     # ── Status ───────────────────────────────────────────────────────────────
 

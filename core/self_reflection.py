@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "self_reflection"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -174,8 +175,9 @@ class SelfReflectionEngine:
                     "evidence": [a.title for a in recent_alerts if a.subsystem == top_subsystem][:3],
                     "suggestion": f"Investigate {top_subsystem} stability or configuration",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
         # Pattern 2: Check for work limit violations
         try:
@@ -190,8 +192,9 @@ class SelfReflectionEngine:
                     "evidence": ["Work limit warnings", "Sleep warnings", "Social isolation warnings"],
                     "suggestion": "Consider adjusting default work limit or proactive nudge frequency",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
         # Pattern 3: Check evolution activity
         try:
@@ -207,8 +210,9 @@ class SelfReflectionEngine:
                     "evidence": [f"{mods} modifications", f"{status.get('statistics', {}).get('total_mutations_applied', 0)} mutations"],
                     "suggestion": "Review if evolution pace is appropriate for system stability",
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
         return patterns
 
@@ -237,8 +241,9 @@ class SelfReflectionEngine:
                     "actual": score,
                     "gap": max(0, 0.8 - score),
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.self_reflection")
 
         return assessments
 
@@ -381,14 +386,20 @@ class SelfReflectionEngine:
                         from core.neural_bus import get_neural_bus
                         bus = get_neural_bus()
                         for insight in results["new_insights"]:
-                            bus.publish("self_reflection", {
-                                "category": insight.category,
-                                "observation": insight.observation,
-                                "severity": insight.severity,
-                                "suggested_action": insight.suggested_action,
-                            })
-                    except Exception:
-                        pass
+                            bus.publish(
+                                domain="self_reflection",
+                                event_type="insight",
+                                payload={
+                                    "category": insight.category,
+                                    "observation": insight.observation,
+                                    "severity": insight.severity,
+                                    "suggested_action": insight.suggested_action,
+                                },
+                                source_module="self_reflection",
+                            )
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.self_reflection")
             except Exception as e:
                 print(f"[SelfReflection] Loop error: {e}")
             time.sleep(3600)  # Reflect every hour
@@ -405,8 +416,9 @@ class SelfReflectionEngine:
                     "decisions_audited": len(results["decision_quality"]),
                     "insights_generated": len(results["new_insights"]),
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
     def _log_decision(self, audit: DecisionAudit):
         try:
@@ -419,8 +431,9 @@ class SelfReflectionEngine:
                     "decision": audit.decision,
                     "reasoning": audit.reasoning,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
     def _save_insights(self):
         try:
@@ -441,8 +454,9 @@ class SelfReflectionEngine:
                 ],
             }
             INSIGHTS_DB.write_text(json.dumps(data, indent=2, default=str))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
     def _load_insights(self):
         try:
@@ -450,8 +464,9 @@ class SelfReflectionEngine:
                 data = json.loads(INSIGHTS_DB.read_text())
                 for ins in data.get("insights", []):
                     self._insights.append(SelfInsight(**ins))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_reflection")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -34,6 +34,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "explainable_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -358,8 +359,9 @@ Generate a technical explanation that:
                     from core.proactive_push import ProactivePushEngine
                     push = ProactivePushEngine()
                     push.push("EVOLUTION", message, priority="normal")
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.explainable_evolution")
             
             # Log notification
             self._log_notification(explanation_id, channel, message)
@@ -472,8 +474,9 @@ Keep it conversational and brief."""
         try:
             with open(EXPLANATION_LOG, "a") as f:
                 f.write(json.dumps(asdict(explanation)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.explainable_evolution")
     
     def _log_notification(self, explanation_id: str, channel: str, message: str):
         try:
@@ -485,8 +488,9 @@ Keep it conversational and brief."""
             }
             with open(EXPLANATION_LOG, "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.explainable_evolution")
     
     # ── Query Methods ───────────────────────────────────────────────────────────
     

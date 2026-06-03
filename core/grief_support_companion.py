@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "grief_support_companion"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,15 +296,17 @@ class GriefSupportCompanion:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.grief_support_companion")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.grief_support_companion")
 
     def _log_entry(self, entry: GriefEntry):
         try:
@@ -315,8 +318,9 @@ class GriefSupportCompanion:
                     "intensity": entry.intensity,
                     "expression": entry.expression,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.grief_support_companion")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

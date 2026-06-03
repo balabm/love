@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import json
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 SPINE_LOG = DATA_DIR / "agi_spine_log.jsonl"
@@ -104,8 +105,9 @@ class AGISpine:
             # also get logged in the orchestrator's narrative for user visibility.
             # No extra work needed — the neural bus handles it.
             pass
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agi_spine")
 
     # ═══════════════════════════════════════════════════════════════
     # BRIDGE 2: Evolution → Mission Queue

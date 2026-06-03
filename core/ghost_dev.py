@@ -21,6 +21,8 @@ from typing import Dict, List, Any, Optional
 
 from core.llm import get_coding_llm, get_reasoning_llm
 from core.consciousness import get_consciousness
+from core.execution_guard import log_error
+from core.activity_log import log_activity
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 GHOST_DEV_TASKS = DATA_DIR / "ghost_dev_tasks.json"
@@ -69,19 +71,20 @@ class GhostDeveloper:
                 data = json.loads(GHOST_DEV_TASKS.read_text())
                 for k, v in data.items():
                     self.tasks[k] = GhostDevTask.from_dict(v)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.ghost_dev")
 
     def _save_tasks(self):
         with self._lock:
             try:
                 data = {k: v.to_dict() for k, v in self.tasks.items()}
                 GHOST_DEV_TASKS.write_text(json.dumps(data, indent=2))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.ghost_dev")
 
     def assign_task(self, description: str, target_files: List[str]) -> str:
-        from core.activity_log import log_activity
         task_id = f"task_{int(time.time())}"
         task = GhostDevTask(task_id, description, target_files)
         self.tasks[task_id] = task
@@ -90,8 +93,9 @@ class GhostDeveloper:
 
         try:
             get_consciousness().think(f"Received new Ghost Dev task: {description}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ghost_dev")
 
         return task_id
 
@@ -209,8 +213,9 @@ Provide the FULL updated content for {fpath}. Output ONLY the code, nothing else
 
             try:
                 get_consciousness().think(f"Ghost Dev finished task: {task.description}. Waiting for user review.")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.ghost_dev")
 
         except Exception as e:
             task.status = "failed"

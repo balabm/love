@@ -30,6 +30,7 @@ from collections import defaultdict, deque
 
 from core import knowledge_graph
 from integrations.phone_bridge import PhoneBridge
+from core.execution_guard import log_error
 
 # Microsoft Teams integration (optional)
 try:
@@ -94,9 +95,9 @@ class SmartNotificationClassifier:
 
     SOCIAL_KEYWORDS = [
         "whatsapp", "telegram", "message", "call", "missed call", "voicemail",
-        "instagram", "facebook", "twitter", "snapchat", "tiktok",
+        "instagram", "facebook", "twitter", "snapchat", "tiktok", "snap",
         "birthday", "party", "dinner", "lunch", "catch up", "weekend",
-        "family", "friend", "invite", "rsvp",
+        "family", "friend", "invite", "rsvp", "ongoing call",
     ]
 
     PROMO_KEYWORDS = [
@@ -109,9 +110,10 @@ class SmartNotificationClassifier:
     FINANCE_KEYWORDS = [
         "debited", "credited", "spent", "purchase", "transaction", "payment",
         "withdrawn", "deposit", "balance", "account", "card", "bank",
-        "upi", "emi", "loan", "refund", "transfer", "sent", "received",
+        "upi", "emi", "loan", "refund", "transfer",
         "investment", "dividend", "stock", "crypto", "bitcoin", "nft",
-        "portfolio", "dividend", "interest", "mortgage", "insurance",
+        "portfolio", "interest", "mortgage", "insurance",
+        "inr", "rs.", "rupees", "usd", "$", "€", "£",
     ]
 
     SYSTEM_KEYWORDS = [
@@ -258,12 +260,16 @@ class SmartNotificationClassifier:
         # Amounts
         amount_pattern = r"(?:Rs\.?|₹|\$|€|£|USD|EUR|GBP|INR)?\s*([\d,]+(?:\.\d{2})?)"
         for m in re.finditer(amount_pattern, text):
+            raw = m.group(1).replace(",", "")
+            if not raw:
+                continue
             try:
-                amt = float(m.group(1).replace(",", ""))
+                amt = float(raw)
                 if amt > 0:
                     entities["amounts"].append(amt)
-            except ValueError:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_ingestion")
 
         # Action items
         action_starters = ["please", "need", "required", "action", "review", "approve", "sign", "submit", "confirm", "pay", "complete", "finish", "check", "verify", "respond", "reply"]
@@ -294,7 +300,7 @@ class NotificationIngestionEngine:
         self._thread: Optional[Thread] = None
         self._seen_hashes: Set[str] = set()
         self._classifier = SmartNotificationClassifier()
-        self._recent_notifications: deque = deque(maxlen=200)
+        self._recent_texts: deque = deque(maxlen=100)  # runtime dedup cache only
         self._stats = {
             "ingested_total": 0,
             "dropped_noise": 0,
@@ -306,6 +312,13 @@ class NotificationIngestionEngine:
         self._pending_actionable: deque = deque(maxlen=50)
         self._last_alert_time: float = 0
         self._alert_cooldown: float = 30  # seconds between alerts
+        self._cm = None
+
+    def _get_cm(self):
+        if self._cm is None:
+            from core.consolidated_memory import get_consolidated_memory
+            self._cm = get_consolidated_memory()
+        return self._cm
 
     @classmethod
     def get_instance(cls) -> "NotificationIngestionEngine":
@@ -320,6 +333,26 @@ class NotificationIngestionEngine:
         self._running = True
         self._thread = Thread(target=self._loop, args=(interval_seconds,), daemon=True)
         self._thread.start()
+        # Auto-start ntfy bridge so notifications flow immediately
+        try:
+            from integrations.ntfy_bridge import NtfyBridge
+            NtfyBridge.get_instance().start()
+        except Exception:
+            pass
+        # Register notification learner as ConsolidatedMemory callback
+        try:
+            from core.notification_learning import get_notification_learning_engine
+            learner = get_notification_learning_engine()
+            self._get_cm().register_learner(lambda entry: learner.ingest({
+                "text": entry.get("payload", {}).get("text", ""),
+                "source": entry.get("payload", {}).get("source", "unknown"),
+                "app": entry.get("payload", {}).get("source", "unknown"),
+                "timestamp": entry.get("timestamp", ""),
+                "payload": entry.get("payload", {}),
+            }))
+            print("[Ingestion] Notification learner registered with ConsolidatedMemory")
+        except Exception:
+            pass
         print(f"[Ingestion] Notification Ingestion Engine v3 started ({interval_seconds}s interval)")
 
     def stop(self):
@@ -331,6 +364,27 @@ class NotificationIngestionEngine:
     def get_pending_actionable(self) -> List[Dict]:
         return list(self._pending_actionable)
 
+    def get_recent_notifications(self, hours: int = 24, limit: int = 200) -> List[Dict]:
+        """Get recent notifications from persistent ConsolidatedMemory (survives restart)."""
+        try:
+            raw = self._get_cm().get_recent(domain="notification", hours=hours, limit=limit)
+            structured = []
+            for entry in raw:
+                payload = entry.get("payload", {})
+                structured.append({
+                    "category": payload.get("category", entry.get("event_type", "notification")),
+                    "message": payload.get("text", entry.get("text_for_search", "")),
+                    "ts": payload.get("timestamp", entry.get("timestamp", "")),
+                    "source": payload.get("source", ""),
+                    "priority": payload.get("priority", "normal"),
+                    "signal_score": payload.get("signal_score", 0),
+                })
+            return structured
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
+            return []
+
     def dismiss_actionable(self, index: int):
         try:
             pending = list(self._pending_actionable)
@@ -338,8 +392,9 @@ class NotificationIngestionEngine:
                 pending.pop(index)
                 self._pending_actionable = deque(pending, maxlen=50)
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
         return False
 
     def _loop(self, interval: int):
@@ -359,7 +414,7 @@ class NotificationIngestionEngine:
         words = set(re.findall(r'\b\w{4,}\b', text_lower))
         if not words:
             return False
-        for recent in self._recent_notifications:
+        for recent in self._recent_texts:
             recent_words = set(re.findall(r'\b\w{4,}\b', recent.lower()))
             if not recent_words:
                 continue
@@ -385,7 +440,7 @@ class NotificationIngestionEngine:
             self._stats["dropped_duplicate"] += 1
             return
 
-        self._recent_notifications.append(text)
+        self._recent_texts.append(text)
 
         # 3. Classify
         classification = self._classifier.classify(text, source)
@@ -418,7 +473,19 @@ class NotificationIngestionEngine:
             self._stats["actionable_detected"] += 1
             self._pending_actionable.append(payload)
 
-        # 6. Route financial
+        # 6. Persist to Consolidated Memory (survives restart + semantic recall)
+        try:
+            self._get_cm().write(
+                domain="notification",
+                event_type=classification["category"],
+                payload=payload,
+                text_for_search=text,
+            )
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
+
+        # 7. Route financial
         if classification["category"] == "financial":
             self._stats["financial_routed"] += 1
             try:
@@ -428,13 +495,13 @@ class NotificationIngestionEngine:
             except Exception as e:
                 print(f"[Ingestion] FinanceGuardian routing error: {e}")
 
-        # 7. Knowledge Graph
+        # 8. Knowledge Graph
         try:
             knowledge_graph.ingest_text(text, source=f"{source}_notification")
         except Exception as e:
             print(f"[Ingestion] KG ingest error for {source}: {e}")
 
-        # 8. Neural Bus
+        # 9. Neural Bus
         if NEURAL_BUS_AVAILABLE:
             try:
                 priority_map = {
@@ -453,7 +520,7 @@ class NotificationIngestionEngine:
             except Exception as e:
                 print(f"[Ingestion] Neural bus publish error: {e}")
 
-        # 9. Pattern learning
+        # 10. Pattern learning (also handled by CM learner callback, but keep direct for safety)
         try:
             from core.notification_learning import get_notification_learning_engine
             learner = get_notification_learning_engine()
@@ -464,12 +531,77 @@ class NotificationIngestionEngine:
                 "timestamp": payload["timestamp"],
                 "payload": extra_meta or {},
             })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
 
-        # 10. Delivery to user (via orchestrator if available, else direct push)
+        # 11. Auto-create tasks/missions from actionable notifications
+        self._route_to_action_system(payload, classification)
+
+        # 12. Delivery to user (via orchestrator if available, else direct push)
         if classification["priority"] == "high":
             self._deliver_to_user(payload)
+
+    def _route_to_action_system(self, payload: Dict, classification: Dict):
+        """Intelligently route notifications to task/mission systems so data is actually used."""
+        category = classification["category"]
+        text = payload.get("text", "")
+        source = payload.get("source", "")
+        is_actionable = classification.get("is_actionable", False)
+
+        # ── WORK / CALENDAR → Executive Tasks ──
+        if category in ("work", "system") or "calendar" in source.lower():
+            try:
+                from core.executive import add_task
+                # Extract deadline if present
+                entities = payload.get("entities", {})
+                deadlines = entities.get("deadlines", [])
+                deadline = deadlines[0] if deadlines else None
+                add_task(
+                    text=f"[{source.upper()}] {text[:120]}",
+                    deadline=deadline,
+                    source="notification"
+                )
+                print(f"[Ingestion] Auto-created task from {source} notification")
+            except Exception as e:
+                log_error(e, module="core.notification_ingestion")
+
+        # ── ACTIONABLE → Autonomous Mission Queue ──
+        if is_actionable and category in ("work", "urgent", "financial"):
+            try:
+                from core.autonomous_mission_queue import get_mission_queue
+                mq = get_mission_queue()
+                mq.add_mission(
+                    title=text[:100],
+                    domain=category,
+                    priority=payload.get("priority", "normal"),
+                    description=f"Auto-created from {source} notification. Full text: {text}",
+                    source="notification_ingestion"
+                )
+                print(f"[Ingestion] Auto-created mission from actionable {source} notification")
+            except Exception as e:
+                log_error(e, module="core.notification_ingestion")
+
+        # ── SOCIAL / CALL → Relationship memory ──
+        if category == "social" or "call" in text.lower():
+            try:
+                # Extract name from text if possible
+                names = payload.get("entities", {}).get("names", [])
+                sender_name = names[0] if names else source
+                self._get_cm().write(
+                    domain="relationships",
+                    event_type="interaction",
+                    payload={
+                        "text": text,
+                        "source": source,
+                        "category": category,
+                        "person": sender_name,
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                    text_for_search=f"{sender_name}: {text}",
+                )
+            except Exception as e:
+                log_error(e, module="core.notification_ingestion")
 
     def _deliver_to_user(self, payload: Dict):
         """Deliver notification to user, respecting orchestrator state."""
@@ -490,8 +622,9 @@ class NotificationIngestionEngine:
                 if state.get("focus_mode"):
                     # Don't alert during focus mode
                     return
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_ingestion")
 
         if PUSH_AVAILABLE:
             try:
@@ -517,8 +650,9 @@ class NotificationIngestionEngine:
                 notifs = state.get("notifications", [])
                 for n in notifs:
                     self._ingest_notification(n, "phone")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_ingestion")
 
         # 2. Microsoft Teams
         if ms.is_connected():
@@ -532,8 +666,9 @@ class NotificationIngestionEngine:
                         continue
                     full_text = f"{sender} in {chat}: {content}"
                     self._ingest_notification(full_text, "teams", extra_meta={"sender": sender, "chat": chat, "type": "chat"})
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_ingestion")
 
             # 3. Microsoft Outlook
             try:
@@ -546,8 +681,9 @@ class NotificationIngestionEngine:
                         continue
                     full_text = f"Email from {sender}: {subj}. {preview}"
                     self._ingest_notification(full_text, "outlook", extra_meta={"sender": sender, "subject": subj, "type": "email"})
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_ingestion")
 
             # 4. Calendar events
             try:
@@ -557,8 +693,9 @@ class NotificationIngestionEngine:
                     start_time = event.get("start", "")
                     if title:
                         self._ingest_notification(f"Upcoming: {title} at {start_time}", "calendar", extra_meta={"type": "calendar", "start": start_time})
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_ingestion")
 
         # 5. Unified Device Bridge
         try:
@@ -571,8 +708,9 @@ class NotificationIngestionEngine:
                     transport = msg.get("transport_name", "device")
                     if text:
                         self._ingest_notification(text, transport, extra_meta={"transport": transport, "raw": msg})
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
 
         # 6. WhatsApp Web (if available)
         try:
@@ -585,8 +723,11 @@ class NotificationIngestionEngine:
                     sender = msg.get("sender", "Unknown")
                     if text:
                         self._ingest_notification(f"{sender}: {text}", "whatsapp", extra_meta={"sender": sender, "type": "chat"})
-        except Exception:
-            pass
+        except (ModuleNotFoundError, ImportError):
+            pass  # WhatsApp bridge not installed — optional
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
 
         # 7. Ntfy Bridge
         try:
@@ -598,8 +739,9 @@ class NotificationIngestionEngine:
                     text = msg.get("text", "")
                     if text:
                         self._ingest_notification(text, "ntfy", extra_meta={"type": "ntfy", "raw": msg})
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_ingestion")
 
         # Keep sets from growing indefinitely
         if len(self._seen_hashes) > 10000:

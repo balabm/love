@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "graph_rag"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -208,8 +209,9 @@ class GraphRAGEngine:
                     "entity": match,
                     "relations": relations,
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.graph_rag")
         return results
 
     # ── Semantic Search ─────────────────────────────────────────────────────
@@ -344,23 +346,26 @@ class GraphRAGEngine:
         try:
             with open(GRAPH_RAG_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.graph_rag")
 
     def _save_cache(self):
         try:
             data = {k: v for k, v in self._query_cache.items()}
             QUERY_CACHE.write_text(json.dumps(data, indent=2, default=str))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.graph_rag")
 
     def _load_cache(self):
         try:
             if QUERY_CACHE.exists():
                 data = json.loads(QUERY_CACHE.read_text())
                 self._query_cache = data
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.graph_rag")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

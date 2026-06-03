@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 TEACHING_DIR = DATA_DIR / "teaching"
@@ -119,27 +120,31 @@ class TeachingEngine:
         try:
             data = {"lessons": [asdict(l) for l in self._lessons[-500:]]}
             LESSONS_FILE.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.teaching_engine")
 
         try:
             queue_data = [asdict(l) for l in self._queue]
             TEACHING_QUEUE.write_text(json.dumps(queue_data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.teaching_engine")
 
         try:
             USER_KNOWLEDGE.write_text(json.dumps(asdict(self._user_profile), indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.teaching_engine")
 
     def _log(self, entry: Dict):
         entry["ts"] = datetime.now().isoformat()
         try:
             with open(TEACHING_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.teaching_engine")
 
     # ── Lesson Creation ──────────────────────────────────────────────────────
 

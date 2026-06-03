@@ -114,23 +114,14 @@ function AlertBanner({ alerts }) {
 
 export default function IntegrationsPanel() {
   const [data, setData] = useState(null);
-  const [tunnel, setTunnel] = useState(null);
   const [polling, setPolling] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
   const [error, setError] = useState(null);
 
   const fetchStatus = useCallback(async () => {
     try {
-      const [intRes, tunRes] = await Promise.allSettled([
-        api.get("/neural/integrations/status"),
-        api.get("/tunnel/status"),
-      ]);
-      if (intRes.status === "fulfilled") {
-        setData(intRes.value.data);
-      }
-      if (tunRes.status === "fulfilled") {
-        setTunnel(tunRes.value.data);
-      }
+      const res = await api.get("/neural/integrations/status");
+      setData(res.data);
       setLastFetch(new Date());
       setError(null);
     } catch (e) {
@@ -241,7 +232,7 @@ export default function IntegrationsPanel() {
 
       {/* Phone Connection Section */}
       <div className="int-section-label">Phone Connection</div>
-      <PhoneConnectCard tunnel={tunnel} />
+      <PhoneConnectCard />
 
       {/* Ntfy Connection Section */}
       <div className="int-section-label">Ntfy Notifications</div>
@@ -291,19 +282,14 @@ function NtfyConnectCard({ data }) {
   );
 }
 
-function PhoneConnectCard({ tunnel }) {
+function PhoneConnectCard() {
   const [zeroTouch, setZeroTouch] = useState(null);
-  const [qr, setQr] = useState(null);
 
   useEffect(() => {
     const fetchExtras = async () => {
       try {
-        const [ztRes, qrRes] = await Promise.allSettled([
-          api.get("/learning/zero-touch"),
-          api.get("/tunnel/qr"),
-        ]);
-        if (ztRes.status === "fulfilled") setZeroTouch(ztRes.value.data);
-        if (qrRes.status === "fulfilled") setQr(qrRes.value.data);
+        const res = await api.get("/learning/zero-touch");
+        setZeroTouch(res.data);
       } catch (e) {
         console.error("[PhoneConnect] extras fetch failed:", e);
       }
@@ -311,60 +297,26 @@ function PhoneConnectCard({ tunnel }) {
     fetchExtras();
   }, []);
 
-  if (!tunnel) {
-    return (
-      <div className="int-phone-card int-phone-loading">
-        Checking tunnel agent...
-      </div>
-    );
-  }
-
-  const url = tunnel.public_url || tunnel.url || "";
-  const webhook = url ? `${url}/device/webhook` : null;
-  const binaryOk = tunnel.cloudflared_available !== false;
-  const running = tunnel.connected || tunnel.running || tunnel.status === "running";
-  const tunnelName = tunnel.tunnel_name || "love";
+  const endpoint = zeroTouch?.endpoint || "http://YOUR_PC_IP:8000";
+  const webhook = `${endpoint}/device/webhook`;
 
   return (
-    <div className={`int-phone-card ${running ? "int-phone-live" : binaryOk ? "int-phone-ready" : "int-phone-missing"}`}>
+    <div className="int-phone-card int-phone-ready">
       <div className="int-phone-header">
-        <span className="int-phone-icon">🌐</span>
+        <span className="int-phone-icon">📱</span>
         <div className="int-phone-title">
-          <strong>Cloudflare Tunnel — {tunnelName}</strong>
-          <span className="int-phone-sub">
-            {running ? "Tunnel active — phone can connect anywhere" : binaryOk ? "cloudflared available but tunnel not running" : "cloudflared not installed or not authenticated"}
-          </span>
+          <strong>Phone Bridge</strong>
+          <span className="int-phone-sub">Forward phone notifications to LOVE</span>
         </div>
-        <span className={`int-phone-status int-phone-status-${running ? "live" : binaryOk ? "ready" : "missing"}`}>
-          {running ? "LIVE" : binaryOk ? "READY" : "MISSING"}
-        </span>
+        <span className="int-phone-status int-phone-status-ready">READY</span>
       </div>
 
-      {/* Tunnel details */}
-      {tunnel.last_started && (
-        <div className="int-phone-row">
-          <span className="int-phone-label">Last started</span>
-          <span className="int-phone-url">{new Date(tunnel.last_started).toLocaleString()}</span>
-        </div>
-      )}
-
-      {/* URL row */}
-      {webhook && (
-        <div className="int-phone-row">
-          <span className="int-phone-label">Webhook URL</span>
-          <code className="int-phone-url">{webhook}</code>
-          <CopyButton text={webhook} label="Copy" />
-        </div>
-      )}
-
-      {/* QR code */}
-      {qr?.qr_data && (
-        <div className="int-phone-row">
-          <span className="int-phone-label">QR Setup</span>
-          <code className="int-phone-url int-phone-qr">{qr.qr_data}</code>
-          <CopyButton text={qr.qr_data} label="Copy QR" />
-        </div>
-      )}
+      {/* Webhook URL */}
+      <div className="int-phone-row">
+        <span className="int-phone-label">Webhook URL</span>
+        <code className="int-phone-url">{webhook}</code>
+        <CopyButton text={webhook} label="Copy" />
+      </div>
 
       {/* Action buttons */}
       <div className="int-phone-actions">
@@ -377,29 +329,13 @@ function PhoneConnectCard({ tunnel }) {
             Download Tasker XML
           </a>
         )}
-        {webhook && (
-          <a
-            className="int-phone-btn int-phone-btn-secondary"
-            href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(zeroTouch || {}, null, 2))}`}
-            download="love_zero_touch.json"
-          >
-            Download Config JSON
-          </a>
-        )}
-        {!binaryOk && (
-          <div className="int-phone-missing-msg">
-            <strong>Install cloudflared:</strong> <code>winget install Cloudflare.cloudflared</code><br/>
-            <strong>Login:</strong> <code>cloudflared tunnel login</code> (browser auth)<br/>
-            <strong>Then restart LOVE.</strong>
-          </div>
-        )}
-        {binaryOk && !running && (
-          <div className="int-phone-missing-msg">
-            Tunnel not running. If using a named tunnel, run:<br/>
-            <code>cloudflared service install &lt;TOKEN&gt;</code> (PowerShell as Admin)<br/>
-            Or quick test: <code>cloudflared tunnel run {tunnelName}</code>
-          </div>
-        )}
+        <a
+          className="int-phone-btn int-phone-btn-secondary"
+          href={`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(zeroTouch || {}, null, 2))}`}
+          download="love_zero_touch.json"
+        >
+          Download Config JSON
+        </a>
       </div>
 
       {/* Setup instructions */}
@@ -407,18 +343,13 @@ function PhoneConnectCard({ tunnel }) {
         <details>
           <summary>Setup steps</summary>
           <ol>
-            <li>Install <strong>cloudflared</strong>: <code>winget install Cloudflare.cloudflared</code></li>
-            <li>Authenticate: <code>cloudflared tunnel login</code> (opens browser)</li>
-            <li>Run <code>setup_tunnel.bat</code> or create tunnel in Cloudflare dashboard</li>
-            <li>Get token from dashboard → <strong>Rotate token</strong></li>
-            <li>Install service: <code>cloudflared service install &lt;TOKEN&gt;</code> (Admin PS)</li>
-            <li>Restart LOVE — tunnel auto-starts</li>
+            <li>Ensure your phone and PC are on the same Wi-Fi network (or use a public URL)</li>
             <li>Install <strong>Tasker</strong> on Android</li>
             <li>Import the downloaded XML profile, OR create:
               <ul>
                 <li>Event → UI → Notification (all apps)</li>
                 <li>Action → Net → HTTP Request</li>
-                <li>Method: POST | URL: <code>{webhook || "(tunnel not ready)"}</code></li>
+                <li>Method: POST | URL: <code>{webhook}</code></li>
                 <li>Body: <code>{`{"text":"%ntext","app":"%napp","title":"%ntitle","source":"phone_auto"}`}</code></li>
               </ul>
             </li>

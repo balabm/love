@@ -32,6 +32,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from threading import Lock, Thread
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PHONE_STATE_FILE = DATA_DIR / "phone_state.json"
@@ -139,7 +140,8 @@ class PhoneBridge:
             try:
                 self._poll_kde_connect()
             except Exception as e:
-                pass
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.phone_bridge")
             time.sleep(60)
 
     def _poll_kde_connect(self):
@@ -158,8 +160,9 @@ class PhoneBridge:
             if battery_line:
                 battery = int(''.join(filter(str.isdigit, battery_line[0])))
                 self._state["battery"] = battery
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.phone_bridge")
 
         # SMS / notifications via kdeconnect
         try:
@@ -172,8 +175,9 @@ class PhoneBridge:
             self._state["unread_messages"] = len([n for n in notifs if any(
                 app in n.lower() for app in ["whatsapp", "telegram", "messages", "sms"]
             )])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.phone_bridge")
 
         self._last_update = datetime.now()
         self._state["source"] = "kde_connect"
@@ -214,8 +218,9 @@ class PhoneBridge:
             try:
                 with open(loc_file) as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.phone_bridge")
         return {}
 
     def save_location(self, label: str, lat: float, lon: float):
@@ -236,8 +241,9 @@ class PhoneBridge:
             state["last_update"] = self._last_update.isoformat() if self._last_update else None
             with open(PHONE_STATE_FILE, "w") as f:
                 json.dump(state, f, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.phone_bridge")
 
     def _load_persisted_state(self):
         if PHONE_STATE_FILE.exists():
@@ -248,5 +254,6 @@ class PhoneBridge:
                 if last_update_str:
                     self._last_update = datetime.fromisoformat(last_update_str)
                 self._state = data
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.phone_bridge")

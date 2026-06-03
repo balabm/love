@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "meditation_coach"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -159,8 +160,9 @@ class MeditationCoach:
             try:
                 hour = datetime.fromisoformat(s.timestamp).hour
                 by_hour[hour].append(s.quality)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.meditation_coach")
 
         best_hour = max(by_hour.items(), key=lambda x: sum(x[1])/len(x[1]))[0] if by_hour else None
 
@@ -308,23 +310,26 @@ class MeditationCoach:
                         "message": milestones[self._stats["total_sessions"]],
                     },
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.meditation_coach")
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.meditation_coach")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.meditation_coach")
 
     def _log_session(self, session: MeditationSession):
         try:
@@ -337,8 +342,9 @@ class MeditationCoach:
                     "stress_before": session.stress_before,
                     "stress_after": session.stress_after,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.meditation_coach")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

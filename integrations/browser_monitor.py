@@ -22,6 +22,7 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 BROWSER_CACHE = DATA_DIR / "browser_cache.json"
@@ -131,8 +132,9 @@ class BrowserMonitor:
                         if url and not url.startswith("chrome://"):
                             histories.append({"title": title or url[:50], "url": url, "visits": visits})
                     break  # Use first found browser
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.browser_monitor")
         return histories[:limit]
 
     def refresh(self):
@@ -146,8 +148,9 @@ class BrowserMonitor:
         # History (every 30 min max)
         try:
             self._recent_history = self._read_chrome_history(20)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.browser_monitor")
         self._save_cache()
 
     def get_active_tabs(self) -> List[Dict]:
@@ -186,8 +189,9 @@ class BrowserMonitor:
             while self._running:
                 try:
                     self.refresh()
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.browser_monitor")
                 time.sleep(interval)
         self._thread = threading.Thread(target=_loop, daemon=True, name="LOVE-Browser")
         self._thread.start()
@@ -198,8 +202,9 @@ class BrowserMonitor:
                 "tabs": self._active_tabs,
                 "history": self._recent_history[:20],
             }, default=str))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.browser_monitor")
 
     def _load_cache(self):
         try:
@@ -207,8 +212,9 @@ class BrowserMonitor:
                 data = json.loads(BROWSER_CACHE.read_text())
                 self._active_tabs = data.get("tabs", [])
                 self._recent_history = data.get("history", [])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.browser_monitor")
 
 
 def get_browser_monitor() -> BrowserMonitor:

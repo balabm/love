@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "career_path_mapper"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -336,8 +337,9 @@ class CareerPathMapper:
                 } for k, v in self._goals.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.career_path_mapper")
 
     def _load_stats(self):
         try:
@@ -346,8 +348,9 @@ class CareerPathMapper:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("goals", {}).items():
                     self._goals[k] = CareerGoal(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.career_path_mapper")
 
     def _log_role(self, role: CareerRole):
         try:
@@ -361,8 +364,9 @@ class CareerPathMapper:
                     "impact": role.impact_score,
                     "skills": role.skills_gained,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.career_path_mapper")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

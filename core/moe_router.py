@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "moe_router"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -240,8 +241,9 @@ class MoERouter:
                     nn = np.linalg.norm(new_p)
                     if nn > 0:
                         self._prototypes[name] = new_p / nn
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.moe_router")
 
             # Periodic persist
             if self._total_invocations % 25 == 0:
@@ -268,8 +270,9 @@ class MoERouter:
                 "stats": {n: asdict(s) for n, s in self._stats.items()},
                 "last_save": datetime.now().isoformat(),
             }, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.moe_router")
 
     def _load(self):
         if EXPERTS_FILE.exists():
@@ -279,16 +282,18 @@ class MoERouter:
                 protos = d["protos"]
                 for i, n in enumerate(names):
                     self._prototypes[n] = protos[i].astype(np.float32)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.moe_router")
         if META_FILE.exists():
             try:
                 m = json.loads(META_FILE.read_text())
                 self._total_invocations = m.get("total_invocations", 0)
                 for n, sd in m.get("stats", {}).items():
                     self._stats[n] = ExpertStats(**sd)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.moe_router")
 
     # ── introspection ────────────────────────────────────────────────────────
 

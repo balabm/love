@@ -36,6 +36,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "multimodal_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -511,8 +512,9 @@ class MultiModalEvolution:
         try:
             with open(CROSS_MODAL_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.multimodal_evolution")
     
     # ── Main Loop ─────────────────────────────────────────────────────────────────
     
@@ -551,8 +553,9 @@ class MultiModalEvolution:
             # Modern module cross-modal integration
             try:
                 self._integrate_modern_modules()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.multimodal_evolution")
             
             time.sleep(7200)  # Run every 2 hours
     
@@ -577,8 +580,9 @@ class MultiModalEvolution:
                         applications=["conversation", "adaptation"],
                     )
                     self._cross_modal_patterns[pattern.id] = pattern
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.multimodal_evolution")
 
     def get_system_status(self) -> Dict:
         """Get overall multi-modal system status."""

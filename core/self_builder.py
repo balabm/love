@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass, field, asdict
 from enum import Enum
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 BUILDER_DIR = DATA_DIR / "self_builder"
@@ -121,27 +122,31 @@ class SelfBuilder:
         try:
             data = {"modifications": [asdict(m) for m in self._modifications[-200:]]}
             MODIFICATIONS.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_builder")
 
         try:
             approvals = [asdict(m) for m in self._pending_approvals]
             PENDING_APPROVALS.write_text(json.dumps(approvals, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_builder")
 
         try:
             ROLLBACK_STORE.write_text(json.dumps(self._rollback_stack[-50:], indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_builder")
 
     def _log(self, entry: Dict):
         entry["ts"] = datetime.now().isoformat()
         try:
             with open(BUILD_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_builder")
 
     def _journal(self, what: str, why: str, impact: str, confidence: float, category: str):
         """Write to growth journal."""
@@ -156,8 +161,9 @@ class SelfBuilder:
         try:
             with open(GROWTH_JOURNAL, "a") as f:
                 f.write(json.dumps(asdict(entry)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_builder")
 
     # ── Prompt Evolution ─────────────────────────────────────────────────────
 
@@ -585,8 +591,9 @@ class SelfBuilder:
                         entry = json.loads(line)
                         if datetime.fromisoformat(entry["timestamp"]) > cutoff:
                             journal_entries.append(entry)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.self_builder")
 
         return {
             "period_days": days,
@@ -618,8 +625,9 @@ class SelfBuilder:
             from core.neural_bus import get_neural_bus
             bus = get_neural_bus()
             bus.emit_self_update(what, details, "self_builder")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_builder")
 
 
 # ── Singleton ────────────────────────────────────────────────────────────────

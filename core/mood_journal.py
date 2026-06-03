@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "mood_journal"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -267,8 +268,9 @@ class MoodJournal:
                     t2 = datetime.fromisoformat(curr.timestamp)
                     hours = (t2 - t1).total_seconds() / 3600
                     recovery_times.append(hours)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.mood_journal")
 
         if not recovery_times:
             return 50
@@ -298,8 +300,9 @@ class MoodJournal:
                     "triggers": entry.triggers,
                 },
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mood_journal")
 
     def _alert_negative_mood(self, entry: MoodEntry):
         """Alert about significant negative mood."""
@@ -315,8 +318,9 @@ class MoodJournal:
                     "context": entry.context,
                 },
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mood_journal")
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -335,8 +339,9 @@ class MoodJournal:
                 } for e in self._entries],
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mood_journal")
 
     def _load_stats(self):
         try:
@@ -345,8 +350,9 @@ class MoodJournal:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for e in data.get("entries", []):
                     self._entries.append(MoodEntry(**e))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mood_journal")
 
     def _log_entry(self, entry: MoodEntry):
         try:
@@ -357,8 +363,9 @@ class MoodJournal:
                     "intensity": entry.intensity,
                     "context": entry.context,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mood_journal")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

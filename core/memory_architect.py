@@ -30,6 +30,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from core.execution_guard import log_error
 
 logger = logging.getLogger("love.memory_architect")
 
@@ -1238,8 +1239,9 @@ class MemoryArchitect:
                 payload=payload,
                 source_module="memory_architect",
             )
-        except Exception:
-            pass  # Neural bus not available — degrade gracefully
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.memory_architect")
 
     # ─── Background Consolidation Daemon ──────────────────────────────────────
 

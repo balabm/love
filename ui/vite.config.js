@@ -27,7 +27,6 @@ const API_PREFIXES = [
   '/orchestrator',
   '/settings',
   '/static',
-  '/tunnel',
   '/voice',
   '/wave',
   '/wellness',

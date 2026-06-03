@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, asdict
 from collections import defaultdict
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -374,8 +375,9 @@ def _log_decision(d: Decision):
     try:
         with open(DECISION_LOG, "a") as f:
             f.write(json.dumps(asdict(d)) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.decisions")
 
 
 # ── High-level helpers ──────────────────────────────────────────────────────

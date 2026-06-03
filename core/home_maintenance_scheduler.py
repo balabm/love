@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "home_maintenance_scheduler"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -293,15 +294,17 @@ class HomeMaintenanceScheduler:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.home_maintenance_scheduler")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.home_maintenance_scheduler")
 
     def _save_schedule(self):
         try:
@@ -317,8 +320,9 @@ class HomeMaintenanceScheduler:
                 "provider_preference": v.provider_preference,
             } for k, v in self._schedule.items()}
             SCHEDULE_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.home_maintenance_scheduler")
 
     def _load_schedule(self):
         try:
@@ -326,8 +330,9 @@ class HomeMaintenanceScheduler:
                 data = json.loads(SCHEDULE_DB.read_text())
                 for k, v in data.items():
                     self._schedule[k] = ScheduledTask(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.home_maintenance_scheduler")
 
     def _log_record(self, record: MaintenanceRecord):
         try:
@@ -340,8 +345,9 @@ class HomeMaintenanceScheduler:
                     "provider": record.provider,
                     "condition_after": record.condition_after,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.home_maintenance_scheduler")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "context_switching_minimizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -267,8 +268,9 @@ class ContextSwitchingMinimizer:
                 "current_category": self._current_category,
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_switching_minimizer")
 
     def _load_stats(self):
         try:
@@ -277,8 +279,9 @@ class ContextSwitchingMinimizer:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 self._current_task = data.get("current_task", "")
                 self._current_category = data.get("current_category", "")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_switching_minimizer")
 
     def _log_switch(self, switch: ContextSwitch):
         try:
@@ -293,8 +296,9 @@ class ContextSwitchingMinimizer:
                     "recovery_time": switch.recovery_time_seconds,
                     "flow_broken": switch.flow_broken,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_switching_minimizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

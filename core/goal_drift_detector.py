@@ -19,6 +19,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 # Data storage
 _DATA_DIR = Path(__file__).parent.parent / "data" / "goal_drift"
@@ -107,25 +108,29 @@ class GoalDriftDetector:
                 raw = json.loads(_GOALS_FILE.read_text(encoding="utf-8"))
                 for gid, g in raw.items():
                     self._goals[gid] = Goal(**g)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.goal_drift_detector")
         if _ACTIVITIES_FILE.exists():
             try:
                 raw = json.loads(_ACTIVITIES_FILE.read_text(encoding="utf-8"))
                 self._activities = [Activity(**a) for a in raw]
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.goal_drift_detector")
         if _ALERTS_FILE.exists():
             try:
                 raw = json.loads(_ALERTS_FILE.read_text(encoding="utf-8"))
                 self._alerts = [DriftAlert(**a) for a in raw]
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.goal_drift_detector")
         if _STATS_FILE.exists():
             try:
                 self._stats = json.loads(_STATS_FILE.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.goal_drift_detector")
 
     def _save_goals(self):
         try:
@@ -133,8 +138,9 @@ class GoalDriftDetector:
                 json.dumps({gid: asdict(g) for gid, g in self._goals.items()}, indent=2, default=str),
                 encoding="utf-8",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.goal_drift_detector")
 
     def _save_activities(self):
         try:
@@ -142,8 +148,9 @@ class GoalDriftDetector:
                 json.dumps([asdict(a) for a in self._activities], indent=2, default=str),
                 encoding="utf-8",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.goal_drift_detector")
 
     def _save_alerts(self):
         try:
@@ -151,14 +158,16 @@ class GoalDriftDetector:
                 json.dumps([asdict(a) for a in self._alerts], indent=2, default=str),
                 encoding="utf-8",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.goal_drift_detector")
 
     def _save_stats(self):
         try:
             _STATS_FILE.write_text(json.dumps(self._stats, indent=2, default=str), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.goal_drift_detector")
 
     # ── Public API ─────────────────────────────────────────────────────────
 

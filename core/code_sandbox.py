@@ -231,8 +231,9 @@ print("TEST_RESULTS:", json.dumps(results))
                     result.test_results = test_data
                     result.success = all(t.get("passed", False) for t in test_data)
                     break
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.code_sandbox")
 
         modification.tested = True
         modification.test_passed = result.success
@@ -301,6 +302,7 @@ print("TEST_RESULTS:", json.dumps(results))
 import sys
 import json
 import builtins
+from core.execution_guard import log_error
 try:
     import resource
 except ImportError:
@@ -316,8 +318,9 @@ if resource:
     try:
         resource.setrlimit(resource.RLIMIT_CPU, (30, 30))
         resource.setrlimit(resource.RLIMIT_AS, (512 * 1024 * 1024, 512 * 1024 * 1024))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.code_sandbox")
 
 # Execute code
 code = {escaped_code}
@@ -399,8 +402,9 @@ except Exception as e:
         try:
             with open(SANDBOX_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.code_sandbox")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

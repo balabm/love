@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "intent_predictor"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -207,14 +208,16 @@ class IntentPredictor:
             from core.vector_memory import get_vector_engine
             vm = get_vector_engine()
             warmed.append("vector_memory")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.intent_predictor")
 
         try:
             from core.knowledge_graph import query_knowledge
             warmed.append("knowledge_graph")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.intent_predictor")
 
         return {
             "prepared": True,
@@ -251,21 +254,24 @@ class IntentPredictor:
                     "validated": prediction.validated,
                     "correct": prediction.correct,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.intent_predictor")
 
     def _save_accuracy(self):
         try:
             ACCURACY_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.intent_predictor")
 
     def _load_accuracy(self):
         try:
             if ACCURACY_DB.exists():
                 self._stats = json.loads(ACCURACY_DB.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.intent_predictor")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

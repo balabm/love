@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "sleep_analyzer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -146,8 +147,9 @@ class SleepAnalyzer:
             try:
                 bt = datetime.fromisoformat(s.start_time)
                 bedtimes.append(bt.hour + bt.minute / 60)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.sleep_analyzer")
 
         avg_bedtime = sum(bedtimes) / max(1, len(bedtimes)) if bedtimes else 22.5
 
@@ -246,15 +248,17 @@ class SleepAnalyzer:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sleep_analyzer")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sleep_analyzer")
 
     def _log_sleep(self, session: SleepSession):
         try:
@@ -265,8 +269,9 @@ class SleepAnalyzer:
                     "quality": session.quality,
                     "interruptions": session.interruptions,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sleep_analyzer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

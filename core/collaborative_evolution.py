@@ -36,6 +36,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
 from core.cross_instance_learning import get_cross_instance_learning
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "collaborative_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -163,8 +164,9 @@ class CollaborativeEvolution:
                 if (datetime.now() - last_active).total_seconds() < 3600:  # Active within last hour
                     if not specialization or specialization in spec.specializations:
                         available.append(instance_id)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.collaborative_evolution")
         
         return available
     
@@ -323,8 +325,9 @@ class CollaborativeEvolution:
                 proposal.status = "expired"
                 self._save_state()
                 return False
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.collaborative_evolution")
         
         # Record vote
         proposal.votes[instance_id] = vote
@@ -502,15 +505,17 @@ class CollaborativeEvolution:
         try:
             with open(COLLABORATION_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.collaborative_evolution")
     
     def _log_consensus(self, proposal: ConsensusProposal):
         try:
             with open(CONSENSUS_HISTORY, "a") as f:
                 f.write(json.dumps(asdict(proposal)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.collaborative_evolution")
     
     # ── Main Loop ─────────────────────────────────────────────────────────────────
     
@@ -547,8 +552,9 @@ class CollaborativeEvolution:
                             if now > expiry:
                                 proposal.status = "expired"
                                 self._save_state()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.collaborative_evolution")
                 
                 # Clean up old tasks
                 cutoff = datetime.now() - timedelta(days=7)
@@ -557,8 +563,9 @@ class CollaborativeEvolution:
                         if datetime.fromisoformat(task.created_at) < cutoff:
                             del self._tasks[task_id]
                             self._save_state()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.collaborative_evolution")
                 
             except Exception as e:
                 print(f"[CollaborativeEvolution] Loop error: {e}")

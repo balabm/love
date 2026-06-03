@@ -42,6 +42,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "llm_manager"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -409,8 +410,9 @@ class LLMManager:
         try:
             with open(PERFORMANCE_LOG, "a") as f:
                 f.write(json.dumps({**point, "model": model}) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.llm_manager")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

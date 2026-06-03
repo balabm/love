@@ -10,6 +10,7 @@ from typing import Dict, Any, Optional
 import sys
 import subprocess
 import importlib
+from core.execution_guard import log_error
 
 PYAUTOGUI_AVAILABLE = False
 GW_AVAILABLE = False
@@ -37,8 +38,9 @@ except ImportError:
                     "package": pkg_name,
                     "error": str(e)
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.action_engine")
             return None
 
     mod = _try_install_and_import("pyautogui")

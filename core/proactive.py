@@ -20,6 +20,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -49,8 +50,9 @@ def _load_receptivity() -> Dict[str, Any]:
     if RECEPTIVITY_FILE.exists():
         try:
             return json.loads(RECEPTIVITY_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive")
     return {
         "global_score": 0.5,       # 0 = hates interruptions, 1 = loves them
         "by_type": {},              # situation_type -> {score, count}
@@ -63,24 +65,27 @@ def _load_receptivity() -> Dict[str, Any]:
 def _save_receptivity(r: Dict[str, Any]):
     try:
         RECEPTIVITY_FILE.write_text(json.dumps(r, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
 
 
 def _load_blacklist() -> Dict[str, Any]:
     if BLACKLIST_FILE.exists():
         try:
             return json.loads(BLACKLIST_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive")
     return {"until": None, "types": [], "reason": ""}
 
 
 def _save_blacklist(b: Dict[str, Any]):
     try:
         BLACKLIST_FILE.write_text(json.dumps(b, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
 
 
 # ── Scoring ─────────────────────────────────────────────────────────────────
@@ -92,8 +97,9 @@ def _is_blacklisted(situation_type: str) -> bool:
             until = datetime.fromisoformat(b["until"])
             if datetime.now() < until:
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive")
     if situation_type in b.get("types", []):
         return True
     return False
@@ -189,8 +195,9 @@ def _send_tts(text: str) -> bool:
         if is_tts_available():
             speak_text(text, block=False)
             return True
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
     return False
 
 
@@ -208,8 +215,9 @@ def _send_push(title: str, body: str, data: dict = None) -> bool:
             timeout=5,
         )
         return resp.status_code == 200
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
     return False
 
 
@@ -241,8 +249,9 @@ def deliver_interruption(text: str, channel: str, situation: Dict[str, Any]) -> 
     try:
         with open(INTERRUPTION_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
 
     # Update last interruption
     r = _load_receptivity()
@@ -276,8 +285,9 @@ def record_reaction(interruption_ts: str, reaction: str) -> Dict[str, Any]:
                 if entry.get("ts") == interruption_ts:
                     situation_type = entry.get("situation", {}).get("type", "unknown")
                     break
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
 
     if not situation_type:
         return {"error": "Interruption not found"}
@@ -362,8 +372,9 @@ def get_interruption_stats(n: int = 50) -> Dict[str, Any]:
             lines = INTERRUPTION_LOG.read_text().strip().split("\n")
             for line in lines[-n:]:
                 recent.append(json.loads(line))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.proactive")
 
     return {
         "global_receptivity": r.get("global_score", 0.5),

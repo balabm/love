@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "stress_response_coach"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -167,8 +168,9 @@ class StressResponseCoach:
                 hour = datetime.fromisoformat(e.timestamp).hour
                 by_hour[hour]["count"] += 1
                 by_hour[hour]["avg_intensity"] = (by_hour[hour]["avg_intensity"] * (by_hour[hour]["count"] - 1) + e.intensity) / by_hour[hour]["count"]
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.stress_response_coach")
 
         risk_hours = [h for h, d in by_hour.items() if d["count"] >= 2 and d["avg_intensity"] > 0.6]
 
@@ -339,8 +341,9 @@ class StressResponseCoach:
                             "suggestion": "Consider taking a full break. Your stress pattern is escalating.",
                         },
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.stress_response_coach")
 
     def _assess_escalation_risk(self, events: List[StressEvent]) -> str:
         """Assess risk of stress escalation."""
@@ -374,8 +377,9 @@ class StressResponseCoach:
                 } for k, v in self._strategies.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.stress_response_coach")
 
     def _load_stats(self):
         try:
@@ -384,8 +388,9 @@ class StressResponseCoach:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("strategies", {}).items():
                     self._strategies[k] = StrategyEffectiveness(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.stress_response_coach")
 
     def _log_event(self, event: StressEvent):
         try:
@@ -399,8 +404,9 @@ class StressResponseCoach:
                     "recovery": event.recovery_minutes,
                     "resolved": event.resolved,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.stress_response_coach")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable, Optional, List
 
 from core.settings import get_settings
+from core.execution_guard import log_error
 
 # Load wake word from settings
 SETTINGS = get_settings()
@@ -201,8 +202,9 @@ class WhisperTranscriber:
                 rel = get_relationship_summary()
                 for person in rel.get("top_people", [])[:5]:
                     vocabulary.append(person.get("name", ""))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="voice.stt")
             
         except Exception as e:
             print(f"[STT] Context vocabulary extraction error: {e}")

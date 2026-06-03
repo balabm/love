@@ -6,11 +6,13 @@ Allows LOVE to autonomously browse the web, read HTML, convert it to markdown, a
 import requests
 import json
 import urllib.parse
+from core.execution_guard import log_error
 try:
     from bs4 import BeautifulSoup
     from markdownify import markdownify as md
-except ImportError:
-    pass
+except Exception as e:
+    from core.execution_guard import log_error
+    log_error(e, module="core.browser_agent")
 
 class WebBrowser:
     def __init__(self):

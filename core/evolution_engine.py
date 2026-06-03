@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -152,8 +153,9 @@ def _try_convert_scalar(s: Any):
     if '/' in s_strip:
         try:
             return float(Fraction(s_strip))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_engine")
     # try int then float
     try:
         if '.' in s_strip or 'e' in s_strip.lower():
@@ -203,8 +205,9 @@ def _convert_numeric_fields(data: Dict[str, Any], numeric_fields: Dict[str, type
                     converted[field_name] = int(float(v))
                 elif field_type == bool and not isinstance(v, bool):
                     converted[field_name] = bool(v)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.evolution_engine")
     return converted
 
 # ── Evolution Engine ─────────────────────────────────────────────────────────
@@ -775,8 +778,9 @@ class EvolutionEngine:
                 for line in lines[-limit:]:
                     if line.strip():
                         events.append(EvolutionEvent(**json.loads(line)))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.evolution_engine")
         return [asdict(e) for e in events[-limit:]]
 
     def explain_evolution(self) -> str:

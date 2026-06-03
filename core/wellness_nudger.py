@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "wellness_nudger"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -287,8 +288,9 @@ class WellnessNudger:
                     nudge_time = datetime.fromisoformat(entry.get("timestamp", ""))
                     if (now - nudge_time).total_seconds() < 7200:  # 2 hours
                         return True
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.wellness_nudger")
         return False
 
     # ── Feedback ──────────────────────────────────────────────────────────
@@ -331,8 +333,9 @@ class WellnessNudger:
                 "receptiveness_by_hour": dict(self._receptiveness_by_hour),
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wellness_nudger")
 
     def _load_stats(self):
         try:
@@ -340,8 +343,9 @@ class WellnessNudger:
                 data = json.loads(STATS_DB.read_text())
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 self._receptiveness_by_hour.update(data.get("receptiveness_by_hour", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wellness_nudger")
 
     def _log_nudge(self, nudge: Nudge):
         try:
@@ -353,8 +357,9 @@ class WellnessNudger:
                     "message": nudge.message[:100],
                     "tone": nudge.tone,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wellness_nudger")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -33,6 +33,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable
+from core.execution_guard import log_error
 
 # Optional MCP SDK — if not installed, graceful degradation
 try:
@@ -125,8 +126,9 @@ class MCPHost:
                     args=["-y", "@anthropic-ai/mcp-playwright"],
                     auto_discover=True,
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mcp_host")
 
         # Check for filesystem MCP
         try:
@@ -139,8 +141,9 @@ class MCPHost:
                     args=["-y", "@modelcontextprotocol/server-filesystem", str(Path.home())],
                     auto_discover=True,
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mcp_host")
 
         # Check for GitHub MCP
         try:
@@ -156,8 +159,9 @@ class MCPHost:
                         env={"GITHUB_PERSONAL_ACCESS_TOKEN": token},
                         auto_discover=True,
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mcp_host")
 
         for d in discoveries:
             if d.id not in self._servers:
@@ -265,8 +269,9 @@ class MCPHost:
             try:
                 # Close session
                 pass  # Async cleanup would go here
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.mcp_host")
             del self._sessions[server_id]
 
     def connect_all(self):
@@ -420,8 +425,9 @@ class MCPHost:
         try:
             with open(MCP_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.mcp_host")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "emergency_preparedness_tracker"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -280,8 +281,9 @@ class EmergencyPreparednessTracker:
                 } for k, v in self._supplies.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emergency_preparedness_tracker")
 
     def _load_stats(self):
         try:
@@ -290,8 +292,9 @@ class EmergencyPreparednessTracker:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("supplies", {}).items():
                     self._supplies[k] = EmergencySupply(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emergency_preparedness_tracker")
 
     def _log_supply(self, supply: EmergencySupply):
         try:
@@ -303,8 +306,9 @@ class EmergencyPreparednessTracker:
                     "quantity": supply.quantity,
                     "condition": supply.condition,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emergency_preparedness_tracker")
 
     def _log_drill(self, drill: EmergencyDrill):
         try:
@@ -316,8 +320,9 @@ class EmergencyPreparednessTracker:
                     "effectiveness": drill.effectiveness,
                     "issues": drill.issues_found,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emergency_preparedness_tracker")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

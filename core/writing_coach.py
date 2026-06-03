@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "writing_coach"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -257,8 +258,9 @@ class WritingCoach:
                         words_needed = max(0, proj.goal_words - proj.current_words)
                         daily_needed = words_needed / days_to_deadline
                         suggestions.append(f"'{name}' deadline in {days_to_deadline} days. You need {int(daily_needed)} words/day.")
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.writing_coach")
 
         return {
             "suggestions": suggestions[:3],
@@ -335,8 +337,9 @@ class WritingCoach:
                 } for k, v in self._projects.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.writing_coach")
 
     def _load_stats(self):
         try:
@@ -345,8 +348,9 @@ class WritingCoach:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("projects", {}).items():
                     self._projects[k] = WritingProject(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.writing_coach")
 
     def _log_session(self, session: WritingSession):
         try:
@@ -360,8 +364,9 @@ class WritingCoach:
                     "flow": session.flow_score,
                     "quality": session.quality_score,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.writing_coach")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

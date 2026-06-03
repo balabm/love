@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 from collections import Counter, defaultdict
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -45,24 +46,27 @@ def _log(entry: Dict[str, Any]):
     try:
         with open(DREAM_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.dream_engine")
 
 
 def _load_json(path: Path, default: Any = None) -> Any:
     if path.exists():
         try:
             return json.loads(path.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.dream_engine")
     return default if default is not None else {}
 
 
 def _save_json(path: Path, data: Any):
     try:
         path.write_text(json.dumps(data, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.dream_engine")
 
 
 # ── Deep Pattern Extraction ───────────────────────────────────────────────────
@@ -78,6 +82,8 @@ def _extract_temporal_patterns(events: List[Dict]) -> List[Dict[str, Any]]:
 
     for e in events:
         ts = e.get("timestamp", "")
+        if not ts:
+            continue
         try:
             dt = datetime.fromisoformat(ts)
             hourly[dt.hour].append(e.get("theme", "general"))
@@ -183,8 +189,9 @@ def _update_world_model(events: List[Dict], conversations: List[Dict]):
                 world["routines"][theme] = {"hours": [], "count": 0}
             world["routines"][theme]["hours"].append(dt.hour)
             world["routines"][theme]["count"] += 1
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.dream_engine")
 
     # Stressors and motivators
     for conv in conversations:

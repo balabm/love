@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 import threading
 
 from core.llm import get_reasoning_llm
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PROMPT_DNA_FILE = DATA_DIR / "prompt_dna.json"
@@ -397,8 +398,9 @@ Return ONLY the new instruction text."""
                     "timestamp": datetime.now().isoformat(),
                     "generation": self.generation,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.prompt_dna")
 
     def _load(self):
         try:

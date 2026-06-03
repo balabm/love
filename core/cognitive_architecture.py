@@ -38,6 +38,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from core.llm import get_reasoning_llm, get_coding_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 # ── Data Persistence ─────────────────────────────────────────────────────────
 
@@ -699,8 +700,9 @@ Give a concise, direct answer with brief reasoning."""
             try:
                 response = str(llm.invoke(prompt))
                 attempts.append(response.strip())
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.cognitive_architecture")
 
         if not attempts:
             result.confidence = 0.2
@@ -1488,8 +1490,9 @@ Return JSON:
         # Try direct parse first
         try:
             return json.loads(text)
-        except json.JSONDecodeError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.cognitive_architecture")
 
         # Try to find JSON block in text
         patterns = [
@@ -1512,8 +1515,9 @@ Return JSON:
         if brace_start != -1 and brace_end > brace_start:
             try:
                 return json.loads(text[brace_start:brace_end + 1])
-            except json.JSONDecodeError:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.cognitive_architecture")
 
         return None
 
@@ -1565,8 +1569,9 @@ Return JSON:
                 },
                 source_module="cognitive_architecture",
             )
-        except Exception:
-            pass  # Don't let bus errors break thinking
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.cognitive_architecture")
 
     def _store_trace(self, trace: ThinkingTrace):
         """Persist thinking trace to disk."""

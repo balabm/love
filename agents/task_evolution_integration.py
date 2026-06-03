@@ -30,6 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field, asdict
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "task_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -157,8 +158,9 @@ class TaskEvolutionIntegration:
                             completed = datetime.fromisoformat(task.completed_at)
                             duration = (completed - created).total_seconds() / 60  # minutes
                             completion_times.append(duration)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="agents.task_evolution_integration")
                 
                 if completion_times:
                     metric.avg_completion_time = sum(completion_times) / len(completion_times)
@@ -177,8 +179,9 @@ class TaskEvolutionIntegration:
                                 actual_time = (completed - created).total_seconds() / 60
                                 if abs(actual_time - task.estimated_minutes) / task.estimated_minutes < 0.2:
                                     accurate_estimations += 1
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="agents.task_evolution_integration")
                 
                 metric.estimation_accuracy = accurate_estimations / max(1, len(estimated_tasks))
             
@@ -298,16 +301,18 @@ class TaskEvolutionIntegration:
     def _log_productivity(self, metric: ProductivityMetric):
         try:
             with open(PRODUCTIVITY_METRICS, "a") as f:
-                f.write(json.dumps(asdict(metric)) + "\n")
-        except Exception:
-            pass
+                f.write(json.dumps(asdict(metric), default=str) + "\n")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.task_evolution_integration")
     
     def _log_evolution_feedback(self, feedback: Dict):
         try:
             with open(EVOLUTION_FEEDBACK, "a") as f:
                 f.write(json.dumps(feedback) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.task_evolution_integration")
     
     # ── Integration Hooks ───────────────────────────────────────────────────────
     
@@ -359,8 +364,9 @@ class TaskEvolutionIntegration:
             # Modern module task integration
             try:
                 self._track_modern_module_tasks()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="agents.task_evolution_integration")
             
             time.sleep(3600)
     
@@ -381,8 +387,9 @@ class TaskEvolutionIntegration:
                         effectiveness=0.7,
                     )
                     self._patterns[pattern.id] = pattern
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.task_evolution_integration")
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 

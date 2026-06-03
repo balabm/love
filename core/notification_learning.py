@@ -21,6 +21,7 @@ from collections import defaultdict, deque, Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 LEARNED_STATE_FILE = DATA_DIR / "learned_state.json"
@@ -107,8 +108,9 @@ class UserBehaviorProfile:
         try:
             LEARNED_STATE_FILE.write_text(json.dumps(self.to_dict(), indent=2), encoding="utf-8")
             self._dirty = False
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_learning")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -187,8 +189,9 @@ class EntityExtractor:
                 num = float(clean)
                 if 0.01 < num < 1000000:  # Sanity range
                     results.append({"raw": val, "value": num, "currency": currency})
-            except ValueError:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_learning")
         return results
 
     @classmethod
@@ -265,8 +268,9 @@ class PatternLearner:
                 if ts:
                     hour = datetime.fromisoformat(ts.replace("Z", "+00:00")).hour
                     profile.spending_by_hour[str(hour)] += 1
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_learning")
 
             # Detect recurring charge
             if merchant and direction == "debit":
@@ -333,8 +337,9 @@ class PatternLearner:
                 if ts:
                     hour = datetime.fromisoformat(ts.replace("Z", "+00:00")).hour
                     profile.location_by_hour[detected][str(hour)] += 1
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_learning")
 
     @staticmethod
     def learn_mood(notification: Dict, profile: UserBehaviorProfile):
@@ -416,8 +421,9 @@ class PatternLearner:
                 hour = datetime.fromisoformat(ts.replace("Z", "+00:00")).hour
                 if hour < 5 or hour > 23:
                     anomalies.append("Late night transaction")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_learning")
 
         # 4. Location mismatch
         payload = notification.get("payload", {})
@@ -604,8 +610,9 @@ class NotificationLearningEngine:
         try:
             with open(NOTIFICATION_HISTORY, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_learning")
 
     def _push_anomaly(self, entry: Dict, anomaly_desc: str):
         """Push anomaly alert to user."""
@@ -625,8 +632,9 @@ class NotificationLearningEngine:
                     priority="high",
                     metadata={"anomaly": anomaly_desc, "source": entry["source"]},
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.notification_learning")
 
     def _publish_insight(self, entry: Dict):
         if not NEURAL_BUS_AVAILABLE:
@@ -645,8 +653,9 @@ class NotificationLearningEngine:
                 source_module="notification_learning",
                 priority=EventPriority.HIGH if entry.get("anomaly") else EventPriority.LOW,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_learning")
 
     # ─── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -708,8 +717,9 @@ class SuggestionEngine:
         predicted = None
         try:
             predicted = self._predict_next_location()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_learning")
         if predicted:
             suggestions.append({
                 "type": "location_prediction",

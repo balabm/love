@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from core.execution_guard import log_error
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -117,8 +118,9 @@ class AutonomousSelfImprovement:
             for line in rows:
                 try:
                     parsed.append(json.loads(line))
-                except json.JSONDecodeError:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.autonomous_self_improvement")
             self._cycle_history = parsed[-30:]
             # Restore consecutive failure counter from history
             self._consecutive_failures = 0
@@ -739,8 +741,9 @@ class AutonomousSelfImprovement:
             from core.homeostasis import get_homeostasis
             snap = get_homeostasis().snapshot()
             return snap.get("circadian_phase") == "sleep"
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_self_improvement")
         # Fallback: 02:00–05:00 local time
         hour = datetime.now().hour
         return 2 <= hour < 5
@@ -762,6 +765,16 @@ class AutonomousSelfImprovement:
 
     def _maybe_run_cycle(self) -> None:
         """Run a cycle if conditions are met (sleep phase + >20h since last)."""
+        # Skip if Ollama is in circuit-breaker cooldown
+        try:
+            from core.llm import _circuit_cooldown_until
+            import time as _t
+            if _t.time() < _circuit_cooldown_until:
+                print("[ASI] Skipping — Ollama circuit breaker active")
+                return
+        except Exception:
+            pass
+
         if not self._is_sleep_phase():
             return
         age_h = self._last_cycle_age_hours()
@@ -865,8 +878,9 @@ class AutonomousSelfImprovement:
                 last_dt = datetime.fromisoformat(last_cycle["timestamp"])
                 candidate = last_dt + timedelta(hours=20)
                 next_run_estimate = candidate.isoformat()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.autonomous_self_improvement")
 
         return {
             "running": running,

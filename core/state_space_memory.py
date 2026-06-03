@@ -43,6 +43,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "ssm_memory"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -172,8 +173,9 @@ class StateSpaceMemory:
         if META.exists():
             try:
                 return json.loads(META.read_text())
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.state_space_memory")
         return {"steps": 0, "last_update": ""}
 
     def _save(self):
@@ -186,8 +188,9 @@ class StateSpaceMemory:
             self._meta["steps"] = self._step_count
             self._meta["last_update"] = datetime.now().isoformat()
             META.write_text(json.dumps(self._meta, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.state_space_memory")
 
     # ── core selective SSM step ──────────────────────────────────────────────
 
@@ -445,8 +448,9 @@ class StateSpaceMemory:
             if (len(self._trajectory_buffer) == BPTT_WINDOW
                     and 'buf_snapshot' in locals()):
                 self.train_on_trajectory(buf_snapshot)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.state_space_memory")
 
         return loss
 

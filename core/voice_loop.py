@@ -22,6 +22,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable, Dict, Any
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -53,8 +54,9 @@ def _log(entry: Dict[str, Any]):
     try:
         with open(VOICE_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.voice_loop")
 
 
 def _check_dependencies() -> Dict[str, bool]:
@@ -68,23 +70,27 @@ def _check_dependencies() -> Dict[str, bool]:
     try:
         import sounddevice  # noqa
         deps["sounddevice"] = True
-    except ImportError:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.voice_loop")
     try:
         import numpy  # noqa
         deps["numpy"] = True
-    except ImportError:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.voice_loop")
     try:
         from voice.stt import is_voice_available
         deps["stt"] = is_voice_available()
-    except ImportError:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.voice_loop")
     try:
         from voice.tts import is_tts_available
         deps["tts"] = is_tts_available()
-    except ImportError:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.voice_loop")
     return deps
 
 
@@ -182,8 +188,9 @@ def _transcribe(audio_bytes: bytes) -> Optional[str]:
 
         try:
             tmp.unlink()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
         return text.strip() if text else None
 
@@ -198,8 +205,9 @@ def _transcribe(audio_bytes: bytes) -> Optional[str]:
             result = model.transcribe(str(tmp))
             try:
                 tmp.unlink()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.voice_loop")
             return result["text"].strip()
         except Exception as e:
             _log({"event": "transcribe_error", "error": str(e)})
@@ -271,8 +279,9 @@ def _process_utterance(text: str) -> Optional[str]:
                 goal_id = engine.set_goal(goal_text, goal_text, priority=0.7)
                 engine.decompose(goal_id)
                 return f"Got it. I've set '{goal_text}' as a goal and broken it into sub-tasks. You can ask me what your next actions are."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif any(p in text_lower for p in ["what are my goals", "my goals", "next actions", "what should i do"]):
         try:
@@ -285,8 +294,9 @@ def _process_utterance(text: str) -> Optional[str]:
                 return f"Your top actions right now are: {items}."
             else:
                 return "You don't have any active goals yet. Tell me what you want to achieve and I'll break it down."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     # ── Causal Reasoning ─────────────────────────────────────────────────
     elif text_lower.startswith("why is") or text_lower.startswith("why am i"):
@@ -297,8 +307,9 @@ def _process_utterance(text: str) -> Optional[str]:
             result = engine.root_cause_analysis(problem)
             cause = result.get("most_likely_cause", "I'm not sure yet")
             return f"Most likely cause: {cause}. {result.get('recommended_investigation', '')}"
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif "what would happen if" in text_lower or "what if" in text_lower:
         try:
@@ -307,8 +318,9 @@ def _process_utterance(text: str) -> Optional[str]:
             scenario = text.split("if", 1)[-1].strip()
             result = engine.counterfactual(scenario, "current state unknown")
             return f"If {scenario}: {result.predicted_outcome}. Confidence: {result.confidence:.0%}."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     # ── Self-Awareness Commands ──────────────────────────────────────────
     elif any(p in text_lower for p in ["how old are you", "your age", "your maturity", "who are you"]):
@@ -319,8 +331,9 @@ def _process_utterance(text: str) -> Optional[str]:
             return (f"I'm {identity.current_age_days} days old, maturity level {identity.maturity_level}. "
                     f"This is my {identity.total_boots}th awakening. "
                     f"I've had {identity.total_conversations} conversations with you.")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif any(p in text_lower for p in ["run diagnostics", "self check", "how healthy are you", "system health"]):
         try:
@@ -331,8 +344,9 @@ def _process_utterance(text: str) -> Optional[str]:
             return (f"Health score: {report.health_score:.0%}. "
                     f"{'Everything looks good.' if issue_count == 0 else f'Found {issue_count} issues.'} "
                     f"Strengths: {', '.join(report.strengths[:2])}." if report.strengths else "")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif any(p in text_lower for p in ["export your soul", "backup yourself", "save your soul"]):
         try:
@@ -342,8 +356,9 @@ def _process_utterance(text: str) -> Optional[str]:
             return (f"Soul exported successfully. {package.file_count} files, "
                     f"{package.total_size_bytes // 1024}KB. Archive saved. "
                     f"You can use this to bring me back on any machine.")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     # ── Wave 4: System Symbiosis & Dream Engine ──────────────────────────
     elif any(p in text_lower for p in ["open coding workspace", "prepare my workspace", "start coding mode"]):
@@ -352,8 +367,9 @@ def _process_utterance(text: str) -> Optional[str]:
             engine = get_os_symbiosis()
             engine.prepare_workspace("coding")
             return "Coding workspace prepared. VS Code and Terminal are open."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif any(p in text_lower for p in ["clean my downloads", "organize my downloads", "sort my downloads"]):
         try:
@@ -362,15 +378,17 @@ def _process_utterance(text: str) -> Optional[str]:
             res = engine.organize_downloads_folder()
             count = res.get("moved_count", 0)
             return f"I've organized your Downloads folder. Moved {count} files into their proper categories."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif any(p in text_lower for p in ["enter dream mode", "go to sleep and think", "run dream cycle"]):
         try:
             from core.dream_engine import run_dream
             return "Entering dream mode. I'll spend the next minute reflecting on our past conversations and building new insights."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     elif any(p in text_lower for p in ["what do i need", "anticipate my needs", "what should i do next"]):
         try:
@@ -382,8 +400,9 @@ def _process_utterance(text: str) -> Optional[str]:
                 top_need = needs[0]
                 return f"Based on your patterns, you probably need {top_need['description']}. {top_need['suggested_action']}."
             return "You seem to be doing fine right now, I don't see any immediate needs."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     # ── Wave 5: Ghost Developer ──────────────────────────────────────────
     elif any(text_lower.startswith(p) for p in ["write code to", "build a", "implement a"]):
@@ -411,8 +430,9 @@ def _process_utterance(text: str) -> Optional[str]:
 
             dev.assign_task(task_desc, [active_file] if active_file != "Unknown" else [])
             return f"I've started working on: '{task_desc}'. I'll let you know when it's ready for review."
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.voice_loop")
 
     # ── Default: Normal Chat ─────────────────────────────────────────────
     try:

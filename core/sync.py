@@ -24,6 +24,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 
 from core.memory import save_log
+from core.execution_guard import log_error
 # Neural Bus import for hardware shift events
 try:
     from core.neural_bus import NeuralBus, EventPriority, EventDomain
@@ -604,8 +605,11 @@ class HardwareResourceManager:
                     info["gpu"] = gpu_lines[0] if gpu_lines else None
                     # Check for RTX
                     info["has_rtx"] = any('RTX' in line for line in gpu_lines)
-            except Exception:
-                pass
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                pass  # wmic deprecated on modern Windows — expected
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.sync")
             
             # Check battery (laptop indicator)
             try:
@@ -621,8 +625,11 @@ class HardwareResourceManager:
                     capture_output=True, text=True, timeout=5
                 )
                 info["ac_power"] = "True" in result.stdout
-            except Exception:
-                pass
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                pass  # powershell not available — expected on locked-down systems
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.sync")
         
         # Infer device type from hardware
         if info.get("has_rtx") and not info.get("is_laptop"):

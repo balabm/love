@@ -8,6 +8,7 @@ import shutil
 import time
 from pathlib import Path
 import numpy as np
+from core.execution_guard import log_error
 
 ROOT = Path(__file__).parent.parent
 LORA_DIR = ROOT / "data" / "lora_evolution" / "adapters"
@@ -45,8 +46,9 @@ def _try_convert_scalar(s):
     if '/' in s_strip:
         try:
             return float(Fraction(s_strip))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="tools.sanitize_love_data")
     try:
         if '.' in s_strip or 'e' in s_strip.lower():
             return float(s_strip)

@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -521,8 +522,9 @@ class SelfImprovementDaemon:
                         f"Self-diagnostic: health={report.health_score:.2f}, "
                         f"issues={len(report.issues)}, improvements={results['executed']}"
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.self_improvement_daemon")
 
                 print(f"[SelfImprovementDaemon] Health: {report.health_score:.2f} | "
                       f"Issues: {len(report.issues)} | Improvements: {results['executed']}")
@@ -579,8 +581,9 @@ class SelfImprovementDaemon:
             status["activity_today"] = stats.get("total", 0)
             status["activity_trend"] = stats.get("trend", "idle")
             status["activity_by_component"] = stats.get("by_component", {})
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_improvement_daemon")
         return status
 
     # ── Persistence ──────────────────────────────────────────────────────────
@@ -589,16 +592,18 @@ class SelfImprovementDaemon:
         try:
             if DAEMON_STATE.exists():
                 return json.loads(DAEMON_STATE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_improvement_daemon")
         return {}
 
     def _save_state(self):
         with self._lock:
             try:
                 DAEMON_STATE.write_text(json.dumps(self.state, indent=2))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.self_improvement_daemon")
 
     def _log(self, event: str, data: Dict):
         try:
@@ -607,8 +612,9 @@ class SelfImprovementDaemon:
                     "event": event, "data": data,
                     "ts": datetime.now().isoformat(),
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_improvement_daemon")
 
 
 # Singleton

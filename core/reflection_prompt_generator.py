@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "reflection_prompts"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -121,8 +122,9 @@ class ReflectionPromptGenerator:
             stats = dj.get_decision_stats(7)
             if stats.get("total_decisions", 0) > 0:
                 context_parts.append(f"decisions: {stats['total_decisions']}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
         # Check for mood patterns
         try:
@@ -131,8 +133,9 @@ class ReflectionPromptGenerator:
             insights = mj.get_mood_insights(7)
             if insights.get("most_common_mood"):
                 context_parts.append(f"mood: {insights['most_common_mood']}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
         # Check for values alignment
         try:
@@ -140,8 +143,9 @@ class ReflectionPromptGenerator:
             vac = get_values_alignment_checker()
             score = vac.get_alignment_score()
             context_parts.append(f"alignment: {score}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
         context = ", ".join(context_parts) if context_parts else "general"
         return self.generate_prompt(context, "daily", depth=1)
@@ -210,8 +214,9 @@ class ReflectionPromptGenerator:
             neglected = vac.get_neglected_values(14)
             if neglected:
                 area = neglected[0]["name"]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
         try:
             from core.energy_audit_tool import get_energy_audit_tool
@@ -220,8 +225,9 @@ class ReflectionPromptGenerator:
             if profile.get("time_of_day_energy"):
                 worst_time = min(profile["time_of_day_energy"].items(), key=lambda x: x[1])
                 time_pattern = worst_time[0]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
         template = random.choice(blind_spots)
         prompt_text = template.format(area=area, pattern=pattern, choice=choice, value=value, topic=topic, time_pattern=time_pattern)
@@ -294,15 +300,17 @@ class ReflectionPromptGenerator:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
     def _log_prompt(self, prompt: ReflectionPrompt):
         try:
@@ -313,8 +321,9 @@ class ReflectionPromptGenerator:
                     "category": prompt.category,
                     "depth": prompt.depth,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reflection_prompt_generator")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

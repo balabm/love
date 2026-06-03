@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "user_patterns"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -313,8 +314,9 @@ class UserPatternDetector:
                 for key, p in self._patterns.items()
             }
             PATTERN_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.user_pattern_detector")
 
     def _load_patterns(self):
         try:
@@ -322,8 +324,9 @@ class UserPatternDetector:
                 data = json.loads(PATTERN_DB.read_text())
                 for key, p_data in data.items():
                     self._patterns[key] = ActivityPattern(**p_data)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.user_pattern_detector")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

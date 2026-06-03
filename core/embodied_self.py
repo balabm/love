@@ -35,6 +35,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Deque, Dict, Optional
+from core.execution_guard import log_error
 
 try:
     import psutil
@@ -133,15 +134,17 @@ class EmbodiedSelf:
         # MUSCULAR TENSION — CPU load
         try:
             s.muscular_tension = psutil.cpu_percent(interval=0.2) / 100.0
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
         # WORKING MEMORY — RAM
         try:
             vm = psutil.virtual_memory()
             s.working_memory_full = vm.percent / 100.0
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
         # METABOLIC RATE — Disk I/O delta
         try:
@@ -153,8 +156,9 @@ class EmbodiedSelf:
                 # saturate at 200 MB/s combined
                 s.metabolic_rate = min(1.0, mbps / 200.0)
             self._last_io = io
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
         # SOCIAL REACH — Network
         try:
@@ -168,8 +172,9 @@ class EmbodiedSelf:
             else:
                 s.social_reach = 0.3
             self._last_net = net
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
         # DEEP THOUGHT CAPACITY — GPU (best-effort; works if nvidia-smi or torch present)
         s.deep_thought_capacity = self._read_gpu_availability()
@@ -190,8 +195,9 @@ class EmbodiedSelf:
         try:
             n = len(psutil.pids())
             s.cognitive_parallelism = min(1.0, n / 800.0)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
         # AROUSAL — temperature or fan (linux/mac); fallback to cpu_freq
         s.arousal = self._read_arousal()
@@ -238,30 +244,37 @@ class EmbodiedSelf:
             if out:
                 util = float(out.split("\n")[0])
                 return 1.0 - util / 100.0   # availability = 1 - utilization
-        except Exception:
-            pass
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass  # nvidia-smi not available — expected on Windows/non-NVIDIA
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
         return 0.5  # unknown / no GPU — assume mid
 
     def _read_arousal(self) -> float:
         try:
-            temps = psutil.sensors_temperatures()
-            if temps:
-                # pick first CPU-like sensor
-                for name, entries in temps.items():
-                    if entries:
-                        for e in entries:
-                            if e.current and e.current > 0:
-                                # normalize: 30°C cold, 90°C hot
-                                return max(0.0, min(1.0, (e.current - 30.0) / 60.0))
-        except Exception:
-            pass
+            # sensors_temperatures is Linux-only; skip silently on Windows
+            if hasattr(psutil, "sensors_temperatures"):
+                temps = psutil.sensors_temperatures()
+                if temps:
+                    # pick first CPU-like sensor
+                    for name, entries in temps.items():
+                        if entries:
+                            for e in entries:
+                                if e.current and e.current > 0:
+                                    # normalize: 30°C cold, 90°C hot
+                                    return max(0.0, min(1.0, (e.current - 30.0) / 60.0))
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
         # Fallback: CPU frequency ratio
         try:
             freq = psutil.cpu_freq()
             if freq and freq.max > 0:
                 return freq.current / freq.max
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
         return 0.0
 
     def _broadcast_significant_changes(self, s: BodySensations):
@@ -279,8 +292,9 @@ class EmbodiedSelf:
         try:
             from core.world_model_latent import get_world_model_latent
             get_world_model_latent().observe(text, source="body")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
     # ── persistence ──────────────────────────────────────────────────────────
 
@@ -291,22 +305,25 @@ class EmbodiedSelf:
                     "t": datetime.now().isoformat(),
                     **{k: round(v, 3) for k, v in asdict(s).items()},
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
     def _save(self):
         try:
             STATE_FILE.write_text(json.dumps(asdict(self._current), indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.embodied_self")
 
     def _load(self):
         if STATE_FILE.exists():
             try:
                 d = json.loads(STATE_FILE.read_text())
                 self._current = BodySensations(**d)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.embodied_self")
 
     # ── queries ──────────────────────────────────────────────────────────────
 

@@ -20,6 +20,7 @@ import subprocess
 import json
 from pathlib import Path
 from datetime import datetime
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 PYTHONW = PROJECT_ROOT / "venv" / "Scripts" / "pythonw.exe"
@@ -160,8 +161,9 @@ def status():
             pid = int(PID_FILE.read_text().strip())
             print(f"PID: {pid}")
             print(f"UI: http://localhost:{SERVICE_PORT}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="service.love_service")
 
 
 if __name__ == "__main__":

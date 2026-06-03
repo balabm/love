@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Any, Dict, Optional
 import uvicorn
+from core.execution_guard import log_error
 
 app = FastAPI(title="LOVE MCP HTTP", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -69,9 +70,11 @@ def tool_call(req: ToolCallRequest):
                 result = mod._handle_tool(req.tool, req.args)
                 return {"success": True, "result": result}
             except Exception as e:
-                pass
-    except Exception:
-        pass
+                from core.execution_guard import log_error
+                log_error(e, module="mcp_server_http")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="mcp_server_http")
     # Fallback: direct dispatch
     try:
         if req.tool == "love_chat":
@@ -109,14 +112,16 @@ def status():
         from core.evolution_engine import get_evolution_engine
         evo = get_evolution_engine()
         info["evolution_generation"] = evo.get_generation()
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="mcp_server_http")
     try:
         from core.constitution import get_constitution
         c = get_constitution()
         info["constitution_principles"] = c.get_stats().get("total_principles", 0)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="mcp_server_http")
     return info
 
 

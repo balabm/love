@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "proactive_preparation"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -116,8 +117,9 @@ class ProactivePreparationEngine:
                 cal_events = gs.get_upcoming_events(hours_ahead)
                 for evt in cal_events:
                     events.append(self._analyze_event(evt))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_preparation_engine")
 
         # Scan tasks
         try:
@@ -133,8 +135,9 @@ class ProactivePreparationEngine:
                         prep_needed=["review progress", "plan final push"],
                         urgency="high" if goal["deadline"] < (now + timedelta(hours=4)).isoformat() else "medium",
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_preparation_engine")
 
         return events
 
@@ -328,15 +331,17 @@ class ProactivePreparationEngine:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_preparation_engine")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_preparation_engine")
 
     def _log_task(self, task: PrepTask):
         try:
@@ -348,8 +353,9 @@ class ProactivePreparationEngine:
                     "priority": task.priority,
                     "completed": task.completed,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_preparation_engine")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

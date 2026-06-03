@@ -19,6 +19,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 from dataclasses import dataclass, field, asdict
 
 from core.neural_bus import get_neural_bus, NeuralEvent, EventDomain
+from core.execution_guard import log_error
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -227,11 +228,15 @@ class TelemetryManager:
         try:
             websocket = self.active_connections[client_id]
             # Fast pre-check: skip if socket already closing/closed
-            if hasattr(websocket, "client_state") and str(websocket.client_state) not in ("CONNECTED", "<State.CONNECTED: 1>"):
+            if hasattr(websocket, "client_state") and websocket.client_state.value != 1:
                 self.disconnect(client_id)
                 return False
-            await websocket.send_json(payload)
+            await asyncio.wait_for(websocket.send_json(payload), timeout=3)
             return True
+        except asyncio.TimeoutError:
+            logger.warning(f"[TelemetryManager] Send timeout to {client_id} — disconnecting stale connection")
+            self.disconnect(client_id)
+            return False
         except WebSocketDisconnect:
             self.disconnect(client_id)
             return False
@@ -268,8 +273,9 @@ class TelemetryManager:
             self._streaming_task.cancel()
             try:
                 await self._streaming_task
-            except asyncio.CancelledError:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.websocket_manager")
         
         # Unsubscribe from NeuralBus
         if self.neural_bus:

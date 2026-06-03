@@ -6,6 +6,7 @@ import time
 import threading
 from datetime import datetime
 from typing import Dict, Optional
+from core.execution_guard import log_error
 
 
 class LiveContext:
@@ -76,36 +77,59 @@ class LiveContext:
                     self.battery = int(bat.percent)
                     self.pc_battery = int(bat.percent)
                     self.battery_charging = bat.power_plugged
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_engine")
+        # Optional modules — only log missing-module errors once to avoid spam
+        _logged_missing = getattr(LiveContext, '_logged_missing_modules', set())
         try:
             from core.browser_monitor import get_active_window_title
             self.active_window = get_active_window_title()
             self.active_app = self.active_window.split(' - ')[-1] if ' - ' in self.active_window else self.active_window
-        except Exception:
-            pass
+        except (ModuleNotFoundError, ImportError):
+            if 'browser_monitor' not in _logged_missing:
+                _logged_missing.add('browser_monitor')
+                LiveContext._logged_missing_modules = _logged_missing
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_engine")
         try:
             from core.life_domains import get_all_domain_stats
             stats = get_all_domain_stats()
             self.sleep_hours_last_night = stats.get('sleep', {}).get('last_night_hours', 0)
             self.hydration_pct = stats.get('hydration', {}).get('today_pct', 0)
             self.meals_today = stats.get('nutrition', {}).get('meals_today', 0)
-        except Exception:
-            pass
+        except (ModuleNotFoundError, ImportError):
+            if 'life_domains' not in _logged_missing:
+                _logged_missing.add('life_domains')
+                LiveContext._logged_missing_modules = _logged_missing
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_engine")
         try:
             from core.guardian import get_guardian_status
             g = get_guardian_status()
             self.work_hours_today = g.get('hours_today', 0)
             self.focus_mode_active = g.get('focus_mode', False)
-        except Exception:
-            pass
+        except (ModuleNotFoundError, ImportError):
+            if 'guardian' not in _logged_missing:
+                _logged_missing.add('guardian')
+                LiveContext._logged_missing_modules = _logged_missing
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_engine")
         try:
             from core.emotional_state import get_current_state
             emo = get_current_state()
             self.stress_level = emo.get('stress', 0)
             self.energy_level = emo.get('energy', 0)
-        except Exception:
-            pass
+        except (ModuleNotFoundError, ImportError):
+            if 'emotional_state' not in _logged_missing:
+                _logged_missing.add('emotional_state')
+                LiveContext._logged_missing_modules = _logged_missing
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_engine")
         parts = [
             f'It is {self.time_of_day} on a {self.day_type}.',
             f'System CPU: {self.system_cpu:.0f}%, RAM: {self.system_ram:.0f}%.',
@@ -137,8 +161,9 @@ def start_context_engine(interval_seconds: int = 60):
         while _daemon_running:
             try:
                 _ctx.refresh()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.context_engine")
             for _ in range(interval_seconds):
                 if not _daemon_running:
                     break
@@ -148,8 +173,9 @@ def start_context_engine(interval_seconds: int = 60):
     _daemon_thread.start()
     try:
         _ctx.refresh()
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
 
 
 def stop_context_engine():
@@ -223,6 +249,23 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
     if live_context:
         blocks.append(f"=== WHAT I CURRENTLY KNOW ===\n{live_context}")
 
+    # 1b. Recent notifications (high-priority / actionable only, to keep prompt short)
+    try:
+        from core.consolidated_memory import get_consolidated_memory
+        cm = get_consolidated_memory()
+        recent_notifs = cm.get_recent(domain="notification", hours=2, limit=8)
+        if recent_notifs:
+            lines = []
+            for n in recent_notifs:
+                payload = n.get("payload", {})
+                if payload.get("priority") == "high" or payload.get("is_actionable"):
+                    ts = n.get("timestamp", "")[11:16]  # HH:MM only
+                    lines.append(f"  [{ts}] {payload.get('source','?')} — {payload.get('text','')[:80]}")
+            if lines:
+                blocks.append("=== RECENT NOTIFICATIONS ===\n" + "\n".join(lines[:5]))
+    except Exception:
+        pass
+
     # 2. Long-term memory
     try:
         from core.long_term_memory import remember, format_memory_for_chat
@@ -230,8 +273,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         ltm_text = format_memory_for_chat(ltm_result)
         if ltm_text:
             blocks.append(ltm_text)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
 
     # 3. User profile
     try:
@@ -239,8 +283,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         profile_ctx = enrich_prompt_context()
         if profile_ctx:
             blocks.append(f"=== WHAT I KNOW ABOUT KARTHI ===\n{profile_ctx}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
 
     # 4. AGI-Level Systems
     try:
@@ -253,8 +298,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
             agi_context_parts.append(f"Psychological Profile: {json.dumps(profile, indent=2)[:200]}...")
         if agi_context_parts:
             blocks.append("=== AGI-LEVEL INSIGHTS ===\n" + "\n".join(agi_context_parts))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
 
     # 5. Web Search
     try:
@@ -262,8 +308,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         web_results = auto_search_for_query(user_input)
         if web_results:
             blocks.append(f"REAL-TIME WEB DATA:\n{web_results}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
 
     # 6. Temporal Memory
     try:
@@ -272,8 +319,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         temporal_ctx = tmem.get_temporal_context(query=user_input, limit=3)
         if temporal_ctx:
             blocks.append(f"=== MY AUTOBIOGRAPHICAL MEMORY ===\n{temporal_ctx}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
         
     # 7. Intelligence Hub
     try:
@@ -282,8 +330,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         intel_ctx = hub.get_context_for_prompt()
         if intel_ctx:
             blocks.append("=== LIVE INTELLIGENCE ===\n" + intel_ctx)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
         
     # 8. Agent Registry
     try:
@@ -292,8 +341,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         agent_ctx = registry.get_all_context(user_input)
         if agent_ctx:
             blocks.append("=== LIVE LIFE CONTEXT ===\n" + agent_ctx)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
         
     # 9. Active Goals
     try:
@@ -303,8 +353,9 @@ def get_unified_prompt_context(user_input: str, mode: str = "general", injected_
         if active_goals:
             goal_lines = [f"  • {g['title']} [{g['priority']}] {g['progress']:.0f}% done" for g in active_goals[:3]]
             blocks.append("=== ACTIVE GOALS ===\n" + "\n".join(goal_lines))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.context_engine")
         
     # Join and enforce a hard limit to avoid prompt truncation upstream
     unified = "\n\n".join(blocks)

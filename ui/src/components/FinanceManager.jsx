@@ -76,6 +76,14 @@ export default function FinanceManager() {
   const [tradePaper, setTradePaper] = useState(true);
   const [tradeResult, setTradeResult] = useState(null);
 
+  // ATE live signals
+  const [liveSignal, setLiveSignal] = useState(null);
+  const [autoTradeEnabled, setAutoTradeEnabled] = useState(() => localStorage.getItem("love_auto_paper_trade") === "true");
+
+  // Noise / dismiss
+  const [showDismissed, setShowDismissed] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
+
   // Backtest form
   const [btStrategy, setBtStrategy] = useState("sma_crossover");
   const [btSymbol, setBtSymbol] = useState("BTC-USDT");
@@ -113,15 +121,25 @@ export default function FinanceManager() {
   const [learnedAnomalies, setLearnedAnomalies] = useState([]);
   const [learnedSuggestions, setLearnedSuggestions] = useState([]);
 
+  // Quantitative module state
+  const [quantSignals, setQuantSignals] = useState(null);
+  const [quantRegime, setQuantRegime] = useState(null);
+  const [quantSentiment, setQuantSentiment] = useState(null);
+  const [quantRisk, setQuantRisk] = useState(null);
+  const [quantPortfolio, setQuantPortfolio] = useState(null);
+  const [quantSymbol, setQuantSymbol] = useState("BTC-USDT");
+  const [quantLoading, setQuantLoading] = useState(false);
+
   const categories = Object.keys(CATEGORY_COLORS);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [sRes, tRes, aRes, pRes, priceRes, stratRes, genRes, ateRes, evoRes, autoRes,
-             profRes, moodRes, merchRes, recRes, anomRes, suggRes] = await Promise.allSettled([
+      const [sRes, tRes, aRes, pRes, priceRes, stratRes, genRes, ateRes, evoRes, autoRes, sigRes,
+             profRes, moodRes, merchRes, recRes, anomRes, suggRes,
+             qSigRes, qRegRes, qSenRes, qRiskRes] = await Promise.allSettled([
         api.get("/finance/stats"),
-        api.get(`/finance/transactions?limit=50${filterCategory ? `&category=${filterCategory}` : ""}`),
+        api.get(`/finance/transactions?limit=50&include_dismissed=${showDismissed}${filterCategory ? `&category=${filterCategory}` : ""}`),
         api.get("/finance/alerts?limit=20"),
         api.get("/finance/portfolio"),
         api.get("/finance/price?symbol=BTC-USDT"),
@@ -130,12 +148,17 @@ export default function FinanceManager() {
         api.get("/finance/autonomous/status"),
         api.get("/finance/autonomous/evolution-log"),
         api.get("/finance/autonomous/auto-trades"),
+        api.get("/finance/autonomous/signals"),
         api.get("/learning/profile"),
         api.get("/learning/mood"),
         api.get("/learning/merchants"),
         api.get("/learning/recurring"),
         api.get("/learning/anomalies"),
         api.get("/learning/suggestions"),
+        api.get(`/finance/quant/signals?symbol=${quantSymbol}`),
+        api.get(`/finance/quant/regime?symbol=${quantSymbol}`),
+        api.get(`/finance/quant/sentiment?symbol=${quantSymbol}`),
+        api.get("/finance/quant/risk"),
       ]);
       if (sRes.status === "fulfilled") setStats(sRes.value.data);
       if (tRes.status === "fulfilled") setTransactions(tRes.value.data.transactions || []);
@@ -143,32 +166,40 @@ export default function FinanceManager() {
       if (pRes.status === "fulfilled") setPortfolio(pRes.value.data);
       if (priceRes.status === "fulfilled") {
         const d = priceRes.value.data;
-        const pdata = d.data || d;
-        setMarketPrice(pdata?.lastPrice || pdata?.price || null);
+        setMarketPrice(d?.price || d?.lastPrice || null);
       }
       if (stratRes.status === "fulfilled") setStrategies(stratRes.value.data.strategies || []);
       if (genRes.status === "fulfilled") setGenStrategies(genRes.value.data.strategies || []);
       if (ateRes.status === "fulfilled") setAteStatus(ateRes.value.data);
       if (evoRes.status === "fulfilled") setEvolutionLog(evoRes.value.data.entries || []);
       if (autoRes.status === "fulfilled") setAutoTrades(autoRes.value.data.trades || []);
+      if (sigRes.status === "fulfilled") setLiveSignal(sigRes.value.data);
       if (profRes.status === "fulfilled") setLearnedProfile(profRes.value.data.profile || null);
       if (moodRes.status === "fulfilled") setLearnedMood(moodRes.value.data);
       if (merchRes.status === "fulfilled") setLearnedMerchants(merchRes.value.data.merchants || []);
       if (recRes.status === "fulfilled") setLearnedRecurring(recRes.value.data.recurring || []);
       if (anomRes.status === "fulfilled") setLearnedAnomalies(anomRes.value.data.anomalies || []);
       if (suggRes.status === "fulfilled") setLearnedSuggestions(suggRes.value.data.suggestions || []);
+      if (qSigRes.status === "fulfilled") setQuantSignals(qSigRes.value.data);
+      if (qRegRes.status === "fulfilled") setQuantRegime(qRegRes.value.data);
+      if (qSenRes.status === "fulfilled") setQuantSentiment(qSenRes.value.data);
+      if (qRiskRes.status === "fulfilled") setQuantRisk(qRiskRes.value.data);
     } catch (e) {
       console.error("[FinanceManager] fetch error:", e);
     } finally {
       setLoading(false);
     }
-  }, [filterCategory]);
+  }, [filterCategory, showDismissed, quantSymbol]);
 
   useEffect(() => {
     fetchAll();
     const id = setInterval(fetchAll, 10000);
     return () => clearInterval(id);
   }, [fetchAll]);
+
+  useEffect(() => {
+    localStorage.setItem("love_auto_paper_trade", autoTradeEnabled ? "true" : "false");
+  }, [autoTradeEnabled]);
 
   const addTransaction = async () => {
     if (!formAmount || !formMerchant) return;
@@ -257,6 +288,34 @@ export default function FinanceManager() {
     }
   };
 
+  const toggleAutoTrade = async (enabled) => {
+    try {
+      await api.post("/finance/autonomous/toggle-auto", { enabled });
+      setAutoTradeEnabled(enabled);
+    } catch (e) {
+      console.error("[FinanceManager] toggle auto trade error:", e);
+    }
+  };
+
+  const dismissTx = async (txId) => {
+    try {
+      await api.post(`/finance/transactions/${encodeURIComponent(txId)}/dismiss`);
+      fetchAll();
+    } catch (e) {
+      console.error("[FinanceManager] dismiss error:", e);
+    }
+  };
+
+  const recategorizeTx = async (txId, newCat) => {
+    try {
+      await api.post(`/finance/transactions/${encodeURIComponent(txId)}/recategorize`, { category: newCat });
+      setEditingTx(null);
+      fetchAll();
+    } catch (e) {
+      console.error("[FinanceManager] recategorize error:", e);
+    }
+  };
+
   const totalSpent7d = stats?.total_spent_7d || 0;
   const totalSpent30d = stats?.total_spent_30d || 0;
   const suspiciousCount = stats?.suspicious_count || 0;
@@ -291,13 +350,14 @@ export default function FinanceManager() {
       </div>
 
       <nav className="fm-tabs">
-        {["overview", "transactions", "alerts", "budgets", "trading", "autonomous", "learned", "add", "parse"].map(tab => (
+        {["overview", "transactions", "alerts", "budgets", "trading", "quant", "autonomous", "learned", "add", "parse"].map(tab => (
           <button key={tab} className={`fm-tab ${activeTab === tab ? "active" : ""}`} onClick={() => setActiveTab(tab)}>
             {tab === "overview" && "Overview"}
             {tab === "transactions" && "Transactions"}
             {tab === "alerts" && "Alerts"}
             {tab === "budgets" && "Budgets"}
             {tab === "trading" && "📈 Trading"}
+            {tab === "quant" && "🔬 Quant"}
             {tab === "autonomous" && "🧠 Auto"}
             {tab === "learned" && "🔮 Learned"}
             {tab === "add" && "+ Add"}
@@ -361,6 +421,10 @@ export default function FinanceManager() {
                 <option value="">All categories</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
+              <label className="fm-toggle">
+                <input type="checkbox" checked={showDismissed} onChange={e => setShowDismissed(e.target.checked)} />
+                <span>Show dismissed</span>
+              </label>
               <span className="fm-tx-count">{transactions.length} transactions</span>
             </div>
             {transactions.length === 0 ? (
@@ -368,15 +432,31 @@ export default function FinanceManager() {
             ) : (
               <div className="fm-tx-table">
                 <div className="fm-tx-header">
-                  <span>Time</span><span>Merchant</span><span>Category</span><span>Source</span><span style={{ textAlign: "right" }}>Amount</span>
+                  <span>Time</span><span>Merchant</span><span>Category</span><span>Source</span><span style={{ textAlign: "right" }}>Amount</span><span>Actions</span>
                 </div>
                 {transactions.map((tx, i) => (
-                  <div key={i} className="fm-tx-row">
+                  <div key={i} className={`fm-tx-row ${tx.dismissed ? "fm-tx-dismissed" : ""}`}>
                     <span className="fm-tx-time">{tx.timestamp ? new Date(tx.timestamp).toLocaleDateString([], { month: "short", day: "numeric" }) + " " + new Date(tx.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</span>
                     <span className="fm-tx-merchant" title={tx.raw_text}>{tx.merchant}</span>
-                    <span className="fm-tx-cat" style={{ color: CATEGORY_COLORS[tx.category] || CATEGORY_COLORS.uncategorized }}>{tx.category}</span>
+                    <span className="fm-tx-cat" style={{ color: CATEGORY_COLORS[tx.category] || CATEGORY_COLORS.uncategorized }}>
+                      {editingTx === tx.id ? (
+                        <select value={tx.category} onChange={e => recategorizeTx(tx.id, e.target.value)} onBlur={() => setEditingTx(null)} autoFocus>
+                          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      ) : (
+                        tx.category
+                      )}
+                    </span>
                     <span className="fm-tx-source">{tx.source}</span>
                     <span className="fm-tx-amt">{formatCurrency(tx.amount, tx.currency)}</span>
+                    <span className="fm-tx-actions">
+                      {!tx.dismissed && (
+                        <>
+                          <button className="fm-action-btn" title="Recategorize" onClick={() => setEditingTx(tx.id)}>🏷️</button>
+                          <button className="fm-action-btn" title="Dismiss as noise" onClick={() => dismissTx(tx.id)}>🗑️</button>
+                        </>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -440,6 +520,113 @@ export default function FinanceManager() {
                     </div>
                   );
                 })
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── QUANT ── */}
+        {activeTab === "quant" && (
+          <div className="fm-quant">
+            <div className="fm-section">
+              <div className="fm-form-row">
+                <input className="fm-input" placeholder="Symbol (e.g. BTC-USDT)" value={quantSymbol} onChange={e => setQuantSymbol(e.target.value)} />
+                <button className="fm-btn" onClick={fetchAll} disabled={loading}>Refresh</button>
+              </div>
+            </div>
+
+            {/* Signal Card */}
+            {quantSignals && (
+              <div className="fm-section">
+                <h4>Ensemble Signal</h4>
+                <div className={`fm-signal-card fm-signal-${(quantSignals.signal || "HOLD").toLowerCase()}`}>
+                  <div className="fm-signal-main">
+                    <span className="fm-signal-badge">{quantSignals.signal || "HOLD"}</span>
+                    <span>Score: {(quantSignals.score || 0).toFixed(2)}</span>
+                    <span>Confidence: {((quantSignals.confidence || 0) * 100).toFixed(0)}%</span>
+                  </div>
+                  {quantSignals.details && (
+                    <div className="fm-signal-meta">
+                      {Object.entries(quantSignals.details).map(([k, v]) => {
+                        let display = "";
+                        if (typeof v === "number") display = v.toFixed(2);
+                        else if (v && typeof v === "object" && "signal" in v) display = `sig ${v.signal.toFixed(2)} / conf ${(v.confidence * 100).toFixed(0)}%`;
+                        else display = String(v);
+                        return <span key={k}>{k}: {display}</span>;
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Regime + Sentiment row */}
+            <div className="fm-section">
+              <div className="fm-portfolio-stats">
+                {quantRegime && (
+                  <StatCard label="Market Regime" value={quantRegime.regime || "UNKNOWN"} sub={`Confidence: ${((quantRegime.confidence || 0) * 100).toFixed(0)}%`} color="#60a5fa" />
+                )}
+                {quantSentiment && (
+                  <StatCard
+                    label="Sentiment"
+                    value={quantSentiment.regime || "NEUTRAL"}
+                    sub={`Score: ${(quantSentiment.sentiment || 0).toFixed(2)}`}
+                    color={quantSentiment.sentiment > 0.3 ? "#34d399" : quantSentiment.sentiment < -0.3 ? "#f87171" : "#fbbf24"}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Risk Status */}
+            {quantRisk && (
+              <div className="fm-section">
+                <h4>Risk Status</h4>
+                <div className="fm-portfolio-stats">
+                  <StatCard label="Capital" value={formatCurrency(quantRisk.current_capital || 0)} color="#34d399" />
+                  <StatCard label="Drawdown" value={`${(quantRisk.drawdown_pct || 0).toFixed(2)}%`} sub={quantRisk.circuit_breaker ? "CIRCUIT BREAKER" : "OK"} color={quantRisk.circuit_breaker ? "#f87171" : "#34d399"} />
+                  <StatCard label="VaR 95%" value={`${(quantRisk.var_95_pct || 0).toFixed(2)}%`} color="#60a5fa" />
+                  <StatCard label="Kelly" value={`${((quantRisk.kelly_fraction || 0) * 100).toFixed(1)}%`} color="#a78bfa" />
+                  <StatCard label="Win Rate" value={`${((quantRisk.win_rate || 0) * 100).toFixed(1)}%`} sub={`${quantRisk.total_trades || 0} trades`} color="#fbbf24" />
+                </div>
+              </div>
+            )}
+
+            {/* Portfolio Optimizer */}
+            <div className="fm-section">
+              <h4>Portfolio Optimizer</h4>
+              <div className="fm-form-row">
+                <button className="fm-btn" onClick={async () => {
+                  setQuantLoading(true);
+                  try {
+                    const returns = {
+                      BTC: [0.01, -0.005, 0.02, 0.01, -0.01, 0.015, 0.005, -0.008, 0.012, 0.003],
+                      ETH: [0.008, -0.003, 0.015, 0.012, -0.008, 0.01, 0.003, -0.005, 0.009, 0.004],
+                    };
+                    const res = await api.post("/finance/quant/portfolio", { returns, method: "sharpe" });
+                    setQuantPortfolio(res.data);
+                  } catch (e) { console.error(e); }
+                  finally { setQuantLoading(false); }
+                }} disabled={quantLoading}>
+                  {quantLoading ? "Optimizing…" : "Run Sharpe Optimizer"}
+                </button>
+              </div>
+              {quantPortfolio && !quantPortfolio.error && (
+                <div className="fm-backtest-stats">
+                  <StatCard label="Method" value={quantPortfolio.method || "sharpe"} color="#60a5fa" />
+                  <StatCard label="Sharpe" value={(quantPortfolio.sharpe || 0).toFixed(2)} color="#fbbf24" />
+                  <StatCard label="Expected Return" value={`${((quantPortfolio.expected_return || 0) * 100).toFixed(2)}%`} color="#34d399" />
+                  <StatCard label="Volatility" value={`${((quantPortfolio.volatility || 0) * 100).toFixed(2)}%`} color="#a78bfa" />
+                </div>
+              )}
+              {quantPortfolio?.weights && (
+                <div className="fm-cat-list" style={{ marginTop: 12 }}>
+                  {Object.entries(quantPortfolio.weights).map(([sym, w]) => (
+                    <CategoryBar key={sym} category={sym} amount={w} total={1} budget={0} />
+                  ))}
+                </div>
+              )}
+              {quantPortfolio?.error && (
+                <div className="fm-parse-result error"><span>❌</span><span>{quantPortfolio.error}</span></div>
               )}
             </div>
           </div>
@@ -631,11 +818,35 @@ export default function FinanceManager() {
         {/* ── AUTONOMOUS ── */}
         {activeTab === "autonomous" && (
           <div className="fm-autonomous">
+            {/* Live Signal Card */}
+            {liveSignal && liveSignal.strategy && (
+              <div className="fm-section">
+                <div className={`fm-signal-card fm-signal-${liveSignal.signal?.toLowerCase()}`}>
+                  <div className="fm-signal-main">
+                    <span className="fm-signal-label">Live Signal</span>
+                    <span className="fm-signal-badge">{liveSignal.signal}</span>
+                    <span className="fm-signal-strat">{liveSignal.strategy}</span>
+                    {liveSignal.price != null && (
+                      <span className="fm-signal-price">@ {formatCurrency(liveSignal.price, "USDT")}</span>
+                    )}
+                  </div>
+                  <div className="fm-signal-meta">
+                    <span>Score: {liveSignal.score?.toFixed(1)}</span>
+                    <span>BTC-USDT</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Status Bar */}
             <div className="fm-section">
               <div className="fm-auto-header">
                 <h4>🧠 Autonomous Trading Engine</h4>
                 <div className="fm-auto-controls">
+                  <label className="fm-toggle">
+                    <input type="checkbox" checked={autoTradeEnabled} onChange={e => toggleAutoTrade(e.target.checked)} />
+                    <span>Auto-paper-trade on signals</span>
+                  </label>
                   <button className="fm-btn" onClick={forceGenerateStrategy} disabled={genLoading}>
                     {genLoading ? "Generating…" : "Generate Strategy Now"}
                   </button>
@@ -644,12 +855,12 @@ export default function FinanceManager() {
               </div>
               {ateStatus && (
                 <div className="fm-auto-status">
-                  <span className={`fm-auto-badge ${ateStatus.running ? "active" : "idle"}`}>
-                    {ateStatus.running ? "● Running" : "○ Idle"}
+                  <span className={`fm-auto-badge ${ateStatus.active ? "active" : "idle"}`}>
+                    {ateStatus.active ? "● Running" : "○ Idle"}
                   </span>
-                  <span className="fm-auto-stat">{ateStatus.strategies_generated || 0} strategies generated</span>
-                  <span className="fm-auto-stat">Last gen: {ateStatus.last_generate_minutes_ago != null ? `${ateStatus.last_generate_minutes_ago}m ago` : "—"}</span>
-                  <span className="fm-auto-stat">Last trade: {ateStatus.last_paper_trade_minutes_ago != null ? `${ateStatus.last_paper_trade_minutes_ago}m ago` : "—"}</span>
+                  <span className="fm-auto-stat">{ateStatus.strategy_count || 0} strategies</span>
+                  <span className="fm-auto-stat">Best score: {ateStatus.best_score?.toFixed(1) || "—"}</span>
+                  <span className="fm-auto-stat">Mode: {ateStatus.mode}</span>
                 </div>
               )}
             </div>

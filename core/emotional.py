@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from collections import deque
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -142,8 +143,9 @@ def _load_stress() -> Dict[str, Any]:
     if STRESS_FILE.exists():
         try:
             return json.loads(STRESS_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emotional")
     return {
         "current_level": 0,       # 0-100
         "trend": "stable",        # rising / falling / stable
@@ -156,8 +158,9 @@ def _load_stress() -> Dict[str, Any]:
 def _save_stress(s: Dict[str, Any]):
     try:
         STRESS_FILE.write_text(json.dumps(s, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.emotional")
 
 
 def record_mood(text: str) -> Dict[str, Any]:
@@ -227,8 +230,9 @@ def record_mood(text: str) -> Dict[str, Any]:
                 "trend": s["trend"],
                 "crisis": crisis,
             }) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.emotional")
 
     return {
         "mood": mood,
@@ -363,8 +367,9 @@ def _load_relationships() -> Dict[str, Any]:
     if RELATIONSHIP_FILE.exists():
         try:
             return json.loads(RELATIONSHIP_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emotional")
     return {
         "people": {},  # name -> {mention_count, last_mentioned, emotional_context, relationship_type}
         "interactions": [],  # list of interactions with people
@@ -374,8 +379,9 @@ def _load_relationships() -> Dict[str, Any]:
 def _save_relationships(rel: Dict[str, Any]):
     try:
         RELATIONSHIP_FILE.write_text(json.dumps(rel, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.emotional")
 
 
 def extract_people(text: str) -> List[str]:

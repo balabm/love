@@ -46,6 +46,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "autonomous_cicd"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -126,6 +127,8 @@ class AutonomousCICD:
         self._current_deployment: Optional[str] = None
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._last_candidate_count: int = 0
+        self._last_candidate_ids: frozenset = frozenset()
         self._load_state()
         self._initialize_rollback_triggers()
     
@@ -496,8 +499,9 @@ class AutonomousCICD:
                 for module in critical_modules:
                     if not flags.get(module, False):
                         return True, f"Modern module {module} offline after deployment"
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.autonomous_cicd")
             
             return False, ""
             
@@ -617,8 +621,9 @@ class AutonomousCICD:
         try:
             with open(DEPLOYMENT_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_cicd")
     
     # ── Main Loop ─────────────────────────────────────────────────────────────────
     
@@ -655,12 +660,21 @@ class AutonomousCICD:
         try:
             from core.self_coder import get_self_coder
             self_coder = get_self_coder()
-            
+
             # Find modifications that are tested but not deployed
             # Auto-approve low-risk pending modifications
             candidates = []
+            cutoff = time.time() - 86400  # ignore modifications older than 24h
             for mod_id, mod in self_coder._modifications.items():
                 if mod.test_status != "passed" or mod.applied_at:
+                    continue
+                # Skip stale modifications
+                created_ts = 0
+                try:
+                    created_ts = datetime.fromisoformat(mod.created_at).timestamp()
+                except Exception:
+                    pass
+                if created_ts and created_ts < cutoff:
                     continue
                 if mod.approval_status == "approved":
                     candidates.append(mod_id)
@@ -669,17 +683,23 @@ class AutonomousCICD:
                     mod.approval_status = "approved"
                     candidates.append(mod_id)
                     print(f"[AutonomousCICD] Auto-approved low-risk modification {mod_id}")
-            
+
+            # Only log when the candidate set actually changes
+            current_ids = frozenset(candidates)
+            if len(candidates) != self._last_candidate_count or current_ids != self._last_candidate_ids:
+                self._last_candidate_count = len(candidates)
+                self._last_candidate_ids = current_ids
+                if candidates:
+                    print(f"[AutonomousCICD] Found {len(candidates)} deployment candidate(s): {', '.join(candidates[:5])}{'...' if len(candidates) > 5 else ''}")
+
             if candidates:
-                print(f"[AutonomousCICD] Found {len(candidates)} deployment candidates")
-                
                 # Create deployment for candidates
                 deployment_id = self.create_deployment(candidates)
-                
+
                 if deployment_id:
                     # Run deployment
                     self.run_deployment(deployment_id)
-                    
+
         except Exception as e:
             print(f"[AutonomousCICD] Check candidates error: {e}")
     

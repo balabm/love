@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "learning_path_optimizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -189,8 +190,9 @@ class LearningPathOptimizer:
                     if now >= next_review:
                         priority += 0.5
                         reason = "Review due"
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.learning_path_optimizer")
 
             # Weak skill
             if skill.level < 0.4:
@@ -299,8 +301,9 @@ class LearningPathOptimizer:
                 } for k, v in self._skills.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.learning_path_optimizer")
 
     def _load_stats(self):
         try:
@@ -309,8 +312,9 @@ class LearningPathOptimizer:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("skills", {}).items():
                     self._skills[k] = Skill(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.learning_path_optimizer")
 
     def _log_review(self, session: ReviewSession):
         try:
@@ -321,8 +325,9 @@ class LearningPathOptimizer:
                     "performance": session.performance,
                     "duration": session.duration_minutes,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.learning_path_optimizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

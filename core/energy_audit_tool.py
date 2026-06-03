@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "energy_audit"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -203,8 +204,9 @@ class EnergyAuditTool:
             try:
                 hour = datetime.fromisoformat(r.timestamp).hour
                 hour_avg[hour].append(r.before_energy)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.energy_audit_tool")
 
         forecasts = []
         for i in range(hours_ahead):
@@ -288,15 +290,17 @@ class EnergyAuditTool:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.energy_audit_tool")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.energy_audit_tool")
 
     def _log_record(self, record: EnergyRecord):
         try:
@@ -309,8 +313,9 @@ class EnergyAuditTool:
                     "after": record.after_energy,
                     "duration": record.duration_minutes,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.energy_audit_tool")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

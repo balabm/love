@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "habit_streak_tracker"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -142,8 +143,9 @@ class HabitStreakTracker:
                         habit.status = "broken"
                     elif days_since > 1:
                         habit.status = "at_risk"
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.habit_streak_tracker")
 
         return sorted(self._habits.values(), key=lambda h: h.momentum_score, reverse=True)
 
@@ -198,8 +200,9 @@ class HabitStreakTracker:
                     recency_factor = 0.3
                 elif hours_since > 24:
                     recency_factor = 0.7
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.habit_streak_tracker")
 
         return round((streak_factor * 0.4 + rate_factor * 0.4 + recency_factor * 0.2), 2)
 
@@ -218,8 +221,9 @@ class HabitStreakTracker:
                         "streak": habit.current_streak,
                     },
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.habit_streak_tracker")
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
@@ -239,8 +243,9 @@ class HabitStreakTracker:
                 } for k, v in self._habits.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.habit_streak_tracker")
 
     def _load_stats(self):
         try:
@@ -248,8 +253,9 @@ class HabitStreakTracker:
                 data = json.loads(STATS_DB.read_text())
                 for k, v in data.get("habits", {}).items():
                     self._habits[k] = HabitStreak(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.habit_streak_tracker")
 
     def _log_completion(self, habit_id: str, completed: bool):
         try:
@@ -259,8 +265,9 @@ class HabitStreakTracker:
                     "habit_id": habit_id,
                     "completed": completed,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.habit_streak_tracker")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

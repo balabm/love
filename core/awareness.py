@@ -26,6 +26,7 @@ from dataclasses import dataclass, field, asdict
 from threading import Lock, Thread
 
 from core.central_logger import get_logger
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -264,8 +265,9 @@ class AwarenessEngine:
                 if batt:
                     snap.battery_percent = round(batt.percent, 1)
                     snap.battery_plugged = batt.power_plugged
-        except ImportError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.awareness")
 
         try:
             import socket as s
@@ -276,8 +278,9 @@ class AwarenessEngine:
 
         try:
             snap.gpu_name = self._get_gpu_name()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.awareness")
 
         return snap
 
@@ -371,10 +374,12 @@ class AwarenessEngine:
                     name = proc.info["name"]
                     if name:
                         apps.add(name.replace(".exe", "").lower())
-                except Exception:
-                    pass
-        except ImportError:
-            pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.awareness")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.awareness")
         return sorted(list(apps))
 
     def _infer_activity(self, ctx: ActiveContext) -> str:
@@ -426,10 +431,12 @@ class AwarenessEngine:
                                         "modified": mtime.isoformat(),
                                         "size_kb": round(item.stat().st_size / 1024, 1)
                                     })
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.awareness")
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.awareness")
 
         recent.sort(key=lambda x: x.get("modified", ""), reverse=True)
         fa.recently_modified = recent[:20]
@@ -452,8 +459,9 @@ class AwarenessEngine:
         try:
             with open(snap_file, "w") as f:
                 json.dump(self.get_snapshot(), f, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.awareness")
 
 
 # ──────────────────────────────────────────────

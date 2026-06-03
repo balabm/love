@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional
 
 import pydantic
 from pydantic import BaseModel, ValidationError
+from core.execution_guard import log_error
 
 
 # ── Data structures ───────────────────────────────────────────────────────────
@@ -411,8 +412,9 @@ def _emit_event(event_type: str, step: int, thought: str, tool: Optional[str],
                 "observation": observation[:300],
             },
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent_loop")
 
 
 # ── Convenience wrapper ───────────────────────────────────────────────────────

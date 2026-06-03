@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from core.settings import get_settings
+from core.execution_guard import log_error
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Storage
@@ -94,8 +95,9 @@ class GapScanner:
                     "description": f"Stress at {stress}%, trend: {trend}. Emotional recovery features may help.",
                     "category": "mental_wellbeing"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wave_engine")
 
         # 3. Guardian / work balance
         try:
@@ -112,8 +114,9 @@ class GapScanner:
                     "description": f"Work at {pct:.0f}% of limit ({hours:.1f}h/{limit}h). Recovery automation lacking.",
                     "category": "productivity_balance"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wave_engine")
 
         # 4. Memory health
         try:
@@ -128,8 +131,9 @@ class GapScanner:
                     "description": f"Only {count} memories stored. Context richness is low.",
                     "category": "intelligence"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wave_engine")
 
         # 5. Capability gaps from detector
         try:
@@ -144,15 +148,16 @@ class GapScanner:
                     "description": g.description if hasattr(g, "description") else str(g),
                     "category": "capability"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wave_engine")
 
         # 6. Module health
         try:
-            from core.module_lifecycle import get_lifecycle_manager
-            mgr = get_lifecycle_manager()
-            statuses = mgr.get_all_statuses() if hasattr(mgr, 'get_all_statuses') else {}
-            degraded = [k for k, v in statuses.items() if isinstance(v, dict) and v.get("status") not in ("ready", "running")]
+            from core.module_lifecycle import get_lifecycle
+            mgr = get_lifecycle()
+            statuses = mgr.get_status() if hasattr(mgr, 'get_status') else {}
+            degraded = [k for k, v in statuses.get("modules", {}).items() if isinstance(v, dict) and v.get("state") not in ("ready", "running", "READY", "RUNNING")]
             if degraded:
                 gaps.append({
                     "domain": "modules",
@@ -160,8 +165,9 @@ class GapScanner:
                     "description": f"{len(degraded)} modules degraded: {', '.join(degraded[:4])}",
                     "category": "system_health"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wave_engine")
 
         # 7. Fitness
         try:
@@ -177,8 +183,9 @@ class GapScanner:
                     "description": f"Only {workouts} workouts this week. Fitness tracking is passive.",
                     "category": "physical_wellbeing"
                 })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wave_engine")
 
         overall_gap_score = sum(g["severity"] for g in gaps) / max(1, len(gaps)) if gaps else 0
 
@@ -410,8 +417,9 @@ class WaveEngine:
         if STATUS_FILE.exists():
             try:
                 status = json.loads(STATUS_FILE.read_text(encoding="utf-8"))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.wave_engine")
         status["running"] = self._running
         waves = _load_waves()
         status["total_waves"] = len(waves)

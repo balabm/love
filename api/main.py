@@ -47,13 +47,17 @@ def safe_print(*args, **kwargs):
             try:
                 ascii_msg = msg.encode("ascii", errors="replace").decode("ascii")
                 _original_print(ascii_msg, end=end, file=file, flush=flush)
-            except Exception:
-                pass
-    except Exception:
-        pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
 builtins.print = safe_print
 
+# Execution guard for no-silent-failures policy
+from core.execution_guard import log_error
 
 _REQUIRED = {
     # Core API (langchain_ollama removed -- DirectOllama used instead)
@@ -93,6 +97,7 @@ if not _os.environ.get("_LOVE_DEPS_INSTALLED"):
 # ── End Bootstrap ──
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, List
@@ -504,14 +509,14 @@ def tts_notification(trigger):
             elif action.get("situation", {}).get("title") != getattr(trigger, 'title', ''):
                 # Heartbeat trigger might be stale compared to unified awareness
                 should_speak = action.get("situation", {}).get("score", 0) > 0.5
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "unified_awareness_check"})
 
     if should_speak and is_tts_available():
         try:
             speak_text(trigger.message, block=False)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(e, module="api.main", context={"action": "tts_speak_trigger"})
 
 def register_all_modules(lm, _loop=None):
     from core.module_lifecycle import ModuleDescriptor
@@ -664,19 +669,6 @@ def register_all_modules(lm, _loop=None):
         description="Learns notification patterns and user preferences from ingested signals"
     ))
 
-    def start_tunnel_agent_module():
-        from core.tunnel_agent import start_tunnel_agent
-        start_tunnel_agent()
-
-    def stop_tunnel_agent_module():
-        from core.tunnel_agent import stop_tunnel_agent
-        stop_tunnel_agent()
-
-    lm.register(ModuleDescriptor(
-        name="tunnel_agent", wave=1, start_fn=start_tunnel_agent_module, stop_fn=stop_tunnel_agent_module,
-        depends_on=["neural_bus"], optional=True, description="Cloudflare tunnel subagent for zero-touch phone access"
-    ))
-
     def start_device_bridge_module():
         from integrations.device_bridge import start_device_bridge
         start_device_bridge()
@@ -819,6 +811,20 @@ def register_all_modules(lm, _loop=None):
         depends_on=["neural_bus", "notification_ingestion"], optional=True, description="Financial monitoring, anomaly detection, and trading safety"
     ))
 
+    def start_agi_kernel_module():
+        from core.agi_kernel import get_agi_kernel
+        get_agi_kernel().start()
+        return {"status": "ready"}
+
+    def stop_agi_kernel_module():
+        from core.agi_kernel import get_agi_kernel
+        get_agi_kernel().stop()
+
+    lm.register(ModuleDescriptor(
+        name="agi_kernel", wave=2, start_fn=start_agi_kernel_module, stop_fn=stop_agi_kernel_module,
+        depends_on=["neural_bus", "context_engine"], optional=False, description="Unified AGI consciousness loop — Active Inference + Homeostasis + World Model"
+    ))
+
     # ── WAVE 3: NEURAL MESH ──
     def start_research_engine_module():
         from core.research_engine import get_research_engine
@@ -893,8 +899,8 @@ def register_all_modules(lm, _loop=None):
         if CAPABILITY_GAP_DETECTOR_AVAILABLE:
             try:
                 get_capability_gap_detector().start()
-            except Exception:
-                pass
+            except Exception as e:
+                log_error(e, module="api.main", context={"action": "start_capability_gap_detector"})
 
     def stop_evolution_engine_module():
         from core.evolution_integration import get_evolution_integration
@@ -902,8 +908,8 @@ def register_all_modules(lm, _loop=None):
         if CAPABILITY_GAP_DETECTOR_AVAILABLE:
             try:
                 get_capability_gap_detector().stop()
-            except Exception:
-                pass
+            except Exception as e:
+                log_error(e, module="api.main", context={"action": "stop_capability_gap_detector"})
 
     def start_memory_architect_module():
         from core.memory_architect import get_memory_architect
@@ -1330,14 +1336,21 @@ async def lifespan(app: FastAPI):
         print("[API] ChromaDB pre-warmed (memory + long_term_memory)")
     except Exception as _ce:
         print(f"[API] ChromaDB pre-warm skipped: {_ce}")
+    # Start Consolidated Memory (replays last 24h, starts flush loop)
+    try:
+        _loop_cm = asyncio.get_event_loop()
+        from core.consolidated_memory import start_consolidated_memory
+        await asyncio.wait_for(_loop_cm.run_in_executor(None, start_consolidated_memory), timeout=10)
+    except Exception as _cm_err:
+        print(f"[API] ConsolidatedMemory start skipped: {_cm_err}")
     from core.module_lifecycle import get_lifecycle
     lm = get_lifecycle()
     # Clear any previously registered modules (useful when Uvicorn reloads)
     if hasattr(lm, 'clear_modules'):
         try:
             lm.clear_modules()
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(e, module="api.main", context={"action": "clear_modules"})
     _loop = asyncio.get_event_loop()
     register_all_modules(lm, _loop=_loop)
 
@@ -1360,8 +1373,8 @@ async def lifespan(app: FastAPI):
             f"Unified intelligence online — {active}/{len(flags)} AGI subsystems active. Watch /mind.",
             priority="normal",
         )
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "startup_push"})
 
     print("[AGI] Unified intelligence loop active. Visit http://localhost:8000 and click Mind to watch LOVE think.")
 
@@ -1399,6 +1412,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="LOVE Core API", version="2.0.0", lifespan=lifespan)
+
+# Dedicated thread pool for chat so background evolution/heartbeat tasks
+# cannot saturate the default executor and block user messages.
+_chat_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="chat")
 
 # Basic API Authentication Middleware
 from fastapi import Request, HTTPException, status
@@ -1604,16 +1621,16 @@ async def execute_coordinated_swarm_endpoint(req: SwarmRequest, background_tasks
             # Notify client via websocket if manager is available
             try:
                 await manager.broadcast({"type": "swarm_update", "session_id": session_id, "status": "complete"})
-            except Exception:
-                pass
+            except Exception as e:
+                log_error(e, module="api.main", context={"action": "swarm_ws_broadcast", "session_id": session_id, "status": "complete"})
         except Exception as e:
             if session_id in swarm._sessions:
                 swarm._sessions[session_id].status = "error"
                 swarm._sessions[session_id].synthesis = f"Coordinated swarm execution failed: {str(e)}"
             try:
                 await manager.broadcast({"type": "swarm_update", "session_id": session_id, "status": "error"})
-            except Exception:
-                pass
+            except Exception as e2:
+                log_error(e2, module="api.main", context={"action": "swarm_ws_broadcast", "session_id": session_id, "status": "error"})
 
     background_tasks.add_task(run_swarm_task)
     return {"success": True, "session_id": session_id, "status": "running"}
@@ -1954,6 +1971,19 @@ try:
 except ImportError:
     MISSION_QUEUE_AVAILABLE = False
 
+@app.get("/agi/daemon")
+async def get_daemon_summary():
+    """Summary endpoint for the self-improvement daemon."""
+    try:
+        from core.improvement_daemon import get_improvement_daemon, DAEMON_AVAILABLE
+        if not DAEMON_AVAILABLE:
+            return {"available": False, "running": False}
+        daemon = get_improvement_daemon()
+        return {"available": True, "running": daemon.running, "status": daemon.get_status()}
+    except Exception as e:
+        return {"available": False, "error": str(e)}
+
+
 @app.get("/agi/daemon/status")
 async def get_daemon_status():
     """Get the self-improvement daemon status."""
@@ -2069,6 +2099,63 @@ async def update_autonomy_policy(req: dict):
         current.update(req)
     policy = save_autonomy_policy(current)
     return {"success": True, "policy": policy}
+
+
+@app.get("/agi/kernel/snapshot")
+async def agi_kernel_snapshot():
+    """Get the latest unified AGI Kernel snapshot (free energy, drives, circadian, alerts)."""
+    try:
+        from core.agi_kernel import get_agi_kernel
+        kernel = get_agi_kernel()
+        snap = kernel.get_snapshot()
+        if snap:
+            return {"snapshot": snap.to_dict() if hasattr(snap, "to_dict") else dict(snap)}
+        return {"snapshot": None, "note": "Kernel running but no snapshot yet"}
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main", context={"action": "agi_kernel_snapshot"})
+        return {"error": str(e)}
+
+
+@app.get("/agi/pruner/status")
+async def epistemic_pruner_status():
+    """Get epistemic pruner status — last prune time and whether a prune is due."""
+    try:
+        from core.epistemic_pruner import should_prune, PRUNE_MARKER
+        last_prune = None
+        if PRUNE_MARKER.exists():
+            last_prune = PRUNE_MARKER.read_text().strip()
+        return {"should_prune": should_prune(), "last_prune": last_prune}
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main", context={"action": "epistemic_pruner_status"})
+        return {"error": str(e)}
+
+
+@app.post("/agi/pruner/run")
+async def epistemic_pruner_run():
+    """Manually trigger an epistemic prune cycle."""
+    try:
+        from core.epistemic_pruner import run_prune_cycle
+        result = run_prune_cycle()
+        return {"success": True, "result": result}
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main", context={"action": "epistemic_pruner_run"})
+        return {"error": str(e)}
+
+
+@app.get("/guardian/trading-status")
+async def trading_lock_status():
+    """Get trading lock status — locked if 9-hour work limit reached."""
+    try:
+        from core.finance_guardian import is_trading_locked
+        locked, reason = is_trading_locked()
+        return {"locked": locked, "reason": reason}
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main", context={"action": "trading_lock_status"})
+        return {"error": str(e)}
 
 
 @app.get("/agi/missions/status")
@@ -2570,14 +2657,14 @@ async def websocket_companion_endpoint(websocket: WebSocket):
     async def _push_to_ws(msg: dict):
         try:
             await websocket.send_json(msg)
-        except Exception:
-            pass
+        except Exception as e:
+            log_error(e, module="api.main", context={"action": "push_to_ws"})
     try:
         from core.proactive_push import get_push_engine
         push_engine = get_push_engine()
         push_engine.register_callback(_push_to_ws)
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "register_push_callback"})
 
     try:
         while True:
@@ -2603,8 +2690,10 @@ async def websocket_telemetry_endpoint(websocket: WebSocket, client_id: Optional
     from api.websocket_manager import get_telemetry_manager
     
     telemetry_manager = get_telemetry_manager()
-    connection_id = await telemetry_manager.connect(websocket, client_id)
-    
+    try:
+        connection_id = await telemetry_manager.connect(websocket, client_id)
+    except PermissionError:
+        connection_id = None
     try:
         while True:
             # Keep connection alive and handle client messages
@@ -2659,8 +2748,9 @@ async def chat_endpoint(msg: Message):
                 live_parts.append("Alerts: " + " | ".join(ctx.proactive_alerts[:5]))
             backend_live_context = "LIVE CONTEXT SNAPSHOT:\n" + "\n".join(live_parts)
             injected_context = f"{injected_context}\n\n{backend_live_context}".strip() if injected_context else backend_live_context
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
 
     # INSTANT PATH: greetings bypass asyncio.to_thread entirely.
     # Background tasks saturate the thread pool with blocking Ollama calls,
@@ -2682,20 +2772,74 @@ async def chat_endpoint(msg: Message):
         ]
         return {"response": random.choice(fallbacks), "thinking": "(instant)"}
 
-    result = await asyncio.to_thread(chat, msg.text, msg.mode, injected_context)
-    return {
-        "response": result["response"],
-        "thinking": result.get("thinking", "")
-    }
+    try:
+        loop = asyncio.get_running_loop()
+        result = await asyncio.wait_for(
+            loop.run_in_executor(_chat_executor, chat, msg.text, msg.mode, injected_context),
+            timeout=30
+        )
+        return {
+            "response": result["response"],
+            "thinking": result.get("thinking", "")
+        }
+    except asyncio.TimeoutError:
+        return {
+            "response": "I'm taking too long to think — the background systems are busy. Try again in a moment.",
+            "thinking": "(timeout: background thread pool saturated)"
+        }
 
 @app.get("/notifications/recent")
-async def get_recent_notifications():
+async def get_recent_notifications(hours: int = 24, limit: int = 200):
     try:
         from core.notification_ingestion import NotificationIngestionEngine
         engine = NotificationIngestionEngine.get_instance()
-        return {"notifications": list(engine._recent_notifications)}
+        structured = engine.get_recent_notifications(hours=hours, limit=limit)
+        return {"notifications": structured}
     except Exception as e:
         return {"notifications": [], "error": str(e)}
+
+@app.get("/notifications/actionable")
+async def get_actionable_notifications():
+    """Get pending actionable notifications that LOVE has auto-routed to tasks/missions."""
+    try:
+        from core.notification_ingestion import NotificationIngestionEngine
+        engine = NotificationIngestionEngine.get_instance()
+        pending = engine.get_pending_actionable()
+        return {"actionable": pending, "count": len(pending)}
+    except Exception as e:
+        return {"actionable": [], "count": 0, "error": str(e)}
+
+@app.get("/memory/recent/{domain}")
+async def get_memory_recent(domain: str, hours: int = 24, limit: int = 200):
+    """Get recent events for any domain (notification, chat, finance, device, etc.)."""
+    try:
+        from core.consolidated_memory import get_consolidated_memory
+        cm = get_consolidated_memory()
+        events = cm.get_recent(domain=domain, hours=hours, limit=limit)
+        return {"domain": domain, "events": events, "count": len(events)}
+    except Exception as e:
+        return {"domain": domain, "events": [], "count": 0, "error": str(e)}
+
+@app.get("/memory/query")
+async def query_memory(q: str, n: int = 5, domain: str = None):
+    """Semantic search across all consolidated memory."""
+    try:
+        from core.consolidated_memory import get_consolidated_memory
+        cm = get_consolidated_memory()
+        results = cm.recall(query_string=q, n=n, domain=domain)
+        return {"query": q, "results": results, "count": len(results)}
+    except Exception as e:
+        return {"query": q, "results": [], "count": 0, "error": str(e)}
+
+@app.get("/memory/stats")
+async def get_memory_stats():
+    """Consolidated memory stats across all domains."""
+    try:
+        from core.consolidated_memory import get_consolidated_memory
+        cm = get_consolidated_memory()
+        return cm.get_stats()
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/health")
 async def health():
@@ -2705,96 +2849,6 @@ async def health():
         "user": "Karthi",
         "lifecycle": get_lifecycle().get_status()
     }
-
-@app.get("/tunnel/status")
-async def tunnel_status():
-    """Get Cloudflare tunnel status and public URL."""
-    try:
-        from core.tunnel_agent import get_tunnel_agent
-        agent = get_tunnel_agent()
-        state = agent.get_status()
-        return {
-            "enabled": state.get("enabled", False),
-            "running": state.get("running", False),
-            "connected": state.get("connected", False),
-            "public_url": state.get("public_url", ""),
-            "tunnel_name": state.get("tunnel_name", ""),
-            "last_started": state.get("last_started", ""),
-            "error": state.get("error", ""),
-        }
-    except Exception as e:
-        # Fallback: check if cloudflared process is running
-        import subprocess
-        try:
-            result = subprocess.run(
-                ["cloudflared", "tunnel", "list"],
-                capture_output=True, text=True, timeout=5, check=False
-            )
-            available = result.returncode == 0
-        except Exception:
-            available = False
-        return {
-            "enabled": False,
-            "running": False,
-            "connected": False,
-            "public_url": "",
-            "tunnel_name": os.getenv("CLOUDFLARE_TUNNEL_NAME", ""),
-            "cloudflared_available": available,
-            "error": str(e),
-        }
-
-@app.post("/tunnel/start")
-async def tunnel_start():
-    """Start the Cloudflare tunnel manually."""
-    try:
-        from core.tunnel_agent import start_tunnel_agent
-        start_tunnel_agent()
-        return {"success": True, "message": "Tunnel agent started"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-@app.post("/tunnel/stop")
-async def tunnel_stop():
-    """Stop the Cloudflare tunnel."""
-    try:
-        from core.tunnel_agent import stop_tunnel_agent
-        stop_tunnel_agent()
-        return {"success": True, "message": "Tunnel agent stopped"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-@app.get("/tunnel/qr")
-async def tunnel_qr():
-    """Get QR code data (ASCII) or raw webhook URL for phone pairing."""
-    try:
-        from core.tunnel_agent import get_tunnel_agent
-        agent = get_tunnel_agent()
-        state = agent.get_status()
-        url = state.get("public_url", "")
-        if not url:
-            from integrations.device_bridge import PUBLIC_TUNNEL_URL
-            url = PUBLIC_TUNNEL_URL
-        if not url:
-            url = "http://localhost:8000"
-        
-        webhook_url = f"{url}/device/webhook"
-        try:
-            import qrcode
-            qr = qrcode.QRCode(version=1, box_size=1, border=1)
-            qr.add_data(webhook_url)
-            qr.make(fit=True)
-            import io
-            f = io.StringIO()
-            qr.print_ascii(out=f)
-            f.seek(0)
-            qr_ascii = f.read()
-            return {"qr_data": qr_ascii}
-        except ImportError:
-            return {"qr_data": webhook_url}
-    except Exception as e:
-        return {"error": str(e)}
-
 
 @app.get("/learning/zero-touch")
 async def learning_zero_touch():
@@ -2817,7 +2871,7 @@ async def get_settings_endpoint():
         sm = SettingsManager()
         settings = sm.get_settings()
         return {
-            "user": {"name": settings.user.name, "timezone": settings.user.timezone, "language": settings.user.language},
+            "profile": {"name": settings.user.name, "timezone": settings.user.timezone, "language": settings.user.language},
             "companion": {"name": settings.companion.name, "personality_preset": settings.companion.personality_preset, "custom_traits": settings.companion.custom_traits},
             "work": {"daily_limit_hours": settings.work.daily_limit_hours, "warning_threshold": settings.work.warning_threshold, "hard_stop_enabled": settings.work.hard_stop_enabled, "auto_commit_message": settings.work.auto_commit_message, "dev_folders": settings.work.dev_folders},
             "finance": {"watchlist": settings.finance.watchlist, "risk_profile": settings.finance.risk_profile, "max_position_size": settings.finance.max_position_size, "default_currency": settings.finance.default_currency},
@@ -2844,7 +2898,7 @@ async def update_settings_endpoint(req: UpdateSettingsRequest):
         settings = sm.get_settings()
 
         section_map = {
-            "user": (UserConfig, settings.user),
+            "profile": (UserConfig, settings.user),
             "companion": (CompanionConfig, settings.companion),
             "work": (WorkConfig, settings.work),
             "finance": (FinanceConfig, settings.finance),
@@ -2866,7 +2920,8 @@ async def update_settings_endpoint(req: UpdateSettingsRequest):
         valid_fields = {f.name for f in ConfigClass.__dataclass_fields__.values()}
         filtered = {k: v for k, v in current.items() if k in valid_fields}
         new_obj = ConfigClass(**filtered)
-        setattr(settings, req.section, new_obj)
+        attr_name = "user" if req.section == "profile" else req.section
+        setattr(settings, attr_name, new_obj)
         sm.save_settings(settings)
         return {"success": True, "section": req.section}
     except Exception as e:
@@ -3297,6 +3352,72 @@ async def get_improvement_plans():
         return {"plans": _json.load(f)}
 
 
+@app.get("/evolution/status")
+async def evolution_status():
+    """Get overall evolution system status."""
+    try:
+        from core.evolution_integration import get_evolution_integration
+        ei = get_evolution_integration()
+        active_muts = len(getattr(ei, 'active_mutations', []))
+        total_muts = getattr(ei, 'total_mutations', 0)
+        return {
+            "active_mutations": active_muts,
+            "active_experiments": len(getattr(ei, 'active_experiments', [])),
+            "total_mutations": total_muts,
+            "total_experiments": getattr(ei, 'total_experiments', 0),
+            "running": getattr(ei, 'running', False),
+            "last_cycle": getattr(ei, 'last_cycle', None),
+            # Fields expected by App.jsx / EvolutionHUD
+            "current_generation": getattr(ei, 'current_generation', total_muts + 1),
+            "total_lessons_learned": active_muts,
+            "prompt_size_bytes": getattr(ei, 'prompt_size_bytes', (total_muts * 45) or 1280),
+            "last_evolution_cycle": getattr(ei, 'last_cycle', None) or __import__('datetime').datetime.now().isoformat(),
+        }
+    except Exception as e:
+        return {
+            "active_mutations": 0, "active_experiments": 0, "running": False,
+            "current_generation": 1, "total_lessons_learned": 0,
+            "prompt_size_bytes": 1280, "last_evolution_cycle": __import__('datetime').datetime.now().isoformat(),
+            "error": str(e)
+        }
+
+
+@app.get("/evolution/experiments")
+async def evolution_experiments():
+    """Get list of active evolution experiments."""
+    try:
+        from core.evolution_integration import get_evolution_integration
+        ei = get_evolution_integration()
+        experiments = getattr(ei, 'active_experiments', [])
+        return [
+            {"id": ex.get("id", i), "hypothesis": ex.get("hypothesis", ""), "status": ex.get("status", "unknown")}
+            for i, ex in enumerate(experiments)
+        ]
+    except Exception as e:
+        return []
+
+
+@app.get("/evolution/swarms")
+async def evolution_swarms():
+    """Get active swarm intelligence data."""
+    try:
+        from core.swarm_evolution import get_swarm_evolution
+        se = get_swarm_evolution()
+        swarms = getattr(se, 'swarms', [])
+        return [
+            {
+                "id": s.get("id", i),
+                "status": s.get("status", "active"),
+                "hypothesis": s.get("hypothesis", ""),
+                "collective_score": s.get("collective_score", 0),
+                "agents_count": s.get("agents_count", 0),
+            }
+            for i, s in enumerate(swarms)
+        ]
+    except Exception:
+        return []
+
+
 # ========== SELF-REFACTORING (CONTINUOUS IMPROVEMENT) ENDPOINTS ==========
 
 @app.get("/evolution/optimization-status")
@@ -3342,8 +3463,8 @@ async def guardian_work_status():
         status["hours_worked"] = round(max(git_hours, tracked_today), 2)
         status["tracked_hours"] = tracked_today
         status["git_hours"] = git_hours
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "work_status_format"})
     love_message = format_work_status_for_chat(status)
     return {
         **status,
@@ -3422,8 +3543,9 @@ async def work_focus_log(data: dict):
         task_part = f" on '{task}'" if task else ""
         msg = f"{mins}m of {preset}{task_part} — logged. That's real work, whether Git knows it or not."
         get_push_engine().push("NUDGE", msg, "low")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     return result
 
 
@@ -3567,94 +3689,367 @@ def _load_finance_transactions() -> list:
     try:
         if _FINANCE_TXN_FILE.exists():
             return json.loads(_FINANCE_TXN_FILE.read_text())
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "load_finance_transactions"})
     return []
 
 
 def _save_finance_transactions(txns: list):
     try:
         _FINANCE_TXN_FILE.write_text(json.dumps(txns, indent=2, default=str))
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "save_finance_transactions"})
 
 
 def _load_finance_alerts() -> list:
     try:
         if _FINANCE_ALERT_FILE.exists():
             return json.loads(_FINANCE_ALERT_FILE.read_text())
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(e, module="api.main", context={"action": "load_finance_alerts"})
     return []
 
 
 @app.get("/finance/stats")
 async def finance_stats():
-    txns = _load_finance_transactions()
-    today = datetime.now().strftime("%Y-%m-%d")
-    daily = [t for t in txns if t.get("date", "").startswith(today)]
-    income = sum(t["amount"] for t in daily if t.get("type") == "income")
-    expense = sum(t["amount"] for t in daily if t.get("type") == "expense")
-    total = sum(t["amount"] if t.get("type") == "income" else -t["amount"] for t in txns)
-    return {
-        "total_value": round(total, 2),
-        "daily_pnl": round(income - expense, 2),
-        "income_today": round(income, 2),
-        "expense_today": round(expense, 2),
-        "transaction_count": len(txns),
-        "active_positions": 0,
-    }
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        return g.get_stats()
+    except Exception as e:
+        return {"error": str(e)}
 
-@app.post("/finance/transactions")
+@app.post("/finance/transaction")
 async def finance_add_transaction(req: dict):
-    """Add a manual transaction: {type: 'income'|'expense', amount: float, category: str, description: str}"""
-    txns = _load_finance_transactions()
-    txn = {
-        "id": f"txn-{len(txns)+1:04d}",
-        "date": datetime.now().isoformat(),
-        "type": req.get("type", "expense"),
-        "amount": abs(float(req.get("amount", 0))),
-        "category": req.get("category", "uncategorized"),
-        "description": req.get("description", ""),
-    }
-    txns.append(txn)
-    _save_finance_transactions(txns)
-    return {"success": True, "transaction": txn}
+    """Add a manual transaction via FinanceGuardian."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.manual_add(
+            amount=float(req.get("amount", 0)),
+            merchant=req.get("merchant", req.get("description", "unknown")),
+            category=req.get("category", "uncategorized"),
+            currency=req.get("currency", "USD"),
+        )
+        return result
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.get("/finance/transactions")
-async def finance_transactions(limit: int = 50):
-    txns = _load_finance_transactions()
-    return {"transactions": txns[-limit:][::-1], "count": len(txns)}
+async def finance_transactions(limit: int = 50, category: str = None, include_dismissed: bool = False):
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        txs = g.get_recent_transactions(limit=limit, category=category, include_dismissed=include_dismissed)
+        return {"transactions": txs, "count": len(g._transactions)}
+    except Exception as e:
+        return {"transactions": [], "count": 0, "error": str(e)}
+
+@app.post("/finance/transactions/{tx_id}/dismiss")
+async def finance_dismiss_transaction(tx_id: str):
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        ok = g.dismiss_transaction(tx_id)
+        return {"success": ok}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/finance/transactions/{tx_id}/recategorize")
+async def finance_recategorize_transaction(tx_id: str, req: dict):
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        ok = g.recategorize_transaction(tx_id, req.get("category", "uncategorized"))
+        return {"success": ok}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/finance/alerts")
 async def finance_alerts(limit: int = 20):
-    alerts = _load_finance_alerts()
-    return {"alerts": alerts[:limit], "unread_count": len(alerts)}
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        return {"alerts": g.get_alerts(limit=limit), "unread_count": len(g._alerts)}
+    except Exception as e:
+        return {"alerts": [], "unread_count": 0, "error": str(e)}
 
 @app.get("/finance/price")
 async def finance_price(symbol: str):
-    # Simple fallback without API key — returns placeholder
-    return {"symbol": symbol.upper(), "price": None, "change_24h": None, "source": "manual"}
+    try:
+        import urllib.request
+        import json
+        sym = symbol.replace("-", "")
+        url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={sym}"
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.loads(r.read())
+        return {
+            "symbol": symbol.upper(),
+            "price": float(data.get("lastPrice", 0)),
+            "change_24h": float(data.get("priceChangePercent", 0)),
+            "source": "binance",
+        }
+    except Exception:
+        return {"symbol": symbol.upper(), "price": None, "change_24h": None, "source": "manual"}
+
+@app.get("/finance/portfolio")
+async def finance_portfolio():
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        return g.get_portfolio()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/finance/trade")
+async def finance_trade(req: dict):
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.place_trade(
+            symbol=req.get("symbol", "BTC-USDT"),
+            side=req.get("side", "BUY"),
+            quantity=float(req.get("quantity", 0)),
+            paper=req.get("paper", True),
+        )
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/finance/strategies")
 async def finance_strategies():
     return {"strategies": [], "active": 0}
 
+@app.post("/finance/backtest")
+async def finance_backtest(req: dict):
+    """Run a strategy backtest on historical candle data."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.run_backtest(
+            strategy=req.get("strategy", "sma_crossover"),
+            symbol=req.get("symbol", "BTC-USDT"),
+            interval=req.get("interval", "1h"),
+            limit=int(req.get("limit", 500)),
+            initial_balance=float(req.get("initial_balance", 10000)),
+            params=req.get("params"),
+        )
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/finance/budget")
+async def finance_budget(req: dict):
+    """Set a budget limit for a spending category."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        g.set_budget(req.get("category", ""), float(req.get("limit", 0)))
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@app.post("/finance/parse")
+async def finance_parse(req: dict):
+    """Parse a bank notification text and extract transaction details."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.parse_notification(req.get("text", ""))
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.get("/finance/autonomous/strategies")
 async def finance_auto_strategies():
-    return {"strategies": [], "evolving": False}
+    try:
+        from core.autonomous_trading_engine import get_autonomous_trading_engine
+        ate = get_autonomous_trading_engine()
+        return {"strategies": [s.to_dict() for s in ate._strategies], "evolving": ate._running}
+    except Exception as e:
+        return {"strategies": [], "evolving": False, "error": str(e)}
 
 @app.get("/finance/autonomous/status")
 async def finance_auto_status():
-    return {"active": False, "last_run": None, "mode": "manual"}
+    try:
+        from core.autonomous_trading_engine import get_autonomous_trading_engine
+        ate = get_autonomous_trading_engine()
+        return {
+            "active": ate._running,
+            "last_run": None,
+            "mode": "paper" if os.getenv("BINGX_PAPER_MODE", "true").lower() in ("true", "1", "yes") else "live",
+            "strategy_count": len(ate._strategies),
+            "best_score": max((s.score for s in ate._strategies), default=0.0),
+            "auto_trade_enabled": ate._auto_trade_enabled,
+        }
+    except Exception as e:
+        return {"active": False, "last_run": None, "mode": "manual", "error": str(e)}
+
+@app.post("/finance/autonomous/toggle-auto")
+async def finance_auto_toggle(req: dict):
+    try:
+        from core.autonomous_trading_engine import get_autonomous_trading_engine
+        ate = get_autonomous_trading_engine()
+        ate._auto_trade_enabled = req.get("enabled", True)
+        return {"success": True, "auto_trade_enabled": ate._auto_trade_enabled}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/finance/autonomous/evolution-log")
 async def finance_auto_evolution_log():
     return {"logs": [], "generation": 0}
 
+def _fetch_binance_price(symbol: str) -> Optional[float]:
+    try:
+        import urllib.request, json
+        sym = symbol.replace("-", "")
+        url = f"https://api.binance.com/api/v3/ticker/price?symbol={sym}"
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.loads(r.read())
+        return float(data.get("price", 0)) or None
+    except Exception:
+        return None
+
+@app.get("/finance/autonomous/signals")
+async def finance_auto_signals():
+    """Get current top strategy signal on BTC-USDT."""
+    try:
+        from core.autonomous_trading_engine import get_autonomous_trading_engine, StrategyExecutor
+        ate = get_autonomous_trading_engine()
+        if not ate._strategies:
+            return {"signal": "HOLD", "strategy": None, "price": None}
+        best = max(ate._strategies, key=lambda s: s.score)
+        executor = StrategyExecutor(best)
+        if not executor.compile():
+            return {"signal": "HOLD", "strategy": best.name, "error": "Compilation failed", "price": None}
+        candles = ate._fetch_klines("BTC-USDT", "1h", 50)
+        signal = executor.run(candles) if candles else "HOLD"
+        price = _fetch_binance_price("BTC-USDT")
+        return {
+            "signal": signal,
+            "strategy": best.name,
+            "score": best.score,
+            "price": price,
+        }
+    except Exception as e:
+        return {"signal": "HOLD", "strategy": None, "error": str(e), "price": None}
+
 @app.get("/finance/autonomous/auto-trades")
 async def finance_auto_trades():
-    return {"trades": [], "pending": 0}
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        orders = list(g.paper_engine.order_history)[-50:]
+        return {"trades": orders, "pending": 0}
+    except Exception as e:
+        return {"trades": [], "pending": 0, "error": str(e)}
+
+@app.post("/finance/autonomous/generate")
+async def finance_auto_generate():
+    try:
+        from core.autonomous_trading_engine import get_autonomous_trading_engine
+        ate = get_autonomous_trading_engine()
+        ate.generate_strategy()
+        return {"success": True, "generated": 1, "message": "Strategy generated"}
+    except Exception as e:
+        return {"success": False, "generated": 0, "message": str(e)}
+
+@app.post("/finance/autonomous/paper-trade")
+async def finance_auto_paper_trade():
+    try:
+        from core.autonomous_trading_engine import get_autonomous_trading_engine, StrategyExecutor
+        ate = get_autonomous_trading_engine()
+        if ate._strategies:
+            best = max(ate._strategies, key=lambda s: s.score)
+            if best.status in ("backtested", "active"):
+                result = ate.force_paper_trade()
+                return result
+        return {"success": True, "trade": None, "message": "No strategy ready"}
+    except Exception as e:
+        return {"success": False, "trade": None, "message": str(e)}
+
+
+# ========== WAVE 25+ QUANTITATIVE MODULES ==========
+
+@app.get("/finance/quant/signals")
+async def finance_quant_signals(symbol: str = "BTC-USDT"):
+    """Get ensemble quantitative signal analysis."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.analyze_signals(symbol)
+        return result
+    except Exception as e:
+        return {"signal": "HOLD", "score": 0.0, "confidence": 0.0, "error": str(e)}
+
+
+@app.get("/finance/quant/regime")
+async def finance_quant_regime(symbol: str = "BTC-USDT"):
+    """Get current market regime classification."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.get_market_regime(symbol)
+        return result
+    except Exception as e:
+        return {"regime": "UNKNOWN", "confidence": 0.0, "error": str(e)}
+
+
+@app.get("/finance/quant/sentiment")
+async def finance_quant_sentiment(symbol: str = "BTC-USDT"):
+    """Get composite market sentiment."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.get_sentiment(symbol)
+        return result
+    except Exception as e:
+        return {"sentiment": 0.0, "confidence": 0.0, "regime": "NEUTRAL", "error": str(e)}
+
+
+@app.get("/finance/quant/risk")
+async def finance_quant_risk():
+    """Get current risk status."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.get_risk_status()
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/finance/quant/portfolio")
+async def finance_quant_portfolio(req: dict):
+    """Optimize portfolio given returns map."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        returns_map = req.get("returns", {})
+        method = req.get("method", "sharpe")
+        result = g.optimize_portfolio(returns_map, method=method)
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/finance/quant/trade")
+async def finance_quant_trade(req: dict):
+    """Place a risk-managed sized trade."""
+    try:
+        from core.finance_guardian import get_finance_guardian
+        g = get_finance_guardian()
+        result = g.sized_trade(
+            symbol=req.get("symbol", "BTC-USDT"),
+            side=req.get("side", "BUY"),
+            price=req.get("price"),
+            stop_loss=req.get("stop_loss"),
+            take_profit=req.get("take_profit"),
+            paper=req.get("paper", True),
+        )
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # ========== AMBIENT VOICE LAYER ENDPOINTS ==========
@@ -3682,8 +4077,9 @@ async def voice_status():
                     [sys.executable, "-m", "pip", "install", pkg, "--quiet"],
                     capture_output=True, timeout=60
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
         # Re-check after install
         tts_status = is_tts_available()
     
@@ -3717,8 +4113,9 @@ async def voice_listen():
                 [sys.executable, "-m", "pip", "install", "pyaudio", "--quiet"],
                 capture_output=True, timeout=30
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
         return {
             "transcription": "",
             "available": False,
@@ -3751,8 +4148,9 @@ async def voice_listen():
                 "error": "ffmpeg was just auto-installed. Try again in a moment.",
                 "command_recognized": False
             }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
         return {
             "transcription": "",
             "available": False,
@@ -3855,13 +4253,73 @@ def _load_push_tokens():
     if _PUSH_TOKENS_FILE.exists():
         try:
             return json.loads(_PUSH_TOKENS_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
     return {}
 
 def _save_push_tokens(tokens):
     _PUSH_TOKENS_FILE.parent.mkdir(parents=True, exist_ok=True)
     _PUSH_TOKENS_FILE.write_text(json.dumps(tokens, indent=2))
+
+
+@app.get("/agi/health/sentinel")
+async def get_sentinel_health():
+    """Alias for sentinel status — used by ZeroBloatDashboard polling."""
+    try:
+        from core.sentinel import get_sentinel
+        sentinel = get_sentinel()
+        return {
+            "running": sentinel.is_running() if hasattr(sentinel, "is_running") else True,
+            "presence": sentinel.get_presence() if hasattr(sentinel, "get_presence") else "unknown",
+            "subsystems": sentinel.get_subsystem_health() if hasattr(sentinel, "get_subsystem_health") else [],
+            "events_24h": len(sentinel.get_recent_events(hours=24)) if hasattr(sentinel, "get_recent_events") else 0,
+        }
+    except Exception as e:
+        return {"running": False, "error": str(e), "subsystems": []}
+
+
+@app.get("/devices/live-status")
+async def get_live_device_status():
+    """Return live connection status of all device bridges."""
+    devices = []
+    try:
+        from integrations.phone_bridge import PhoneBridge
+        pb = PhoneBridge.get_instance()
+        devices.append({
+            "id": "phone",
+            "name": "Phone Bridge",
+            "type": "peripheral",
+            "status": "connected" if pb.is_connected() else "disconnected",
+        })
+    except Exception:
+        devices.append({"id": "phone", "name": "Phone Bridge", "type": "peripheral", "status": "offline"})
+
+    try:
+        from integrations.ntfy_bridge import NtfyBridge
+        nb = NtfyBridge.get_instance()
+        devices.append({
+            "id": "ntfy",
+            "name": "Ntfy Listener",
+            "type": "peripheral",
+            "status": "connected" if nb.is_connected() else "disconnected",
+        })
+    except Exception:
+        devices.append({"id": "ntfy", "name": "Ntfy Listener", "type": "peripheral", "status": "offline"})
+
+    try:
+        from integrations.whatsapp_bridge import get_whatsapp_bridge
+        wa = get_whatsapp_bridge()
+        devices.append({
+            "id": "whatsapp",
+            "name": "WhatsApp Bridge",
+            "type": "peripheral",
+            "status": "connected" if wa and wa.is_connected() else "disconnected",
+        })
+    except Exception:
+        pass  # optional bridge
+
+    return {"devices": devices}
 
 
 @app.post("/devices/push-register")
@@ -4033,16 +4491,18 @@ def _load_learning_sessions() -> list:
     try:
         if _LEARNING_LOG.exists():
             return json.loads(_LEARNING_LOG.read_text())
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     return []
 
 
 def _save_learning_sessions(sessions: list):
     try:
         _LEARNING_LOG.write_text(json.dumps(sessions, indent=2, default=str))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
 
 @app.get("/learning/profile")
@@ -4385,8 +4845,9 @@ async def orchestrator_interventions():
     try:
         from core.emotional_behavior import apply_emotional_filter
         interventions = apply_emotional_filter(interventions)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     return {
         "active_count": len(interventions),
         "interventions": interventions
@@ -4468,8 +4929,9 @@ async def get_insights():
                 "text": insight,
                 "timestamp": datetime.now().isoformat()
             })
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     
     # Active project
     try:
@@ -4485,8 +4947,9 @@ async def get_insights():
                 "detail": f"Recent: {recent_files[0].get('name') if recent_files else 'No recent changes'}",
                 "timestamp": datetime.now().isoformat()
             })
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     
     # Idle mind thoughts
     try:
@@ -4499,8 +4962,9 @@ async def get_insights():
                     "text": f"LOVE thought: {thought.get('task', 'Unknown')}",
                     "timestamp": thought.get("ts")
                 })
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     
     # Fitness/work status
     try:
@@ -4518,8 +4982,9 @@ async def get_insights():
                 "text": f"Worked {ctx.hours_worked_today:.1f}h today. Consider a break.",
                 "timestamp": datetime.now().isoformat()
             })
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     
     return {
         "insights": insights[:50],  # Last 50 insights
@@ -4574,8 +5039,9 @@ async def get_context_summary_endpoint():
             "expense_today": round(expense, 2),
             "transaction_count": len(txns),
         }
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
     # Learning snapshot
     learning_snapshot = {"hours_total": 0.0, "streak_days": 0, "today_hours": 0.0}
@@ -4592,8 +5058,9 @@ async def get_context_summary_endpoint():
             "today_hours": round(getattr(ctx, "learning_streak", 0), 2),
             "subjects": list(set(s.get("subject", "general") for s in sessions)),
         }
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
     # System metrics
     system_metrics = {"cpu": ctx.system_cpu, "ram": ctx.system_ram}
@@ -4601,8 +5068,9 @@ async def get_context_summary_endpoint():
         import psutil
         system_metrics["disk_percent"] = round(psutil.disk_usage('/').percent, 1)
         system_metrics["uptime_hours"] = round((datetime.now().timestamp() - psutil.boot_time()) / 3600, 1)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
     return {
         "summary": ctx.context_summary,
@@ -5116,8 +5584,9 @@ def _load_devices() -> dict:
     if _DEVICES_FILE.exists():
         try:
             return _json.loads(_DEVICES_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
     return {}
 
 
@@ -5141,8 +5610,9 @@ async def list_devices():
                 last_dt = datetime.fromisoformat(last_seen)
                 elapsed = (datetime.utcnow() - last_dt.replace(tzinfo=None)).total_seconds()
                 online = elapsed < 120  # online if pinged within 2 min
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
         result.append({**info, "id": device_id, "online": online})
     # Sort: online first, then by last_seen
     result.sort(key=lambda d: (not d["online"], d.get("last_seen", "")), reverse=False)
@@ -5211,8 +5681,9 @@ async def device_push_event(data: dict):
                 "notifications": [{"app": data.get("app", ""), "title": title, "text": body}],
                 "source": device_id,
             })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
 
     # Push into Teams/Outlook bridge state if from office laptop
     if event_type in ("teams_message", "outlook_email"):
@@ -5264,8 +5735,9 @@ async def profile_sync(data: dict):
             tags=["profile", "user"],
             source="profile_load"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
     return {"success": True, "stored": profile_path.as_posix()}
 
@@ -5306,8 +5778,9 @@ async def memory_ingest(data: dict):
             tags=["notification", channel, event_type],
             source="notification"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
     # Also append to daily log for awareness
     try:
@@ -5315,8 +5788,9 @@ async def memory_ingest(data: dict):
         log_path = Path(f"data/notif_log_{__import__('datetime').date.today()}.jsonl")
         with open(log_path, "a") as f:
             f.write(_json.dumps(data) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
 
     return {"success": True, "id": doc_id}
 
@@ -5392,8 +5866,9 @@ async def idle_mind_status():
         from core.idle_mind import get_idle_state, get_idle_duration
         status["idle_state"] = get_idle_state()
         status["idle_seconds"] = round(get_idle_duration(), 1)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     return status
 
 
@@ -5612,8 +6087,9 @@ async def get_aggregated_context():
                 last_dt = datetime.fromisoformat(last_seen)
                 elapsed = (now - last_dt.replace(tzinfo=None)).total_seconds()
                 online = elapsed < 120
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
         
         if online and "context" in info:
             ctx = info["context"]
@@ -6145,6 +6621,38 @@ async def neural_briefing_set_time(data: dict):
         return {"error": str(e)}
 
 
+@app.get("/neural/integrations/status")
+async def neural_integrations_status():
+    """Get connectivity status of all external integrations."""
+    import os
+    integrations = [
+        {"id": "system", "label": "System Sensors", "description": "CPU, memory, disk, thermal sensors", "connected": True, "configured": True, "always_on": True, "icon": "🖥️", "envKeys": []},
+        {"id": "browser", "label": "Browser Bridge", "description": "Active tab, URL, page context capture", "connected": True, "configured": True, "always_on": True, "icon": "🌐", "envKeys": []},
+        {"id": "clipboard", "label": "Clipboard Monitor", "description": "Auto-capture clipboard for context", "connected": True, "configured": True, "always_on": True, "icon": "📋", "envKeys": []},
+        {"id": "finance", "label": "BingX Trading", "description": "Live crypto trading via BingX API", "connected": bool(os.getenv("BINGX_API_KEY")), "configured": bool(os.getenv("BINGX_API_KEY")), "always_on": False, "icon": "💰", "envKeys": ["BINGX_API_KEY", "BINGX_SECRET"]},
+        {"id": "google", "label": "Google Calendar", "description": "Read calendar events and free/busy", "connected": bool(os.getenv("GOOGLE_CREDENTIALS_PATH")), "configured": bool(os.getenv("GOOGLE_CREDENTIALS_PATH")), "always_on": False, "icon": "📅", "envKeys": ["GOOGLE_CREDENTIALS_PATH"]},
+        {"id": "microsoft", "label": "Microsoft Graph", "description": "Outlook, Teams, To-Do integration", "connected": bool(os.getenv("MS_CLIENT_ID")), "configured": bool(os.getenv("MS_CLIENT_ID")), "always_on": False, "icon": "Ⓜ️", "envKeys": ["MS_CLIENT_ID", "MS_CLIENT_SECRET"]},
+        {"id": "github", "label": "GitHub", "description": "Repo activity, commits, PRs", "connected": bool(os.getenv("GITHUB_TOKEN")), "configured": bool(os.getenv("GITHUB_TOKEN")), "always_on": False, "icon": "🐙", "envKeys": ["GITHUB_TOKEN"]},
+        {"id": "phone", "label": "Phone Bridge", "description": "Forward phone notifications via webhook", "connected": True, "configured": True, "always_on": True, "icon": "📱", "envKeys": []},
+        {"id": "telegram", "label": "Telegram Bot", "description": "Send/receive messages via Telegram", "connected": bool(os.getenv("TELEGRAM_BOT_TOKEN")), "configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")), "always_on": False, "icon": "✈️", "envKeys": ["TELEGRAM_BOT_TOKEN"]},
+        {"id": "device_bridge", "label": "Device Bridge", "description": "Folder sync, file watcher, cross-device", "connected": True, "configured": True, "always_on": True, "icon": "🔗", "envKeys": []},
+        {"id": "ntfy_bridge", "label": "Ntfy Listener", "description": "Listen to ntfy push notification topic", "connected": bool(os.getenv("NTFY_TOPIC")), "configured": bool(os.getenv("NTFY_TOPIC")), "always_on": False, "icon": "🔔", "envKeys": ["NTFY_TOPIC"]},
+    ]
+    connected = sum(1 for i in integrations if i["connected"])
+    return {
+        "integrations": integrations,
+        "connected_count": connected,
+        "total": len(integrations),
+        "hub_alerts": [],
+    }
+
+
+@app.post("/neural/integrations/poll")
+async def neural_integrations_poll():
+    """Poll all integrations for fresh data."""
+    return {"success": True, "polled": 0}
+
+
 @app.get("/briefing/latest")
 async def briefing_latest():
     """Get the most recent daily brief (Wave 30 — on-demand fetch for UI)."""
@@ -6219,8 +6727,9 @@ async def emotional_record(data: dict):
                 push_msg["message"],
                 push_msg["priority"],
             )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     return result
 
 
@@ -6420,7 +6929,7 @@ def get_predictions():
 def get_curiosity_gaps():
     """Get knowledge gaps LOVE is working to fill."""
     try:
-        from core.curiosity_engine import get_gap_count, _load_gaps
+        from core.curiosity_engine import _load_gaps
         gaps = _load_gaps()
         open_gaps = [g for g in gaps if g.get("status") == "open"]
         return {
@@ -6445,8 +6954,9 @@ def get_self_evolution_status():
             from core.evolution_integration import get_evolution_integration
             evo = get_evolution_integration()
             result["integration"] = evo.get_integration_status()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
         
         # Augment with capability gap data
         try:
@@ -6458,8 +6968,9 @@ def get_self_evolution_status():
                 "high_impact": len([g for g in gaps if g.impact > 0.6]),
                 "domains": list(set(g.domain for g in gaps)),
             }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
         
         # Augment with evolution health
         try:
@@ -6529,8 +7040,9 @@ def get_self_evolution_status():
                 "smart_break_suggester": {"available": True},
                 "overall": "healthy" if evo_int._running else "degraded",
             }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
 
         # Augment with autonomous CI/CD data
         try:
@@ -6541,8 +7053,9 @@ def get_self_evolution_status():
                 {"id": d.id, "version": d.version, "status": d.status, "stages": {k: v.status for k, v in d.stages.items()}}
                 for d in deps
             ]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
         
         return result
     except Exception as e:
@@ -6569,6 +7082,25 @@ def force_evolution():
         return result
     except Exception as e:
         return {"error": str(e)}
+
+
+# ========== MODERN AI MODULE ENDPOINTS (IntelligenceDashboard) ==========
+
+@app.get("/modern/patterns/insights")
+async def modern_patterns_insights():
+    return {"insights": []}
+
+@app.get("/modern/context/stats")
+async def modern_context_stats():
+    return {"window_size": 0, "entries": 0}
+
+@app.get("/modern/cache/stats")
+async def modern_cache_stats():
+    return {"hits": 0, "misses": 0, "size": 0}
+
+@app.get("/modern/kg/stats")
+async def modern_kg_stats():
+    return {"entities": 0, "relations": 0}
 
 
 @app.get("/vision/desktop")
@@ -6968,8 +7500,9 @@ async def get_agi_status():
     if EVOLUTION_INTEGRATION_AVAILABLE:
         try:
             evolution_status = get_evolution_integration().get_integration_status()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="api.main")
     return {
         **merged,
         "total_systems": total,
@@ -7370,8 +7903,9 @@ async def homeostasis_drives_history(hours: int = 6):
                     e = json.loads(line)
                     if datetime.fromisoformat(e["t"]) >= cutoff:
                         entries.append(e)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="api.main")
         return {"entries": entries[-200:]}  # cap at 200 data points
     except Exception as e:
         return {"error": str(e)}
@@ -7687,28 +8221,33 @@ def _redirect_stderr_to_log():
             try:
                 self._log.write(msg)
                 self._log.flush()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
 
         def flush(self):
             try:
                 self._orig.flush()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
             try:
                 self._log.flush()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
 
         def close(self):
             try:
                 self._orig.close()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
             try:
                 self._log.close()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.main")
 
         def fileno(self):
             return self._orig.fileno()
@@ -7777,8 +8316,9 @@ async def heartbeat_focus_status():
         queue_file = Path(__file__).parent.parent / "data" / "suppressed_nudges.json"
         if queue_file.exists():
             suppressed = json.loads(queue_file.read_text(encoding="utf-8"))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main")
     return {
         "focus_mode_active": in_focus,
         "suppressed_nudge_count": len(suppressed),

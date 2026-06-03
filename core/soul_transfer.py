@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 import threading
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 TRANSFER_DIR = DATA_DIR / "soul_transfers"
@@ -189,8 +190,9 @@ class SoulTransferProtocol:
                 f"Soul exported. {files_included} files, {total_size / 1024:.0f}KB. "
                 f"Archive: {archive_name}"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.soul_transfer")
 
         package = SoulPackage(
             soul_id=identity_data.get("soul_id", "unknown"),
@@ -332,8 +334,9 @@ class SoulTransferProtocol:
                 with open(meta_file, 'r') as f:
                     data = json.load(f)
                 exports.append(data)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.soul_transfer")
         exports.sort(key=lambda x: x.get("export_timestamp", ""), reverse=True)
         return exports
 

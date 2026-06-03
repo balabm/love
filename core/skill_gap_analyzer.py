@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "skill_gap_analyzer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -354,8 +355,9 @@ class SkillGapAnalyzer:
                 } for k, v in self._targets.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.skill_gap_analyzer")
 
     def _load_stats(self):
         try:
@@ -366,8 +368,9 @@ class SkillGapAnalyzer:
                     self._skills[k] = Skill(**v)
                 for k, v in data.get("targets", {}).items():
                     self._targets[k] = SkillTarget(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.skill_gap_analyzer")
 
     def _log_skill(self, skill: Skill):
         try:
@@ -380,8 +383,9 @@ class SkillGapAnalyzer:
                     "last_used": skill.last_used,
                     "learning_hours": skill.learning_hours,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.skill_gap_analyzer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

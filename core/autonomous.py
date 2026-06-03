@@ -22,6 +22,7 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 INITIATIVE_LOG = DATA_DIR / "autonomous_initiatives.jsonl"
@@ -36,8 +37,9 @@ def _log_initiative(initiative: Dict[str, Any]):
     try:
         with open(INITIATIVE_LOG, "a") as f:
             f.write(json.dumps(initiative) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous")
 
 
 def get_relationship_state() -> Dict[str, Any]:
@@ -45,8 +47,9 @@ def get_relationship_state() -> Dict[str, Any]:
     try:
         if RELATIONSHIP_STATE.exists():
             return json.loads(RELATIONSHIP_STATE.read_text())
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous")
     return {
         "last_interaction": None,
         "last_initiative": None,
@@ -70,8 +73,9 @@ def update_relationship_state(response_quality: str):
     
     try:
         RELATIONSHIP_STATE.write_text(json.dumps(state, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous")
 
 
 def should_take_initiative() -> bool:
@@ -290,8 +294,9 @@ def record_interaction():
     state["last_interaction"] = datetime.now().isoformat()
     try:
         RELATIONSHIP_STATE.write_text(json.dumps(state, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous")
 
 
 def get_pending_initiatives() -> List[Dict[str, Any]]:

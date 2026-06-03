@@ -20,6 +20,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
+from core.execution_guard import log_error
 
 SEEN_FILE = Path(__file__).parent.parent / "data" / "life_nudge_seen.json"
 INTERVAL_SECONDS = 30 * 60   # every 30 minutes
@@ -50,8 +51,9 @@ def _load_seen() -> dict:
     if SEEN_FILE.exists():
         try:
             return json.loads(SEEN_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.life_nudge_scheduler")
     return {}
 
 

@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import asyncio
+from core.execution_guard import log_error
 
 app = FastAPI()
 app.add_middleware(
@@ -81,8 +82,9 @@ async def ws_endpoint(websocket: WebSocket):
     try:
         while True:
             await asyncio.sleep(30)
-    except WebSocketDisconnect:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.minimal_main")
 
 @app.get("/evolution/experiments")
 def experiments():

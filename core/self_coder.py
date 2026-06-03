@@ -22,6 +22,7 @@ import hashlib
 import importlib
 import json
 import py_compile
+import re
 import shutil
 import subprocess
 import sys
@@ -37,6 +38,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm, get_coding_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "self_coder"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,7 +297,89 @@ Suggest 3-5 specific improvements (performance, readability, maintainability).""
             print(f"[SelfCoder] File analysis error: {e}")
             return CodeAnalysis(file_path=file_path)
 
+    # ── Targeted Prompt Extraction ──────────────────────────────────────────────
+
+    def _extract_target_context(self, file_path: str, hypothesis: str) -> Tuple[str, Optional[int], Optional[int]]:
+        """Extract the most relevant code block for the hypothesis to keep prompts small."""
+        path = Path(file_path)
+        code = path.read_text()
+        lines = code.splitlines()
+
+        try:
+            tree = ast.parse(code)
+        except SyntaxError:
+            return code, None, None
+
+        # Collect top-level function/class names with line ranges
+        targets = []
+        for node in ast.iter_child_nodes(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                name = node.name.lower()
+                start = node.lineno - 1  # 0-based
+                end = node.end_lineno    # 1-based exclusive
+                targets.append((name, start, end))
+
+        # Match hypothesis against target names
+        hypothesis_lower = hypothesis.lower()
+        best_match = None
+        best_score = 0
+        for name, start, end in targets:
+            if name in hypothesis_lower:
+                score = 10
+            else:
+                hyp_words = set(hypothesis_lower.replace('_', ' ').split())
+                name_words = set(name.replace('_', ' ').split())
+                score = len(hyp_words & name_words)
+            if score > best_score:
+                best_score = score
+                best_match = (name, start, end)
+
+        if best_match and best_score > 0:
+            name, start, end = best_match
+            block_lines = lines[start:end]
+            # Prepend imports if the block is not at the top
+            if start > 0:
+                import_lines = [line for line in lines[:start]
+                                if line.strip().startswith(('import ', 'from '))]
+                if import_lines:
+                    block_lines = import_lines + ['# ...'] + block_lines
+            return '\n'.join(block_lines), start, end
+
+        # Fallback: truncated file for very large files
+        if len(lines) > 300:
+            head = lines[:200]
+            tail = lines[-50:]
+            truncated = head + [f'# ... {len(lines) - 250} lines truncated ...'] + tail
+            return '\n'.join(truncated), None, None
+
+        return code, None, None
+
     # ── Code Generation ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _clean_llm_response(raw: str) -> str:
+        """Aggressively clean LLM output to extract valid Python code."""
+        code = raw.strip()
+        if "```python" in code:
+            code = code.split("```python")[1].split("```")[0].strip()
+        elif "```" in code:
+            parts = code.split("```")
+            if len(parts) >= 2:
+                code = parts[1].strip()
+        code = re.sub(r"\[thinking\].*?\[/thinking\]", "", code, flags=re.DOTALL)
+        lines = code.splitlines()
+        if lines and re.match(r"^\d+\.\s+", lines[0]):
+            lines = [re.sub(r"^\d+\.\s+", "", line) for line in lines]
+            code = "\n".join(lines)
+        first_py_line = None
+        for i, line in enumerate(code.splitlines()):
+            stripped = line.strip()
+            if stripped.startswith(("import ", "from ", "def ", "class ", "# ", "@", "if ", "for ", "while ", "with ", "try:")) or (stripped and not stripped.startswith(("Here", "The ", "This ", "Note", "Sure", "Okay"))):
+                first_py_line = i
+                break
+        if first_py_line is not None and first_py_line > 0:
+            code = "\n".join(code.splitlines()[first_py_line:])
+        return code.strip()
 
     def generate_modification(self, hypothesis: str, file_path: str, improvement_type: str = "enhancement") -> Optional[CodeModification]:
         """Generate a code modification based on a hypothesis."""
@@ -306,6 +390,9 @@ Suggest 3-5 specific improvements (performance, readability, maintainability).""
                 return None
 
             original_code = path.read_text()
+
+            # Extract only the relevant block to keep prompts small
+            context_code, ctx_start, ctx_end = self._extract_target_context(file_path, hypothesis)
 
             # Use coding LLM to generate modification
             llm = get_coding_llm()
@@ -318,20 +405,44 @@ Improvement type: {improvement_type}
 
 Current code:
 ```python
-{original_code}
-```
-
-Generate the modified code that addresses the hypothesis.
-Return ONLY the complete modified code, no explanations.
+{context_code}
+```"""
+            if ctx_start is not None:
+                prompt += f"""
+This is a section from lines {ctx_start + 1} to {ctx_end} of the file.
+Return ONLY the modified version of this section. Do not include markdown fences.
+Ensure it is valid Python and can be spliced back into the original file."""
+            else:
+                prompt += """
+Return ONLY the complete modified file, no explanations.
 Ensure the modification is safe and maintains existing functionality."""
 
             modified_code = llm.invoke(prompt)
 
-            # Clean up the response (remove markdown if present)
-            if "```python" in modified_code:
-                modified_code = modified_code.split("```python")[1].split("```")[0].strip()
-            elif "```" in modified_code:
-                modified_code = modified_code.split("```")[1].split("```")[0].strip()
+            # Skip if circuit breaker returned early
+            if modified_code.startswith("[Ollama") or modified_code.startswith("[LLM"):
+                print(f"[SelfCoder] Skipped generation: {modified_code[:80]}")
+                return None
+
+            modified_code = self._clean_llm_response(modified_code)
+
+            # If we extracted a block, splice it back into the original file
+            if ctx_start is not None:
+                try:
+                    ast.parse(modified_code)  # quick validation
+                    original_lines = original_code.splitlines()
+                    block_lines = modified_code.splitlines()
+                    new_lines = original_lines[:ctx_start] + block_lines + original_lines[ctx_end:]
+                    modified_code = '\n'.join(new_lines)
+                except SyntaxError as se:
+                    print(f"[SelfCoder] Spliced block failed syntax check: {se}. Using raw response.")
+
+            # Final syntax check on the full modified code
+            try:
+                ast.parse(modified_code)
+            except SyntaxError as se:
+                print(f"[SelfCoder] Generated code has syntax error: {se}")
+                return None
 
             # Check safety
             is_safe, warnings = self.check_safety(modified_code, file_path)
@@ -341,7 +452,7 @@ Ensure the modification is safe and maintains existing functionality."""
 
             # Create modification object
             modification = CodeModification(
-                hypothesis_id=hypothesis[:20],  # Simplified
+                hypothesis_id=hypothesis[:20],
                 file_path=file_path,
                 original_code=original_code,
                 modified_code=modified_code,
@@ -379,21 +490,29 @@ Ensure the modification is safe and maintains existing functionality."""
             # Write modified code to sandbox
             sandbox_file.write_text(modification.modified_code)
 
-            # Try to import/parse the modified code
+            # py_compile is stricter than ast.parse
             try:
-                with open(sandbox_file, 'r') as f:
-                    code = f.read()
-                ast.parse(code)
-
-                modification.test_status = "passed"
-                self._save_modifications()
-                return True
-
-            except SyntaxError as e:
+                py_compile.compile(str(sandbox_file), doraise=True)
+            except py_compile.PyCompileError as pce:
                 modification.test_status = "failed"
-                modification.description += f" | Syntax error: {str(e)}"
+                modification.description += f" | Compile error: {str(pce)}"
                 self._save_modifications()
                 return False
+
+            # Also parse with AST
+            with open(sandbox_file, 'r') as f:
+                code = f.read()
+            ast.parse(code)
+
+            modification.test_status = "passed"
+            self._save_modifications()
+            return True
+
+        except SyntaxError as e:
+            modification.test_status = "failed"
+            modification.description += f" | Syntax error: {str(e)}"
+            self._save_modifications()
+            return False
 
         except Exception as e:
             modification.test_status = "failed"
@@ -437,15 +556,18 @@ Ensure the modification is safe and maintains existing functionality."""
                 if not self._smoke_test(modification.file_path):
                     print(f"[SelfCoder] Smoke test failed, rolling back")
                     self.rollback_modification(modification_id)
+                    self._record_outcome(modification_id, "subprocess_failed", "Smoke test failed after apply")
                     return False
 
             # Attempt hot-reload so the running process picks up the changes immediately
             reload_result = self.hot_reload_modification(modification_id)
             if reload_result["status"] not in ("ok", "module_not_loaded"):
                 print(f"[SelfCoder] Hot-reload did not succeed: {reload_result['status']} — {reload_result.get('detail', '')}")
+                self._record_outcome(modification_id, "bug", f"Hot-reload failed: {reload_result['status']}")
                 # Not fatal — the file is already written; just warn.
             else:
                 print(f"[SelfCoder] Hot-reload result: {reload_result['status']}")
+                self._record_outcome(modification_id, "success", f"Hot-reload: {reload_result['status']}")
 
             return True
 
@@ -477,6 +599,7 @@ Ensure the modification is safe and maintains existing functionality."""
 
             modification.approval_status = "rolled_back"
             self._save_modifications()
+            self._record_outcome(modification_id, "rollback", "Manual or automatic rollback")
 
             print(f"[SelfCoder] Rolled back modification {modification_id}")
             return True
@@ -591,6 +714,7 @@ Ensure the modification is safe and maintains existing functionality."""
                 detail = str(pce)
                 result = {**base_event, "status": "compile_error", "detail": detail}
                 self._log_hot_reload_event(result)
+                self._record_outcome(modification_id, "compile_error", detail)
                 print(f"[SelfCoder] hot_reload compile error: {detail}")
                 return result
 
@@ -617,6 +741,7 @@ Ensure the modification is safe and maintains existing functionality."""
                 detail = proc.stderr.strip() or proc.stdout.strip() or "exit code non-zero"
                 result = {**base_event, "status": "subprocess_failed", "detail": detail}
                 self._log_hot_reload_event(result)
+                self._record_outcome(modification_id, "subprocess_failed", detail)
                 print(f"[SelfCoder] hot_reload subprocess probe failed:\n{detail}")
                 return result
 
@@ -650,8 +775,9 @@ Ensure the modification is safe and maintains existing functionality."""
                             importlib.invalidate_caches()
                             try:
                                 importlib.reload(sys.modules[module_name])
-                            except Exception:
-                                pass  # best-effort re-load of old code
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="core.self_coder")
                     except Exception as rb_exc:
                         tb += f"\n[rollback also failed: {rb_exc}]"
 
@@ -673,8 +799,9 @@ Ensure the modification is safe and maintains existing functionality."""
                 # Remove any compiled .pyc sibling tempfile left by py_compile
                 pyc = Path(tmp_path_str + "c")
                 pyc.unlink(missing_ok=True)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.self_coder")
 
     # ── Persistence ─────────────────────────────────────────────────────────────
 
@@ -704,6 +831,66 @@ Ensure the modification is safe and maintains existing functionality."""
                 f.write(json.dumps(asdict(modification)) + "\n")
         except Exception as e:
             print(f"[SelfCoder] Modification log error: {e}")
+
+    # ── Teleological Feedback (Prompt DNA) ─────────────────────────────────────
+
+    def _record_outcome(self, modification_id: str, outcome: str, detail: str = ""):
+        """
+        Record the outcome of a self-modification into prompt DNA.
+        Tracks: success, bug, rollback, compile_error, subprocess_failed.
+        Used to bias future code generation away from failing patterns.
+        """
+        dna_file = DATA_DIR / "prompt_dna.json"
+        try:
+            dna = json.loads(dna_file.read_text()) if dna_file.exists() else {"weights": {}, "history": []}
+        except Exception:
+            dna = {"weights": {}, "history": []}
+
+        mod = self._modifications.get(modification_id)
+        mod_type = mod.modification_type if mod else "unknown"
+
+        entry = {
+            "modification_id": modification_id,
+            "outcome": outcome,  # success, bug, rollback, compile_error, subprocess_failed
+            "modification_type": mod_type,
+            "detail": detail,
+            "timestamp": datetime.now().isoformat(),
+        }
+        dna["history"].append(entry)
+        dna["history"] = dna["history"][-500:]  # Keep last 500
+
+        # Update weights: penalize failing patterns, reward successes
+        weight = dna["weights"].get(mod_type, 0.0)
+        if outcome == "success":
+            weight = min(1.0, weight + 0.05)
+        elif outcome in ("bug", "rollback"):
+            weight = max(-1.0, weight - 0.15)
+        elif outcome in ("compile_error", "subprocess_failed"):
+            weight = max(-1.0, weight - 0.10)
+        dna["weights"][mod_type] = round(weight, 3)
+
+        try:
+            dna_file.write_text(json.dumps(dna, indent=2))
+        except Exception as e:
+            log_error(e, module="core.self_coder", context={"action": "record_outcome"})
+
+    def get_prompt_dna_weights(self) -> Dict[str, float]:
+        """Return current prompt DNA weights for biasing generation."""
+        dna_file = DATA_DIR / "prompt_dna.json"
+        try:
+            dna = json.loads(dna_file.read_text()) if dna_file.exists() else {}
+            return dna.get("weights", {})
+        except Exception:
+            return {}
+
+    def should_attempt_modification_type(self, mod_type: str) -> bool:
+        """Check if a modification type has a strongly negative DNA weight."""
+        weights = self.get_prompt_dna_weights()
+        w = weights.get(mod_type, 0.0)
+        if w < -0.5:
+            print(f"[SelfCoder] Prompt DNA suppresses '{mod_type}' (weight={w})")
+            return False
+        return True
 
     # ── Swarm Validation ─────────────────────────────────────────────────────────
 
@@ -848,8 +1035,9 @@ Ensure the modification is safe and maintains existing functionality."""
                         from core.master_orchestrator import get_orchestration_master
                         om = get_orchestration_master()
                         om._narrate("self_coder", f"Generated {modifications_generated} code modification(s)", "action")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.self_coder")
 
             except Exception as e:
                 print(f"[SelfCoder] Loop error: {e}")

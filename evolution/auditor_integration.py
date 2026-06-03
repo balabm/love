@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from pathlib import Path
 import json
+from core.execution_guard import log_error
 
 # Configure logging
 logging.basicConfig(
@@ -467,8 +468,9 @@ def setup_full_integration() -> bool:
             sentinel = get_sentinel()
             if integration.integrate_with_sentinel(sentinel):
                 success_count += 1
-        except:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="evolution.auditor_integration")
         
         # Auto-register modules
         registered_modules = integration.auto_register_modules()

@@ -26,6 +26,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from collections import defaultdict
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PREDICTIONS_FILE = DATA_DIR / "predictions.json"
@@ -38,22 +39,34 @@ def _load(path: Path, default: Any = None) -> Any:
     if path.exists():
         try:
             return json.loads(path.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.prediction_market")
     return default if default is not None else {}
 
 
 def _save(path: Path, data: Any):
     try:
         path.write_text(json.dumps(data, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.prediction_market")
+
+
+def _load_predictions() -> Dict[str, Any]:
+    """Load predictions file, defensively fixing corrupted structure."""
+    preds = _load(PREDICTIONS_FILE, {"predictions": []})
+    if not isinstance(preds, dict):
+        return {"predictions": []}
+    if not isinstance(preds.get("predictions"), list):
+        preds["predictions"] = []
+    return preds
 
 
 def make_prediction(what: str, confidence: float, basis: str,
                     resolution_time: str, criteria: str) -> Dict[str, Any]:
     """LOVE makes a prediction and tracks it."""
-    preds = _load(PREDICTIONS_FILE, {"predictions": []})
+    preds = _load_predictions()
 
     pred = {
         "id": f"pred_{int(time.time() * 1000)}",
@@ -75,7 +88,7 @@ def make_prediction(what: str, confidence: float, basis: str,
 
 def resolve_prediction(pred_id: str, outcome: str, actual_happened: bool):
     """Mark a prediction as resolved and calculate accuracy."""
-    preds = _load(PREDICTIONS_FILE, {"predictions": []})
+    preds = _load_predictions()
 
     for p in preds["predictions"]:
         if p["id"] == pred_id:
@@ -117,25 +130,35 @@ def _update_accuracy_history(prediction_type: str, accuracy: float):
 def get_accuracy_report() -> Dict[str, Any]:
     """How good is LOVE at predicting?"""
     acc = _load(ACCURACY_FILE, {})
+    report = {
+        "total_resolved": 0,
+        "correct": 0,
+        "accuracy_rate": 0.0,
+    }
     if not acc:
-        return {"message": "Not enough predictions yet. Still learning."}
+        return report
 
-    report = {}
+    valid = {}
     for pred_type, data in acc.items():
+        if not isinstance(data, dict):
+            continue
+        valid[pred_type] = data
         report[pred_type] = {
             "avg_accuracy": round(data.get("avg_accuracy", 0), 2),
-            "count": data["count"],
-            "trend": "improving" if len(data["scores"]) >= 3 and data["scores"][-1] > data["scores"][0] else "stable",
+            "count": data.get("count", 0),
+            "trend": "improving" if len(data.get("scores", [])) >= 3 and data["scores"][-1] > data["scores"][0] else "stable",
         }
 
-    overall = sum(d["avg_accuracy"] for d in acc.values()) / len(acc)
-    report["overall_accuracy"] = round(overall, 2)
+    if valid:
+        overall = sum(d.get("avg_accuracy", 0) for d in valid.values()) / len(valid)
+        report["accuracy_rate"] = round(overall, 2)
+        report["total_resolved"] = sum(d.get("count", 0) for d in valid.values())
     return report
 
 
 def get_active_predictions() -> List[Dict[str, Any]]:
-    preds = _load(PREDICTIONS_FILE, {"predictions": []})
-    return [p for p in preds.get("predictions", []) if p.get("status") == "active"]
+    preds = _load_predictions()
+    return [p for p in preds.get("predictions", []) if isinstance(p, dict) and p.get("status") == "active"]
 
 
 def get_prediction_for_prompt() -> str:
@@ -157,7 +180,7 @@ def get_prediction_for_prompt() -> str:
 
 def auto_resolve_expired():
     """Mark expired predictions. Called periodically."""
-    preds = _load(PREDICTIONS_FILE, {"predictions": []})
+    preds = _load_predictions()
     now = datetime.now()
 
     for p in preds.get("predictions", []):
@@ -169,10 +192,54 @@ def auto_resolve_expired():
                 p["status"] = "expired"
                 p["outcome"] = "unknown — no data"
                 p["accuracy"] = None
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.prediction_market")
 
     _save(PREDICTIONS_FILE, preds)
+
+
+def auto_resolve_from_snapshot(stress: float, energy: float, work_hours: float):
+    """Resolve active predictions against current biometrics for accuracy tracking."""
+    preds = _load_predictions()
+    resolved_any = False
+
+    for p in preds.get("predictions", []):
+        if p.get("status") != "active":
+            continue
+        what = p.get("what", "").lower()
+        confidence = p.get("confidence", 0.5)
+        actual = None
+
+        if "stress spike" in what and stress > 0.7:
+            actual = True
+        elif "energy crash" in what and energy < 0.3:
+            actual = True
+        elif "9-hour work limit" in what and work_hours >= 9:
+            actual = True
+        elif "check email" in what:
+            # Morning email check resolves after 30 min regardless
+            created = datetime.fromisoformat(p.get("created_at", datetime.now().isoformat()))
+            if datetime.now() > created + timedelta(minutes=30):
+                actual = True  # assume happened
+
+        if actual is not None:
+            predicted = confidence > 0.5
+            if actual and predicted:
+                accuracy = confidence
+            elif not actual and not predicted:
+                accuracy = 1.0 - confidence
+            else:
+                accuracy = 0.0
+            p["status"] = "resolved"
+            p["outcome"] = "happened" if actual else "did not happen"
+            p["accuracy"] = round(accuracy, 2)
+            p["resolved_at"] = datetime.now().isoformat()
+            _update_accuracy_history(what, accuracy)
+            resolved_any = True
+
+    if resolved_any:
+        _save(PREDICTIONS_FILE, preds)
 
 
 # ── Proactive prediction generation ───────────────────────────────────────────

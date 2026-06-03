@@ -24,6 +24,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from collections import Counter, defaultdict
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 EVOLUTION_LOG = DATA_DIR / "evolution_log.jsonl"
@@ -38,24 +39,27 @@ def _log(entry: Dict[str, Any]):
     try:
         with open(EVOLUTION_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_evolution")
 
 
 def _load(path: Path, default: Any = None) -> Any:
     if path.exists():
         try:
             return json.loads(path.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_evolution")
     return default if default is not None else {}
 
 
 def _save(path: Path, data: Any):
     try:
         path.write_text(json.dumps(data, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_evolution")
 
 
 # ── Performance Measurement ───────────────────────────────────────────────────
@@ -421,8 +425,9 @@ def run_evolution_cycle() -> Dict[str, Any]:
             if (datetime.now() - started_dt).total_seconds() > 3600 * 24:
                 result = evaluate_experiment(exp["id"])
                 evaluated.append(result)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_evolution")
 
     # 4. Generate new hypothesis if needed
     hypothesis = None

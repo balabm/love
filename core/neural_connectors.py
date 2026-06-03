@@ -5,6 +5,7 @@ This is the glue that makes all modules talk to each other.
 """
 
 from typing import Dict, Any
+from core.execution_guard import log_error
 
 
 def connect_all_modules():
@@ -451,11 +452,13 @@ def emit_conversation_events(user_input: str, love_response: str, mode: str = "g
                         source_module="curiosity_engine",
                         caused_by=event_id,
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.neural_connectors")
 
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
 
 def get_neural_context_for_prompt() -> str:
@@ -472,8 +475,9 @@ def get_neural_context_for_prompt() -> str:
         status = engine.get_status()
         if status["knowledge_entries"] > 0:
             sections.append(f"[I have {status['knowledge_entries']} research entries in my knowledge base, monitoring {status['monitored_topics']} topics]")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     # Learned behaviors
     try:
@@ -482,8 +486,9 @@ def get_neural_context_for_prompt() -> str:
         rules_prompt = builder.get_rules_prompt()
         if rules_prompt:
             sections.append(rules_prompt)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     # Teaching opportunities
     try:
@@ -492,8 +497,9 @@ def get_neural_context_for_prompt() -> str:
         status = engine.get_status()
         if status["queued"] > 0:
             sections.append(f"[I have {status['queued']} things I want to share with the user when the time is right]")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     # Ecosystem awareness
     try:
@@ -502,8 +508,9 @@ def get_neural_context_for_prompt() -> str:
         presence = controller.get_user_presence()
         if presence.get("present"):
             sections.append(f"[User is active on {presence.get('active_device_name', 'unknown device')}, activity: {presence.get('likely_activity', 'unknown')}]")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     # ═══ WAVE 17: Cognitive Evolution Context ═══
 
@@ -514,8 +521,9 @@ def get_neural_context_for_prompt() -> str:
         char_prompt = constitution.get_character_prompt()
         if char_prompt:
             sections.append(char_prompt)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     # Memory architect context
     try:
@@ -524,8 +532,9 @@ def get_neural_context_for_prompt() -> str:
         memory_context = ma.get_context_for_prompt()
         if memory_context:
             sections.append(memory_context)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     # Evolution engine status
     try:
@@ -534,7 +543,8 @@ def get_neural_context_for_prompt() -> str:
         evo_context = evo.get_context_for_prompt()
         if evo_context:
             sections.append(evo_context)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.neural_connectors")
 
     return "\n".join(sections) if sections else ""

@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "energy_forecaster"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -283,8 +284,9 @@ class EnergyForecaster:
                 "hourly_patterns": {str(k): v[-10:] for k, v in self._hourly_patterns.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.energy_forecaster")
 
     def _load_stats(self):
         try:
@@ -294,8 +296,9 @@ class EnergyForecaster:
                 patterns = data.get("hourly_patterns", {})
                 for k, v in patterns.items():
                     self._hourly_patterns[int(k)] = v
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.energy_forecaster")
 
     def _log_energy(self, snapshot: EnergySnapshot):
         try:
@@ -305,8 +308,9 @@ class EnergyForecaster:
                     "level": snapshot.level,
                     "activity": snapshot.activity,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.energy_forecaster")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

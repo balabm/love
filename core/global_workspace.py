@@ -41,6 +41,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 # ── thresholds (named constants so they're easy to tune) ─────────────────────
 _DRIVE_THRESHOLD        = 0.6    # drives above this enter the broadcast
@@ -434,13 +435,15 @@ class GlobalWorkspace:
                         continue
                     try:
                         records.append(json.loads(line))
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.global_workspace")
                     if len(records) >= n:
                         break
                 return records
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.global_workspace")
 
         # Fallback: in-memory ring
         with self._mu:
@@ -478,8 +481,9 @@ class GlobalWorkspace:
                         rec = json.loads(line)
                         if rec.get("fired_at", 0) >= cutoff_24h:
                             count_24h += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.global_workspace")
         except Exception:
             count_24h = sum(1 for ev in ring_copy if ev.fired_at >= cutoff_24h)
 
@@ -620,8 +624,9 @@ def _append_ignition_log(event: IgnitionEvent) -> None:
         line = json.dumps(record, ensure_ascii=False)
         with open(_IGNITION_LOG, "a", encoding="utf-8") as f:
             f.write(line + "\n")
-    except Exception:
-        pass  # logging must never crash the caller
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.global_workspace")
 
 
 # ── module-level singleton ────────────────────────────────────────────────────

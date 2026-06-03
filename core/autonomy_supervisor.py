@@ -22,6 +22,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Set
+from core.execution_guard import log_error
 
 
 # Modules the supervisor will auto-restart if failed/degraded (optional only)
@@ -31,7 +32,6 @@ _AUTO_HEAL_MODULES: Set[str] = {
     "autonomous_goal_engine",
     "wave_engine",
     "mission_queue",
-    "tunnel_agent",
     "device_bridge",
     "notification_ingestion",
     "finance_guardian",
@@ -449,8 +449,9 @@ class AutonomySupervisor:
         try:
             from core.consciousness import get_consciousness
             get_consciousness().think(f"[Supervisor] {thought}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomy_supervisor")
 
     def _gather_intelligence_context(self) -> Dict[str, Any]:
         """Gather rich context about user, system, and world state."""
@@ -467,8 +468,9 @@ class AutonomySupervisor:
                     "hours_worked": getattr(live, "hours_worked", 0),
                     "tasks_overdue": getattr(live, "tasks_overdue", 0),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomy_supervisor")
 
         # Goals
         try:
@@ -515,8 +517,9 @@ class AutonomySupervisor:
                 "pnl_pct": pf.get("total_pnl_pct", 0),
                 "positions": pf.get("position_count", 0),
             }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomy_supervisor")
 
         # Recent waves
         try:
@@ -524,8 +527,9 @@ class AutonomySupervisor:
             wave = get_wave_engine()
             latest = wave.get_latest_proposal()
             ctx["latest_wave"] = latest.get("title") if latest else None
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomy_supervisor")
 
         return ctx
 
@@ -585,8 +589,9 @@ class AutonomySupervisor:
                             f"I'm coding a fix for the {domain} integration. Watch me work.",
                             priority="low",
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.autonomy_supervisor")
                 else:
                     actions.append({"component": "ghost_dev", "action": "already_assigned", "domain": domain})
             except Exception as e:
@@ -666,10 +671,12 @@ Generate 3 concrete, actionable next steps they (or you) can take TODAY. Be spec
                         metadata={"goal": title, "plan": plan},
                     )
                     actions.append({"component": "goal_engine", "action": "proactive_plan_pushed", "goal": title})
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.autonomy_supervisor")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomy_supervisor")
 
         return actions
 
@@ -797,10 +804,12 @@ Generate 3 concrete, actionable next steps they (or you) can take TODAY. Be spec
                             f"I'm implementing the wave you proposed: {title[:80]}. Coding now.",
                             priority="low",
                         )
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.autonomy_supervisor")
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.autonomy_supervisor")
 
         except Exception as e:
             actions.append({"component": "wave_engine", "action": "error", "error": str(e)})

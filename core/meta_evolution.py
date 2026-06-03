@@ -27,6 +27,7 @@ Meta-evolution capabilities:
 """
 
 import json
+import re
 import threading
 import time
 import uuid
@@ -38,6 +39,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "meta_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -164,8 +166,9 @@ class MetaEvolutionEngine:
         try:
             with open(LEARNING_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.meta_evolution")
     
     # ── Meta-Learning: Strategy Optimization ───────────────────────────────────────
     
@@ -305,8 +308,9 @@ class MetaEvolutionEngine:
                     if overdue > 0 or due_soon > 0:
                         pressures["career"] = min(1.0, (overdue * 0.3 + due_soon * 0.1))
                         has_any_data = True
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.meta_evolution")
 
             try:
                 from agents.fitness_agent import get_fitness_overview
@@ -316,8 +320,9 @@ class MetaEvolutionEngine:
                     if activity_level is not None:
                         pressures["health"] = 1.0 - activity_level
                         has_any_data = True
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.meta_evolution")
 
             try:
                 from integrations.finance_intelligence import get_finance_intelligence
@@ -327,22 +332,24 @@ class MetaEvolutionEngine:
                     if alerts:
                         pressures["finance"] = min(1.0, len(alerts) * 0.2)
                         has_any_data = True
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.meta_evolution")
 
             try:
                 from core.autonomous import get_relationship_state
                 if get_relationship_state is not None:
                     rel_state = get_relationship_state()
                     freq = rel_state.get("interaction_frequency")
-                    if freq is not None:
+                    if freq is not None and isinstance(freq, (int, float)):
                         try:
                             pressures["relationships"] = 1.0 - float(freq)
                             has_any_data = True
                         except (ValueError, TypeError):
-                            pass
-            except Exception:
-                pass
+                            pass  # non-numeric sentinel like "unknown" — skip silently
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.meta_evolution")
 
             if not has_any_data:
                 return pressures
@@ -386,16 +393,43 @@ class MetaEvolutionEngine:
     
     # ── Predictive Evolution ─────────────────────────────────────────────────────
     
+    @staticmethod
+    def _extract_json(text: str):
+        """Extract JSON array/object from LLM response, handling markdown/thinking tags."""
+        if not text:
+            return None
+        # Strip markdown fences
+        text = text.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```$", "", text)
+        # Strip <thinking> tags
+        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+        text = re.sub(r"<thinking>.*?</thinking>", "", text, flags=re.DOTALL)
+        # Find first [ or {
+        start = text.find("[")
+        if start == -1:
+            start = text.find("{")
+        end = text.rfind("]")
+        if end == -1 or end < start:
+            end = text.rfind("}")
+        if start != -1 and end != -1 and end >= start:
+            try:
+                return json.loads(text[start:end+1])
+            except json.JSONDecodeError:
+                pass
+        return None
+
     def generate_predictive_hypotheses(self):
         """Pre-generate hypotheses for likely future scenarios."""
         try:
             llm = get_reasoning_llm()
-            
+
             # Get current context
             priorities = self.get_evolutionary_priorities()
             priority_areas = [area for area, _ in priorities[:3]]
-            
-            prompt = f"""You are LOVE's predictive evolution engine. 
+
+            prompt = f"""You are LOVE's predictive evolution engine.
 Generate 3-5 hypotheses for likely future scenarios based on current state.
 
 Current high-priority areas: {', '.join(priority_areas)}
@@ -407,13 +441,13 @@ For each hypothesis, provide:
 4. expected_impact: What improvement is expected
 5. confidence: 0.0-1.0 how confident you are
 
-Return as JSON array with these exact fields."""
-            
+Return ONLY a JSON array with these exact fields. No markdown, no explanation."""
+
             response = llm.invoke(prompt)
-            
+
             # Parse response
-            try:
-                hypotheses_data = json.loads(response)
+            hypotheses_data = self._extract_json(response)
+            if hypotheses_data and isinstance(hypotheses_data, list):
                 for hd in hypotheses_data:
                     pred = PredictiveHypothesis(
                         trigger_scenario=hd.get("trigger_scenario", ""),
@@ -423,18 +457,17 @@ Return as JSON array with these exact fields."""
                         confidence=hd.get("confidence", 0.5),
                     )
                     self._predictions.append(pred)
-                
+
                 self._save_state()
                 self._log_learning({
                     "event": "predictive_hypotheses_generated",
                     "count": len(hypotheses_data),
                 })
-                
+
                 print(f"[MetaEvolution] Generated {len(hypotheses_data)} predictive hypotheses")
-                
-            except json.JSONDecodeError:
+            else:
                 print("[MetaEvolution] Failed to parse predictive hypotheses")
-                
+
         except Exception as e:
             print(f"[MetaEvolution] Predictive generation error: {e}")
     
@@ -542,18 +575,17 @@ that should be applied to another domain in this pattern.
 Return as JSON array with: source_domain, target_domain, hypothesis, proposed_change"""
                 
                 response = llm.invoke(prompt)
-                
-                try:
-                    hypotheses = json.loads(response)
+
+                hypotheses = self._extract_json(response)
+                if hypotheses and isinstance(hypotheses, list):
                     for h in hypotheses:
-                        # This would integrate with the main evolution engine
                         self._log_learning({
                             "event": "transfer_hypothesis_generated",
                             "pattern_id": pattern.id,
                             "hypothesis": h,
                         })
-                except json.JSONDecodeError:
-                    pass
+                else:
+                    print(f"[MetaEvolution] Failed to parse transfer hypotheses for pattern {pattern.id}")
                     
         except Exception as e:
             print(f"[MetaEvolution] Transfer hypothesis generation error: {e}")
@@ -584,7 +616,7 @@ Return as JSON array with: source_domain, target_domain, hypothesis, proposed_ch
                 self.update_evolutionary_pressures()
                 
                 # Generate predictive hypotheses (less frequently)
-                if len(self._predictions) < 10:
+                if len(self._predictions) < 5:
                     self.generate_predictive_hypotheses()
                 
                 # Detect cross-domain patterns
@@ -609,15 +641,16 @@ Return as JSON array with: source_domain, target_domain, hypothesis, proposed_ch
                                 from core.master_orchestrator import get_orchestration_master
                                 om = get_orchestration_master()
                                 om._narrate("meta_evolution", f"Applied strategy '{best.name}' to {domain} (success: {best.success_rate:.0%})", "action")
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="core.meta_evolution")
                 except Exception as e:
                     print(f"[MetaEvolution] Strategy application error: {e}")
                 
             except Exception as e:
                 print(f"[MetaEvolution] Loop error: {e}")
             
-            time.sleep(600)  # Run every 10 minutes
+            time.sleep(14400)  # Run every 4 hours (was 10 minutes)
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

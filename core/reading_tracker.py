@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "reading_tracker"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -252,8 +253,9 @@ class ReadingTracker:
                     if last_session:
                         last_date = datetime.fromisoformat(last_session[-1].timestamp)
                         days_idle = (datetime.now() - last_date).days
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.reading_tracker")
 
                 if days_idle > 3:
                     suggestions.append({
@@ -346,8 +348,9 @@ class ReadingTracker:
                 } for k, v in self._books.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reading_tracker")
 
     def _load_stats(self):
         try:
@@ -356,8 +359,9 @@ class ReadingTracker:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("books", {}).items():
                     self._books[k] = Book(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reading_tracker")
 
     def _log_session(self, session: ReadingSession):
         try:
@@ -371,8 +375,9 @@ class ReadingTracker:
                     "minutes": session.duration_minutes,
                     "comprehension": session.comprehension_score,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reading_tracker")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

@@ -46,6 +46,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "guardrails"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -330,8 +331,9 @@ class GuardrailsEngine:
         try:
             with open(GUARDRAILS_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.guardrails")
 
     def _log_pii(self, pii: List[Dict], context: str):
         try:
@@ -342,8 +344,9 @@ class GuardrailsEngine:
                     "count": len(pii),
                     "context": context,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.guardrails")
 
     def _save_drift_state(self):
         try:
@@ -352,16 +355,18 @@ class GuardrailsEngine:
                 "last_updated": datetime.now().isoformat(),
             }
             DRIFT_STATE.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.guardrails")
 
     def _load_drift_state(self):
         try:
             if DRIFT_STATE.exists():
                 data = json.loads(DRIFT_STATE.read_text())
                 self._user_goals = data.get("user_goals", [])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.guardrails")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

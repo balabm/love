@@ -14,6 +14,7 @@ from dataclasses import dataclass
 
 from core.llm import get_reasoning_llm
 from core.memory import save_log
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -591,8 +592,9 @@ Return as a JSON array with objects containing: headline (str), sentiment (posit
             json_match = re.search(r'\[.*\]', response, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="tools.finance")
         
         # Fallback: empty list
         return []

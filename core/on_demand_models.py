@@ -74,8 +74,9 @@ def _check_ollama_model(model_name: str) -> bool:
         if resp.status_code == 200:
             models = resp.json().get("models", [])
             return any(m.get("name", "").startswith(model_name) for m in models)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.on_demand_models")
     return False
 
 
@@ -205,16 +206,18 @@ def _load_status() -> Dict[str, Any]:
     if MODEL_STATUS_FILE.exists():
         try:
             return json.loads(MODEL_STATUS_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.on_demand_models")
     return {}
 
 
 def _save_status(status: Dict[str, Any]):
     try:
         MODEL_STATUS_FILE.write_text(json.dumps(status, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.on_demand_models")
 
 
 def check_capability(name: str) -> Dict[str, Any]:
@@ -340,3 +343,4 @@ def auto_detect_needed_capability(user_input: str, has_image: bool = False) -> O
 
 # Need datetime for status tracking
 from datetime import datetime
+from core.execution_guard import log_error

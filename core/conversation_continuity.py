@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "conversation_continuity"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -275,8 +276,9 @@ class ConversationContinuityManager:
                 "stats": self._stats,
             }
             SNAPSHOT_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.conversation_continuity")
 
     def _load_data(self):
         try:
@@ -287,8 +289,9 @@ class ConversationContinuityManager:
                 for k, t_data in data.get("threads", {}).items():
                     self._threads[k] = ConversationThread(**t_data)
                 self._stats.update(data.get("stats", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.conversation_continuity")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

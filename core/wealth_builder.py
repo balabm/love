@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "wealth_builder"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -343,15 +344,17 @@ class WealthBuilder:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wealth_builder")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wealth_builder")
 
     def _log_entry(self, entry: WealthEntry):
         try:
@@ -366,8 +369,9 @@ class WealthBuilder:
                     "net_worth_change": entry.net_worth_change,
                     "lifestyle_inflation": entry.lifestyle_inflation,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.wealth_builder")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

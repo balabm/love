@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "knowledge_synthesizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -337,15 +338,17 @@ class KnowledgeSynthesizer:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.knowledge_synthesizer")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.knowledge_synthesizer")
 
     def _log_entry(self, entry: KnowledgeEntry):
         try:
@@ -359,8 +362,9 @@ class KnowledgeSynthesizer:
                     "insight": entry.insight,
                     "insight_quality": entry.insight_quality,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.knowledge_synthesizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

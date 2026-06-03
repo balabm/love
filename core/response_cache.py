@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "response_cache"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -258,8 +259,9 @@ class ResponseCache:
                 "stats": self._stats,
             }
             CACHE_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.response_cache")
 
     def _load_cache(self):
         try:
@@ -270,8 +272,9 @@ class ResponseCache:
                     if entry.expires_at > time.time():
                         self._cache[entry.query_hash] = entry
                 self._stats = data.get("stats", self._stats)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.response_cache")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

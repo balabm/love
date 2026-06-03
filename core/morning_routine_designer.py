@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "morning_routine_designer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -357,16 +358,18 @@ class MorningRoutineDesigner:
                 } for m in list(self._mornings)[-50:]],
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.morning_routine_designer")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 data = json.loads(STATS_DB.read_text())
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.morning_routine_designer")
 
     def _log_element(self, element: RoutineElement):
         try:
@@ -378,8 +381,9 @@ class MorningRoutineDesigner:
                     "duration": element.duration_minutes,
                     "energy_impact": element.energy_impact,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.morning_routine_designer")
 
     def _log_morning(self, morning: MorningRecord):
         try:
@@ -392,8 +396,9 @@ class MorningRoutineDesigner:
                     "day_rating": morning.day_rating,
                     "elements": morning.elements,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.morning_routine_designer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

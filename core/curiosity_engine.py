@@ -5,6 +5,7 @@ import json, re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 GAPS_FILE = DATA_DIR / "knowledge_gaps.json"
@@ -26,8 +27,9 @@ def detect_gaps_from_conversation(user_input: str, love_response: str) -> List[D
     try:
         from core.dream_engine import get_world_model
         known = set(get_world_model().get("people", {}).keys())
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.curiosity_engine")
     for name in names:
         if name in ("I","The","You","This","That","What","How") or len(name) < 4:
             continue

@@ -5,6 +5,7 @@ This is critical for AGI - the ability to act while being safe.
 """
 
 import json
+import uuid as uuid_mod
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, field
@@ -16,6 +17,28 @@ import platform
 from core.settings import get_settings
 from core.context_engine import get_live_context
 from core.psychological_model import get_psychological_model
+from core.execution_guard import log_error
+
+# Optional causal simulator integration
+try:
+    from cognition.causal_simulator import get_causal_simulator, ActionType as CausalActionType
+    CAUSAL_AVAILABLE = True
+except Exception:
+    CAUSAL_AVAILABLE = False
+
+# Optional WebSocket manager for intervention pushes
+try:
+    from api.websocket_manager import get_telemetry_manager
+    WS_AVAILABLE = True
+except Exception:
+    WS_AVAILABLE = False
+
+# Optional TTS for critical alerts
+try:
+    from voice.tts import speak_text
+    TTS_AVAILABLE = True
+except Exception:
+    TTS_AVAILABLE = False
 
 SETTINGS = get_settings()
 
@@ -311,18 +334,23 @@ class AutonomousActionExecutor:
         except Exception as e:
             print(f"[AutonomousActionExecutor] Error saving data: {e}")
     
-    def propose_action(self, action_type: ActionType, description: str, 
+    def propose_action(self, action_type: ActionType, description: str,
                       parameters: Dict[str, Any], reasoning: str) -> str:
         """
         Propose an autonomous action for execution.
         Goes through safety checks before execution.
-        Enhanced with approval flow for high-risk actions.
+        Enhanced with:
+          - Causal Simulator for MEDIUM+ risk actions
+          - UUID generation for high-risk actions
+          - WebSocket Y/N handshake for HIGH/CRITICAL risk
         """
         try:
             # Determine risk level
             risk_level = self._assess_risk_level(action_type, parameters)
-            
-            action_id = f"action_{datetime.utcnow().timestamp()}"
+
+            # Generate proper UUID for traceability
+            action_uuid = str(uuid_mod.uuid4())
+            action_id = f"action_{datetime.utcnow().timestamp()}_{action_uuid[:8]}"
             action = Action(
                 id=action_id,
                 type=action_type,
@@ -331,14 +359,45 @@ class AutonomousActionExecutor:
                 risk_level=risk_level,
                 reasoning=reasoning
             )
-            
+
+            # ── Causal Simulator Gate (MEDIUM+ risk) ──────────────────────────
+            if risk_level in [RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL] and CAUSAL_AVAILABLE:
+                try:
+                    causal = get_causal_simulator()
+                    # Map our ActionType to causal ActionType
+                    causal_action = self._map_to_causal_action(action_type)
+                    analysis = causal.analyze_action(
+                        action=causal_action,
+                        action_description=description,
+                        context={"risk_factor": 0.5 + (risk_level.value * 0.2), "parameters": parameters},
+                        intervention=parameters
+                    )
+                    if analysis.recommendation == "reject":
+                        action.status = "rejected"
+                        action.reasoning = f"{reasoning} | CAUSAL_REJECT: {analysis.reasoning}"
+                        self.actions[action_id] = action
+                        self._save_data()
+                        print(f"[AutonomousActionExecutor] Action rejected by Causal Simulator: {description}")
+                        return action_id
+                    elif analysis.recommendation == "defer":
+                        action.status = "deferred"
+                        action.reasoning = f"{reasoning} | CAUSAL_DEFER: {analysis.reasoning}"
+                        self.actions[action_id] = action
+                        self._save_data()
+                        print(f"[AutonomousActionExecutor] Action deferred by Causal Simulator: {description}")
+                        return action_id
+                    else:
+                        action.reasoning = f"{reasoning} | CAUSAL_EXECUTE: {analysis.reasoning}"
+                except Exception as e:
+                    log_error(e, module="core.autonomous_actions", context={"action": "causal_simulator_gate", "action_id": action_id})
+
             # Run safety checks
             approval_result = self._run_safety_checks(action)
-            
+
             if approval_result["approved"]:
                 action.status = "approved"
                 action.safety_checks_passed = approval_result["passed_checks"]
-                
+
                 # Auto-execute if risk is safe or low
                 if risk_level in [RiskLevel.SAFE, RiskLevel.LOW]:
                     self._execute_action(action)
@@ -351,7 +410,7 @@ class AutonomousActionExecutor:
                     self.actions[action_id] = action
                     self._save_data()
                     print(f"[AutonomousActionExecutor] Action pending approval ({risk_level.value}): {description}")
-                    # Trigger notification for approval
+                    # Trigger WebSocket intervention + TTS for critical
                     self._notify_pending_approval(action)
             else:
                 action.status = "rejected"
@@ -359,12 +418,28 @@ class AutonomousActionExecutor:
                 self.actions[action_id] = action
                 self._save_data()
                 print(f"[AutonomousActionExecutor] Action rejected by safety checks: {description}")
-            
+
             return action_id
-            
+
         except Exception as e:
-            print(f"[AutonomousActionExecutor] Error proposing action: {e}")
+            log_error(e, module="core.autonomous_actions", context={"action": "propose_action"})
             return ""
+
+    def _map_to_causal_action(self, action_type: ActionType):
+        """Map internal ActionType to causal simulator ActionType."""
+        mapping = {
+            ActionType.NOTIFICATION: CausalActionType.COMMUNICATION,
+            ActionType.TASK_CREATION: CausalActionType.RESOURCE_ALLOCATION,
+            ActionType.TASK_UPDATE: CausalActionType.DATA_MODIFICATION,
+            ActionType.CALENDAR_EVENT: CausalActionType.COMMUNICATION,
+            ActionType.FILE_OPERATION: CausalActionType.DATA_MODIFICATION,
+            ActionType.SYSTEM_COMMAND: CausalActionType.SYSTEM_CHANGE,
+            ActionType.COMMUNICATION: CausalActionType.COMMUNICATION,
+            ActionType.RESEARCH: CausalActionType.RESOURCE_ALLOCATION,
+            ActionType.ANALYSIS: CausalActionType.RESOURCE_ALLOCATION,
+            ActionType.REMINDER: CausalActionType.COMMUNICATION,
+        }
+        return mapping.get(action_type, CausalActionType.SYSTEM_CHANGE)
     
     def get_pending_approvals(self) -> List[Dict]:
         """Get all actions awaiting approval"""
@@ -429,19 +504,39 @@ class AutonomousActionExecutor:
         return True
     
     def _notify_pending_approval(self, action: Action):
-        """Notify user about pending action approval"""
+        """Notify user about pending action approval via WebSocket + TTS for critical."""
         try:
-            # Log the pending approval
-            notification = {
-                "type": "action_approval",
+            # Build intervention payload
+            intervention = {
+                "type": "intervention",
+                "action": "pending_approval",
                 "action_id": action.id,
                 "action_type": action.type.value,
                 "description": action.description,
                 "risk_level": action.risk_level.value,
                 "reasoning": action.reasoning,
+                "requires_confirmation": action.risk_level in [RiskLevel.HIGH, RiskLevel.CRITICAL],
                 "timestamp": datetime.utcnow().isoformat()
             }
-            
+
+            # Push to WebSocket telemetry (real-time UI notification)
+            if WS_AVAILABLE:
+                try:
+                    import asyncio
+                    tm = get_telemetry_manager()
+                    # Fire-and-forget broadcast
+                    asyncio.create_task(tm.broadcast_event(intervention))
+                except Exception as e:
+                    log_error(e, module="core.autonomous_actions", context={"action": "ws_intervention", "action_id": action.id})
+
+            # TTS alert for critical actions
+            if action.risk_level == RiskLevel.CRITICAL and TTS_AVAILABLE:
+                try:
+                    alert_text = f"Critical action pending approval: {action.description}. Say yes or no."
+                    speak_text(alert_text, block=False)
+                except Exception as e:
+                    log_error(e, module="core.autonomous_actions", context={"action": "tts_alert", "action_id": action.id})
+
             # Add to action log
             log_entry = ActionLog(
                 action_id=action.id,
@@ -454,12 +549,11 @@ class AutonomousActionExecutor:
                 user_notified=True
             )
             self.action_log.append(log_entry)
-            
+
             print(f"[AutonomousActionExecutor] Approval notification sent: {action.description}")
-            
+
         except Exception as e:
-            print(f"[AutonomousActionExecutor] Error sending approval notification: {e}")
-            return ""
+            log_error(e, module="core.autonomous_actions", context={"action": "notify_pending_approval", "action_id": action.id})
     
     def _assess_risk_level(self, action_type: ActionType, parameters: Dict[str, Any]) -> RiskLevel:
         """Assess the risk level of an action"""

@@ -21,6 +21,7 @@ import base64
 from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -33,8 +34,9 @@ def _log_vision(entry: Dict[str, Any]):
         import json
         with open(VISION_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.vision")
 
 
 def read_image_text(image_path: str) -> Dict[str, Any]:
@@ -86,8 +88,9 @@ def describe_image(image_path: str, detail_level: str = "normal") -> Dict[str, A
             result = {"success": True, "description": desc.strip(), "model": "llava", "detail": detail_level}
             _log_vision({"action": "describe", "path": str(path), "result": result})
             return result
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.vision")
 
     # Fallback: object detection summary
     try:
@@ -105,8 +108,9 @@ def describe_image(image_path: str, detail_level: str = "normal") -> Dict[str, A
             }
             _log_vision({"action": "describe", "path": str(path), "result": result})
             return result
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.vision")
 
     return {"success": False, "error": "No vision model available. Try: ollama pull llava"}
 
@@ -142,8 +146,9 @@ Text extracted from image: {text}
 The user asks: {user_question}
 Answer based on what you see. Be specific and concise."""
             answer = llm.invoke(context).strip()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.vision")
 
     result = {
         "success": True,
@@ -251,8 +256,9 @@ def get_active_window_info() -> Dict[str, Any]:
                 proc = psutil.Process(pid.value)
                 info["process"] = proc.name()
                 info["exe"] = proc.exe()
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.vision")
         elif sys_platform == "Darwin":
             import subprocess
             script = 'tell application "System Events" to get name of first application process whose frontmost is true'
@@ -291,8 +297,9 @@ def get_desktop_context() -> Dict[str, Any]:
                 # Only keep meaningful text (not just window chrome)
                 lines = [l for l in text.split("\n") if len(l) > 3 and not l.startswith("File Edit View")]
                 result["screenshot_text"] = "\n".join(lines[:20])
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.vision")
 
     _log_vision({"action": "desktop_context", "data": result})
     return result

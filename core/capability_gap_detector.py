@@ -38,6 +38,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "capability_gaps"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -191,10 +192,12 @@ class CapabilityGapDetector:
                     from core.master_orchestrator import get_orchestration_master
                     om = get_orchestration_master()
                     om._narrate("gap_missions", f"Created {len(high_impact[:3])} missions from capability gaps", "action")
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.capability_gap_detector")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.capability_gap_detector")
         
         return new_gaps
     
@@ -373,8 +376,9 @@ class CapabilityGapDetector:
                 )
                 gaps.append(gap)
             
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.capability_gap_detector")
         
         return gaps
     
@@ -473,8 +477,9 @@ class CapabilityGapDetector:
                         urgency=0.4,
                         suggested_fixes=[f"Restart {module}", f"Check {module} dependencies"],
                     ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.capability_gap_detector")
         
         # Check for missing modern module integration
         try:
@@ -490,8 +495,9 @@ class CapabilityGapDetector:
                     urgency=0.3,
                     suggested_fixes=["Wire modern modules into evolution_integration", "Add modern module health checks to sentinel"],
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.capability_gap_detector")
         
         return gaps
 
@@ -703,8 +709,9 @@ Focus on interconnected improvements rather than isolated fixes."""
         try:
             with open(ANALYSIS_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.capability_gap_detector")
     
     # ── Main Loop ─────────────────────────────────────────────────────────────────
     

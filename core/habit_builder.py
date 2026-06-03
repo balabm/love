@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "habit_builder"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -323,8 +324,9 @@ class HabitBuilder:
                 } for k, v in self._habits.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.habit_builder")
 
     def _load_stats(self):
         try:
@@ -333,8 +335,9 @@ class HabitBuilder:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("habits", {}).items():
                     self._habits[k] = Habit(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.habit_builder")
 
     def _log_attempt(self, attempt: HabitAttempt):
         try:
@@ -346,8 +349,9 @@ class HabitBuilder:
                     "obstacle": attempt.obstacle,
                     "duration": attempt.duration_minutes,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.habit_builder")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

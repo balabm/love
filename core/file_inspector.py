@@ -13,6 +13,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -42,24 +43,27 @@ def _log(entry: Dict[str, Any]):
     try:
         with open(INSPECTION_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.file_inspector")
 
 
 def _load_interesting() -> Dict[str, Any]:
     if INTERESTING_FILE.exists():
         try:
             return json.loads(INTERESTING_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.file_inspector")
     return {"files": {}, "last_asked": {}, "patterns": {}}
 
 
 def _save_interesting(data: Dict[str, Any]):
     try:
         INTERESTING_FILE.write_text(json.dumps(data, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.file_inspector")
 
 
 def get_watch_paths() -> List[Path]:
@@ -70,8 +74,9 @@ def get_watch_paths() -> List[Path]:
         folders = getattr(settings.work, 'dev_folders', [])
         if folders:
             return [Path(f) for f in folders if Path(f).exists()]
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.file_inspector")
 
     # Fallback: common dev locations
     home = Path.home()
@@ -136,8 +141,9 @@ def scan_directory(path: Path, max_depth: int = 2, max_files: int = 50) -> List[
                         todos = re.findall(r'(TODO|FIXME|HACK|BUG|NOTE|IDEA|XXX)[\s:]*(.{0,80})', text, re.IGNORECASE)
                         if todos:
                             content_hint = ", ".join(f"{t[0]}: {t[1].strip()}" for t in todos[:3])
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.file_inspector")
 
                 score = 0
                 if is_signal: score += 3
@@ -159,10 +165,12 @@ def scan_directory(path: Path, max_depth: int = 2, max_files: int = 50) -> List[
                     "score": score,
                 })
 
-    except PermissionError:
-        pass
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.file_inspector")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.file_inspector")
 
     results.sort(key=lambda x: x["score"], reverse=True)
     return results

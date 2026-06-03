@@ -43,6 +43,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -659,8 +660,9 @@ class Sentinel:
         # Check for new emails
         try:
             from integrations.microsoft_bridge import MicrosoftBridge
-        except ImportError:
-            pass  # Microsoft integration not available
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sentinel")
         else:
             try:
                 ms = MicrosoftBridge.get_instance()
@@ -677,8 +679,9 @@ class Sentinel:
             except asyncio.TimeoutError:
                 self._subsystem_health["microsoft_bridge"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
                 print("[Sentinel] Microsoft Bridge stalled during away summary")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.sentinel")
 
         # Check calendar events that passed
         try:
@@ -700,8 +703,9 @@ class Sentinel:
         except asyncio.TimeoutError:
             self._subsystem_health["calendar"] = {"status": "STALLED", "error": "Timeout after 5.0s"}
             print("[Sentinel] Calendar stalled during away summary")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sentinel")
 
         if missed:
             self._emit(
@@ -769,8 +773,9 @@ class Sentinel:
                 "action": "INSIGHT", "summary": "MEMORY",
             }.get(category, "NUDGE")
             engine.push(push_cat, decision.get("message", ""), decision.get("priority", "normal"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sentinel")
         
         # Publish to neural bus for cross-module awareness
         if NEURAL_BUS_AVAILABLE:
@@ -820,8 +825,9 @@ class Sentinel:
         try:
             with open(SENTINEL_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(asdict(event)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sentinel")
 
         # Notify callbacks
         for cb in self._callbacks:
@@ -832,8 +838,9 @@ class Sentinel:
                         asyncio.ensure_future(cb(asdict(event)))
                 else:
                     cb(asdict(event))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.sentinel")
 
     # ── State Persistence ──────────────────────────────────────────────────────
 
@@ -841,8 +848,9 @@ class Sentinel:
         try:
             if SENTINEL_STATE.exists():
                 return json.loads(SENTINEL_STATE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sentinel")
         return {}
 
     def _save_state(self):
@@ -854,8 +862,9 @@ class Sentinel:
                 "last_save": datetime.now().isoformat(),
             }
             SENTINEL_STATE.write_text(json.dumps(state, indent=2), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sentinel")
 
     # ── Public API ─────────────────────────────────────────────────────────────
 

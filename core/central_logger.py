@@ -96,6 +96,39 @@ class LogEntry:
 
 # ─── Custom JSON Formatter ────────────────────────────────────────────────────
 
+class WindowsSafeRotatingFileHandler(logging.handlers.RotatingFileHandler):
+    """RotatingFileHandler that silently skips rotation when the file is locked (Windows multi-process)."""
+
+    def rotate(self, source, dest):
+        """Override rotate to use os.replace and silently skip on Windows lock."""
+        try:
+            # os.replace works even when dest exists (unlike os.rename on Windows)
+            os.replace(source, dest)
+        except (PermissionError, OSError):
+            # File locked by another process (OneDrive, another Python process, etc.)
+            # Skip rotation — the log will keep appending to the current file.
+            pass
+
+    def doRollover(self):
+        try:
+            super().doRollover()
+        except (PermissionError, OSError):
+            # If rotation fails mid-way, ensure the stream is reopened so logging continues
+            if not self.delay and self.stream is None:
+                try:
+                    self.stream = self._open()
+                except Exception:
+                    pass
+
+    def emit(self, record):
+        """Override emit to silently skip records when the file is locked (Windows)."""
+        try:
+            super().emit(record)
+        except (PermissionError, OSError):
+            # File locked by another process — skip this record rather than crashing
+            pass
+
+
 class JSONFormatter(logging.Formatter):
     """Custom formatter that outputs structured JSON for neural bus integration."""
     
@@ -244,12 +277,13 @@ class CentralLoggerManager:
         console_handler.setFormatter(console_formatter)
         root_logger.addHandler(console_handler)
         
-        # Main log file with rotation
-        main_handler = logging.handlers.RotatingFileHandler(
+        # Main log file with rotation (delay=True reduces file-lock contention on Windows)
+        main_handler = WindowsSafeRotatingFileHandler(
             MAIN_LOG_FILE,
             maxBytes=MAX_LOG_SIZE_BYTES,
             backupCount=BACKUP_COUNT,
-            encoding='utf-8'
+            encoding='utf-8',
+            delay=True
         )
         main_handler.setLevel(logging.DEBUG)
         main_formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
@@ -257,11 +291,12 @@ class CentralLoggerManager:
         root_logger.addHandler(main_handler)
         
         # Error log file (ERROR and above only)
-        error_handler = logging.handlers.RotatingFileHandler(
+        error_handler = WindowsSafeRotatingFileHandler(
             ERROR_LOG_FILE,
             maxBytes=MAX_LOG_SIZE_BYTES,
             backupCount=BACKUP_COUNT,
-            encoding='utf-8'
+            encoding='utf-8',
+            delay=True
         )
         error_handler.setLevel(logging.ERROR)
         error_formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)
@@ -269,11 +304,12 @@ class CentralLoggerManager:
         root_logger.addHandler(error_handler)
         
         # Debug log file (DEBUG and TRACE only)
-        debug_handler = logging.handlers.RotatingFileHandler(
+        debug_handler = WindowsSafeRotatingFileHandler(
             DEBUG_LOG_FILE,
             maxBytes=MAX_LOG_SIZE_BYTES,
             backupCount=BACKUP_COUNT,
-            encoding='utf-8'
+            encoding='utf-8',
+            delay=True
         )
         debug_handler.setLevel(logging.DEBUG)
         debug_formatter = logging.Formatter(LOG_FORMAT, DATE_FORMAT)

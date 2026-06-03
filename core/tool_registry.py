@@ -24,6 +24,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 from typing import Any, Callable, Dict
+from core.execution_guard import log_error
 
 # ── Safety: shell commands that are never allowed ─────────────────────────────
 _SHELL_BLOCKLIST = [
@@ -52,8 +53,9 @@ def _web_search(query: str, max_results: int = 5) -> str:
                 for r in results:
                     lines.append(f"[{r.get('title','?')}]\n{r.get('href','')}\n{r.get('body','')}")
                 return "\n\n".join(lines)
-        except ImportError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.tool_registry")
 
         # Fallback: scrape DuckDuckGo HTML
         encoded = urllib.parse.quote_plus(query)
@@ -90,8 +92,9 @@ def _http_get(url: str, as_json: bool = False) -> str:
             try:
                 data = json.loads(raw)
                 return json.dumps(data, indent=2)[:4000]
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.tool_registry")
         # Strip HTML tags for readability
         text = re.sub(r'<style[^>]*>.*?</style>', '', raw, flags=re.DOTALL)
         text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
@@ -402,15 +405,17 @@ class ToolRegistry:
         try:
             from core.browser_agent import register_browser_tools
             register_browser_tools(self)
-        except ImportError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.tool_registry")
 
         # Extend with infinite memory tools if available
         try:
             from core.infinite_memory import register_memory_tools
             register_memory_tools(self)
-        except ImportError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.tool_registry")
 
     def register_tool(self, name: str, func: Callable, description: str, parameters: Dict[str, Any]):
         self.tools[name] = {"func": func, "description": description, "parameters": parameters}

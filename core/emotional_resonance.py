@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "emotional_resonance"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -832,16 +833,18 @@ class EmotionalResonanceEngine:
                     self._readings.append(ResonanceReading(**r))
                 for a in data.get("alerts", []):
                     self._alerts.append(ShiftAlert(**a))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.emotional_resonance")
 
         if STATS_DB.exists():
             try:
                 with open(STATS_DB, "r", encoding="utf-8") as f:
                     loaded = json.load(f)
                 self._stats.update(loaded)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.emotional_resonance")
 
     def _save_data(self):
         """Persist history and stats."""

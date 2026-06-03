@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from collections import defaultdict, Counter
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -34,8 +35,9 @@ def _load_patterns() -> Dict[str, Any]:
     if PATTERNS_FILE.exists():
         try:
             return json.loads(PATTERNS_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.predictive")
     return {
         "hourly_topics": {},      # "9": ["coding", "email", ...]
         "weekday_topics": {},     # "Monday": [...]
@@ -49,8 +51,9 @@ def _load_patterns() -> Dict[str, Any]:
 def _save_patterns(p: Dict[str, Any]):
     try:
         PATTERNS_FILE.write_text(json.dumps(p, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.predictive")
 
 
 def record_event(event_type: str, details: Dict[str, Any] = None):
@@ -116,8 +119,9 @@ def detect_routines() -> List[Dict[str, Any]]:
     # Save routines
     try:
         ROUTINE_FILE.write_text(json.dumps(routines, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.predictive")
 
     return routines
 
@@ -292,8 +296,9 @@ def _predict_from_context() -> List[Dict[str, Any]]:
                 "metadata": {"fitness_streak": 0},
             })
 
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.predictive")
     return predictions
 
 
@@ -336,8 +341,9 @@ def _predict_from_health() -> List[Dict[str, Any]]:
                     "metadata": {"minutes_away": mins, "battery": ctx.battery},
                 })
 
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.predictive")
     return predictions
 
 
@@ -345,8 +351,9 @@ def _log_prediction(p: Dict[str, Any]):
     try:
         with open(PREDICTIONS_LOG, "a") as f:
             f.write(json.dumps(p) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.predictive")
 
 
 # ── Public API ───────────────────────────────────────────────────────────────

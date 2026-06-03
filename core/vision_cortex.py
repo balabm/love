@@ -12,10 +12,12 @@ try:
     import mss
     from PIL import Image
     import io
-except ImportError:
-    pass  # We handle this gracefully in setup
+    _VISION_AVAILABLE = True
+except Exception:
+    _VISION_AVAILABLE = False  # mss / PIL optional — expected on some environments
 
 from core.settings import get_settings
+from core.execution_guard import log_error
 
 SETTINGS = get_settings()
 VISION_DATA_DIR = SETTINGS.data_dir / "vision"

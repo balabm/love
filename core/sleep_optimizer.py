@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "sleep_optimizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -160,8 +161,9 @@ class SleepOptimizer:
                 try:
                     hour = int(s.bedtime.split(":")[0])
                     bedtimes.append(hour)
-                except ValueError:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.sleep_optimizer")
 
         if bedtimes:
             avg_bedtime = sum(bedtimes) / len(bedtimes)
@@ -315,8 +317,9 @@ class SleepOptimizer:
                     try:
                         hour = int(s.bedtime.split(":")[0])
                         bedtimes.append(hour)
-                    except ValueError:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.sleep_optimizer")
             if bedtimes:
                 avg_bedtime = sum(bedtimes) / len(bedtimes)
                 if avg_bedtime >= 23:
@@ -331,15 +334,17 @@ class SleepOptimizer:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sleep_optimizer")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sleep_optimizer")
 
     def _log_session(self, session: SleepSession):
         try:
@@ -354,8 +359,9 @@ class SleepOptimizer:
                     "caffeine": session.caffeine_after_2pm,
                     "screen_time": session.screen_time_before_bed,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.sleep_optimizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

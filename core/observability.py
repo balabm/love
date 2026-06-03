@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "observability"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -377,8 +378,9 @@ class ObservabilityEngine:
                                 "title": alert.title,
                                 "suggested_action": alert.suggested_action,
                             })
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.observability")
             except Exception as e:
                 print(f"[Observability] Loop error: {e}")
             time.sleep(300)
@@ -395,8 +397,9 @@ class ObservabilityEngine:
                     "subsystem": point.subsystem,
                     "tags": point.tags,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.observability")
 
     def _log_trace(self, span: TraceSpan):
         try:
@@ -411,8 +414,9 @@ class ObservabilityEngine:
                     "status": span.status,
                     "tags": span.tags,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.observability")
 
     def _log_alert(self, alert: Alert):
         try:
@@ -426,16 +430,18 @@ class ObservabilityEngine:
                     "suggested_action": alert.suggested_action,
                     "created_at": alert.created_at,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.observability")
 
     def _load_health_state(self):
         try:
             if HEALTH_STATE.exists():
                 data = json.loads(HEALTH_STATE.read_text())
                 # Could restore baselines here
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.observability")
 
 
 # ── Decorator ──────────────────────────────────────────────────────────────

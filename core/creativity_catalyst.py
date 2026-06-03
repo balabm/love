@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "creativity_catalyst"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -367,15 +368,17 @@ class CreativityCatalyst:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.creativity_catalyst")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.creativity_catalyst")
 
     def _log_session(self, session: CreativeSession):
         try:
@@ -389,8 +392,9 @@ class CreativityCatalyst:
                     "block": session.block_type,
                     "flow": session.flow_score,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.creativity_catalyst")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

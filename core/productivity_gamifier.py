@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "productivity_gamifier"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -347,23 +348,26 @@ class ProductivityGamifier:
                             "description": achievement.description,
                         },
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.productivity_gamifier")
 
     # ── Persistence ──────────────────────────────────────────────────────────
 
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.productivity_gamifier")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.productivity_gamifier")
 
     def _load_achievements(self):
         try:
@@ -371,8 +375,9 @@ class ProductivityGamifier:
                 data = json.loads(ACHIEVEMENTS_DB.read_text())
                 for k, v in data.items():
                     self._achievements[k] = Achievement(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.productivity_gamifier")
 
     def _save_achievements(self):
         try:
@@ -388,8 +393,9 @@ class ProductivityGamifier:
                 "rarity": v.rarity,
             } for k, v in self._achievements.items()}
             ACHIEVEMENTS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.productivity_gamifier")
 
     def _log_activity(self, entry: ProductiveActivity):
         try:
@@ -401,8 +407,9 @@ class ProductivityGamifier:
                     "duration": entry.duration_minutes,
                     "xp": entry.xp_earned,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.productivity_gamifier")
 
     def __del__(self):
         """Save achievements on cleanup."""

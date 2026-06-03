@@ -27,6 +27,20 @@ import TerminalPanel from "./components/TerminalPanel";
 import HomeostasisPanel from "./components/HomeostasisPanel";
 import IntegrationsPanel from "./components/IntegrationsPanel";
 import SetupWizard from "./components/SetupWizard";
+import ZeroBloatDashboard from "./components/ZeroBloatDashboard";
+
+// Orphaned panels — now integrated
+import LifeDomains from "./components/LifeDomains";
+import BriefingPanel from "./components/BriefingPanel";
+import EvolutionPanel from "./components/EvolutionPanel";
+import NeuralMesh from "./components/NeuralMesh";
+import MindPanel from "./components/MindPanel";
+import WaveEngine from "./components/WaveEngine";
+import ContextPanel from "./components/ContextPanel";
+import EmotionalPanel from "./components/EmotionalPanel";
+import AgentLoopPanel from "./components/AgentLoopPanel";
+import FleetStatusWidget from "./components/FleetStatusWidget";
+import GuardianWidget from "./components/GuardianWidget";
 
 function ts() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -101,21 +115,29 @@ export default function App() {
   const [predictions, setPredictions] = useState(null);
   const [consciousness, setConsciousness] = useState(null);
   const [autonomyMode, setAutonomyMode] = useState("balanced");
+  const [zeroBloat, setZeroBloat] = useState(true);
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const textareaRef = useRef(null);
   const wsRef = useRef(null);
   const voiceRef = useRef(null);
+  const chatTimeoutRef = useRef(null);
+  const wsRetryCount = useRef(0);
+  const wsRetryTimer = useRef(null);
 
   // Sub-view states for modular dashboards
-  const [autonomySubView, setAutonomySubView] = useState("wave"); // wave | supervisor | sentinel
-  const [pulseSubView, setPulseSubView] = useState("lifelog"); // lifelog | focus | ritual
-  const [cosmosSubView, setCosmosSubView] = useState("map"); // map | notifications
-  const [evolutionSubView, setEvolutionSubView] = useState("matrix"); // matrix | terminal
+  const [autonomySubView, setAutonomySubView] = useState("wave"); // wave | supervisor | sentinel | orchestrator | intelligence | consciousness | emotions | context | mesh
+  const [pulseSubView, setPulseSubView] = useState("lifelog"); // lifelog | domains | focus | ritual | briefing | homeostasis
+  const [cosmosSubView, setCosmosSubView] = useState("map"); // map | notifications | integrations
+  const [evolutionSubView, setEvolutionSubView] = useState("matrix"); // matrix | advanced | terminal
+  const [swarmSubView, setSwarmSubView] = useState("swarm"); // swarm | agents
 
   const connectWS = useCallback(() => {
-    const wsUrl = API.replace(/^http/, "ws") + "/agi/companion/ws";
+    const apiKey = import.meta.env.VITE_API_KEY || "love-dev-key";
+    const sep = API.includes("?") ? "&" : "?";
+    const wsUrl = API.replace(/^http/, "ws") + "/agi/companion/ws" + sep + "api_key=" + apiKey;
+    setWsStatus("connecting");
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -127,8 +149,7 @@ export default function App() {
           setMessages(p => [...p, { role: "love", text, time: ts(), push: true, thinking: "" }]);
         }
         if (msg.type === "monologue") {
-          // Do not spam the main chat with internal monologues. 
-          // They are logged to file and can be viewed elsewhere.
+          // Do not spam the main chat with internal monologues.
         }
         if (msg.type === "state_sync") {
           if (msg.context) {
@@ -147,16 +168,30 @@ export default function App() {
         if (msg.type === "alert" || msg.type === "device_update") {
           loadLive();
         }
+        if (msg.type === "connection_established") {
+          wsRetryCount.current = 0;
+        }
       } catch {}
     };
 
-    ws.onopen = () => setWsStatus("connected");
+    ws.onopen = () => {
+      setWsStatus("connected");
+      wsRetryCount.current = 0;
+    };
     ws.onclose = () => {
       setWsStatus("disconnected");
-      setTimeout(() => { if (wsRef.current === ws) connectWS(); }, 5000);
+      if (wsRetryTimer.current) clearTimeout(wsRetryTimer.current);
+      const backoff = Math.min(30000, 2000 * Math.pow(2, wsRetryCount.current));
+      wsRetryCount.current += 1;
+      wsRetryTimer.current = setTimeout(() => {
+        if (wsRef.current === ws && wsRetryCount.current < 20) connectWS();
+      }, backoff);
     };
-
-    ws.onerror = () => ws.close();
+    ws.onerror = () => {
+      if (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -231,6 +266,10 @@ export default function App() {
     setInput("");
     setLoading(true);
     setView("chat");
+    chatTimeoutRef.current = setTimeout(() => {
+      setLoading(false);
+      setMessages(p => [...p, { role: "love", text: "Response timed out — backend may be overloaded. Try again.", time: ts() }]);
+    }, 35000);
     try {
       const contextOverride = buildContextOverride(ctx);
       const res = await api.post(`${API}/chat`, {
@@ -239,6 +278,7 @@ export default function App() {
         context_override: contextOverride,
         include_live_context: true,
       });
+      clearTimeout(chatTimeoutRef.current);
       setMessages(p => [...p, {
         role: "love",
         text: res.data.response,
@@ -249,6 +289,7 @@ export default function App() {
         voiceRef.current?.speakText(res.data.response);
       }
     } catch {
+      clearTimeout(chatTimeoutRef.current);
       setMessages(p => [...p, { role: "love", text: "Can't reach the backend. Is LOVE running?", time: ts() }]);
     } finally {
       setLoading(false);
@@ -315,12 +356,20 @@ export default function App() {
           <div className="stat-capsule ws-capsule" title={wsStatus === "connected" ? "WebSocket Connected" : "WebSocket Disconnected"}>
             <span className={`ws-dot ${wsStatus === "connected" ? "online" : "offline"}`} />
           </div>
+          <button
+            className="stat-capsule"
+            onClick={() => setZeroBloat(z => !z)}
+            title={zeroBloat ? "Switch to Full UI" : "Switch to Zero-Bloat Telemetry"}
+            style={{ opacity: 0.7, cursor: "pointer", background: "rgba(255,255,255,0.04)" }}
+          >
+            {zeroBloat ? "⛶" : "◈"}
+          </button>
         </div>
 
         {/* Navigation Tabs */}
         <nav className="horizon-tabs">
           <button className={`nav-tab-btn ${view === "chat" ? "active" : ""}`} onClick={() => setView("chat")} title="Commands Stream">
-            ◈ STREAM
+            ◈ {zeroBloat ? "TERMINAL" : "STREAM"}
           </button>
           <button className={`nav-tab-btn ${view === "swarm" ? "active" : ""}`} onClick={() => setView("swarm")} title="Coordinated Multi-Agent Swarm">
             🐝 SWARM
@@ -373,6 +422,8 @@ export default function App() {
                   ))}
                 </div>
               )}
+              <FleetStatusWidget onOpenSupervisor={() => { setView("mind"); setAutonomySubView("supervisor"); }} />
+              <GuardianWidget />
               <TelemetryHUD ctx={ctx} consciousness={consciousness} />
             </>
           )}
@@ -388,7 +439,13 @@ export default function App() {
 
         {/* Center Stage (Dynamic workspace switcher) */}
         <main className="hud-center-stage">
-          {view === "chat" && (
+          {view === "chat" && zeroBloat && (
+            <ZeroBloatDashboard
+              initialMessages={messages}
+              apiBase={API}
+            />
+          )}
+          {view === "chat" && !zeroBloat && (
             <>
               {messages.length === 1 && (
                 <div className="quick-grid" style={{ padding: "16px 24px 0 24px" }}>
@@ -424,13 +481,31 @@ export default function App() {
           )}
 
           {view === "swarm" && (
-            <ErrorBoundary name="Swarm"><div className="view-scroll"><SwarmPanel /></div></ErrorBoundary>
+            <ErrorBoundary name="Swarm">
+              <div className="sub-view-layout">
+                <div className="sub-nav-header">
+                  <button className={`sub-nav-btn ${swarmSubView === "swarm" ? "active" : ""}`} onClick={() => setSwarmSubView("swarm")}>
+                    🐝 SWARM
+                  </button>
+                  <button className={`sub-nav-btn ${swarmSubView === "agents" ? "active" : ""}`} onClick={() => setSwarmSubView("agents")}>
+                    🤖 AGENT LOOP
+                  </button>
+                </div>
+                <div className="view-scroll">
+                  {swarmSubView === "swarm" && <SwarmPanel />}
+                  {swarmSubView === "agents" && <AgentLoopPanel />}
+                </div>
+              </div>
+            </ErrorBoundary>
           )}
 
           {view === "mind" && (
             <ErrorBoundary name="Mind">
               <div className="sub-view-layout">
                 <div className="sub-nav-header">
+                  <button className={`sub-nav-btn ${autonomySubView === "consciousness" ? "active" : ""}`} onClick={() => setAutonomySubView("consciousness")}>
+                    🧠 CONSCIOUSNESS
+                  </button>
                   <button className={`sub-nav-btn ${autonomySubView === "wave" ? "active" : ""}`} onClick={() => setAutonomySubView("wave")}>
                     🌊 WAVE ENGINE
                   </button>
@@ -441,18 +516,31 @@ export default function App() {
                     👁️ SENTINEL MONITOR
                   </button>
                   <button className={`sub-nav-btn ${autonomySubView === "orchestrator" ? "active" : ""}`} onClick={() => setAutonomySubView("orchestrator")}>
-                    🧠 ORCHESTRATOR
+                    🎛️ ORCHESTRATOR
                   </button>
                   <button className={`sub-nav-btn ${autonomySubView === "intelligence" ? "active" : ""}`} onClick={() => setAutonomySubView("intelligence")}>
                     🧬 INTELLIGENCE
                   </button>
+                  <button className={`sub-nav-btn ${autonomySubView === "mesh" ? "active" : ""}`} onClick={() => setAutonomySubView("mesh")}>
+                    🕸️ NEURAL MESH
+                  </button>
+                  <button className={`sub-nav-btn ${autonomySubView === "emotions" ? "active" : ""}`} onClick={() => setAutonomySubView("emotions")}>
+                    ♥ EMOTIONS
+                  </button>
+                  <button className={`sub-nav-btn ${autonomySubView === "context" ? "active" : ""}`} onClick={() => setAutonomySubView("context")}>
+                    📡 CONTEXT
+                  </button>
                 </div>
                 <div className="view-scroll">
-                  {autonomySubView === "wave" && <AutonomyPanel />}
+                  {autonomySubView === "consciousness" && <MindPanel />}
+                  {autonomySubView === "wave" && <WaveEngine />}
                   {autonomySubView === "supervisor" && <SupervisorPanel />}
                   {autonomySubView === "sentinel" && <SentinelPanel />}
                   {autonomySubView === "orchestrator" && <OrchestratorPanel />}
                   {autonomySubView === "intelligence" && <IntelligenceDashboard />}
+                  {autonomySubView === "mesh" && <NeuralMesh />}
+                  {autonomySubView === "emotions" && <EmotionalPanel />}
+                  {autonomySubView === "context" && <ContextPanel />}
                 </div>
               </div>
             </ErrorBoundary>
@@ -465,6 +553,9 @@ export default function App() {
                   <button className={`sub-nav-btn ${evolutionSubView === "matrix" ? "active" : ""}`} onClick={() => setEvolutionSubView("matrix")}>
                     🧬 EVOLUTION MATRIX
                   </button>
+                  <button className={`sub-nav-btn ${evolutionSubView === "advanced" ? "active" : ""}`} onClick={() => setEvolutionSubView("advanced")}>
+                    🧪 DNA & DAEMON
+                  </button>
                   <button className={`sub-nav-btn ${evolutionSubView === "terminal" ? "active" : ""}`} onClick={() => setEvolutionSubView("terminal")}>
                     📟 NEURAL TERMINAL
                   </button>
@@ -474,6 +565,7 @@ export default function App() {
                 </div>
                 <div className="view-scroll">
                   {evolutionSubView === "matrix" && <SelfEvolutionPanel />}
+                  {evolutionSubView === "advanced" && <EvolutionPanel />}
                   {evolutionSubView === "terminal" && <TerminalPanel />}
                 </div>
               </div>
@@ -487,11 +579,17 @@ export default function App() {
                   <button className={`sub-nav-btn ${pulseSubView === "lifelog" ? "active" : ""}`} onClick={() => setPulseSubView("lifelog")}>
                     📊 LIFE DOMAINS
                   </button>
+                  <button className={`sub-nav-btn ${pulseSubView === "domains" ? "active" : ""}`} onClick={() => setPulseSubView("domains")}>
+                    💪 TRACKER
+                  </button>
                   <button className={`sub-nav-btn ${pulseSubView === "focus" ? "active" : ""}`} onClick={() => setPulseSubView("focus")}>
                     ⏱️ FOCUS MODE
                   </button>
                   <button className={`sub-nav-btn ${pulseSubView === "ritual" ? "active" : ""}`} onClick={() => setPulseSubView("ritual")}>
                     ♥ RITUAL BRIEFINGS
+                  </button>
+                  <button className={`sub-nav-btn ${pulseSubView === "briefing" ? "active" : ""}`} onClick={() => setPulseSubView("briefing")}>
+                    📰 DAILY BRIEF
                   </button>
                   <button className={`sub-nav-btn ${pulseSubView === "homeostasis" ? "active" : ""}`} onClick={() => setPulseSubView("homeostasis")}>
                     ♻️ HOMEOSTASIS
@@ -499,8 +597,10 @@ export default function App() {
                 </div>
                 <div className="view-scroll">
                   {pulseSubView === "lifelog" && <Dashboard />}
+                  {pulseSubView === "domains" && <LifeDomains />}
                   {pulseSubView === "focus" && <FocusMode />}
                   {pulseSubView === "ritual" && <RitualView />}
+                  {pulseSubView === "briefing" && <BriefingPanel />}
                   {pulseSubView === "homeostasis" && <HomeostasisPanel />}
                 </div>
               </div>
@@ -522,7 +622,7 @@ export default function App() {
                     📲 NOTIFICATION LOGS & INSIGHTS
                   </button>
                   <button className={`sub-nav-btn ${cosmosSubView === "integrations" ? "active" : ""}`} onClick={() => setCosmosSubView("integrations")}>
-                    🌐 TUNNELS & INTEGRATIONS
+                    🌐 INTEGRATIONS
                   </button>
                 </div>
                 <div className="view-scroll">

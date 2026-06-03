@@ -12,6 +12,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -33,8 +34,9 @@ def _log_error(error: Dict[str, Any]):
     try:
         with open(ERROR_LOG, "a") as f:
             f.write(json.dumps(error) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_healing")
 
 
 def _log_healing(healing: Dict[str, Any]):
@@ -43,8 +45,9 @@ def _log_healing(healing: Dict[str, Any]):
     try:
         with open(HEALING_LOG, "a") as f:
             f.write(json.dumps(healing) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_healing")
 
     # Publish to neural bus for cross-module awareness
     if NEURAL_BUS_AVAILABLE:
@@ -193,10 +196,12 @@ def check_recent_errors(max_hours: int = 24) -> List[Dict[str, Any]]:
                     ts = datetime.fromisoformat(error_data.get("timestamp", "")).timestamp()
                     if ts > cutoff:
                         errors.append(error_data)
-                except Exception:
-                    pass
-    except Exception:
-        pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.self_healing")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_healing")
     
     return errors
 
@@ -214,8 +219,9 @@ def get_healing_summary() -> Dict[str, Any]:
                 "auto_fixed": sum(1 for h in healing_events if h.get("status") == "auto_fixed"),
                 "needs_manual": sum(1 for h in healing_events if h.get("status") in ["needs_manual_fix", "auto_fix_suggested"])
             }
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_healing")
     
     return {
         "total_healing_attempts": 0,
@@ -243,8 +249,9 @@ def monitor_log_file(log_path: Path) -> Optional[str]:
             if healing["user_alert"]:
                 return healing["user_alert"]
     
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_healing")
     
     return None
 
@@ -262,8 +269,9 @@ def monitor_stdout_stderr() -> Optional[str]:
                 healing = detect_and_fix_error(line)
                 if healing["user_alert"]:
                     return healing["user_alert"]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_healing")
     return None
 
 
@@ -305,8 +313,9 @@ def rollback_all_backups() -> List[str]:
                 "action": f"Restored backups for: {', '.join(restored_files)}",
                 "status": "auto_fixed"
             })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.self_healing")
         
     return restored_files
 

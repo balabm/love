@@ -309,7 +309,7 @@ export default function EvolutionPanel() {
               </div>
               <div className="sensory-stat">
                 <span className="sensory-lbl">Dev Activity</span>
-                <span className="sensory-val">{contextSummary?.activity || "Analyzing..."}</span>
+                <span className="sensory-val">{contextSummary?.activity || "None"}</span>
               </div>
               <div className="sensory-stat">
                 <span className="sensory-lbl">Surroundings & Time</span>

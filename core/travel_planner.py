@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "travel_planner"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -311,8 +312,9 @@ class TravelPlanner:
                 } for k, v in self._preferences.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.travel_planner")
 
     def _load_stats(self):
         try:
@@ -321,8 +323,9 @@ class TravelPlanner:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("preferences", {}).items():
                     self._preferences[k] = TravelPreference(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.travel_planner")
 
     def _log_trip(self, trip: Trip):
         try:
@@ -335,8 +338,9 @@ class TravelPlanner:
                     "satisfaction": trip.satisfaction,
                     "stress": trip.stress_level,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.travel_planner")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

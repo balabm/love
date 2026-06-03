@@ -2,6 +2,7 @@ import chromadb
 from datetime import datetime, timedelta
 import logging
 from dotenv import load_dotenv
+from core.execution_guard import log_error
 
 load_dotenv()
 
@@ -59,8 +60,9 @@ def save_memory(user_input: str, response: str, mode: str = "general"):
     try:
         from core.hierarchical_predictive_coding import get_hpc
         get_hpc().feed(response, source="love")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory")
     try:
         # Implicit reward: short user follow-ups w/ thanks => positive, corrections => negative
         from core.moe_router import get_moe_router
@@ -72,8 +74,9 @@ def save_memory(user_input: str, response: str, mode: str = "general"):
             r_signal = -0.6
         if r_signal != 0.0:
             get_moe_router().reinforce("core_agent_chat", user_input, r_signal)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory")
     # [FEEDBACK-PATCH] implicit feedback detection
     try:
         from core.feedback_collector import get_feedback_collector
@@ -81,31 +84,33 @@ def save_memory(user_input: str, response: str, mode: str = "general"):
         _prev = getattr(_fc, '_last_user_text', '')
         _sig = _fc.detect_implicit(user_input, _prev, response, 0)
         _fc._last_user_text = user_input
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory")
     # Save to local ChromaDB
     _get_collection().add(
         documents=[f"User: {user_input}\nLove: {response}"],
         metadatas=[{"mode": mode, "timestamp": datetime.now().isoformat()}],
         ids=[datetime.now().isoformat()],
     )
-    
-    # Also write to local structured log for memory consolidation
-    import json
-    from pathlib import Path
+
+    # Also write to Consolidated Memory for unified persistence and learning
     try:
-        log_file = Path(__file__).parent.parent / "data" / "conversations.jsonl"
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-        log_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "user": user_input,
-            "love": response,
-            "mode": mode
-        }
-        with open(log_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(log_entry) + "\n")
-    except Exception:
-        pass
+        from core.consolidated_memory import get_consolidated_memory
+        get_consolidated_memory().write(
+            domain="chat",
+            event_type=mode,
+            payload={
+                "user": user_input,
+                "love": response,
+                "mode": mode,
+                "timestamp": datetime.now().isoformat(),
+            },
+            text_for_search=f"User: {user_input}\nLove: {response}",
+        )
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory")
     
     # Sync to Neural Sync if available
     if SYNC_AVAILABLE:
@@ -118,8 +123,9 @@ def save_memory(user_input: str, response: str, mode: str = "general"):
                 content=f"User: {user_input}\nLove: {response}",
                 metadata={"mode": mode, "user_input": user_input[:100]}
             )
-        except Exception:
-            pass  # Fail silently if sync fails
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.memory")
 
 def recall_memory(query: str, n: int = 5, mode: str = None):
     """Recall relevant past memories."""
@@ -132,8 +138,9 @@ def recall_memory(query: str, n: int = 5, mode: str = None):
         )
         if results["documents"][0]:
             return "\n".join(results["documents"][0])
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory")
     return ""
 
 def save_log(category: str, data: dict):
@@ -145,7 +152,20 @@ def save_log(category: str, data: dict):
         metadatas=[{"timestamp": datetime.now().isoformat()}],
         ids=[datetime.now().isoformat()],
     )
-    
+
+    # Also write to Consolidated Memory for unified persistence
+    try:
+        from core.consolidated_memory import get_consolidated_memory
+        get_consolidated_memory().write(
+            domain=category,
+            event_type="log",
+            payload={**data, "timestamp": datetime.now().isoformat()},
+            text_for_search=str(data),
+        )
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.memory")
+
     # Sync to Neural Sync if available
     if SYNC_AVAILABLE:
         try:
@@ -168,8 +188,9 @@ def save_log(category: str, data: dict):
                 device_id=device_id,
                 priority=8 if category in ['work_status', 'portfolio_update'] else 5
             )
-        except Exception:
-            pass  # Fail silently if sync fails
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.memory")
 
 def prune_short_term_memory(days_to_keep: int = 7):
     """Prune old entries from the love_memory collection to prevent unbounded memory growth.
@@ -204,3 +225,13 @@ def prune_short_term_memory(days_to_keep: int = 7):
         
     except Exception as e:
         logging.error(f"Failed to prune short-term memory: {e}")
+
+
+def get_memory_stats() -> dict:
+    """Return basic memory statistics for health dashboards."""
+    try:
+        collection = _get_collection()
+        count = collection.count()
+        return {"total_memories": count, "status": "ready"}
+    except Exception:
+        return {"total_memories": 0, "status": "unavailable"}

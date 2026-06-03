@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.llm import get_reasoning_llm
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "reasoning"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -372,8 +373,9 @@ Respond with JSON only:
         try:
             with open(REASONING_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.reasoning_engine")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

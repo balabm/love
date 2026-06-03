@@ -21,6 +21,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 FINANCE_CACHE = DATA_DIR / "finance_intelligence.json"
@@ -213,10 +214,12 @@ class FinanceIntelligence:
                             from core.proactive_push import get_push_engine
                             get_push_engine().push("ALERT", alert["message"], priority="high", metadata={"source": "finance"})
                             alert["pushed"] = True
-                        except Exception:
-                            pass
-                except Exception:
-                    pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="integrations.finance_intelligence")
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.finance_intelligence")
                 time.sleep(interval)
         self._thread = threading.Thread(target=_loop, daemon=True, name="LOVE-Finance")
         self._thread.start()
@@ -225,8 +228,9 @@ class FinanceIntelligence:
         try:
             cache = {"prices": self._prices, "news": self._news[:20], "prev_prices": self._prev_prices}
             FINANCE_CACHE.write_text(json.dumps(cache, default=str, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.finance_intelligence")
 
     def _load_cache(self):
         try:
@@ -235,8 +239,9 @@ class FinanceIntelligence:
                 self._prices = data.get("prices", {})
                 self._news = data.get("news", [])
                 self._prev_prices = data.get("prev_prices", {})
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.finance_intelligence")
 
 
 def get_finance_intelligence() -> FinanceIntelligence:

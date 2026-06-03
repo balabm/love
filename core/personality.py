@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from collections import Counter, defaultdict
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 PERSONALITY_FILE = DATA_DIR / "personality.json"
@@ -60,8 +61,9 @@ class Personality:
         try:
             if PERSONALITY_FILE.exists():
                 return json.loads(PERSONALITY_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.personality")
         return default
     
     def _load_opinions(self) -> Dict[str, Any]:
@@ -69,8 +71,9 @@ class Personality:
         try:
             if OPINIONS_FILE.exists():
                 return json.loads(OPINIONS_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.personality")
         return {}
     
     def _load_preferences(self) -> Dict[str, Any]:
@@ -85,8 +88,9 @@ class Personality:
         try:
             if PREFERENCES_FILE.exists():
                 return json.loads(PREFERENCES_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.personality")
         return default
     
     def _save(self):
@@ -95,8 +99,9 @@ class Personality:
             PERSONALITY_FILE.write_text(json.dumps(self.traits, indent=2))
             OPINIONS_FILE.write_text(json.dumps(self.opinions, indent=2))
             PREFERENCES_FILE.write_text(json.dumps(self.preferences, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.personality")
     
     def _log_character_event(self, event_type: str, details: Dict[str, Any]):
         """Log significant character development events."""
@@ -109,8 +114,9 @@ class Personality:
             }
             with open(CHARACTER_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.personality")
     
     def form_opinion(self, topic: str, opinion: str, confidence: float, context: str):
         """Form an opinion on a topic based on experience."""

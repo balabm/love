@@ -37,6 +37,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "cross_modal_fusion"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -537,8 +538,9 @@ class CrossModalFusionEngine:
         try:
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(obj, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.cross_modal_fusion")
 
     def _count_lines(self, path: Path) -> int:
         if not path.exists():
@@ -553,8 +555,9 @@ class CrossModalFusionEngine:
         try:
             with open(STATS_FILE, "w", encoding="utf-8") as f:
                 json.dump(self._stats, f, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.cross_modal_fusion")
 
     def _load_stats(self):
         if not STATS_FILE.exists():
@@ -563,8 +566,9 @@ class CrossModalFusionEngine:
             with open(STATS_FILE, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
                 self._stats.update(loaded)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.cross_modal_fusion")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

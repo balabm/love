@@ -43,6 +43,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "multi_agent"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -393,8 +394,9 @@ class MultiAgentOrchestrator:
         try:
             with open(ORCHESTRATION_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.multi_agent_orchestrator")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

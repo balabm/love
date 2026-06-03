@@ -3,6 +3,7 @@ import threading
 import json
 import requests
 import time
+from core.execution_guard import log_error
 
 class NtfyBridge:
     _instance = None
@@ -61,8 +62,9 @@ class NtfyBridge:
                                 data = json.loads(line.decode('utf-8'))
                                 if data.get('event') == 'message':
                                     self._handle_message(data)
-                            except json.JSONDecodeError:
-                                pass
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="integrations.ntfy_bridge")
                 else:
                     time.sleep(5)
             except requests.exceptions.RequestException:

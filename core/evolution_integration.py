@@ -26,6 +26,7 @@ from core.swarm_evolution import get_swarm_evolution
 from core.self_coder import get_self_coder
 from core.cross_instance_learning import get_cross_instance_learning
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "evolution_integration"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -252,29 +253,34 @@ class EvolutionIntegration:
         
         try:
             get_meta_evolution().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         try:
             get_swarm_evolution().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         try:
             get_self_coder().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         try:
             from core.autonomous_cicd import get_autonomous_cicd
             get_autonomous_cicd().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         try:
             get_cross_instance_learning().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         print("[EvolutionIntegration] All evolution systems stopped")
     
@@ -290,7 +296,7 @@ class EvolutionIntegration:
             except Exception as e:
                 print(f"[EvolutionIntegration] Cycle error: {e}")
             
-            time.sleep(1800)  # Run full cycle every 30 minutes
+            time.sleep(7200)  # Run full cycle every 2 hours (was 30 minutes)
     
     def _run_full_cycle(self):
         """Run a full evolution coordination cycle."""
@@ -391,8 +397,9 @@ class EvolutionIntegration:
                         category="EVOLUTION",
                         importance="normal"
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
     
     def _heal_subsystems(self):
         """Check subsystem health and restart any that have crashed."""
@@ -448,8 +455,9 @@ class EvolutionIntegration:
             tasks = get_task_overview()
             state["overdue_count"] = tasks.get("overdue_count", 0)
             state["upcoming_deadline_hours"] = 999  # Simplified
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         try:
             from integrations.finance_intelligence import get_finance_intelligence
@@ -457,8 +465,9 @@ class EvolutionIntegration:
             prices = fi.get_prices()
             # Calculate market change (simplified)
             state["market_change"] = 0.0
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
         
         return state
     
@@ -642,8 +651,9 @@ class EvolutionIntegration:
         try:
             with open(INTEGRATION_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.evolution_integration")
     
     # ── Query Methods ───────────────────────────────────────────────────────────
     

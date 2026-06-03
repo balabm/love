@@ -22,6 +22,29 @@ from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
+
+# Wave 25+ Quantitative Modules
+try:
+    from core.quantitative_signals import get_quant_signals
+    QUANT_AVAILABLE = True
+except ImportError:
+    QUANT_AVAILABLE = False
+try:
+    from core.risk_manager import get_risk_manager
+    RISK_AVAILABLE = True
+except ImportError:
+    RISK_AVAILABLE = False
+try:
+    from core.market_regime_detector import get_regime_detector
+    REGIME_AVAILABLE = True
+except ImportError:
+    REGIME_AVAILABLE = False
+try:
+    from core.sentiment_analyzer import get_sentiment_analyzer
+    SENTIMENT_AVAILABLE = True
+except ImportError:
+    SENTIMENT_AVAILABLE = False
 
 # Neural Bus
 try:
@@ -139,8 +162,61 @@ def on_data(candles):
         if self._compiled is None and not self.compile():
             return "HOLD"
         try:
-            local_ns = {"candles": candles, "statistics": __import__("statistics")}
-            exec(self._compiled, {"__builtins__": __builtins__}, local_ns)
+            # Normalize params: convert string numbers to float/int,
+            # and cast floats that are whole numbers back to int so list indexing works.
+            raw_params = self.strategy.params or {}
+            norm_params: Dict[str, Any] = {}
+            for k, v in raw_params.items():
+                if isinstance(v, str):
+                    try:
+                        if "." in v:
+                            norm_params[k] = float(v)
+                        else:
+                            norm_params[k] = int(v)
+                    except ValueError:
+                        norm_params[k] = v
+                elif isinstance(v, float) and v.is_integer():
+                    norm_params[k] = int(v)
+                else:
+                    norm_params[k] = v
+
+            def get_param(key: str, default=0.0):
+                return norm_params.get(key, default)
+
+            def get_int_param(key: str, default: int = 10) -> int:
+                """Return param as int — safe for list indexing."""
+                v = norm_params.get(key, default)
+                try:
+                    return int(float(v))
+                except (TypeError, ValueError):
+                    return int(default)
+
+            def get_float_param(key: str, default: float = 0.0) -> float:
+                """Return param as float."""
+                v = norm_params.get(key, default)
+                try:
+                    return float(v)
+                except (TypeError, ValueError):
+                    return float(default)
+
+            local_ns = {
+                "candles": candles,
+                "statistics": __import__("statistics"),
+            }
+            # Build globals for exec: include helpers AND inject each param
+            # as a bare-name global so poorly-generated strategies that reference
+            # param names directly (e.g., `trend_line_length`) still work.
+            exec_globals = {
+                "__builtins__": __builtins__,
+                "params": norm_params,
+                "get_param": get_param,
+                "get_int_param": get_int_param,
+                "get_float_param": get_float_param,
+            }
+            for k, v in norm_params.items():
+                if k not in exec_globals:
+                    exec_globals[k] = v
+            exec(self._compiled, exec_globals, local_ns)
             on_data_fn = local_ns.get("on_data")
             if on_data_fn:
                 return on_data_fn(candles)
@@ -164,6 +240,12 @@ class AutonomousTradingEngine:
         self._last_paper_trade_time = 0.0
         self._auto_collection_last_run = 0.0
         self._market_cache: Dict[str, Any] = {}
+        self._auto_trade_enabled = True  # Can be toggled from UI
+        # Quantitative module hooks
+        self.quant_engine = get_quant_signals() if QUANT_AVAILABLE else None
+        self.risk_engine = get_risk_manager() if RISK_AVAILABLE else None
+        self.regime_engine = get_regime_detector() if REGIME_AVAILABLE else None
+        self.sentiment_engine = get_sentiment_analyzer() if SENTIMENT_AVAILABLE else None
         self._load_strategies()
 
     @classmethod
@@ -185,30 +267,51 @@ class AutonomousTradingEngine:
 
             # Get recent market conditions
             market_summary = self._get_market_summary()
+            regime_ctx = ""
+            sentiment_ctx = ""
+            if self.regime_engine:
+                candles = self._fetch_klines("BTC-USDT", "1h", 50)
+                if candles:
+                    r = self.regime_engine.detect(candles, "BTC-USDT")
+                    regime_ctx = f"Current regime: {r.get('regime', 'unknown')} (confidence: {r.get('confidence', 0)})."
+            if self.sentiment_engine:
+                candles = self._fetch_klines("BTC-USDT", "1h", 30)
+                if candles:
+                    s = self.sentiment_engine.analyze(candles, "BTC-USDT")
+                    sentiment_ctx = f"Market sentiment: {s.get('regime', 'neutral')} (score: {s.get('sentiment', 0)})."
 
             prompt = f"""You are a quantitative trading researcher. Create a novel short-term trading strategy for crypto (BTC/USDT on 1h timeframe).
 
 Current market conditions: {market_summary}
+{regime_ctx}
+{sentiment_ctx}
 
 Your response must be ONLY a JSON object with these fields:
 - name: short catchy name for the strategy
 - description: what it does and why it should work (1-2 sentences)
 - logic_type: one of [momentum, mean_reversion, breakout, trend_following, volatility]
 - params: dict of numeric parameters the strategy needs
-- code: Python code string. The code must define a function called `on_data(candles)` that takes a list of candles [[timestamp, open, high, low, close, volume], ...] newest last, and returns exactly "BUY", "SELL", or "HOLD". You can use simple indicators (SMA, EMA, RSI, Bollinger, ATR, volume) with basic math. No external imports needed except `statistics`.
+- code: Python code string. The code must define a function called `on_data(candles)` that takes a list of candles [[timestamp, open, high, low, close, volume], ...] newest last, and returns exactly "BUY", "SELL", or "HOLD".
+
+**Important:** The runtime provides three helpers you MUST use for parameters:
+- `get_int_param(key, default)` — use this for ANY parameter used as a list index, slice, or loop count (e.g., `period = get_int_param("period", 14)`)
+- `get_float_param(key, default)` — use this for price thresholds, ratios, or multipliers
+- `get_param(key, default)` — generic accessor
 
 Example valid code:
 ```python
 _state = {{}}
 def on_data(candles):
     closes = [float(c[4]) for c in candles]
-    if len(closes) < 20: return "HOLD"
-    sma20 = sum(closes[-20:]) / 20
-    sma5 = sum(closes[-5:]) / 5
-    if sma5 > sma20 * 1.01 and _state.get("prev") != "BUY":
+    period = get_int_param("period", 14)
+    threshold = get_float_param("threshold", 0.01)
+    if len(closes) < period + 1: return "HOLD"
+    sma_fast = sum(closes[-get_int_param("fast", 5):]) / get_int_param("fast", 5)
+    sma_slow = sum(closes[-period:]) / period
+    if sma_fast > sma_slow * (1 + threshold) and _state.get("prev") != "BUY":
         _state["prev"] = "BUY"
         return "BUY"
-    if sma5 < sma20 * 0.99 and _state.get("prev") != "SELL":
+    if sma_fast < sma_slow * (1 - threshold) and _state.get("prev") != "SELL":
         _state["prev"] = "SELL"
         return "SELL"
     return "HOLD"
@@ -250,19 +353,25 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                 return None
             # Strip common LLM artifacts
             candidate = candidate.strip()
+            # Strip <thinking> / reasoning tags
+            candidate = re.sub(r"<think>.*?</think>", "", candidate, flags=re.DOTALL)
+            candidate = re.sub(r"<thinking>.*?</thinking>", "", candidate, flags=re.DOTALL)
+            candidate = re.sub(r"\[thinking\].*?\[/thinking\]", "", candidate, flags=re.DOTALL)
+            if not candidate:
+                return None
             # 1. Direct parse
             try:
                 return json.loads(candidate)
-            except json.JSONDecodeError:
-                pass
+            except Exception:
+                pass  # expected when LLM returns non-JSON prose
             # 2. Remove trailing commas before } or ]
             repaired = re.sub(r',(\s*[}\]])', r'\1', candidate)
             # 3. Replace single-quoted string keys/values with double quotes (simple cases)
             repaired = re.sub(r"(?<=[{\s,])([a-zA-Z_][a-zA-Z0-9_]*)(?=\s*:)", r'"\1"', repaired)
             try:
                 return json.loads(repaired)
-            except json.JSONDecodeError:
-                pass
+            except Exception:
+                pass  # repair also failed — expected
             return None
 
         # 1. Direct parse
@@ -431,11 +540,17 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
         for k in set(list(parent1.params.keys()) + list(parent2.params.keys())):
             child_params[k] = parent1.params.get(k, parent2.params.get(k, 10))
 
-        # Mutation: randomize some params by ±20%
+        # Mutation: randomize some params by ±20%, preserving int vs float type
         for k in child_params:
             if random.random() < 0.3:
-                val = float(child_params[k])
-                child_params[k] = round(val * random.uniform(0.8, 1.2), 2)
+                orig = child_params[k]
+                val = float(orig)
+                mutated = round(val * random.uniform(0.8, 1.2), 2)
+                # Preserve integer type if the original was a whole-number int
+                if isinstance(orig, int) or (isinstance(orig, float) and orig.is_integer()):
+                    child_params[k] = int(mutated)
+                else:
+                    child_params[k] = mutated
 
         child = GeneratedStrategy(
             name=f"Evolved_{parent1.name[:10]}_{parent2.name[:10]}",
@@ -464,13 +579,16 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
             }
             with open(STRATEGY_EVOLUTION_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_trading_engine")
 
     # ─── Auto Paper Trade ────────────────────────────────────────────────────
 
     def _auto_paper_trade(self):
         """Run the top strategy in paper trading mode automatically."""
+        if not self._auto_trade_enabled:
+            return
         active = [s for s in self._strategies if s.status in ("backtested", "active") and s.score > 0]
         if not active:
             return
@@ -497,8 +615,35 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                 pdata = price_data.get("data", price_data)
                 price = float(pdata.get("lastPrice", pdata.get("price", 0)))
 
-            # Use a fixed small amount for auto-trades
-            qty = 0.001 if signal == "BUY" else 0.001
+            # Risk-managed position sizing
+            qty = 0.001
+            if self.risk_engine and price:
+                # Simple ATR-based stop loss for sizing
+                candles = self._fetch_klines("BTC-USDT", "1h", 20)
+                if candles and len(candles) >= 10:
+                    atr = sum(float(c[2]) - float(c[3]) for c in candles[-10:]) / 10
+                    sl = price - (atr * 2) if signal == "BUY" else price + (atr * 2)
+                    sizing = self.risk_engine.position_size(price, sl, "BTC-USDT")
+                    qty = sizing.get("quantity", 0.001)
+                    if qty <= 0:
+                        print(f"[ATE] Risk manager blocked {signal} BTC-USDT")
+                        return
+
+            # Quant signal overlay: only trade if quant ensemble agrees
+            if self.quant_engine:
+                candles = self._fetch_klines("BTC-USDT", "1h", 100)
+                regime_hint = None
+                if self.regime_engine:
+                    r = self.regime_engine.detect(candles, "BTC-USDT")
+                    regime_hint = r.get("regime", "").lower()
+                q = self.quant_engine.analyze(candles, "BTC-USDT", regime_hint=regime_hint)
+                q_sig = q.get("signal", "HOLD")
+                if q_sig != signal and q.get("confidence", 0) > 0.5:
+                    print(f"[ATE] Quant overlay override: {signal} -> HOLD (quant says {q_sig})")
+                    return
+                elif q_sig == signal:
+                    print(f"[ATE] Quant overlay confirms {signal}")
+
             result = guardian.place_trade("BTC-USDT", signal, qty, paper=True)
 
             if result.get("success"):
@@ -507,6 +652,12 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                     "timestamp": datetime.now().isoformat(),
                     "result": result,
                 })
+                # Record P&L for risk manager Kelly tracking
+                if self.risk_engine and result.get("order"):
+                    order = result["order"]
+                    pnl = order.get("pnl", 0)
+                    at_risk = order.get("total", qty * price) if price else qty * 30000
+                    self.risk_engine.record_trade_pnl(pnl, at_risk)
                 top.status = "active"
                 self._save_strategies()
 
@@ -519,8 +670,9 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                             priority="normal",
                             metadata={"source": "autonomous_trading", "strategy": top.id},
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.autonomous_trading_engine")
 
                 # Log
                 try:
@@ -530,8 +682,9 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                             "strategy_id": top.id, "signal": signal,
                             "qty": qty, "price": price,
                         }) + "\n")
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.autonomous_trading_engine")
         except Exception as e:
             print(f"[ATE] Auto paper trade error: {e}")
 
@@ -597,8 +750,9 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
                                         priority="normal",
                                         metadata={"source": "autonomous_trading", "strategy": strategy.id},
                                     )
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    from core.execution_guard import log_error
+                                    log_error(e, module="core.autonomous_trading_engine")
 
                     # Evolve existing
                     if len(self._strategies) >= 3:
@@ -631,8 +785,9 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
         try:
             data = [s.to_dict() for s in self._strategies]
             GENERATED_STRATEGIES_DB.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_trading_engine")
 
     def _load_strategies(self):
         if not GENERATED_STRATEGIES_DB.exists():
@@ -642,10 +797,12 @@ Be creative. Try something the example didn't do. Return ONLY valid JSON."""
             for s in data:
                 try:
                     self._strategies.append(GeneratedStrategy.from_dict(s))
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.autonomous_trading_engine")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_trading_engine")
 
     # ─── Public API ──────────────────────────────────────────────────────────
 

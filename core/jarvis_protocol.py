@@ -14,6 +14,7 @@ from typing import Optional, Dict, Any
 from core.settings import get_settings
 from core.llm import route_llm
 from core.context_engine import get_live_context, get_prompt_context
+from core.execution_guard import log_error
 
 # Voice loop integration (optional)
 try:
@@ -39,13 +40,14 @@ class NeuralCortex:
     Runs silently in the background, thinking about the live context.
     """
     
-    def __init__(self, interval_seconds: int = 45):
+    def __init__(self, interval_seconds: int = 300):
         self.interval = interval_seconds
         self.running = False
         self.thread: Optional[threading.Thread] = None
         self.last_thought = ""
         self.last_speech_time = 0
         self._last_blocked_log = 0  # rate-limit action-plan-blocked noise
+        self._last_background_action_time = 0.0  # debounce background actions
         
     def start(self):
         if self.running: return
@@ -77,16 +79,25 @@ class NeuralCortex:
 
     def _think(self):
         """Perform one cognitive cycle based on live context."""
+        # Skip if Ollama is in circuit-breaker cooldown
+        try:
+            from core.llm import _circuit_cooldown_until
+            import time
+            if time.time() < _circuit_cooldown_until:
+                return
+        except Exception:
+            pass
+
         ctx = get_live_context()
         if not ctx: return
         
         # Don't think as often if user is idle or screen is off
-        if ctx.activity == "idle" and self.interval == 45:
+        if ctx.activity == "idle" and self.interval == 300:
             # Slow down thought process when idle to save CPU
-            self.interval = 120
-        elif ctx.activity != "idle" and self.interval == 120:
+            self.interval = 600
+        elif ctx.activity != "idle" and self.interval == 600:
             # Speed up when active
-            self.interval = 45
+            self.interval = 300
 
         rich_context = get_prompt_context()
         
@@ -285,8 +296,13 @@ Return ONLY valid JSON:
 
             # Background Action (Future hook to Swarm/Ghost Dev)
             if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
-                print(f"[Jarvis] ⚙️ Triggering background action: {action}")
-                self._trigger_action(action)
+                now = time.time()
+                if now - self._last_background_action_time > 300:  # 5 minute debounce
+                    print(f"[Jarvis] ⚙️ Triggering background action: {action}")
+                    self._last_background_action_time = now
+                    self._trigger_action(action)
+                else:
+                    print(f"[Jarvis] ⏱️ Background action '{action}' debounced (5min cooldown)")
 
             # 🚀 Wave 9: Action Engine Computer Use
             if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
@@ -359,8 +375,9 @@ Return ONLY valid JSON:
                             try:
                                 win.activate()
                                 break
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="core.jarvis_protocol")
                 elif action == "screenshot":
                     path = args.get("path", "screenshot.png")
                     pyautogui.screenshot(path)
@@ -382,8 +399,9 @@ Return ONLY valid JSON:
             try:
                 from core.ghost_dev import get_ghost_dev
                 get_ghost_dev().assign_task(action, [])
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.jarvis_protocol")
 
 
 # Singleton

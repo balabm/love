@@ -18,6 +18,7 @@ import threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 GITHUB_CACHE = DATA_DIR / "github_cache.json"
@@ -189,8 +190,9 @@ class GitHubMonitor:
             events = self._events or self.get_recent_events(3)
             if events:
                 parts.append(f"[GITHUB] Recent: {events[0]['summary'][:80]}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.github_monitor")
         return "\n".join(parts)
 
     def start_polling(self, interval: int = POLL_INTERVAL):
@@ -210,10 +212,12 @@ class GitHubMonitor:
                         urgent = [n for n in self._notifications if n.get("reason") in ("mention", "review_requested", "assign")]
                         if urgent:
                             engine.push("ALERT", f"GitHub: {urgent[0]['title'][:100]} ({urgent[0]['reason']})", priority="high", metadata={"source": "github"})
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="integrations.github_monitor")
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.github_monitor")
                 time.sleep(interval)
         self._thread = threading.Thread(target=_loop, daemon=True, name="LOVE-GitHub")
         self._thread.start()
@@ -221,8 +225,9 @@ class GitHubMonitor:
     def _save_cache(self):
         try:
             GITHUB_CACHE.write_text(json.dumps(self._cache, default=str, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.github_monitor")
 
     def _load_cache(self):
         try:

@@ -37,6 +37,7 @@ except ImportError:
     NEURAL_BUS_AVAILABLE = False
 
 import psutil
+from core.execution_guard import log_error
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -279,8 +280,9 @@ class ResourceGovernor:
                             found.append(name)
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.resource_governor")
         return found
 
     def _maybe_log_to_disk(self, snapshot: Dict[str, Any]) -> None:

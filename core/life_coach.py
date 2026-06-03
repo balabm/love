@@ -14,6 +14,7 @@ Key behaviors:
 
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Any, Optional
+from core.execution_guard import log_error
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -308,8 +309,9 @@ class LifeCoach:
                 import json
                 data = json.loads(focus_file.read_text(encoding="utf-8"))
                 return data.get("active", False)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.life_coach")
         return False
 
     def _streak_at_risk(self, domain: str, dashboard: Dict) -> bool:

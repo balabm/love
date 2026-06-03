@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "context_window"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -285,8 +286,9 @@ class ContextWindowManager:
                     "turns_summarized": turns_summarized,
                     "summary_length": summary_length,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_window_manager")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

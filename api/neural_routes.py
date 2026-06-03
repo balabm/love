@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+from core.execution_guard import log_error
 
 router = APIRouter(prefix="/neural", tags=["neural-mesh"])
 
@@ -1858,8 +1859,9 @@ async def get_integrations_status():
             "clipboard": snap.clipboard,
             "device_bridge": getattr(snap, "device_bridge", {}),
         }
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.neural_routes")
 
     integrations = []
     for key, cfg in _INTEGRATION_CONFIG.items():
@@ -1876,8 +1878,9 @@ async def get_integrations_status():
                 connected = db.is_connected()
                 data = db.get_state()
                 configured = True
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.neural_routes")
 
         # Build a one-line status summary from snapshot data
         summary = _build_summary(key, data)
@@ -1971,8 +1974,9 @@ def _build_summary(key: str, data: dict) -> str:
             return " · ".join(parts)
         if key == "telegram":
             return "delivery channel"
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.neural_routes")
     return ""
 
 

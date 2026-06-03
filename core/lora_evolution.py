@@ -32,6 +32,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+from core.execution_guard import log_error
 
 # ── Optional torch/peft — activates automatically if available ─────────────────
 _TORCH_AVAILABLE = False
@@ -39,13 +40,15 @@ _PEFT_AVAILABLE = False
 try:
     import torch  # noqa: F401
     _TORCH_AVAILABLE = True
-except ImportError:
-    pass
+except Exception as e:
+    from core.execution_guard import log_error
+    log_error(e, module="core.lora_evolution")
 try:
     import peft  # noqa: F401
     _PEFT_AVAILABLE = True
-except ImportError:
-    pass
+except Exception as e:
+    from core.execution_guard import log_error
+    log_error(e, module="core.lora_evolution")
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -205,8 +208,9 @@ def _load_adapter(adapter_id: str) -> Optional[LoRAAdapter]:
                 try:
                     with open(pending_file, 'a', encoding='utf-8') as pf:
                         pf.write(adapter_id + '\n')
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.lora_evolution")
                 print(f"[LoRAEvolution] load_adapter failed and quarantine failed ({adapter_id}): {e} / move failed")
                 return None
 
@@ -221,8 +225,9 @@ def _log_event(event: Dict[str, Any]) -> None:
     try:
         with open(LOG_FILE, "a", encoding="utf-8") as f:
             f.write(json.dumps(event) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.lora_evolution")
 
 
 # ── LoRAEvolution singleton ────────────────────────────────────────────────────
@@ -269,8 +274,9 @@ class LoRAEvolution:
                 s = json.loads(STATE_FILE.read_text(encoding="utf-8"))
                 self._current_generation = int(s.get("current_generation", 0))
                 self._total_evolved = int(s.get("total_evolved", 0))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.lora_evolution")
 
     def _save_state(self) -> None:
         try:
@@ -282,8 +288,9 @@ class LoRAEvolution:
                 }, indent=2),
                 encoding="utf-8",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.lora_evolution")
 
     def _load_population(self) -> None:
         """Reload all persisted adapters from disk into memory."""
@@ -519,8 +526,9 @@ class LoRAEvolution:
             wm = get_world_model_latent()
             recent = list(wm._recent_obs)[-20:]
             test_embeddings = [o.state for o in recent if o.state is not None]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.lora_evolution")
 
         # Fallback: random unit vectors if no world model data yet
         if not test_embeddings:
@@ -572,8 +580,9 @@ class LoRAEvolution:
                     self._population.pop(a.id, None)
                     try:
                         _adapter_path(a.id).unlink(missing_ok=True)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.lora_evolution")
 
         with self._mu:
             self._current_generation += 1

@@ -24,6 +24,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -66,6 +67,9 @@ class ProactivePushEngine:
         self._async_loop: Optional[asyncio.AbstractEventLoop] = None
         self._push_counts: Dict[str, int] = {}  # category → count today
         self._recent_messages: Dict[str, float] = {}  # message_hash → timestamp for dedup
+        self._pushed_mutation_ids: set = set()  # already-pushed evolution mutations
+        self._last_category_push_time: Dict[str, float] = {}  # category → timestamp
+        self._printed_suppressions: set = set()  # suppress duplicate log noise
 
     def set_async_loop(self, loop: asyncio.AbstractEventLoop):
         """Set the event loop for async callbacks."""
@@ -79,24 +83,37 @@ class ProactivePushEngine:
         """Remove a previously registered callback."""
         try:
             self._callbacks.remove(callback)
-        except ValueError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
 
     def push(self, category: str, message: str, priority: str = "normal", metadata: Dict = None):
         """Add a message to the push queue. Skip if identical message was pushed recently."""
         import uuid
         import hashlib
-        # Deduplication: same message within 30 minutes = suppressed
-        msg_hash = hashlib.sha256(f"{category}:{message}".encode()).hexdigest()[:16]
         now = time.time()
+
+        # Category cooldown: max 1 push per category per 2 hours (except high/critical)
+        if priority not in ("high", "critical"):
+            last_cat = self._last_category_push_time.get(category, 0)
+            if now - last_cat < 7200:  # 2 hours
+                return  # silently skip
+
+        # Deduplication: same message within 2 hours = suppressed
+        msg_hash = hashlib.sha256(f"{category}:{message}".encode()).hexdigest()[:16]
         if msg_hash in self._recent_messages:
             last_time = self._recent_messages[msg_hash]
-            if now - last_time < 1800:  # 30 minutes
-                print(f"[ProactivePush] Duplicate suppressed: {message[:60]}")
+            if now - last_time < 7200:  # 2 hours
+                # Only print suppression once per hash to reduce log noise
+                if msg_hash not in self._printed_suppressions:
+                    self._printed_suppressions.add(msg_hash)
+                    print(f"[ProactivePush] Duplicate suppressed: {message[:60]}")
                 return
         self._recent_messages[msg_hash] = now
+        self._last_category_push_time[category] = now
         # Prune old entries to prevent memory growth
-        self._recent_messages = {k: v for k, v in self._recent_messages.items() if now - v < 1800}
+        self._recent_messages = {k: v for k, v in self._recent_messages.items() if now - v < 7200}
+        self._printed_suppressions.discard(msg_hash)
 
         msg = PushMessage(
             id=uuid.uuid4().hex[:8],
@@ -110,14 +127,16 @@ class ProactivePushEngine:
         try:
             from core.activity_log import log_activity
             log_activity("proactive_push", "message_queued", f"[{category}] {message}", {"category": category, "priority": priority}, importance=priority if priority in ("high", "critical") else "normal")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         # Log it locally
         try:
             with open(PUSH_LOG, "a") as f:
                 f.write(json.dumps(asdict(msg)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
 
         # Publish to neural bus for cross-module awareness
         if NEURAL_BUS_AVAILABLE:
@@ -159,8 +178,9 @@ class ProactivePushEngine:
                         headers={"Content-Type": "application/json"},
                     )
                     urllib.request.urlopen(req, timeout=5)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.proactive_push")
         if not self._callbacks:
             return
         payload = {
@@ -241,8 +261,9 @@ class ProactivePushEngine:
                     metadata={"overdue_count": len(overdue)},
                 )
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         return False
 
     def _check_work_limit(self) -> bool:
@@ -268,8 +289,9 @@ class ProactivePushEngine:
                     metadata={"hours_worked": hours_worked, "limit": limit},
                 )
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         return False
 
     def _check_idle_thoughts(self) -> bool:
@@ -289,11 +311,13 @@ class ProactivePushEngine:
                         # Mark as pushed (best effort)
                         try:
                             t["pushed_to_ui"] = True
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.proactive_push")
                         return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         return False
 
     def _check_evolution(self) -> bool:
@@ -303,17 +327,24 @@ class ProactivePushEngine:
             mutations = evo.get_active_mutations()
             if mutations:
                 latest = mutations[-1]
+                mutation_id = getattr(latest, 'id', '')
+                # Skip if we already pushed this exact mutation
+                if mutation_id and mutation_id in self._pushed_mutation_ids:
+                    return False
                 desc = getattr(latest, 'description', str(latest))
                 gen = evo.get_generation()
                 self.push(
                     "EVOLUTION",
                     f"I just evolved (gen {gen}): {desc[:150]}",
                     priority="low",
-                    metadata={"generation": gen, "mutation": desc[:100]},
+                    metadata={"generation": gen, "mutation": desc[:100], "mutation_id": mutation_id},
                 )
+                if mutation_id:
+                    self._pushed_mutation_ids.add(mutation_id)
                 return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         return False
 
     def _check_emotional_patterns(self) -> bool:
@@ -332,8 +363,9 @@ class ProactivePushEngine:
                         metadata={"insight_type": insight_type},
                     )
                     return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         return False
 
     def _check_research(self) -> bool:
@@ -354,8 +386,9 @@ class ProactivePushEngine:
                         metadata={"topic": topic},
                     )
                     return True
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
         return False
 
     def get_pending(self, limit: int = 10) -> List[Dict]:
@@ -370,8 +403,9 @@ class ProactivePushEngine:
             for line in lines[-limit:]:
                 try:
                     entries.append(json.loads(line))
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.proactive_push")
             return list(reversed(entries))
         except Exception:
             return []

@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "context_aware_prioritizer"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -270,8 +271,9 @@ class ContextAwarePrioritizer:
             from core.settings import get_settings
             settings = get_settings()
             work_limit = getattr(settings, 'WORK_LIMIT_HOURS', 8.0)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_aware_prioritizer")
 
         return UserContext(
             time_of_day=time_of_day,
@@ -299,8 +301,9 @@ class ContextAwarePrioritizer:
                 hours_until = (deadline_dt - datetime.now()).total_seconds() / 3600
                 if hours_until < 24:
                     reasons.append("due soon")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.context_aware_prioritizer")
 
         if not reasons:
             reasons.append("aligned with current context")
@@ -346,15 +349,17 @@ class ContextAwarePrioritizer:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_aware_prioritizer")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_aware_prioritizer")
 
     def _log_prioritization(self, prioritized: List[PrioritizedTask], context: UserContext):
         try:
@@ -366,8 +371,9 @@ class ContextAwarePrioritizer:
                     "emotional_state": context.emotional_state,
                     "top_task": prioritized[0].task.title if prioritized else "",
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.context_aware_prioritizer")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

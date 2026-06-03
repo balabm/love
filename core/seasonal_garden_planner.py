@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "seasonal_garden_planner"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -280,15 +281,17 @@ class SeasonalGardenPlanner:
     def _save_stats(self):
         try:
             STATS_DB.write_text(json.dumps(self._stats, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.seasonal_garden_planner")
 
     def _load_stats(self):
         try:
             if STATS_DB.exists():
                 self._stats.update(json.loads(STATS_DB.read_text()))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.seasonal_garden_planner")
 
     def _log_entry(self, entry: SeasonEntry):
         try:
@@ -300,8 +303,9 @@ class SeasonalGardenPlanner:
                     "planning": entry.planning,
                     "harmony": entry.harmony,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.seasonal_garden_planner")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

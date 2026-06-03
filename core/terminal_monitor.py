@@ -32,6 +32,7 @@ import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -395,8 +396,9 @@ class TerminalMonitor:
         try:
             with open(path, "a", encoding="utf-8") as f:
                 f.write(json.dumps(record, default=str) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.terminal_monitor")
 
     def get_errors(self, limit: int = 20) -> List[Dict]:
         with _lock:

@@ -18,6 +18,7 @@ import threading
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -71,8 +72,9 @@ class RealtimeWorkTracker:
         try:
             with open(WORK_SESSION_LOG, "a") as f:
                 f.write(json.dumps(self.current_session) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.work_tracker")
 
         result = {
             "status": "saved",
@@ -112,8 +114,9 @@ class RealtimeWorkTracker:
         try:
             with open(WORK_SESSION_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.work_tracker")
         return {"status": "logged", "duration_hours": entry["duration_hours"], "context": entry["context"]}
 
     def get_today_hours(self) -> float:
@@ -129,10 +132,12 @@ class RealtimeWorkTracker:
                         s = json.loads(line)
                         if s.get("date") == today:
                             total += s.get("duration_hours", 0)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.work_tracker")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.work_tracker")
         return round(total, 2)
 
     def get_today_sessions(self) -> List[Dict[str, Any]]:
@@ -148,10 +153,12 @@ class RealtimeWorkTracker:
                         s = json.loads(line)
                         if s.get("date") == today:
                             sessions.append(s)
-                    except Exception:
-                        pass
-        except Exception:
-            pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.work_tracker")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.work_tracker")
         return sessions
 
     def get_status(self) -> Dict[str, Any]:

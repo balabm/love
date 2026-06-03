@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type, Union
 
 from core.llm import get_reasoning_llm
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "structured_output"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -235,16 +236,18 @@ JSON:"""
         # Strategy 2: Try parsing the whole text as JSON
         try:
             return json.loads(text.strip())
-        except json.JSONDecodeError:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.structured_output")
 
         # Strategy 3: Find the largest JSON-like substring
         brace_match = re.search(r'\{.*\}', text, re.DOTALL)
         if brace_match:
             try:
                 return json.loads(brace_match.group())
-            except json.JSONDecodeError:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.structured_output")
 
         return None
 
@@ -333,8 +336,9 @@ JSON:"""
         try:
             with open(STRUCTURED_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.structured_output")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

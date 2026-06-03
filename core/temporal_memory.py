@@ -24,6 +24,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass, field
 import threading
 from collections import defaultdict
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -150,8 +151,9 @@ class TemporalMemoryEngine:
                     mem.access_count += 1
                     mem.last_accessed = datetime.now().isoformat()
                     results.append(mem)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.temporal_memory")
 
         # Sort by importance (most important first)
         results.sort(key=lambda m: m.importance, reverse=True)

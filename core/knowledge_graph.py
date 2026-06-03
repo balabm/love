@@ -19,6 +19,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from contextlib import contextmanager
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -442,8 +443,9 @@ def how_is(name: str) -> Dict[str, Any]:
         try:
             d = datetime.fromisoformat(last_seen)
             days_since = (datetime.now() - d).days
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.knowledge_graph")
 
     return {
         "found": True,
@@ -554,7 +556,8 @@ def query_knowledge(query: str, limit: int = 20) -> List[Dict]:
                 info = how_is(r["name"])
                 if info.get("found") and info not in all_entities:
                     all_entities.append(info)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.knowledge_graph")
     
     return all_entities[:limit]

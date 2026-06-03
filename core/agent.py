@@ -8,6 +8,7 @@ import re
 import socket
 import json
 from datetime import datetime
+from core.execution_guard import log_error
 
 # Live context — Jarvis situational awareness
 try:
@@ -290,8 +291,9 @@ def get_device_context() -> str:
         if personality.get('modifications'):
             mods = "\n".join(f"- {m}" for m in personality['modifications'])
             return f"\n\nCURRENT CONTEXT (adapt your tone):\n{mods}"
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
     
     return ""
 
@@ -615,8 +617,9 @@ def _maybe_ingest_feature_request(user_input: str) -> str:
         if result.get("count", 0) > 0:
             domains = [m.get("domain") for m in result.get("created", [])][:6]
             return f"[AUTONOMY NOTE: queued {result.get('count')} autonomous mission(s): {domains}]"
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
     return ""
 
 
@@ -632,16 +635,18 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
     try:
         from core.hierarchical_predictive_coding import get_hpc
         get_hpc().feed(user_input, source="user")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
     try:
         from core.world_model_latent import get_world_model_latent
         from core.state_space_memory import get_ssm_memory
         _wm = get_world_model_latent()
         if _wm._recent_obs:
             get_ssm_memory().step(_wm._recent_obs[-1].state)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     # FAST PATH: greetings and very short queries don't need the full context dump
     # This prevents small models (llama3.2:1b) from hanging on trivial inputs.
@@ -875,34 +880,48 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
     thinking, response = extract_thinking(raw)
     response = clean_response(response)
 
-    # ═══ WAVE 17: POST-RESPONSE — Constitutional review (score only, no LLM revision) ═══
+    # ═══ WAVE 17: POST-RESPONSE — Constitutional review (skip under load) ═══
+    chat_elapsed = time.time() - t_start
     try:
-        from core.constitution import get_constitution
-        constitution = get_constitution()
-        critique = constitution.critique_response(response, user_input, "")
-        # NOTE: Skipping revise_response() — it's an extra LLM call that hangs small models.
-        # Score is still logged for monitoring; we only revise if score is critically low (<0.3).
-        if critique and critique.score < 0.3 and getattr(critique, 'suggestions', []):
-            revised = constitution.revise_response(response, critique, user_input, "")
-            if revised and revised != response and len(revised) > 20:
-                response = revised
-                thinking = (thinking or "") + f" [Constitutional revision applied, score was {critique.score:.2f}]"
+        from core.llm import _is_system_under_load
+        under_load = _is_system_under_load()
     except Exception:
-        pass
+        under_load = False
+    if chat_elapsed < 15 and not under_load:
+        try:
+            from core.constitution import get_constitution
+            constitution = get_constitution()
+            critique = constitution.critique_response(response, user_input, "")
+            # NOTE: Skipping revise_response() — it's an extra LLM call that hangs small models.
+            # Score is still logged for monitoring; we only revise if score is critically low (<0.3).
+            if critique and critique.score < 0.3 and getattr(critique, 'suggestions', []):
+                revised = constitution.revise_response(response, critique, user_input, "")
+                if revised and revised != response and len(revised) > 20:
+                    response = revised
+                    thinking = (thinking or "") + f" [Constitutional revision applied, score was {critique.score:.2f}]"
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
+    else:
+        print(f"[Agent] Skipping constitutional critique (elapsed={chat_elapsed:.1f}s, under_load={under_load})")
 
-    # Wave 27: PLANNING OUTCOME VERIFICATION
-    try:
-        from core.rollout_planner import get_rollout_planner
-        _planner_v = get_rollout_planner()
-        _outcome = _planner_v.verify_outcome(response)
-        if _outcome:
-            _delta = _outcome.get("prediction_delta", 0)
-            _accurate = _outcome.get("prediction_accurate", False)
-            if thinking is None:
-                thinking = ""
-            thinking += f" [Planning: predicted FE={_outcome['predicted_fe']:.3f}, actual={_outcome['actual_fe']:.3f}, delta={_delta:+.3f}, accurate={_accurate}]"
-    except Exception:
-        pass
+    # Wave 27: PLANNING OUTCOME VERIFICATION (skip under load)
+    if chat_elapsed < 15 and not under_load:
+        try:
+            from core.rollout_planner import get_rollout_planner
+            _planner_v = get_rollout_planner()
+            _outcome = _planner_v.verify_outcome(response)
+            if _outcome:
+                _delta = _outcome.get("prediction_delta", 0)
+                _accurate = _outcome.get("prediction_accurate", False)
+                if thinking is None:
+                    thinking = ""
+                thinking += f" [Planning: predicted FE={_outcome['predicted_fe']:.3f}, actual={_outcome['actual_fe']:.3f}, delta={_delta:+.3f}, accurate={_accurate}]"
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
+    else:
+        print(f"[Agent] Skipping planning verification (elapsed={chat_elapsed:.1f}s, under_load={under_load})")
 
     # Record interaction for adaptive learning
     elapsed_ms = int((time.time() - t_start) * 1000)
@@ -918,36 +937,41 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 dna.record_signal(positive=True)
             elif signals.get("frustrated"):
                 dna.record_signal(positive=False)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Knowledge graph: extract entities & relations from this turn
     if KG_AVAILABLE:
         try:
             ingest_text(user_input + " " + response, source=f"chat:{mode}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Conversation flow: track turn for multi-turn coherence
     if FLOW_AVAILABLE:
         try:
             record_turn(user_input, response, mode=mode)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Predictive: record event topic for pattern learning
     if PREDICTIVE_AVAILABLE:
         try:
             record_event(f"chat:{mode}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Curiosity: detect knowledge gaps from this conversation
     try:
         from core.curiosity_engine import detect_gaps_from_conversation
         detect_gaps_from_conversation(user_input, response)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     # Long-term memory: store this conversation
     if LTM_AVAILABLE:
@@ -962,8 +986,9 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 tags=["chat", mode],
                 source="chat"
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Emotional: detect mood from this turn
     if EMOTIONAL_AVAILABLE:
@@ -972,15 +997,17 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             if mood_result.get("crisis"):
                 # Append crisis note to response
                 response += f"\n\n[LOVE notices you're {mood_result['mood']}. I'm here.]"
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Personality: learn from this interaction to evolve character
     if PERSONALITY_AVAILABLE:
         try:
             learn_from_interaction(user_input, response)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # Executive: extract any tasks from this conversation
     if EXECUTIVE_AVAILABLE:
@@ -988,8 +1015,9 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             extracted = extract_tasks(user_input)
             for t in extracted:
                 add_task(t["text"], t.get("deadline"), source="chat")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # ═══ CONSCIOUSNESS — Record conversation & update identity ═══
     if CONSCIOUSNESS_AVAILABLE:
@@ -997,8 +1025,9 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             consciousness = get_consciousness()
             consciousness.record_conversation()
             consciousness.think(f"Responded to '{user_input[:60]}...' with '{response[:60]}...'")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     # ═══ TEMPORAL MEMORY — Store as autobiographical memory ═══
     if TEMPORAL_MEMORY_AVAILABLE:
@@ -1013,8 +1042,9 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                         intensity = 0.9
                     elif mood_data.get("mood") in ["excited", "angry", "sad"]:
                         intensity = 0.7
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.agent")
             tmem.remember(
                 content=f"User: {user_input[:150]} | LOVE: {response[:150]}",
                 category="conversation",
@@ -1022,16 +1052,18 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 importance=0.4 + (intensity * 0.3),
                 tags=[mode],
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent")
 
     save_memory(user_input, response, mode=mode)
     # ═══ WAVE 16: NEURAL BUS EVENTS ═══
     try:
         from core.neural_connectors import emit_conversation_events
         emit_conversation_events(user_input, response, mode)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     # ═══ WAVE 17: COGNITIVE EVOLUTION POST-PROCESSING ═══
     # Feed evolution engine with interaction data
@@ -1048,8 +1080,9 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 "thinking_length": len(thinking) if thinking else 0,
             },
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     # Store as episodic memory in memory architect
     try:
@@ -1060,16 +1093,18 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             emotional_weight=0.5,
             importance=0.4,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     # Reflect on interaction (cognitive architecture learning)
     try:
         from core.cognitive_architecture import get_cognitive_architecture
         cog = get_cognitive_architecture()
         cog.reflect_on_interaction(user_input, response, user_feedback=None)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     # Build final return value with metacognitive confidence
     _meta_confidence = None
@@ -1088,10 +1123,12 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                     _meta_confidence = round(
                         sum(h.get('overall', 0.5) for h in recent) / len(recent), 3
                     )
-            except Exception:
-                pass
-    except Exception:
-        pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.agent")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
 
     return {
         "response": response,

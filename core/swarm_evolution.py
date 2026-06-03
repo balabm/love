@@ -39,6 +39,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "swarm_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -164,8 +165,9 @@ class SwarmEvolutionEngine:
         try:
             with open(SWARM_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.swarm_evolution")
     
     # ── Swarm Management ─────────────────────────────────────────────────────────
     
@@ -247,8 +249,9 @@ class SwarmEvolutionEngine:
                     swarm.collective_score = min(1.0, swarm.collective_score + 0.1)
                 else:
                     swarm.collective_score = max(0.0, swarm.collective_score - 0.2)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.swarm_evolution")
         
         # Share signal if performance is notably good or bad
         if user_feedback > 0.8:
@@ -489,8 +492,9 @@ Provide:
                                 from core.master_orchestrator import get_orchestration_master
                                 om = get_orchestration_master()
                                 om._narrate("swarm_evolution", f"Swarm validated hypothesis (score {score:.2f})", "action")
-                            except Exception:
-                                pass
+                            except Exception as e:
+                                from core.execution_guard import log_error
+                                log_error(e, module="core.swarm_evolution")
                         elif score < 0.3 and s.interactions_count >= 5:
                             s.status = "disbanded"
                             print(f"[SwarmEvolution] Disbanded swarm {s.id} (score {score:.2f})")
@@ -498,7 +502,7 @@ Provide:
             except Exception as e:
                 print(f"[SwarmEvolution] Loop error: {e}")
             
-            time.sleep(300)  # Run every 5 minutes
+            time.sleep(7200)  # Run every 2 hours (was 5 minutes)
     
     # ── Query Methods ───────────────────────────────────────────────────────────
     

@@ -28,6 +28,7 @@ import threading
 from core.llm import get_reasoning_llm
 from core.world_model import get_world_model, CausalLink
 from core.consciousness import get_consciousness
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CAUSAL_LOG = DATA_DIR / "causal_reasoning.jsonl"
@@ -408,8 +409,9 @@ Return JSON:
                     "event": event, "data": data,
                     "timestamp": datetime.now().isoformat(),
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.causal_reasoning")
 
 
 # Singleton

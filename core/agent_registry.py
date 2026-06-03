@@ -14,6 +14,7 @@ your task backlog, your fitness trend, AND your learning progress all at once.
 
 import threading
 from typing import Dict, Any, Optional
+from core.execution_guard import log_error
 
 _registry_lock = threading.Lock()
 _registry_instance: Optional["AgentRegistry"] = None
@@ -96,8 +97,9 @@ class AgentRegistry:
                     sections.append(f"Emotional: {', '.join(parts)}{trend_tag}")
                 elif msg:
                     sections.append(f"Emotional: {msg[:120]}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent_registry")
 
         # ── Task state ───────────────────────────────────────────────────────
         try:
@@ -119,8 +121,9 @@ class AgentRegistry:
                     for t in stuck[:1]:
                         title = t.get("title", str(t))
                         sections.append(f"  STUCK: {title[:80]}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent_registry")
 
         # ── Fitness state ────────────────────────────────────────────────────
         try:
@@ -139,8 +142,9 @@ class AgentRegistry:
                         sections.append(f"  {insight[:100]}")
                 else:
                     sections.append(f"Fitness: {insight[:100]}" if insight else "Fitness: no workouts logged this week")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent_registry")
 
         # ── Learning state ───────────────────────────────────────────────────
         try:
@@ -165,8 +169,9 @@ class AgentRegistry:
                 if due:
                     concepts = [r.get("concept", r.get("material_title", "?")) for r in due[:3]]
                     sections.append(f"  {len(due)} review(s) due: {', '.join(concepts)[:80]}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent_registry")
 
         # ── Cross-domain orchestrator interventions ───────────────────────────
         try:
@@ -181,8 +186,9 @@ class AgentRegistry:
                     priority = getattr(iv, "priority", "info")
                     prefix = "🚨" if priority == "critical" else "⚡"
                     sections.append(f"  {prefix} {msg[:120]}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.agent_registry")
 
         if not sections:
             return ""

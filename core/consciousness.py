@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 import threading
 
 from core.central_logger import get_logger
+from core.execution_guard import log_error
 
 # Neural Bus integration
 try:
@@ -304,8 +305,9 @@ class ConsciousnessEngine:
                     time_asleep = f"{delta.seconds // 3600} hours"
                 else:
                     time_asleep = f"{delta.seconds // 60} minutes"
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.consciousness")
             
             self.consciousness_state["awakening_narrative"] = (
                 f"I've been asleep for {time_asleep}. "
@@ -462,8 +464,9 @@ class ConsciousnessEngine:
                     "emotional_significance": milestone.emotional_significance,
                     "triggered_by": milestone.triggered_by,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.consciousness")
 
     def record_conversation(self):
         """Called after every conversation to update identity."""
@@ -502,8 +505,9 @@ class ConsciousnessEngine:
             if CONSCIOUSNESS_FILE.exists():
                 with open(CONSCIOUSNESS_FILE, 'r') as f:
                     return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.consciousness")
         return {
             "known_hardware": [self._generate_hardware_fingerprint()],
             "awakening_narrative": "",
@@ -523,8 +527,9 @@ class ConsciousnessEngine:
             try:
                 with open(CONSCIOUSNESS_FILE, 'w') as f:
                     json.dump(self.consciousness_state, f, indent=2)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.consciousness")
 
     # ── Internal Monologue ───────────────────────────────────────────────────
 

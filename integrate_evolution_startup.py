@@ -1,3 +1,4 @@
+from core.execution_guard import log_error
 """
 Evolution Systems Integration for LOVE Main Startup
 
@@ -161,44 +162,51 @@ def stop_evolution_systems(self):
         try:
             integration = get_evolution_integration()
             integration.stop_all()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     if META_EVOLUTION_AVAILABLE:
         try:
             get_meta_evolution().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     if SWARM_EVOLUTION_AVAILABLE:
         try:
             get_swarm_evolution().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     if SELF_CODER_AVAILABLE:
         try:
             get_self_coder().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     if CROSS_INSTANCE_AVAILABLE:
         try:
             get_cross_instance_learning().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     if CAPABILITY_GAP_DETECTOR_AVAILABLE:
         try:
             get_capability_gap_detector().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     if AUTONOMOUS_CICD_AVAILABLE:
         try:
             get_autonomous_cicd().stop()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrate_evolution_startup")
     
     print("[Startup] Evolution systems stopped")
 

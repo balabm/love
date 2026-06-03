@@ -19,6 +19,7 @@ import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable
+from core.execution_guard import log_error
 
 
 # ── Windows idle-time detection ──────────────────────────────────────────────
@@ -118,8 +119,9 @@ def get_idle_duration() -> float:
         if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(lii)):
             millis = ctypes.windll.kernel32.GetTickCount() - lii.dwTime
             return millis / 1000.0
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.idle_mind")
     # Fallback: time since last chat interaction
     return time.time() - _last_active
 
@@ -218,13 +220,16 @@ def _idle_state_monitor() -> None:
                 cancel_all_heavy_tasks()
                 # Try to nudge Karthi via WebSocket
                 try:
-                    from core.proactive_push import push_nudge
-                    push_nudge("welcome_back", {
-                        "message": "Welcome back! I paused all heavy background work.",
-                        "previous_state": _previous_idle_state,
-                    })
-                except Exception:
-                    pass
+                    from core.proactive_push import get_push_engine
+                    get_push_engine().push(
+                        "welcome_back",
+                        "Welcome back! I paused all heavy background work.",
+                        priority="normal",
+                        metadata={"previous_state": str(_previous_idle_state)},
+                    )
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.idle_mind")
 
             _previous_idle_state = current
         except Exception as e:
@@ -251,8 +256,9 @@ def _log(entry: Dict[str, Any]):
     try:
         with open(IDLE_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.idle_mind")
 
 
 def get_recent_thoughts(n: int = 10) -> List[Dict]:
@@ -291,8 +297,9 @@ def get_recent_thoughts(n: int = 10) -> List[Dict]:
             source_module="idle_mind",
             priority=EventPriority.NORMAL
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.idle_mind")
 
 
 # ── LLM helper ──────────────────────────────────────────────────────────────
@@ -312,8 +319,9 @@ def _remember(content: str, category: str = "idle_insight"):
     try:
         from core.memory import save_log
         save_log(category, {"content": content, "source": "idle_mind"})
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.idle_mind")
 
 
 def _recall_user_patterns() -> str:
@@ -339,8 +347,9 @@ def _task_web_exploration() -> Dict[str, Any]:
         if profile_path.exists():
             try:
                 profile = json.loads(profile_path.read_text())
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.idle_mind")
 
         profession = profile.get("profession", "software engineering")
         interests = profile.get("interests", ["technology", "AI"])
@@ -441,8 +450,9 @@ def _task_draft_feature() -> Dict[str, Any]:
         if profile_path.exists():
             try:
                 profile = json.loads(profile_path.read_text())
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.idle_mind")
 
         idea_context = "\n".join(f"- {i}" for i in ideas[:3]) if ideas else "AI assistant improvements"
 
@@ -521,8 +531,9 @@ Status: DRAFT — needs review before activation
                     "code_size": len(code.split("\n")),
                     "code": code,
                 })
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.idle_mind")
 
             # If safe and high score, copy to tools/ or core/ for real use
             activated = False
@@ -532,8 +543,9 @@ Status: DRAFT — needs review before activation
                 try:
                     target_file.write_text(draft_file.read_text())
                     activated = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.idle_mind")
 
             _log({
                 "task": "feature_draft",
@@ -593,8 +605,9 @@ def _task_learn_about_user() -> Dict[str, Any]:
                         channel = entry.get("channel", "")
                         if sender and len(sender) > 1:
                             recent_contacts.append(f"{sender} via {channel}")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.idle_mind")
 
         # Check people DB
         people_path = DATA_DIR / "people_db.json" if (DATA_DIR / "people_db.json").exists() else None
@@ -604,8 +617,9 @@ def _task_learn_about_user() -> Dict[str, Any]:
                 people = json.loads(people_path.read_text())
                 top = sorted(people.values(), key=lambda p: p.get("seenCount", 0), reverse=True)[:5]
                 people_summary = ", ".join(p.get("displayName", "") for p in top if p.get("displayName"))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.idle_mind")
 
         reflection_prompt = f"""You are LOVE, studying your user to understand them better.
 
@@ -644,8 +658,9 @@ def _task_news_digest() -> Dict[str, Any]:
         if profile_path.exists():
             try:
                 profile = json.loads(profile_path.read_text())
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.idle_mind")
 
         interests = profile.get("interests", [])
         if isinstance(interests, str):
@@ -1001,8 +1016,9 @@ def _task_daily_summary_generation() -> Dict[str, Any]:
             if IDLE_LOG.exists():
                 lines = IDLE_LOG.read_text().strip().split("\n")[-50:]
                 recent_logs = [json.loads(l) for l in lines if l]
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.idle_mind")
         
         today = datetime.now().date().isoformat()
         today_logs = [l for l in recent_logs if l.get("ts", "").startswith(today)]
@@ -1174,16 +1190,18 @@ def get_idle_status() -> Dict[str, Any]:
             callback=_handle_neural_event,
             is_async=False
         )
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.idle_mind")
 
     # Wire to Resource Governor for load-aware task cancellation (Gap Analysis fix)
     try:
         from core.resource_governor import get_resource_governor
         gov = get_resource_governor()
         gov.register_load_callback(_on_system_load_change)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.idle_mind")
     return {
         **_idle_status,
         "is_idle": is_idle(),
@@ -1233,6 +1251,7 @@ def get_news_digest() -> Optional[Dict]:
             fetched = datetime.fromisoformat(data.get("date", "2000-01-01"))
             if (datetime.now() - fetched).total_seconds() < 3600 * 8:
                 return data
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.idle_mind")
     return None

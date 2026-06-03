@@ -14,6 +14,7 @@ import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -26,16 +27,18 @@ def _load_tasks() -> List[Dict[str, Any]]:
     if TASKS_FILE.exists():
         try:
             return json.loads(TASKS_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.executive")
     return []
 
 
 def _save_tasks(tasks: List[Dict[str, Any]]):
     try:
         TASKS_FILE.write_text(json.dumps(tasks, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
 
 def _log_reminder(entry: Dict[str, Any]):
@@ -43,8 +46,9 @@ def _log_reminder(entry: Dict[str, Any]):
     try:
         with open(REMINDERS_FILE, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
 
 # ── Meeting Prep ──────────────────────────────────────────────────────────
@@ -70,8 +74,9 @@ def prep_for_meeting(subject: str, start_time: str = None) -> Dict[str, Any]:
                         names = [a.get("name", "") for a in e["attendees"]]
                         context_parts.append(f"   Attendees: {', '.join(names)}")
                     break
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     # 2. Recent emails related to meeting
     try:
@@ -86,8 +91,9 @@ def prep_for_meeting(subject: str, start_time: str = None) -> Dict[str, Any]:
         if related:
             context_parts.append("Related emails:")
             context_parts.extend(related[:5])
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     # 3. Knowledge graph — who are these people?
     try:
@@ -101,8 +107,9 @@ def prep_for_meeting(subject: str, start_time: str = None) -> Dict[str, Any]:
                     rels = get_relations(p["name"], "person", direction="both", limit=5)
                     if rels:
                         context_parts.append(f"👤 {p['name']}: {len(rels)} known connections")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     # 4. Recent project work
     try:
@@ -112,8 +119,9 @@ def prep_for_meeting(subject: str, start_time: str = None) -> Dict[str, Any]:
             context_parts.append("📁 Active project files:")
             for d in docs.get("files", [])[:3]:
                 context_parts.append(f"   {d.get('name', 'file')}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     summary = "\n".join(context_parts) if context_parts else "No context found."
 
@@ -163,8 +171,9 @@ def extract_tasks(text: str) -> List[Dict[str, Any]]:
                 if keyword in text_lower:
                     try:
                         deadline = fn()
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.executive")
                     break
 
             tasks.append({
@@ -283,8 +292,9 @@ def generate_daily_brief() -> Dict[str, Any]:
                 sections.append(f"📅 {len(today_events)} meeting(s) today")
                 for e in today_events[:3]:
                     sections.append(f"   {e.get('start', '')[11:16]} — {e.get('subject', 'No title')}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     # Tasks
     tasks_today = get_tasks("today")
@@ -301,8 +311,9 @@ def generate_daily_brief() -> Dict[str, Any]:
         emails = ms.get_email(count=5)
         if emails:
             sections.append(f"📧 {len(emails)} recent email(s)")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     # Predictions
     try:
@@ -310,8 +321,9 @@ def generate_daily_brief() -> Dict[str, Any]:
         pred = predict_next_need()
         if pred:
             sections.append(f"🔮 {pred['prediction']} — {pred['suggested_action']}")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     # Health / system
     try:
@@ -319,8 +331,9 @@ def generate_daily_brief() -> Dict[str, Any]:
         snap = get_full_snapshot()
         if snap.get("battery_percent", 100) < 30:
             sections.append(f"🔋 PC battery at {snap['battery_percent']}%")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     brief = {
         "date": datetime.now().strftime("%Y-%m-%d"),
@@ -331,8 +344,9 @@ def generate_daily_brief() -> Dict[str, Any]:
     try:
         with open(BRIEF_LOG, "a") as f:
             f.write(json.dumps(brief) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
 
     return brief
 
@@ -388,8 +402,10 @@ def check_due_reminders() -> List[Dict[str, Any]]:
                     trigger = datetime.fromisoformat(entry["trigger_at"])
                     if trigger <= now:
                         due.append(entry)
-                except Exception:
-                    pass
-    except Exception:
-        pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.executive")
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.executive")
     return due

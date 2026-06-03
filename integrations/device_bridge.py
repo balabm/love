@@ -47,6 +47,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Callable
+from core.execution_guard import log_error
 
 # Neural Bus
 try:
@@ -174,15 +175,17 @@ class TelegramTransport:
                         payload=entry, source_module="device_bridge",
                         priority=EventPriority.NORMAL,
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.device_bridge")
 
     def _log_message(self, entry: Dict):
         try:
             with open(DEVICE_MESSAGE_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
     def send(self, text: str) -> bool:
         """Send a message back to Telegram."""
@@ -271,8 +274,9 @@ class MQTTTransport:
         try:
             with open(DEVICE_MESSAGE_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
     def get_messages(self, limit: int = 50) -> List[Dict]:
         return list(self.messages)[-limit:]
@@ -325,8 +329,9 @@ class FolderSyncTransport:
                         }
                         self.messages.append(entry)
                         self._log_message(entry)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="integrations.device_bridge")
                 # Prune old entries to prevent memory growth
                 if len(self._seen_files) > 1000:
                     self._seen_files = set(list(self._seen_files)[-500:])
@@ -339,8 +344,9 @@ class FolderSyncTransport:
         try:
             with open(DEVICE_MESSAGE_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
     def get_messages(self, limit: int = 50) -> List[Dict]:
         return list(self.messages)[-limit:]
@@ -420,8 +426,9 @@ class DiscordTransport:
         try:
             with open(DEVICE_MESSAGE_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(entry, default=str) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
     def get_messages(self, limit: int = 50) -> List[Dict]:
         return list(self.messages)[-limit:]
@@ -469,6 +476,7 @@ class DeviceBridge:
         if self._running:
             return
         self._running = True
+        self._state["active_transports"] = []
 
         # 1. Telegram (most reliable for notifications)
         if TELEGRAM_BOT_TOKEN:
@@ -514,8 +522,9 @@ class DeviceBridge:
         for t in self._transports.values():
             try:
                 t.stop()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.device_bridge")
         self._save_state()
 
     def is_connected(self) -> bool:
@@ -536,8 +545,9 @@ class DeviceBridge:
                 for m in msgs:
                     m["transport_name"] = name
                 all_msgs.extend(msgs)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.device_bridge")
         all_msgs.sort(key=lambda x: x.get("timestamp", ""))
         return all_msgs[-limit:]
 
@@ -559,8 +569,9 @@ class DeviceBridge:
                                 continue
                             self._recent_messages.append(msg)
                             self._on_new_message(msg, name)
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="integrations.device_bridge")
                 time.sleep(5)
             except Exception as e:
                 print(f"[DeviceBridge] Processor error: {e}")
@@ -585,6 +596,19 @@ class DeviceBridge:
         # Check for financial content
         is_financial = self._looks_financial(text)
 
+        # Write to Consolidated Memory for unified persistence
+        try:
+            from core.consolidated_memory import get_consolidated_memory
+            get_consolidated_memory().write(
+                domain="device",
+                event_type=f"{transport_name}_message",
+                payload={"text": text, "transport": transport_name, "timestamp": msg.get("timestamp"), "payload": payload},
+                text_for_search=text,
+            )
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
+
         # Publish to neural bus
         if NEURAL_BUS_AVAILABLE:
             try:
@@ -595,16 +619,18 @@ class DeviceBridge:
                     source_module="device_bridge",
                     priority=EventPriority.HIGH if is_financial else EventPriority.NORMAL,
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.device_bridge")
 
         # Route to finance guardian if financial
         if is_financial:
             try:
                 from core.finance_guardian import get_finance_guardian
                 get_finance_guardian().ingest_from_notification(text, source=f"device_{transport_name}")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.device_bridge")
 
         # Autonomous learning — feed EVERY message into pattern engine
         try:
@@ -617,15 +643,17 @@ class DeviceBridge:
                 "timestamp": msg.get("timestamp", datetime.now().isoformat()),
                 "payload": payload,
             })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
         # Run callbacks
         for cb in self._message_callbacks:
             try:
                 cb(msg, transport_name)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.device_bridge")
 
     def _extract_phone_state(self, text: str, payload: Dict):
         """Try to extract phone battery, location, etc. from message text."""
@@ -768,16 +796,18 @@ class DeviceBridge:
     def _save_state(self):
         try:
             DEVICE_STATE_FILE.write_text(json.dumps(self._state, indent=2, default=str), encoding="utf-8")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
     def _load_state(self):
         if not DEVICE_STATE_FILE.exists():
             return
         try:
             self._state = json.loads(DEVICE_STATE_FILE.read_text(encoding="utf-8"))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.device_bridge")
 
 
 # ─── Singleton ────────────────────────────────────────────────────────────

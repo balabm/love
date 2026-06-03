@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 MISSION_DIR = DATA_DIR / "autonomous_missions"
@@ -62,22 +63,28 @@ class AutonomousMissionQueue:
         try:
             with open(MISSION_LOG, "a", encoding="utf-8") as f:
                 f.write(json.dumps(rec) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.autonomous_mission_queue")
 
     def get_missions(self, status: str = '', limit: int = 50):
         if status:
             return [m for m in self._missions if m.status == status][:limit]
         return self._missions[:limit]
 
-    def add_mission(self, title: str, domain: str, priority: str = 'high', metadata=None):
+    def add_mission(self, title: str, domain: str, priority: str = 'high', description: str = '', metadata=None, source: str = ''):
         import uuid
+        meta = metadata or {}
+        if description:
+            meta["description"] = description
+        if source:
+            meta["source"] = source
         m = Mission(
             id=str(uuid.uuid4())[:8],
             title=title,
             domain=domain,
             priority=priority,
-            metadata=metadata or {},
+            metadata=meta,
         )
         self._missions.append(m)
         self._save()
@@ -99,6 +106,42 @@ class AutonomousMissionQueue:
                 self._log('updated', {'id': m.id, 'status': m.status})
                 return True
         return False
+
+    def get_status(self) -> Dict[str, Any]:
+        """Return current mission queue status for the API."""
+        by_status = {}
+        for m in self._missions:
+            by_status[m.status] = by_status.get(m.status, 0) + 1
+        return {
+            "total": len(self._missions),
+            "by_status": by_status,
+            "recent": [asdict(m) for m in self._missions[-10:]],
+        }
+
+    def add_feature_request(self, text: str, requested_by: str = "user") -> Dict[str, Any]:
+        """Add a feature request as a mission."""
+        m = self.add_mission(
+            title=text,
+            domain="feature_request",
+            priority="high",
+            metadata={"requested_by": requested_by, "type": "feature_request"},
+        )
+        return {"mission_id": m.id, "title": m.title, "status": m.status}
+
+    def run_cycle(self) -> Dict[str, Any]:
+        """Execute one autonomous mission cycle."""
+        queued = [m for m in self._missions if m.status == "queued"]
+        if not queued:
+            return {"message": "No queued missions", "processed": 0}
+        processed = 0
+        for m in queued[:3]:  # Process up to 3 per cycle
+            m.status = "in_progress"
+            m.attempts += 1
+            m.updated_at = datetime.now().isoformat()
+            processed += 1
+        self._save()
+        self._log('cycle', {'processed': processed})
+        return {"message": f"Processed {processed} missions", "processed": processed}
 
 
 # Singleton

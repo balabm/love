@@ -19,6 +19,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -63,16 +64,18 @@ def _log_discovery(entry: Dict[str, Any]):
     try:
         with open(FILE_DISCOVERIES, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="agents.file_explorer")
 
 
 def _load_profile() -> Dict[str, Any]:
     if PROFILE_FILE.exists():
         try:
             return json.loads(PROFILE_FILE.read_text())
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.file_explorer")
     return {
         "name": "Karthi",
         "discovered_at": datetime.now().isoformat(),
@@ -97,8 +100,9 @@ def _save_profile(profile: Dict[str, Any]):
     profile["updated_at"] = datetime.now().isoformat()
     try:
         PROFILE_FILE.write_text(json.dumps(profile, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="agents.file_explorer")
 
 
 def _is_safe_path(path: Path) -> bool:
@@ -283,8 +287,9 @@ async def _trickle_scan_dir(directory: Path, depth: int = 0, max_depth: int = 3)
                     await asyncio.sleep(0.1)  # brief yield between subdirs
             except (PermissionError, OSError):
                 continue
-    except (PermissionError, OSError):
-        pass
+    except (PermissionError, OSError) as e:
+        from core.execution_guard import log_error
+        log_error(e, module="agents.file_explorer")
     return candidates
 
 
@@ -381,8 +386,9 @@ async def trickle_explore_files(max_files: int = 20) -> Dict[str, Any]:
             for tech in entities["technologies"]:
                 add_entity(tech, "tool", {})
                 add_relation("Karthi", "uses", tech, strength=1.0, context=f"found in {rel_path}")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.file_explorer")
 
     # 5. Save enriched profile
     _save_profile(profile)
@@ -494,8 +500,9 @@ def _quick_scan_home() -> List[Dict[str, Any]]:
                             "category": cat,
                             "modified": datetime.fromtimestamp(item.stat().st_mtime).isoformat(),
                         })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.file_explorer")
     return found
 
 

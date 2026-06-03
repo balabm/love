@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "knowledge_graph"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -404,8 +405,9 @@ class KnowledgeGraphBuilder:
                 },
             }
             GRAPH_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.knowledge_graph_builder")
 
     def _load_graph(self):
         try:
@@ -415,8 +417,9 @@ class KnowledgeGraphBuilder:
                     self._entities[k] = Entity(**e_data)
                 for k, r_data in data.get("relations", {}).items():
                     self._relations[k] = Relation(**r_data)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.knowledge_graph_builder")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

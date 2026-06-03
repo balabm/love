@@ -16,6 +16,7 @@ import statistics
 from core.settings import get_settings
 from core.context_engine import get_live_context
 from core.psychological_model import get_psychological_model
+from core.execution_guard import log_error
 
 SETTINGS = get_settings()
 
@@ -423,8 +424,9 @@ Analyze why this decision failed and provide insights in JSON:
                         estimated_impact="High - prevents similar failures"
                     )
                     self.improvement_suggestions.append(suggestion)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.self_improvement")
                 
         except Exception as e:
             print(f"[SelfImprovementEngine] Error analyzing failure with LLM: {e}")

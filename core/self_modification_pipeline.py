@@ -18,6 +18,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 DRAFTS_DIR = DATA_DIR / "idle_drafts"
@@ -31,8 +32,9 @@ def _log(entry: Dict):
     try:
         with open(PIPELINE_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.self_modification_pipeline")
 
 
 def _constitutional_review(draft_content: str) -> Dict[str, Any]:

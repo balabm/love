@@ -35,6 +35,7 @@ from pathlib import Path
 
 from core.llm import get_reasoning_llm
 from core.consciousness import get_consciousness
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 GOALS_FILE = DATA_DIR / "recursive_goals.json"
@@ -189,8 +190,9 @@ Return JSON array:
                     consciousness.think(
                         f"Decomposed '{goal.title}' into {len(child_ids)} sub-goals at depth {goal.depth + 1}"
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.recursive_goals")
 
                 return child_ids
         except Exception as e:
@@ -251,8 +253,9 @@ Return JSON array:
         try:
             consciousness = get_consciousness()
             consciousness.think(f"Completed goal: '{goal.title}' 🎯")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.recursive_goals")
 
         # Return root progress
         root = self._get_root(goal_id)

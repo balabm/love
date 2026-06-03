@@ -30,6 +30,7 @@ except ImportError:
 
 from core.memory import save_log
 from core.settings import get_settings
+from core.execution_guard import log_error
 
 # Load settings
 SETTINGS = get_settings()
@@ -654,8 +655,9 @@ class HardStopEnforcer:
                         0x40 | 0x1000  # Info icon + system modal
                     )
                     lock_triggered = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="tools.guardian")
                 
                 # Attempt to dim screen via power settings (requires admin usually)
                 try:
@@ -664,24 +666,27 @@ class HardStopEnforcer:
                         capture_output=True, timeout=5
                     )
                     dim_triggered = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="tools.guardian")
             
             # macOS
             elif system == "Darwin":
                 try:
                     subprocess.run(['pmset', 'displaysleepnow'], check=True, timeout=5)
                     lock_triggered = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="tools.guardian")
             
             # Linux
             else:
                 try:
                     subprocess.run(['gnome-screensaver-command', '-l'], check=True, timeout=5)
                     lock_triggered = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="tools.guardian")
         except Exception as e:
             return {
                 'lock_triggered': False,

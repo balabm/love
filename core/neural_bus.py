@@ -25,6 +25,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Coroutine
 from concurrent.futures import ThreadPoolExecutor
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 EVENT_LOG = DATA_DIR / "neural_bus_events.jsonl"
@@ -330,8 +331,9 @@ class NeuralBus:
         try:
             with open(EVENT_LOG, "a") as f:
                 f.write(json.dumps(event.to_dict()) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.neural_bus")
 
     # ── Query Methods ────────────────────────────────────────────────────────
 
@@ -488,8 +490,9 @@ class NeuralBus:
                 "saved_at": datetime.now().isoformat(),
             }
             BUS_STATE.write_text(json.dumps(state, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.neural_bus")
 
     def set_async_loop(self, loop: asyncio.AbstractEventLoop):
         """Set the async event loop for async subscribers."""

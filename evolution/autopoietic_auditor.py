@@ -27,6 +27,7 @@ import re
 import os
 from pathlib import Path
 from abc import ABC, abstractmethod
+from core.execution_guard import log_error
 
 # Configure logging
 logging.basicConfig(
@@ -780,8 +781,9 @@ class StateCoherenceInspector:
                         from datetime import datetime
                         dt = datetime.fromisoformat(value)
                         return dt.timestamp()
-                    except:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="evolution.autopoietic_auditor")
         
         return None
     

@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "predictive_maintenance"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -283,8 +284,9 @@ class PredictiveMaintenanceEngine:
                 "priority": priority,
                 "scheduled_at": datetime.now().isoformat(),
             })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.predictive_maintenance")
 
         return {
             "subsystem": subsystem,
@@ -367,8 +369,9 @@ class PredictiveMaintenanceEngine:
             try:
                 health = health_fn()
                 self.record_snapshot(name, **health)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.predictive_maintenance")
 
     def _get_evolution_health(self) -> Dict[str, float]:
         try:
@@ -423,8 +426,9 @@ class PredictiveMaintenanceEngine:
                     "latency_ms": snapshot.latency_ms,
                     "error_rate": snapshot.error_rate,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.predictive_maintenance")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

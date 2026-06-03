@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from collections import defaultdict
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -49,8 +50,9 @@ def _load_state() -> Dict[str, Any]:
     try:
         if ADAPTIVE_FILE.exists():
             return {**DEFAULT_STATE, **json.loads(ADAPTIVE_FILE.read_text())}
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.adaptive")
     return dict(DEFAULT_STATE)
 
 
@@ -58,8 +60,9 @@ def _save_state(state: Dict[str, Any]):
     try:
         state["updated_at"] = datetime.now().isoformat()
         ADAPTIVE_FILE.write_text(json.dumps(state, indent=2))
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.adaptive")
 
 
 def _log_interaction(data: Dict[str, Any]):
@@ -67,8 +70,9 @@ def _log_interaction(data: Dict[str, Any]):
         data["ts"] = datetime.now().isoformat()
         with open(INTERACTION_LOG, "a") as f:
             f.write(json.dumps(data) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.adaptive")
 
 
 # ── Signal detection ──────────────────────────────────────────────────────────

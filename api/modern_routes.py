@@ -10,6 +10,7 @@ Cutting-edge 2025 endpoints for:
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 router = APIRouter(prefix="/modern", tags=["modern"])
 
@@ -831,8 +832,9 @@ async def create_agent_task(description: str, role: str = "", dependencies: str 
         if role:
             try:
                 agent_role = AgentRole(role)
-            except ValueError:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="api.modern_routes")
         deps = dependencies.split(",") if dependencies else []
         task_id = orch.create_task(description, agent_role, deps)
         return {"task_id": task_id}

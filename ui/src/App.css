@@ -288,20 +288,23 @@
 .global-hud-stats {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   margin-left: auto;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .stat-capsule {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 8px;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 6px;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .val-glowing {
@@ -335,24 +338,35 @@
 .horizon-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 2px;
+  flex: 1 1 0%;
+  min-width: 0;
   overflow-x: auto;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255,255,255,0.3) transparent;
+  mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+  padding: 0 4px;
 }
+.horizon-tabs::-webkit-scrollbar { height: 6px; }
+.horizon-tabs::-webkit-scrollbar-track { background: transparent; }
+.horizon-tabs::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 4px; }
+.horizon-tabs::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.5); }
 
 .nav-tab-btn {
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 4px 7px;
+  border-radius: 6px;
   border: none;
   background: transparent;
   color: var(--muted);
   font-family: inherit;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .nav-tab-btn:hover { background: rgba(255,255,255,.04); color: var(--text); }
 .nav-tab-btn.active { background: rgba(192,132,252,.12); color: var(--love); }
@@ -484,7 +498,14 @@
   background: rgba(10,10,20,0.6);
   flex-shrink: 0;
   overflow-x: auto;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(255,255,255,0.2) transparent;
+  mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 8px, black calc(100% - 8px), transparent 100%);
 }
+.sub-nav-header::-webkit-scrollbar { height: 5px; }
+.sub-nav-header::-webkit-scrollbar-track { background: transparent; }
+.sub-nav-header::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
 .sub-nav-btn {
   padding: 6px 12px;

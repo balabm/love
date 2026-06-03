@@ -378,6 +378,16 @@ class IntelligenceHub:
         for alert in self._snapshot.active_alerts[:3]:
             parts.append(f"!! {alert}")
 
+        # ── AGI Kernel Snapshot Injection (mandatory context) ───────────────────
+        try:
+            from core.agi_kernel import get_agi_kernel
+            kernel = get_agi_kernel()
+            kernel_prompt = kernel.get_snapshot_for_prompt()
+            if kernel_prompt:
+                parts.append(kernel_prompt)
+        except Exception as e:
+            logger.error(f"Error injecting AGIKernel snapshot: {e}", exc_info=True)
+
         context = "\n".join(parts)
         self._context_cache = context
         self._cache_time = now

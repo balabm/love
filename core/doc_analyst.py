@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from threading import Lock, Thread
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 INSIGHTS_FILE = DATA_DIR / "doc_insights.json"
@@ -404,8 +405,9 @@ Be concise. Max 150 words."""
         try:
             with open(INSIGHTS_FILE, "w") as f:
                 json.dump(data, f, indent=2, default=str)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.doc_analyst")
 
     def _load_persisted(self):
         if INSIGHTS_FILE.exists():
@@ -415,8 +417,9 @@ Be concise. Max 150 words."""
                 self._insights = data.get("insights", [])
                 self._active_project = data.get("active_project")
                 self._project_summary = data
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.doc_analyst")
 
 
 # ──────────────────────────────────────────────

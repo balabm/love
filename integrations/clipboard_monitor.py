@@ -16,6 +16,7 @@ import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 CLIPBOARD_LOG = DATA_DIR / "clipboard_intelligence.jsonl"
@@ -50,8 +51,9 @@ class ClipboardMonitor:
                 capture_output=True, text=True, timeout=3
             )
             return (result.stdout or "").strip()
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.clipboard_monitor")
         try:
             import tkinter as tk
             root = tk.Tk(); root.withdraw()
@@ -145,8 +147,9 @@ class ClipboardMonitor:
         try:
             with open(CLIPBOARD_LOG, "a", encoding="utf-8") as f:
                 f.write(f'{{"timestamp":"{entry["timestamp"]}","type":"{entry["type"]}","signal":"{entry["signal"][:100]}"}}\n')
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="integrations.clipboard_monitor")
         # Push if it's an error (LOVE can proactively offer help)
         if analysis.get("action") == "debug_help":
             try:
@@ -157,8 +160,9 @@ class ClipboardMonitor:
                     priority="normal",
                     metadata={"type": "debug_offer", "preview": content[:200]},
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="integrations.clipboard_monitor")
 
     def get_current_signal(self) -> Optional[Dict]:
         return self._current_signal
@@ -183,8 +187,9 @@ class ClipboardMonitor:
                     content = self._read_clipboard()
                     if content:
                         self._process(content)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="integrations.clipboard_monitor")
                 time.sleep(interval)
         self._thread = threading.Thread(target=_loop, daemon=True, name="LOVE-Clipboard")
         self._thread.start()

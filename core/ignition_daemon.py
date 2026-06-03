@@ -23,6 +23,7 @@ from __future__ import annotations
 import threading
 import time
 from typing import Any, Dict, Optional
+from core.execution_guard import log_error
 
 
 _TICK_INTERVAL = 30   # seconds between ignition checks
@@ -216,8 +217,9 @@ class IgnitionDaemon:
                     "timestamp": now,
                     "trigger":   trigger,
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.ignition_daemon")
 
 
 # ── module-level singleton ────────────────────────────────────────────────────

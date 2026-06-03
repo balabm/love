@@ -42,6 +42,7 @@ from pathlib import Path
 from typing import Any, Deque, Dict, List, Optional, Tuple
 
 import numpy as np
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "hpc"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -118,8 +119,9 @@ class PlanLevel:
             try:
                 label, hour = k.rsplit("_", 1)
                 self._hour_counts[(label, int(hour))] = v
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.hierarchical_predictive_coding")
 
 
 # ── L2: Context / Activity (embedding centroid predictor) ────────────────────
@@ -323,8 +325,9 @@ class HierarchicalPredictiveCoding:
                     "L1": round(l1, 4), "L2": round(l2, 4), "L3": round(l3, 4),
                     "label": label,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.hierarchical_predictive_coding")
 
     def _save(self):
         try:
@@ -334,8 +337,9 @@ class HierarchicalPredictiveCoding:
                     "L3": self._L3.serialize(),
                     "L2": self._L2.serialize(),
                 }, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.hierarchical_predictive_coding")
 
     def _load(self):
         if not STATE_FILE.exists():
@@ -349,8 +353,9 @@ class HierarchicalPredictiveCoding:
                         setattr(ls, kk, vv)
             self._L3.load(d.get("L3", {}))
             self._L2.load(d.get("L2", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.hierarchical_predictive_coding")
 
     def snapshot(self) -> Dict[str, Any]:
         with self._mu:

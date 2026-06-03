@@ -30,6 +30,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field, asdict
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "fitness_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -199,16 +200,18 @@ class FitnessEvolutionIntegration:
     def _log_fitness(self, metric: FitnessMetric):
         try:
             with open(FITNESS_METRICS, "a") as f:
-                f.write(json.dumps(asdict(metric)) + "\n")
-        except Exception:
-            pass
+                f.write(json.dumps(asdict(metric), default=str) + "\n")
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.fitness_evolution_integration")
     
     def _log_evolution_feedback(self, feedback: Dict):
         try:
             with open(EVOLUTION_FEEDBACK, "a") as f:
                 f.write(json.dumps(feedback) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.fitness_evolution_integration")
 
 
     # ── Background Loop ───────────────────────────────────────────────────────
@@ -235,8 +238,9 @@ class FitnessEvolutionIntegration:
                if hasattr(self, 'analyze_fitness_patterns'):
                 try:
                     self.analyze_fitness_patterns(workouts=[])
-                except TypeError:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="agents.fitness_evolution_integration")
                 self.track_fitness_metrics()
             except Exception as e:
                 print(f"[FitnessEvolution] Loop error: {e}")
@@ -244,8 +248,9 @@ class FitnessEvolutionIntegration:
             # Modern module fitness integration
             try:
                 self._track_modern_module_fitness()
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="agents.fitness_evolution_integration")
             
             time.sleep(3600)
     
@@ -267,8 +272,9 @@ class FitnessEvolutionIntegration:
                         "module_health": 1.0,
                         "pattern_type": "modern_module_fitness",
                     })
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.fitness_evolution_integration")
 
     def track_fitness_metrics(self):
         """Track current fitness metrics and log them."""
@@ -280,9 +286,10 @@ class FitnessEvolutionIntegration:
                 goal_achievement_rate=0.0,
                 energy_level=0.5,
             )
-            self._append_metric(metric)
-        except Exception:
-            pass
+            self._log_fitness(metric)
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="agents.fitness_evolution_integration")
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────
 

@@ -11,6 +11,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 POLICY_FILE = DATA_DIR / "autonomy_policy.json"
@@ -28,7 +29,6 @@ DEFAULT_POLICY: Dict[str, Any] = {
         "self_diagnostics": True,
         "mission_queue": True,
         # Infrastructure & bridges
-        "tunnel_agent": True,
         "device_bridge": True,
         "notification_ingestion": True,
         # Finance & trading
@@ -70,8 +70,9 @@ def load_policy() -> Dict[str, Any]:
         if POLICY_FILE.exists():
             raw = json.loads(POLICY_FILE.read_text(encoding="utf-8"))
             return _deep_merge(DEFAULT_POLICY, raw)
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomy_policy")
     return deepcopy(DEFAULT_POLICY)
 
 

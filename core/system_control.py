@@ -24,6 +24,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
+from core.execution_guard import log_error
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
@@ -47,8 +48,9 @@ def _log(action: str, details: Dict[str, Any], success: bool, error: str = ""):
         }
         with open(ACTIONS_LOG, "a") as f:
             f.write(json.dumps(entry) + "\n")
-    except Exception:
-        pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.system_control")
 
 
 # ── App registry ────────────────────────────────────────────────────────────
@@ -353,6 +355,49 @@ def focus_window(title_substring: str) -> Dict[str, Any]:
         return {"success": False, "error": str(e)}
 
 
+# ── Screen dimming ───────────────────────────────────────────────────────────
+
+def dim_screen(level: int = 30) -> Dict[str, Any]:
+    """
+    Dim screen brightness to reduce visual load during high stress.
+    level: 0-100 brightness percentage.
+    """
+    try:
+        if IS_WINDOWS:
+            import ctypes
+            # Use WMI for monitor brightness
+            try:
+                import wmi
+                c = wmi.WMI(namespace="wmi")
+                methods = c.WmiMonitorBrightnessMethods()[0]
+                methods.WmiSetBrightness(level, 0)
+                _log("dim_screen", {"level": level}, True)
+                return {"success": True, "level": level}
+            except Exception:
+                # Fallback: reduce gamma via PowerShell
+                subprocess.run(
+                    [
+                        "powershell",
+                        "-Command",
+                        f"$brightness = {level}; $monitor = Get-WmiObject -Namespace root/wmi -Class WmiMonitorBrightnessMethods; $monitor.WmiSetBrightness($brightness, 1)",
+                    ],
+                    capture_output=True,
+                    timeout=10,
+                )
+                _log("dim_screen", {"level": level, "method": "powershell"}, True)
+                return {"success": True, "level": level}
+        elif IS_MAC:
+            subprocess.run(["brightness", str(level / 100)], capture_output=True, timeout=5)
+            _log("dim_screen", {"level": level}, True)
+            return {"success": True, "level": level}
+        else:
+            subprocess.run(["brightnessctl", "set", f"{level}%"], capture_output=True, timeout=5)
+            _log("dim_screen", {"level": level}, True)
+            return {"success": True, "level": level}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # ── Shell commands (whitelisted) ─────────────────────────────────────────────
 
 SAFE_COMMANDS = {
@@ -608,8 +653,9 @@ def list_processes(name_filter: str = None, top_n: int = 20) -> Dict[str, Any]:
                 if name_filter and name_filter.lower() not in info['name'].lower():
                     continue
                 procs.append(info)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.system_control")
         # Sort by CPU
         procs.sort(key=lambda x: x.get('cpu_percent', 0), reverse=True)
         return {"success": True, "processes": procs[:top_n], "count": len(procs)}

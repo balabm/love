@@ -42,6 +42,7 @@ from cryptography.fernet import Fernet
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "cross_instance"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -275,8 +276,9 @@ class CrossInstanceLearning:
                         sample_size=stats.get("total_adjustments", 1),
                         adopted_by=set(),
                     ))
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.cross_instance_learning")
         relevant.sort(key=lambda m: (m.success_rate, m.sample_size), reverse=True)
         return relevant[:10]
     
@@ -407,8 +409,9 @@ class CrossInstanceLearning:
                         "instance_id": self._instance_id,
                         "count": shared_count,
                     }, priority=EventPriority.NORMAL)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.cross_instance_learning")
 
         except Exception as e:
             print(f"[CrossInstance] Share local mutations error: {e}")
@@ -431,8 +434,9 @@ class CrossInstanceLearning:
                                 "mutation_id": mutation.id,
                                 "source_instance": mutation.source_instance_id,
                             }, priority=EventPriority.NORMAL)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.cross_instance_learning")
 
             return adopted
 
@@ -480,8 +484,9 @@ class CrossInstanceLearning:
                 last_seen = datetime.fromisoformat(peer.last_seen)
                 if last_seen > cutoff:
                     active.append(peer)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.cross_instance_learning")
         
         return active
     
@@ -597,8 +602,9 @@ class CrossInstanceLearning:
         try:
             with open(LEARNING_LOG, "a") as f:
                 f.write(json.dumps(event) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.cross_instance_learning")
     
     # ── Main Loop ─────────────────────────────────────────────────────────────────
     
@@ -650,8 +656,9 @@ class CrossInstanceLearning:
                             from core.master_orchestrator import get_orchestration_master
                             om = get_orchestration_master()
                             om._narrate("cross_instance", f"Adopted {len(adopted)} peer mutation(s)", "action")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.cross_instance_learning")
                 except Exception as e:
                     print(f"[CrossInstance] Share/adopt error: {e}")
                 

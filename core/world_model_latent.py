@@ -41,6 +41,7 @@ from pathlib import Path
 from typing import Any, Deque, Dict, List, Optional, Tuple
 
 import numpy as np
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "world_model"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -271,8 +272,9 @@ class LatentWorldModel:
                     and b2.shape == (EMBED_DIM,)
                 ):
                     return W1, b1, W2, b2
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.world_model_latent")
         # Backward-compat note: old transition_W.npy exists — ignore it, init fresh.
         return self._init_mlp_params()
 
@@ -283,24 +285,27 @@ class LatentWorldModel:
                 W1=self._W1, b1=self._b1,
                 W2=self._W2, b2=self._b2,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.world_model_latent")
 
     def _load_state(self) -> WorldModelState:
         if STATE_FILE.exists():
             try:
                 d = json.loads(STATE_FILE.read_text())
                 return WorldModelState(**d)
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.world_model_latent")
         return WorldModelState()
 
     def _save_state(self):
         try:
             from dataclasses import asdict
             STATE_FILE.write_text(json.dumps(asdict(self._state), indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.world_model_latent")
 
     # ── core predict / observe / learn loop ──────────────────────────────────
 
@@ -379,8 +384,9 @@ class LatentWorldModel:
                     _ssm = get_ssm_memory()
                     _ssm.step(prev_state_for_ssm)          # advance SSM on prev
                     _ssm.train_step(prev_state_for_ssm, state)  # supervise: predict curr
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.world_model_latent")
 
             obs = Observation(
                 t=time.time(), source=source, text=text, state=state,
@@ -415,8 +421,9 @@ class LatentWorldModel:
                     "err": round(obs.pred_error, 4),
                     "fe": round(obs.free_energy, 4),
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.world_model_latent")
 
     # ── multi-step rollout BPTT ──────────────────────────────────────────────
 

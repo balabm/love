@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "notification_filter"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -163,8 +164,9 @@ class NotificationFilter:
                 score += 0.1
             elif age_hours > 24:
                 score -= 0.1
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_filter")
 
         # Focus mode suppression
         if context.get("focus_mode", False) and notif.priority not in ("urgent", "high"):
@@ -223,8 +225,9 @@ class NotificationFilter:
                 "source_scores": dict(self._source_scores),
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_filter")
 
     def _load_stats(self):
         try:
@@ -232,8 +235,9 @@ class NotificationFilter:
                 data = json.loads(STATS_DB.read_text())
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 self._source_scores.update(data.get("source_scores", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_filter")
 
     def _log_filtering(self, filtered: List[FilteredNotification]):
         try:
@@ -246,8 +250,9 @@ class NotificationFilter:
                         "action": f_notif.action,
                         "relevance": f_notif.relevance_score,
                     }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.notification_filter")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

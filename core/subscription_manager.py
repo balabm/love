@@ -38,6 +38,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "subscription_manager"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -265,8 +266,9 @@ class SubscriptionManager:
                             "action": "Set a reminder to cancel before billing if you don't want it.",
                             "potential_savings": round(self._to_monthly_cost(sub.cost, sub.frequency) * 12, 2),
                         })
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.subscription_manager")
 
         # Find duplicate categories
         category_counts = defaultdict(list)
@@ -348,8 +350,9 @@ class SubscriptionManager:
                 } for k, v in self._subscriptions.items()},
             }
             STATS_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.subscription_manager")
 
     def _load_stats(self):
         try:
@@ -358,8 +361,9 @@ class SubscriptionManager:
                 self._stats.update({k: v for k, v in data.items() if k in self._stats})
                 for k, v in data.get("subscriptions", {}).items():
                     self._subscriptions[k] = Subscription(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.subscription_manager")
 
     def _log_subscription(self, sub: Subscription):
         try:
@@ -373,8 +377,9 @@ class SubscriptionManager:
                     "category": sub.category,
                     "is_active": sub.is_active,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.subscription_manager")
 
     def _log_usage(self, record: UsageRecord):
         try:
@@ -385,8 +390,9 @@ class SubscriptionManager:
                     "duration": record.duration_minutes,
                     "feature": record.feature_used,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.subscription_manager")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────

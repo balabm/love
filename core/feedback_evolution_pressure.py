@@ -35,6 +35,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from core.llm import get_reasoning_llm
 from core.neural_bus import get_neural_bus, EventPriority
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "feedback_evolution"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -421,8 +422,9 @@ Return a JSON object with:
         try:
             with open(FEEDBACK_LOG, "a") as f:
                 f.write(json.dumps(asdict(feedback)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.feedback_evolution_pressure")
     
     # ── Main Loop ─────────────────────────────────────────────────────────────────
     

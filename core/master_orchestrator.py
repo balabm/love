@@ -34,6 +34,7 @@ from typing import Dict, Any, List, Optional, Callable, Set
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from collections import defaultdict, deque
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 ORCHESTRATOR_LOG = DATA_DIR / "orchestrator_log.jsonl"
@@ -223,6 +224,30 @@ class OrchestrationMaster:
             self._state.consciousness_age_days = payload.get("age_days", 0)
             self._narrate("consciousness", f"Consciousness state: {self._state.consciousness_maturity}, age {self._state.consciousness_age_days} days", "observation")
 
+        # AGI Kernel snapshot integration
+        if event_type == "kernel_snapshot":
+            stress = payload.get("user_stress", 0.0)
+            energy = payload.get("user_energy", 1.0)
+            work_hours = payload.get("work_hours_today", 0.0)
+            alerts = payload.get("critical_alerts", [])
+            # Update orchestrator state from kernel telemetry
+            if stress > 0.7:
+                self._state.user_active = False  # User is overwhelmed
+                msg = f"User stress critically high ({stress:.2f})"
+                self._narrate("kernel_alert", msg, "observation", importance="critical")
+                self.speak_to_user(msg, category="HEALTH", importance="critical")
+            if energy < 0.4:
+                msg = f"User energy depleted ({energy:.2f})"
+                self._narrate("kernel_alert", msg, "observation", importance="high")
+                self.speak_to_user(msg, category="HEALTH", importance="high")
+            if work_hours >= 9:
+                msg = f"9-hour work limit reached ({work_hours:.1f}h)"
+                self._narrate("kernel_alert", msg, "observation", importance="critical")
+                self.speak_to_user(msg, category="WORK", importance="critical")
+            if alerts:
+                for alert in alerts:
+                    self._narrate("kernel_alert", f"AGI alert: {alert}", "observation", importance="high")
+
     def _update_heartbeat_state(self, event_type: str, payload: Dict):
         if event_type == "trigger_fired":
             sev = payload.get("severity", "info")
@@ -336,8 +361,9 @@ class OrchestrationMaster:
                         f"Evolution: {stats.get('total_code_modifications', 0)} code mod(s), "
                         f"{stats.get('total_mutations_applied', 0)} mutation(s)."
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.master_orchestrator")
 
             message = " ".join(parts)
             if message:
@@ -490,8 +516,9 @@ class OrchestrationMaster:
                 try:
                     from core.neural_bus import get_neural_bus
                     get_neural_bus().publish(domain="system", event_type="load_management_active", payload={"status": "reducing_activity"}, source_module="master_orchestrator")
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.master_orchestrator")
 
     def request_coordination(self, module: str, action: str, parameters: Dict = None) -> str:
         with self._lock:
@@ -579,6 +606,7 @@ class OrchestrationMaster:
 
         # Also broadcast via registered callbacks (WebSocket)
         if self._async_loop and self._async_loop.is_running():
+            # Standard orchestrator message
             payload = {
                 "type": "orchestrator_message",
                 "category": category,
@@ -590,8 +618,27 @@ class OrchestrationMaster:
                 try:
                     import asyncio
                     asyncio.run_coroutine_threadsafe(cb(payload), self._async_loop)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.master_orchestrator")
+
+            # Critical decisions get an explicit intervention payload (lock_screen / action_required)
+            if importance == "critical":
+                intervention = {
+                    "type": "intervention",
+                    "action": "lock_screen",
+                    "category": category,
+                    "message": message,
+                    "requires_confirmation": True,
+                    "timestamp": entry.timestamp,
+                }
+                for cb in self._callbacks:
+                    try:
+                        import asyncio
+                        asyncio.run_coroutine_threadsafe(cb(intervention), self._async_loop)
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.master_orchestrator", context={"action": "ws_intervention_push"})
 
     def receive_from_user(self, message: str, context: Dict = None) -> str:
         """
@@ -698,8 +745,9 @@ class OrchestrationMaster:
         try:
             with open(NARRATIVE_FILE, "a") as f:
                 f.write(json.dumps(asdict(entry)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.master_orchestrator")
 
     def _generate_periodic_narrative(self):
         # Every so often, generate a periodic "thought" about what's happening
@@ -728,8 +776,9 @@ class OrchestrationMaster:
                 try:
                     import asyncio
                     asyncio.run_coroutine_threadsafe(cb(payload), self._async_loop)
-                except Exception:
-                    pass
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.master_orchestrator")
 
     def get_narrative(self, limit: int = 50, since_hours: Optional[float] = None) -> List[Dict]:
         with self._lock:
@@ -808,8 +857,9 @@ class OrchestrationMaster:
         try:
             with open(USER_COMMS_LOG, "a") as f:
                 f.write(json.dumps(asdict(entry)) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.master_orchestrator")
 
     def _load_state(self):
         try:
@@ -818,8 +868,9 @@ class OrchestrationMaster:
                     data = json.load(f)
                     for k, v in data.get("modules", {}).items():
                         self._state.modules[k] = ModuleHealth(**v)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.master_orchestrator")
 
     def _save_state(self):
         try:
@@ -833,8 +884,9 @@ class OrchestrationMaster:
             }
             with open(ORCHESTRATOR_STATE, "w") as f:
                 json.dump(data, f, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.master_orchestrator")
 
     def _log_decision(self, decision_type: str, details: Dict):
         entry = {
@@ -845,8 +897,9 @@ class OrchestrationMaster:
         try:
             with open(ORCHESTRATOR_LOG, "a") as f:
                 f.write(json.dumps(entry) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.master_orchestrator")
 
     # ═══════════════════════════════════════════════════════════════
     # EXTERNAL API

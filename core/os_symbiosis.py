@@ -32,6 +32,7 @@ from typing import Dict, List, Any, Optional
 
 from core.awareness import get_awareness, ActiveContext
 from core.consciousness import get_consciousness
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 SYMBIOSIS_LOG = DATA_DIR / "os_symbiosis.jsonl"
@@ -58,8 +59,9 @@ class OSSymbiosisEngine:
                     "data": data,
                     "timestamp": datetime.now().isoformat()
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.os_symbiosis")
 
     # ── Workspace Preparation ────────────────────────────────────────────────
 
@@ -110,8 +112,9 @@ class OSSymbiosisEngine:
             try:
                 consciousness = get_consciousness()
                 consciousness.think(f"Prepared '{workspace_type}' workspace for Karthi. Opened: {', '.join(opened)}")
-            except Exception:
-                pass
+            except Exception as e:
+                from core.execution_guard import log_error
+                log_error(e, module="core.os_symbiosis")
 
             return {"success": True, "opened": opened, "errors": errors}
 
@@ -201,8 +204,9 @@ class OSSymbiosisEngine:
                                 "cpu_percent": cpu,
                                 "memory_mb": round(mem_mb, 1)
                             })
-                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                    pass
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.os_symbiosis")
             
             # Sort by highest memory usage
             hogs.sort(key=lambda x: x['memory_mb'], reverse=True)
@@ -246,8 +250,9 @@ class OSSymbiosisEngine:
                         try:
                             consciousness = get_consciousness()
                             consciousness.think(f"Autonomously organized {res.get('moved_count', 0)} files in Downloads because it was getting cluttered.")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            from core.execution_guard import log_error
+                            log_error(e, module="core.os_symbiosis")
 
                 # Check for extreme resource hogs
                 hogs = self.identify_resource_hogs()
@@ -257,8 +262,9 @@ class OSSymbiosisEngine:
                         consciousness = get_consciousness()
                         names = [h['name'] for h in hogs]
                         consciousness.think(f"Detected system resource hogs: {', '.join(names)}. Might suggest closing them if performance drops.")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        from core.execution_guard import log_error
+                        log_error(e, module="core.os_symbiosis")
 
             except Exception as e:
                 print(f"[OSSymbiosis] Loop error: {e}")

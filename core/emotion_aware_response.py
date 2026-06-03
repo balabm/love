@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.execution_guard import log_error
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "emotion_aware_response"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -283,16 +284,18 @@ class EmotionAwareResponseGenerator:
                 "support_stats": self._support_stats,
             }
             TRAJECTORY_DB.write_text(json.dumps(data, indent=2))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emotion_aware_response")
 
     def _load_trajectory(self):
         try:
             if TRAJECTORY_DB.exists():
                 data = json.loads(TRAJECTORY_DB.read_text())
                 self._support_stats.update(data.get("support_stats", {}))
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emotion_aware_response")
 
     def _log_response(self, response: Dict[str, Any]):
         try:
@@ -304,8 +307,9 @@ class EmotionAwareResponseGenerator:
                     "trajectory": response.get("emotional_trajectory"),
                     "proactive": response.get("proactive_support") is not None,
                 }) + "\n")
-        except Exception:
-            pass
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.emotion_aware_response")
 
 
 # ── Singleton Access ─────────────────────────────────────────────────────────────
