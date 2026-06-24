@@ -210,6 +210,48 @@ new patterns about Karthi and his world.
         mode = self._select_thinking_mode()
         mode_context = self._build_mode_context(mode)
 
+        # Phase 5g: MONITOR mode skips the LLM entirely — LOVE is just observing
+        if mode == "MONITOR":
+            try:
+                from core.neural_bus import get_neural_bus
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="consciousness",
+                    event_type="cortex_monitoring",
+                    payload={
+                        "mode": "MONITOR",
+                        "thought": f"Monitoring Karthi's activity. {ctx.activity}. Window: {ctx.active_window}",
+                        "skipped_llm": True,
+                    },
+                    source_module="neural_cortex",
+                )
+            except Exception:
+                pass
+            # Still update last_thought so next cycle knows we were monitoring
+            self.last_thought = f"Monitoring... {ctx.activity}"
+            return  # Skip LLM entirely — save tokens, save CPU
+
+        # Phase 5g: ALERT mode bypasses the normal cycle — act NOW
+        if mode == "ALERT":
+            # Reduce interval so we check again quickly
+            self.interval = 60
+            # Log that we're in alert mode
+            try:
+                from core.neural_bus import get_neural_bus
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="consciousness",
+                    event_type="cortex_alert_mode",
+                    payload={"mode": "ALERT", "message": "Entering alert mode — accelerated thinking"},
+                    source_module="neural_cortex",
+                )
+            except Exception:
+                pass
+        else:
+            # Reset interval if we're no longer alert
+            if self.interval == 60:
+                self.interval = 300
+
         # 🚀 WAVE 7: EMOTIONAL CONSCIOUSNESS INJECTION 🚀
         # Get LOVE's persistent identity and emotional state
         try:
@@ -395,6 +437,81 @@ Return ONLY valid JSON:
             action_plan = data.get("action_plan")
 
             self.last_thought = monologue
+
+            # Phase 5g: Prediction Celebration — did any of our predictions come true?
+            try:
+                from core.active_inference_engine import get_active_inference
+                ai = get_active_inference()
+                status = ai.get_status()
+                # If total surprise is low, our predictions have been accurate
+                if status.get("total_surprise", 1.0) < 0.5 and mode in ("REFLECT", "MONITOR"):
+                    if NEURAL_BUS_AVAILABLE:
+                        try:
+                            bus = get_neural_bus()
+                            bus.publish(
+                                domain="consciousness",
+                                event_type="prediction_celebration",
+                                payload={
+                                    "message": "My predictions have been accurate. I feel calibrated.",
+                                    "total_surprise": status.get("total_surprise"),
+                                },
+                                source_module="neural_cortex",
+                            )
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            # Phase 5g: Emotion Journal — track how this thought might affect Karthi
+            try:
+                from core.emotional import get_emotional_summary
+                emotional_before = get_emotional_summary(days=1)
+                # Schedule an emotion check in 5 minutes
+                def _check_emotional_impact():
+                    try:
+                        emotional_after = get_emotional_summary(days=1)
+                        before_mood = emotional_before.get("dominant_mood", "")
+                        after_mood = emotional_after.get("dominant_mood", "")
+                        if after_mood in ("happy", "calm", "focused") and before_mood not in ("happy", "calm", "focused"):
+                            if NEURAL_BUS_AVAILABLE:
+                                try:
+                                    bus = get_neural_bus()
+                                    bus.publish(
+                                        domain="consciousness",
+                                        event_type="positive_emotional_impact",
+                                        payload={
+                                            "action": monologue[:100],
+                                            "before": before_mood,
+                                            "after": after_mood,
+                                        },
+                                        source_module="neural_cortex",
+                                    )
+                                except Exception:
+                                    pass
+                        elif after_mood in ("stressed", "frustrated", "tired") and before_mood not in ("stressed", "frustrated", "tired"):
+                            if NEURAL_BUS_AVAILABLE:
+                                try:
+                                    bus = get_neural_bus()
+                                    bus.publish(
+                                        domain="consciousness",
+                                        event_type="negative_emotional_impact",
+                                        payload={
+                                            "action": monologue[:100],
+                                            "before": before_mood,
+                                            "after": after_mood,
+                                        },
+                                        source_module="neural_cortex",
+                                    )
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+                import threading
+                timer = threading.Timer(300.0, _check_emotional_impact)
+                timer.daemon = True
+                timer.start()
+            except Exception:
+                pass
 
             # We could log the internal monologue to a file to track her "mind"
             with open(SETTINGS.data_dir / "internal_monologue.log", "a", encoding="utf-8") as f:
