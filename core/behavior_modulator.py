@@ -168,6 +168,32 @@ class BehaviorModulator:
         except Exception:
             pass
 
+        # Phase 5i: Read relationship memory to adjust behavior
+        # If LOVE keeps getting negative feedback, it should learn to be gentler
+        relationship_trust = 0.5  # default neutral trust
+        speech_success_rate = 0.5
+        push_success_rate = 0.5
+        try:
+            from core.relationship_memory import get_relationship_memory
+            rm = get_relationship_memory()
+            status = rm.get_status()
+            relationship_trust = status.get("trust_score", 0.5)
+
+            # Check specific action type success rates
+            signals = status.get("active_signals", [])
+            if "proactive_speech" in signals:
+                speech_stats = status.get("love_signals", {}).get("proactive_speech", {})
+                total = speech_stats.get("total", 1)
+                pos = speech_stats.get("positive", 0)
+                speech_success_rate = pos / total if total > 0 else 0.5
+            if "proactive_push" in signals:
+                push_stats = status.get("love_signals", {}).get("proactive_push", {})
+                total = push_stats.get("total", 1)
+                pos = push_stats.get("positive", 0)
+                push_success_rate = pos / total if total > 0 else 0.5
+        except Exception:
+            pass
+
         # ── Derive modulation profile from emotional state ──
 
         valence = es.valence  # -1 to +1
@@ -211,13 +237,24 @@ class BehaviorModulator:
         else:
             push_cooldown = 7200  # 2 hours (default)
 
+        # If pushes have poor success rate, increase cooldown dramatically
+        if push_success_rate < 0.3:
+            push_cooldown = max(push_cooldown, 28800)  # 8 hours minimum
+
         # ── Initiative aggressiveness: assertive + positive = proactive ──
-        if assertiveness > 0.7 and warmth > 0.5:
+        # But if relationship trust is low, be much more conservative
+        if relationship_trust < 0.3:
+            initiative_aggressiveness = 0.1  # Karthi is annoyed, back off
+        elif assertiveness > 0.7 and warmth > 0.5 and relationship_trust > 0.6:
             initiative_aggressiveness = 0.8
         elif valence < -0.3:
             initiative_aggressiveness = 0.2  # User stressed, be gentle
         else:
             initiative_aggressiveness = 0.5
+
+        # If speech has poor success rate, reduce initiative further
+        if speech_success_rate < 0.3:
+            initiative_aggressiveness = min(initiative_aggressiveness, 0.2)
 
         # ── Model tier: stressed system = lightweight ──
         if system_stress > 0.85:
@@ -246,6 +283,12 @@ class BehaviorModulator:
             speech_cooldown = 120  # 2 minutes
         else:
             speech_cooldown = 300  # 5 minutes
+
+        # If speech has poor success rate, increase cooldown
+        if speech_success_rate < 0.3:
+            speech_cooldown = max(speech_cooldown, 900)  # 15 minutes minimum
+        elif speech_success_rate > 0.8:
+            speech_cooldown = min(speech_cooldown, 180)  # Karthi likes my voice, speak more
 
         # ── Push priority threshold: urgent = push everything, calm = only important ──
         if urgency > 0.7:
