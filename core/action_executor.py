@@ -491,11 +491,12 @@ class ActionExecutor:
         }
 
     def _publish_telemetry(self, results: Dict[str, Any], source: str):
-        """Publish execution telemetry to the Neural Bus."""
+        """Publish execution telemetry to the Neural Bus, including individual action outcomes."""
         if not NEURAL_BUS_AVAILABLE:
             return
         try:
             bus = get_neural_bus()
+            # Publish aggregate execution event
             bus.publish(
                 domain="action",
                 event_type="action_executed",
@@ -507,6 +508,22 @@ class ActionExecutor:
                 source_module="action_executor",
                 priority=EventPriority.NORMAL,
             )
+            # Publish individual action outcomes for the Active Inference Engine
+            for action in results.get("actions", []):
+                action_type = action.get("action", "unknown")
+                success = action.get("status") == "success"
+                bus.publish(
+                    domain="action",
+                    event_type="action_outcome",
+                    payload={
+                        "action_type": action_type,
+                        "success": success,
+                        "source": source,
+                        "details": action,
+                    },
+                    source_module="action_executor",
+                    priority=EventPriority.NORMAL,
+                )
         except Exception as e:
             log_error(e, module="core.action_executor", context={"phase": "telemetry"})
 

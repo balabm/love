@@ -120,10 +120,43 @@ def should_take_initiative() -> bool:
 
 
 def generate_autonomous_initiative() -> Optional[Dict[str, Any]]:
-    """Generate an autonomous initiative based on context and personality."""
+    """Generate an autonomous initiative based on context, personality, and predictions."""
     if not should_take_initiative():
         return None
-    
+
+    # Phase 5 AGI Metamorphosis: Query predictions before generating initiative
+    # If the world model predicts the user will be sleeping or stressed,
+    # respect that prediction instead of overriding with a static rule.
+    try:
+        from core.active_inference_engine import get_active_inference
+        ai = get_active_inference()
+        status = ai.get_status()
+        recent_surprises = status.get("recent_surprises", [])
+        # If high surprise recently, the model is uncertain — be gentle
+        if recent_surprises and any(s.get("magnitude", 0) > 0.6 for s in recent_surprises[-3:]):
+            pass  # Will be handled by personality warmth check below
+        # If model predicts user is sleeping, don't send work initiatives
+        world_model = ai.get_world_model()
+        user_pred = world_model.get("domains", {}).get("user_presence", {}).get("predicted_state", {})
+        if user_pred.get("state") == "sleeping":
+            return None  # Respect the prediction, don't wake the user
+    except Exception:
+        pass
+
+    # Phase 5: Check behavior modulator for current urgency/warmth
+    try:
+        from core.behavior_modulator import get_behavior_modulator
+        bm = get_behavior_modulator()
+        urgency = bm.get_urgency()
+        aggressiveness = bm.get_initiative_aggressiveness()
+        # If urgency is very high, we might want to send an alert-type initiative
+        # If aggressiveness is very low, skip non-critical initiatives
+        if aggressiveness < 0.2:
+            # User is stressed or system is overloaded, be very gentle
+            pass  # Let the existing rules handle it with lower thresholds
+    except Exception:
+        pass
+
     try:
         from core.personality import get_personality
         from core.context_engine import get_live_context

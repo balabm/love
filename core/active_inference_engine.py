@@ -746,12 +746,28 @@ class ActiveInferenceEngine:
             event_type = event.get("event_type", "")
             payload = event.get("payload", {})
 
-            # Action outcomes feed back into learning
+            # Action outcomes feed back into learning — this is the teleological loop
             if event_type == "action_outcome":
                 success = payload.get("success", False)
+                action_type = payload.get("action_type", "unknown")
                 if not success:
-                    # Failed action → increase surprise for that domain
-                    _log({"event": "action_failed_feedback", "payload": payload})
+                    # Failed action → model was wrong about what would work
+                    self._total_surprise += 0.1
+                    self._learning_rate = min(0.3, self._learning_rate + 0.02)
+                    _log({"event": "action_failed_learned",
+                          "action_type": action_type,
+                          "new_learning_rate": round(self._learning_rate, 4)})
+                else:
+                    # Successful action → model was right, increase precision
+                    self._precision = min(1.0, self._precision + 0.02)
+                # Track action success rates by type for future policy optimization
+                domain = self._action_type_to_domain(action_type)
+                domain_model = self._world_model.setdefault("domains", {}).setdefault(domain, {})
+                success_key = f"action_successes_{action_type}"
+                total_key = f"action_total_{action_type}"
+                domain_model[success_key] = domain_model.get(success_key, 0) + (1 if success else 0)
+                domain_model[total_key] = domain_model.get(total_key, 0) + 1
+                self._save_world_model()
 
             # Finance alerts → update finance model expectations
             elif event_type == "finance_alert":
@@ -760,6 +776,17 @@ class ActiveInferenceEngine:
 
         except Exception as e:
             log_error(e, module="core.active_inference_engine", context={"phase": "bus_event"})
+
+    def _action_type_to_domain(self, action_type: str) -> str:
+        """Map an action type to its domain for world model tracking."""
+        mapping = {
+            "speech": "user_presence",
+            "push": "system",
+            "background": "system",
+            "action_plan": "system",
+            "initiative": "user_presence",
+        }
+        return mapping.get(action_type, "system")
 
     def _publish_cycle_telemetry(self, observations, predictions, surprises, actions):
         if not NEURAL_BUS_AVAILABLE:

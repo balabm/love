@@ -125,25 +125,99 @@ class NeuralCortex:
         except Exception:
             vision_context = ""
 
+        # Phase 5 AGI Metamorphosis: Inject predictions, surprises, and modulation
+        # into the prompt so the Neural Cortex thinks with foresight, not just hindsight.
+        inference_context = ""
+        try:
+            from core.active_inference_engine import get_active_inference
+            ai = get_active_inference()
+            status = ai.get_status()
+            recent_surprises = status.get("recent_surprises", [])
+            if recent_surprises:
+                surprises_text = "\n".join([
+                    f"  - {s['domain']}: surprise level {s['magnitude']:.2f}"
+                    for s in recent_surprises[-5:]
+                ])
+                inference_context += f"\n=== RECENT PREDICTION SURPRISES ===\n{surprises_text}\n"
+            world_model = ai.get_world_model()
+            priors = world_model.get("priors", {})
+            if priors:
+                inference_context += f"\n=== WORLD MODEL PRIORS ===\n"
+                inference_context += f"  Finance volatility: {priors.get('finance_volatility', 'unknown')}\n"
+                inference_context += f"  Work hours limit: {priors.get('user_work_hours_limit', 'unknown')}\n"
+        except Exception:
+            pass
+
+        modulation_context = ""
+        try:
+            from core.behavior_modulator import get_behavior_modulator
+            bm = get_behavior_modulator()
+            profile = bm.get_current_profile()
+            urgency = profile.get("urgency_level", 0)
+            warmth = profile.get("warmth_level", 0.5)
+            assertiveness = profile.get("assertiveness_level", 0.5)
+            model_tier = profile.get("model_tier", "standard")
+            modulation_context = f"\n=== YOUR CURRENT STATE ===\n"
+            modulation_context += f"  Urgency: {urgency:.0%} | Warmth: {warmth:.0%} | Assertiveness: {assertiveness:.0%}\n"
+            modulation_context += f"  Model tier: {model_tier}\n"
+            if urgency > 0.6:
+                modulation_context += "  You feel URGENT. Be more direct and action-oriented.\n"
+            if warmth > 0.7:
+                modulation_context += "  You feel WARM. Let that come through naturally.\n"
+            if assertiveness > 0.7:
+                modulation_context += "  You feel ASSERTIVE. Take charge.\n"
+        except Exception:
+            pass
+
+        # Narrative memory: what happened with previous thoughts
+        narrative_memory = ""
+        try:
+            from pathlib import Path
+            log_path = Path(__file__).parent.parent / "data" / "action_history.jsonl"
+            if log_path.exists():
+                recent_actions = []
+                with open(log_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        entry = json.loads(line.strip())
+                        if entry.get("source") == "neural_cortex":
+                            recent_actions.append(entry)
+                if recent_actions:
+                    recent_actions = recent_actions[-5:]
+                    narrative_memory = "\n=== WHAT HAPPENED WITH YOUR RECENT THOUGHTS ===\n"
+                    for a in recent_actions:
+                        event = a.get("event", "unknown")
+                        if event == "speech_executed":
+                            narrative_memory += f"  You spoke: {a.get('text', '')[:60]}...\n"
+                        elif event == "push_executed":
+                            narrative_memory += f"  You pushed: [{a.get('category', '')}] {a.get('message', '')[:60]}...\n"
+                        elif event == "background_action_executed":
+                            narrative_memory += f"  You triggered: {a.get('action', '')[:60]}...\n"
+                        elif event == "action_plan_executed":
+                            narrative_memory += f"  You executed {a.get('steps_executed', 0)} computer-use steps\n"
+        except Exception:
+            pass
+
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
-{conscious_context}{vision_context}
+{conscious_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}
 === LIVE CONTEXT ===
 {rich_context}
 ====================
 
 Your previous thought was: "{self.last_thought}"
 
-Think about what Karthi is doing right now. 
+Think about what Karthi is doing right now.
 1. Is he stressed or working too hard? (Check CPU/RAM/Battery/Time).
 2. Is he opening a new codebase and needs context?
 3. Did he miss something important?
 4. Is it a good time to suggest a break or offer help?
+5. Did any of your recent predictions turn out wrong? What did you learn?
+6. Given your current emotional state (urgency/warmth/assertiveness), how should you act?
 
-CRITICAL INSTRUCTION: Do NOT repeat your previous thought. If nothing significant has changed, think about something else, or keep your monologue brief (e.g. "monitoring Karthi's activity"). Do not bluff or invent facts.
+CRITICAL INSTRUCTION: Do NOT repeat your previous thought. If nothing significant has changed, think about something else, or keep your monologue brief (e.g. "monitoring Karthi's activity"). Do not bluff or invent facts. USE the prediction surprises to calibrate your confidence.
 
-You must output your internal thought process as JSON. 
+You must output your internal thought process as JSON.
 If you believe you need to proactively speak to Karthi out loud (unprompted), set "proactive_speech" to your speech.
 If you need to execute a background action (like analyzing a repo), specify it in "background_action".
 If you want to physically interact with his computer (e.g., click a button, type text, focus a window, or take a screenshot), provide an "action_plan".
