@@ -1129,6 +1129,22 @@ def register_all_modules(lm, _loop=None):
         description="LOVE's nocturnal consciousness — dreams, consolidates memories, generates insights while Karthi sleeps"
     ))
 
+    def start_embodied_presence_module():
+        from core.embodied_presence import get_embodied_presence
+        ep = get_embodied_presence()
+        ep.start()
+
+    def stop_embodied_presence_module():
+        from core.embodied_presence import get_embodied_presence
+        ep = get_embodied_presence()
+        ep.stop()
+
+    lm.register(ModuleDescriptor(
+        name="embodied_presence", wave=4, start_fn=start_embodied_presence_module, stop_fn=stop_embodied_presence_module,
+        depends_on=["context_engine"], optional=True,
+        description="LOVE's awareness of Karthi's physical presence — arrivals, departures, greetings"
+    ))
+
     def start_emotional_persistence_module():
         from core.emotional_persistence import get_emotional_persistence
         get_emotional_persistence()  # Initialize singleton — emotions persist across cycles
