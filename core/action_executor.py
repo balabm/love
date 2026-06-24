@@ -314,6 +314,41 @@ class ActionExecutor:
                          "steps": len(action_plan), "reason": "computer_use_disabled"})
             return {"action": "action_plan", "status": "blocked", "steps": len(action_plan)}
 
+        # Phase 5g AGI Metamorphosis: Causal Simulation before physical interaction
+        try:
+            from core.causal_simulator import simulate_action_consequences
+            sim_result = simulate_action_consequences(
+                {"action": "action_plan", "steps": action_plan},
+                context=f"source={source}, steps={len(action_plan)}"
+            )
+            if sim_result.get("risk_score", 0) > 0.9:
+                _log_action({"event": "action_plan_simulated_blocked", "source": source,
+                             "risk_score": sim_result.get("risk_score"),
+                             "reason": sim_result.get("worst_case", "high risk")})
+                return {"action": "action_plan", "status": "simulation_blocked",
+                        "risk_score": sim_result.get("risk_score"),
+                        "reason": sim_result.get("worst_case", "simulation predicted high risk")}
+            elif sim_result.get("risk_score", 0) > 0.7:
+                # Publish approval request
+                if NEURAL_BUS_AVAILABLE:
+                    try:
+                        bus = get_neural_bus()
+                        bus.publish(
+                            domain="action",
+                            event_type="autonomous_action_needs_approval",
+                            payload={"action_plan": action_plan, "source": source,
+                                     "simulation": sim_result},
+                            source_module="action_executor",
+                            priority=EventPriority.HIGH,
+                        )
+                    except Exception as e:
+                        log_error(e, module="core.action_executor", context={"phase": "approval_publish"})
+                return {"action": "action_plan", "status": "needs_approval",
+                        "risk_score": sim_result.get("risk_score"),
+                        "simulation": sim_result}
+        except Exception as e:
+            log_error(e, module="core.action_executor", context={"phase": "causal_simulation"})
+
         # Execute via pyautogui
         try:
             import pyautogui
