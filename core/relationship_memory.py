@@ -202,9 +202,9 @@ class RelationshipMemory:
     def _categorize_action(self, action: str) -> str:
         """Categorize an action into a type for preference tracking."""
         action_lower = action.lower()
-        if any(w in action_lower for w in {"speak", "say", "tts", "voice"}):
+        if any(w in action_lower for w in {"speak", "spoke", "say", "tts", "voice"}):
             return "proactive_speech"
-        if any(w in action_lower for w in {"push", "notify", "alert"}):
+        if any(w in action_lower for w in {"push", "pushed", "notify", "alert"}):
             return "proactive_push"
         if any(w in action_lower for w in {"suggest", "recommend", "try"}):
             return "suggestion"
