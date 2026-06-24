@@ -549,6 +549,27 @@ class ActionExecutor:
             "rate_limited_keys": len(self._last_action_time),
         }
 
+    def on_bus_event(self, event_name: str, data: Dict[str, Any]):
+        """Handle neural bus events — execute proactive opportunities from predictions."""
+        if not NEURAL_BUS_AVAILABLE:
+            return
+        try:
+            if event_name == "proactive_opportunity":
+                payload = data.get("payload", {})
+                message = payload.get("message")
+                prediction = payload.get("prediction", {})
+                if message and prediction.get("confidence", 0) > 0.7:
+                    # Route through the action executor as a push + speech
+                    self.execute({
+                        "internal_monologue": f"Prediction triggered: {message}",
+                        "push_category": "PREDICTION",
+                        "push_message": message,
+                        "push_priority": "normal",
+                        "proactive_speech": message,
+                    }, source="active_inference_prediction")
+        except Exception as e:
+            log_error(e, module="core.action_executor", context={"phase": "proactive_opportunity"})
+
     def _publish_telemetry(self, results: Dict[str, Any], source: str):
         """Publish execution telemetry to the Neural Bus, including individual action outcomes."""
         if not NEURAL_BUS_AVAILABLE:

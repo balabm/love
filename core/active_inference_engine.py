@@ -209,6 +209,9 @@ class ActiveInferenceEngine:
         # 2. PREDICT — generate predictions for the next time horizon
         predictions = self._predict(observations)
 
+        # 2b. Phase 5k: Evaluate high-confidence behavioral predictions for proactive action
+        self._evaluate_predictions_for_action(predictions)
+
         # 3. SURPRISE — compare past predictions against current observations
         surprises = self._compute_surprise(observations)
 
@@ -924,6 +927,69 @@ class ActiveInferenceEngine:
             "initiative": "user_presence",
         }
         return mapping.get(action_type, "system")
+
+    def _evaluate_predictions_for_action(self, predictions: List[Prediction]):
+        """
+        Phase 5k: When we make a high-confidence behavioral prediction,
+        trigger a proactive notification to help Karthi prepare.
+        This is the most AGI-like behavior: acting BEFORE something happens.
+        """
+        for pred in predictions:
+            if pred.confidence < 0.7:
+                continue  # Only act on high-confidence predictions
+            if pred.domain != "user_behavior":
+                continue  # Only behavioral predictions
+
+            predicted_state = pred.predicted_state
+            action = predicted_state.get("action", "")
+            activity = predicted_state.get("activity", "")
+
+            # Don't spam — check if we already notified about this recently
+            pred_key = f"pred_{pred.id}"
+            if hasattr(self, "_last_prediction_actions"):
+                if pred_key in self._last_prediction_actions:
+                    continue
+            else:
+                self._last_prediction_actions = {}
+
+            self._last_prediction_actions[pred_key] = datetime.now().isoformat()
+            # Clean old entries
+            cutoff = datetime.now() - timedelta(hours=1)
+            self._last_prediction_actions = {
+                k: v for k, v in self._last_prediction_actions.items()
+                if datetime.fromisoformat(v) > cutoff
+            }
+
+            # Build the proactive message
+            message = None
+            if action.startswith("open_"):
+                app = action.replace("open_", "")
+                message = f"I predict you'll open {app} soon. Want me to warm up the context?"
+            elif activity == "working":
+                message = "I think you're about to start working. Need anything prepped?"
+            elif activity == "idle":
+                message = "Looks like you're about to take a break. Good timing — you've been at it for a while."
+
+            if message and NEURAL_BUS_AVAILABLE:
+                try:
+                    bus = get_neural_bus()
+                    bus.publish(
+                        domain="action",
+                        event_type="proactive_opportunity",
+                        payload={
+                            "message": message,
+                            "prediction": {
+                                "domain": pred.domain,
+                                "confidence": pred.confidence,
+                                "predicted_state": predicted_state,
+                            },
+                            "source": "active_inference",
+                        },
+                        source_module="active_inference_engine",
+                        priority=EventPriority.NORMAL,
+                    )
+                except Exception as e:
+                    log_error(e, module="core.active_inference_engine", context={"phase": "prediction_action"})
 
     def _publish_cycle_telemetry(self, observations, predictions, surprises, actions):
         if not NEURAL_BUS_AVAILABLE:
