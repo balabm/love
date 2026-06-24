@@ -1102,6 +1102,26 @@ def register_all_modules(lm, _loop=None):
         depends_on=["consciousness", "relationship_memory"], optional=True,
         description="Evolves LOVE's self-narrative based on experiences and relationship outcomes"
     ))
+
+    def start_interruption_etiquette_module():
+        from core.interruption_etiquette import get_interruption_etiquette
+        get_interruption_etiquette()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="interruption_etiquette", wave=4, start_fn=start_interruption_etiquette_module,
+        depends_on=["context_engine"], optional=True,
+        description="Determines whether it's appropriate to interrupt Karthi based on focus, time, and past reactions"
+    ))
+
+    def start_emotional_persistence_module():
+        from core.emotional_persistence import get_emotional_persistence
+        get_emotional_persistence()  # Initialize singleton — emotions persist across cycles
+
+    lm.register(ModuleDescriptor(
+        name="emotional_persistence", wave=4, start_fn=start_emotional_persistence_module,
+        depends_on=["consciousness"], optional=True,
+        description="LOVE's persistent emotional memory — feelings that decay, intensify, and carry forward"
+    ))
     lm.register(ModuleDescriptor(
         name="memory_architect", wave=4, start_fn=start_memory_architect_module, stop_fn=stop_memory_architect_module,
         depends_on=["neural_connectors"], optional=False, description="Auto-indexing vector & episodic memory"

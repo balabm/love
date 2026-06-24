@@ -173,11 +173,28 @@ class ActionExecutor:
     # ACTUATORS — each one interfaces with a real LOVE subsystem
     # ═══════════════════════════════════════════════════════════════════════
 
-    def _execute_speech(self, text: str, source: str) -> Dict[str, Any]:
-        """Speak text out loud via the voice loop."""
+    def _execute_speech(self, text: str, source: str, urgency: str = "normal") -> Dict[str, Any]:
+        """Speak text out loud via the voice loop, respecting interruption etiquette."""
         action_key = f"speech:{hash(text[:50])}"
         if self._is_rate_limited(action_key):
             return {"action": "speech", "status": "rate_limited", "text": text[:80]}
+
+        # Phase 5l: Check if it's appropriate to interrupt Karthi right now
+        try:
+            from core.interruption_etiquette import get_interruption_etiquette
+            etiquette = get_interruption_etiquette()
+            assessment = etiquette.assess_interruption(message_urgency=urgency)
+            if not assessment["allowed"]:
+                _log_action({"event": "speech_deferred", "source": source,
+                             "reason": assessment["reason"],
+                             "score": assessment["score"],
+                             "text": text[:100]})
+                return {"action": "speech", "status": "deferred",
+                        "reason": assessment["reason"],
+                        "score": assessment["score"],
+                        "text": text[:80]}
+        except Exception:
+            pass
 
         try:
             from core.voice_loop import speak_proactive_alert

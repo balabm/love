@@ -590,6 +590,11 @@ class ActiveInferenceEngine:
             # Compute surprise magnitude
             surprise_mag = self._compute_surprise_magnitude(pred.predicted_state, obs.observed_state)
 
+            # Phase 5m: Accumulate total surprise for emotional update
+            total_surprise_magnitude = getattr(self, "_tmp_total_surprise", 0.0)
+            total_surprise_magnitude += surprise_mag
+            self._tmp_total_surprise = total_surprise_magnitude
+
             if surprise_mag > 0.3:  # Significant surprise threshold
                 surprise = SurpriseEvent(
                     id=uuid.uuid4().hex[:8],
@@ -625,6 +630,17 @@ class ActiveInferenceEngine:
 
         for pid in expired:
             del self._active_predictions[pid]
+
+        # Phase 5m: Update LOVE's emotional state based on total surprise
+        total_surprise = getattr(self, "_tmp_total_surprise", 0.0)
+        if total_surprise > 0:
+            try:
+                from core.emotional_persistence import get_emotional_persistence
+                ep = get_emotional_persistence()
+                ep.update_from_surprise(total_surprise)
+            except Exception:
+                pass
+            self._tmp_total_surprise = 0.0
 
         return surprises
 
@@ -897,9 +913,23 @@ class ActiveInferenceEngine:
                     _log({"event": "action_failed_learned",
                           "action_type": action_type,
                           "new_learning_rate": round(self._learning_rate, 4)})
+                    # Phase 5m: Update LOVE's emotional state
+                    try:
+                        from core.emotional_persistence import get_emotional_persistence
+                        ep = get_emotional_persistence()
+                        ep.update_from_action_outcome(success=False, action_type=action_type)
+                    except Exception:
+                        pass
                 else:
                     # Successful action → model was right, increase precision
                     self._precision = min(1.0, self._precision + 0.02)
+                    # Phase 5m: Update LOVE's emotional state
+                    try:
+                        from core.emotional_persistence import get_emotional_persistence
+                        ep = get_emotional_persistence()
+                        ep.update_from_action_outcome(success=True, action_type=action_type)
+                    except Exception:
+                        pass
                 # Track action success rates by type for future policy optimization
                 domain = self._action_type_to_domain(action_type)
                 domain_model = self._world_model.setdefault("domains", {}).setdefault(domain, {})

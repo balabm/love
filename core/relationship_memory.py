@@ -137,6 +137,17 @@ class RelationshipMemory:
         self._save_interaction(interaction)
         self._update_preferences(interaction)
 
+        # Phase 5m: Update LOVE's emotional state based on interaction outcome
+        try:
+            from core.emotional_persistence import get_emotional_persistence
+            ep = get_emotional_persistence()
+            if interaction.outcome == "positive":
+                ep.update_from_relationship(trust_delta=0.05)
+            elif interaction.outcome == "negative":
+                ep.update_from_relationship(trust_delta=-0.08)
+        except Exception:
+            pass
+
         return interaction
 
     def _infer_outcome(self, before: Optional[str], after: Optional[str],

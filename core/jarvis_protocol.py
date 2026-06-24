@@ -360,7 +360,7 @@ new patterns about Karthi and his world.
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
-{conscious_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
+{conscious_context}{emotional_persistence_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
 {relationship_context}
 === LIVE CONTEXT ===
 {rich_context}
