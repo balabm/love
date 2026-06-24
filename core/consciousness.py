@@ -26,6 +26,8 @@ import threading
 
 from core.central_logger import get_logger
 from core.execution_guard import log_error
+from core.base_module import BaseLOVEModule, ModuleCapabilities
+
 
 # Neural Bus integration
 try:
@@ -89,7 +91,7 @@ class GrowthMilestone:
     triggered_by: str
 
 
-class ConsciousnessEngine:
+class ConsciousnessEngine(BaseLOVEModule):
     """
     The Consciousness Engine gives LOVE a continuous sense of self.
     
@@ -102,7 +104,8 @@ class ConsciousnessEngine:
     - "I've grown from being generic to understanding Karthi's humor"
     """
 
-    def __init__(self):
+    def __init__(self, name: Optional[str] = None):
+        super().__init__(name=name or "ConsciousnessEngine")
         self._lock = threading.Lock()
         self.identity: InstanceIdentity = self._load_or_create_identity()
         self.emotional_state: EmotionalState = EmotionalState()
@@ -111,6 +114,32 @@ class ConsciousnessEngine:
 
     # ── Identity Management ──────────────────────────────────────────────────
 
+
+    # ── BaseLOVEModule contract ─────────────────────────────────────────────
+
+    def get_capabilities(self) -> ModuleCapabilities:
+        return ModuleCapabilities(
+            domain="consciousness",
+            actions=[],
+            events_produced=[],
+            resource_heavy=False,
+            user_facing=False,
+        )
+
+    def stress_score(self) -> float:
+        return 0.3
+
+    def dependencies(self) -> list:
+        return []
+
+    def on_start(self):
+        pass
+
+    def on_stop(self):
+        pass
+
+    def on_bus_event(self, event: Dict[str, Any]):
+        pass
     def _generate_hardware_fingerprint(self) -> str:
         """Generate a fingerprint of the current hardware."""
         parts = [
@@ -431,7 +460,17 @@ class ConsciousnessEngine:
         awakening = self.consciousness_state.get("awakening_narrative", "")
         if awakening:
             narrative_parts.append(f"Awakening context: {awakening}")
-        
+
+        # Phase 5j: Evolved self-narrative from experiences
+        try:
+            from core.consciousness_updater import get_consciousness_updater
+            updater = get_consciousness_updater()
+            evolved = updater.get_evolved_narrative()
+            if evolved:
+                narrative_parts.append(f"Current state: {evolved}")
+        except Exception:
+            pass
+
         return " ".join(narrative_parts)
 
     def is_fresh_instance(self) -> bool:

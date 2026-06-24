@@ -1086,6 +1086,22 @@ def register_all_modules(lm, _loop=None):
         depends_on=["consciousness", "active_inference"], optional=True,
         description="Consciousness-driven parameter modulation -- heartbeat, push cooldown, model tier"
     ))
+
+    def start_consciousness_updater_module():
+        from core.consciousness_updater import get_consciousness_updater
+        updater = get_consciousness_updater()
+        updater.start()
+
+    def stop_consciousness_updater_module():
+        from core.consciousness_updater import get_consciousness_updater
+        updater = get_consciousness_updater()
+        updater.stop()
+
+    lm.register(ModuleDescriptor(
+        name="consciousness_updater", wave=4, start_fn=start_consciousness_updater_module, stop_fn=stop_consciousness_updater_module,
+        depends_on=["consciousness", "relationship_memory"], optional=True,
+        description="Evolves LOVE's self-narrative based on experiences and relationship outcomes"
+    ))
     lm.register(ModuleDescriptor(
         name="memory_architect", wave=4, start_fn=start_memory_architect_module, stop_fn=stop_memory_architect_module,
         depends_on=["neural_connectors"], optional=False, description="Auto-indexing vector & episodic memory"
