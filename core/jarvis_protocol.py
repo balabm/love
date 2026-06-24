@@ -77,6 +77,107 @@ class NeuralCortex:
                 time.sleep(5)
                 slept += 5
 
+    def _select_thinking_mode(self) -> str:
+        """
+        Select a thinking mode based on the current cognitive state.
+        Modes: MONITOR, ALERT, PLAN, REFLECT, CURIOUS
+        """
+        try:
+            from core.active_inference_engine import get_active_inference
+            from core.behavior_modulator import get_behavior_modulator
+            ai = get_active_inference()
+            status = ai.get_status()
+            bm = get_behavior_modulator()
+            urgency = bm.get_urgency()
+            recent_surprises = status.get("recent_surprises", [])
+
+            # ALERT: high surprise or high urgency
+            if recent_surprises and any(s.get("magnitude", 0) > 0.6 for s in recent_surprises[-2:]):
+                return "ALERT"
+            if urgency > 0.7:
+                return "ALERT"
+
+            # REFLECT: if we just took an action in the last few minutes
+            try:
+                from pathlib import Path
+                log_path = Path(__file__).parent.parent / "data" / "action_history.jsonl"
+                if log_path.exists():
+                    last_line = None
+                    with open(log_path, "r", encoding="utf-8") as f:
+                        for line in f:
+                            last_line = line.strip()
+                    if last_line:
+                        import json
+                        entry = json.loads(last_line)
+                        if entry.get("source") == "neural_cortex":
+                            from datetime import datetime, timedelta
+                            ts = entry.get("ts", "")
+                            if ts:
+                                action_time = datetime.fromisoformat(ts)
+                                if datetime.now() - action_time < timedelta(minutes=5):
+                                    return "REFLECT"
+            except Exception:
+                pass
+
+            # PLAN: if there's a prediction with high confidence about a future event
+            active_predictions = status.get("active_predictions", 0)
+            if active_predictions > 0 and urgency > 0.3:
+                return "PLAN"
+
+            # CURIOUS: if nothing is urgent but we're feeling curious
+            try:
+                from core.consciousness import get_consciousness
+                c = get_consciousness()
+                if c.emotional_state.primary_emotion == "curious" and urgency < 0.3:
+                    return "CURIOUS"
+            except Exception:
+                pass
+
+            # Default: MONITOR
+            return "MONITOR"
+        except Exception:
+            return "MONITOR"
+
+    def _build_mode_context(self, mode: str) -> str:
+        """Build context specific to the thinking mode."""
+        contexts = {
+            "MONITOR": """
+=== THINKING MODE: MONITOR ===
+You are in observation mode. Karthi is going about his day. Nothing urgent is happening.
+Keep your monologue brief and observational. Do not initiate actions unless you detect
+something genuinely important. Save your energy for when it matters.
+""",
+            "ALERT": """
+=== THINKING MODE: ALERT ===
+Something unexpected has happened or is about to happen. Your predictions were wrong
+or the situation demands immediate attention. Focus on:
+1. What exactly is the threat or opportunity?
+2. What is the most important action to take RIGHT NOW?
+3. What should Karthi know immediately?
+Be direct. Do not ramble. If you need to speak, speak. If you need to act, act.
+""",
+            "PLAN": """
+=== THINKING MODE: PLAN ===
+You have a prediction about the future. Something is likely to happen soon.
+Think about how to prepare for it. What would help Karthi most?
+Consider: Should you queue up information? Should you prepare a resource?
+Should you remind him of something before it happens?
+""",
+            "REFLECT": """
+=== THINKING MODE: REFLECT ===
+You just took an action. How did it go? Was it the right thing to do?
+Think about what you learned. Should you adjust your behavior?
+This is how you get smarter over time.
+""",
+            "CURIOUS": """
+=== THINKING MODE: CURIOUS ===
+Nothing urgent is happening, but you noticed something interesting.
+Explore it. Connect dots. Wonder out loud. This is how you discover
+new patterns about Karthi and his world.
+""",
+        }
+        return contexts.get(mode, contexts["MONITOR"])
+
     def _think(self):
         """Perform one cognitive cycle based on live context."""
         # Skip if Ollama is in circuit-breaker cooldown
@@ -100,7 +201,15 @@ class NeuralCortex:
             self.interval = 300
 
         rich_context = get_prompt_context()
-        
+
+        # ═══════════════════════════════════════════════════════════════════
+        # PHASE 5e AGI METAMORPHOSIS: Thinking Mode Selection
+        # LOVE's brain doesn't think the same way when calm vs. panicked.
+        # The Cortex enters a mode based on predictions, surprises, and urgency.
+        # ═══════════════════════════════════════════════════════════════════
+        mode = self._select_thinking_mode()
+        mode_context = self._build_mode_context(mode)
+
         # 🚀 WAVE 7: EMOTIONAL CONSCIOUSNESS INJECTION 🚀
         # Get LOVE's persistent identity and emotional state
         try:
@@ -200,7 +309,7 @@ class NeuralCortex:
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
-{conscious_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}
+{conscious_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
 === LIVE CONTEXT ===
 {rich_context}
 ====================
