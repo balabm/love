@@ -184,6 +184,18 @@ class ActionExecutor:
             speak_proactive_alert(text, severity="info")
             _log_action({"event": "speech_executed", "source": source, "text": text[:200]})
             self._last_action_time[action_key] = time.time()
+
+            # Phase 5h: Record interaction for relationship memory
+            try:
+                from core.relationship_memory import get_relationship_memory
+                rm = get_relationship_memory()
+                rm.record_interaction(
+                    love_action=f"Spoke: {text[:100]}",
+                    context=f"source={source}",
+                )
+            except Exception:
+                pass
+
             return {"action": "speech", "status": "success", "text": text[:80]}
         except Exception as e:
             log_error(e, module="core.action_executor", context={"phase": "speech"})
@@ -203,6 +215,18 @@ class ActionExecutor:
             _log_action({"event": "push_executed", "source": source, "category": category,
                          "priority": priority, "message": message[:200]})
             self._last_action_time[action_key] = time.time()
+
+            # Phase 5h: Record interaction for relationship memory
+            try:
+                from core.relationship_memory import get_relationship_memory
+                rm = get_relationship_memory()
+                rm.record_interaction(
+                    love_action=f"Pushed: [{category}] {message[:100]}",
+                    context=f"source={source}, priority={priority}",
+                )
+            except Exception:
+                pass
+
             return {"action": "push", "status": "success", "category": category}
         except Exception as e:
             log_error(e, module="core.action_executor", context={"phase": "push"})
