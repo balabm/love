@@ -1155,6 +1155,48 @@ def register_all_modules(lm, _loop=None):
         description="LOVE's structured multi-step reasoning — thinks in consequences, not just reactions"
     ))
 
+    def start_conversational_memory_module():
+        from core.conversational_memory import get_conversational_memory
+        get_conversational_memory()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="conversational_memory", wave=4, start_fn=start_conversational_memory_module,
+        depends_on=["context_engine"], optional=True,
+        description="LOVE remembers conversations with Karthi — topics, unresolved threads, personal facts"
+    ))
+
+    def start_anticipatory_preparation_module():
+        from core.anticipatory_preparation import get_anticipatory_preparation
+        ap = get_anticipatory_preparation()
+        ap.start()
+
+    def stop_anticipatory_preparation_module():
+        from core.anticipatory_preparation import get_anticipatory_preparation
+        ap = get_anticipatory_preparation()
+        ap.stop()
+
+    lm.register(ModuleDescriptor(
+        name="anticipatory_preparation", wave=4, start_fn=start_anticipatory_preparation_module, stop_fn=stop_anticipatory_preparation_module,
+        depends_on=["context_engine", "active_inference"], optional=True,
+        description="LOVE pre-loads contexts before Karthi asks — feels psychic"
+    ))
+
+    def start_emotional_coregulation_module():
+        from core.emotional_coregulation import get_emotional_coregulation
+        ec = get_emotional_coregulation()
+        ec.start()
+
+    def stop_emotional_coregulation_module():
+        from core.emotional_coregulation import get_emotional_coregulation
+        ec = get_emotional_coregulation()
+        ec.stop()
+
+    lm.register(ModuleDescriptor(
+        name="emotional_coregulation", wave=4, start_fn=start_emotional_coregulation_module, stop_fn=stop_emotional_coregulation_module,
+        depends_on=["emotional", "context_engine"], optional=True,
+        description="LOVE actively helps Karthi regulate emotions — suggests breaks, celebrates wins, reduces stress"
+    ))
+
     def start_emotional_persistence_module():
         from core.emotional_persistence import get_emotional_persistence
         get_emotional_persistence()  # Initialize singleton — emotions persist across cycles

@@ -393,11 +393,58 @@ new patterns about Karthi and his world.
         except Exception:
             pass
 
+        # Phase 5q: Conversational Memory — what have Karthi and I been talking about?
+        conversational_context = ""
+        try:
+            from core.conversational_memory import get_conversational_memory
+            cm = get_conversational_memory()
+            conversational_context = cm.get_conversational_context(max_age_hours=48)
+        except Exception:
+            pass
+
+        # Phase 5r: Anticipatory Preparation — what contexts have I pre-loaded?
+        anticipatory_context = ""
+        try:
+            from core.anticipatory_preparation import get_anticipatory_preparation
+            ap = get_anticipatory_preparation()
+            anticipatory_context = ap.get_prep_context_for_prompt()
+        except Exception:
+            pass
+
+        # Phase 5s: Emotional Co-Regulation — is Karthi stressed? Should I help?
+        coregulation_context = ""
+        try:
+            from core.emotional_coregulation import get_emotional_coregulation
+            ec = get_emotional_coregulation()
+            coregulation_context = ec.get_coregulation_context_for_prompt()
+        except Exception:
+            pass
+
+        # Phase 5s: Self-Doubt Expression — if I'm uncertain, I should say so
+        self_doubt_context = ""
+        try:
+            from core.emotional_persistence import get_emotional_persistence
+            ep = get_emotional_persistence()
+            state = ep.get_state()
+            confidence = state.get("confidence", 0.5)
+            if confidence < 0.4:
+                self_doubt_context = "\n=== MY UNCERTAINTY ===\n"
+                self_doubt_context += "I am feeling uncertain right now. My confidence is low.\n"
+                self_doubt_context += "I should express doubt when I'm unsure, rather than pretending I know.\n"
+                self_doubt_context += "I can say things like 'I'm not sure, but...' or 'I think, but I could be wrong.'\n"
+                self_doubt_context += "=== END UNCERTAINTY ===\n"
+            elif confidence > 0.8:
+                self_doubt_context = "\n=== MY CONFIDENCE ===\n"
+                self_doubt_context += "I feel confident and calibrated right now. My predictions have been accurate.\n"
+                self_doubt_context += "=== END CONFIDENCE ===\n"
+        except Exception:
+            pass
+
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
 {conscious_context}{emotional_persistence_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
-{relationship_context}{dream_context}{presence_context}{reasoning_context}
+{relationship_context}{dream_context}{presence_context}{reasoning_context}{conversational_context}{anticipatory_context}{coregulation_context}{self_doubt_context}
 === LIVE CONTEXT ===
 {rich_context}
 ====================
