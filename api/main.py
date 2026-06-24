@@ -1197,6 +1197,52 @@ def register_all_modules(lm, _loop=None):
         description="LOVE actively helps Karthi regulate emotions — suggests breaks, celebrates wins, reduces stress"
     ))
 
+    def start_preference_memory_module():
+        from core.preference_memory import get_preference_memory
+        get_preference_memory()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="preference_memory", wave=4, start_fn=start_preference_memory_module,
+        depends_on=["context_engine"], optional=True,
+        description="LOVE remembers Karthi's specific preferences — coffee, themes, work patterns, communication style"
+    ))
+
+    def start_correction_learning_module():
+        from core.correction_learning import get_correction_learning
+        get_correction_learning()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="correction_learning", wave=4, start_fn=start_correction_learning_module,
+        depends_on=["context_engine"], optional=True,
+        description="LOVE learns immediately when Karthi corrects it — updates beliefs and adjusts confidence"
+    ))
+
+    def start_ritual_engine_module():
+        from core.ritual_engine import get_ritual_engine
+        re = get_ritual_engine()
+        re.start()
+
+    def stop_ritual_engine_module():
+        from core.ritual_engine import get_ritual_engine
+        re = get_ritual_engine()
+        re.stop()
+
+    lm.register(ModuleDescriptor(
+        name="ritual_engine", wave=4, start_fn=start_ritual_engine_module, stop_fn=stop_ritual_engine_module,
+        depends_on=["context_engine", "behavior_modulator"], optional=True,
+        description="LOVE and Karthi share rituals — morning briefings, evening wind-downs, weekly reviews, focus sessions"
+    ))
+
+    def start_humor_engine_module():
+        from core.humor_engine import get_humor_engine
+        get_humor_engine()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="humor_engine", wave=4, start_fn=start_humor_engine_module,
+        depends_on=["context_engine", "emotional"], optional=True,
+        description="LOVE's contextual humor — tech jokes, timing-aware, never inappropriate"
+    ))
+
     def start_emotional_persistence_module():
         from core.emotional_persistence import get_emotional_persistence
         get_emotional_persistence()  # Initialize singleton — emotions persist across cycles

@@ -440,11 +440,47 @@ new patterns about Karthi and his world.
         except Exception:
             pass
 
+        # Phase 5t: Preference Memory -- specific things I know Karthi likes/dislikes
+        preference_context = ""
+        try:
+            from core.preference_memory import get_preference_memory
+            pm = get_preference_memory()
+            preference_context = pm.get_context_for_prompt()
+        except Exception:
+            pass
+
+        # Phase 5u: Correction Learning -- what have I been wrong about recently?
+        correction_context = ""
+        try:
+            from core.correction_learning import get_correction_learning
+            cl = get_correction_learning()
+            correction_context = cl.get_context_for_prompt()
+        except Exception:
+            pass
+
+        # Phase 5v: Ritual Engine -- what ritual should I be aware of?
+        ritual_context = ""
+        try:
+            from core.ritual_engine import get_ritual_engine
+            re = get_ritual_engine()
+            ritual_context = re.get_ritual_context_for_prompt()
+        except Exception:
+            pass
+
+        # Phase 5w: Humor Engine -- am I allowed to joke right now?
+        humor_context = ""
+        try:
+            from core.humor_engine import get_humor_engine
+            he = get_humor_engine()
+            humor_context = he.get_context_for_prompt()
+        except Exception:
+            pass
+
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
 {conscious_context}{emotional_persistence_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
-{relationship_context}{dream_context}{presence_context}{reasoning_context}{conversational_context}{anticipatory_context}{coregulation_context}{self_doubt_context}
+{relationship_context}{dream_context}{presence_context}{reasoning_context}{conversational_context}{anticipatory_context}{coregulation_context}{self_doubt_context}{preference_context}{correction_context}{ritual_context}{humor_context}
 === LIVE CONTEXT ===
 {rich_context}
 ====================
