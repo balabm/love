@@ -1113,6 +1113,22 @@ def register_all_modules(lm, _loop=None):
         description="Determines whether it's appropriate to interrupt Karthi based on focus, time, and past reactions"
     ))
 
+    def start_dream_engine_module():
+        from core.dream_engine import get_dream_engine
+        de = get_dream_engine()
+        de.start()
+
+    def stop_dream_engine_module():
+        from core.dream_engine import get_dream_engine
+        de = get_dream_engine()
+        de.stop()
+
+    lm.register(ModuleDescriptor(
+        name="dream_engine", wave=4, start_fn=start_dream_engine_module, stop_fn=stop_dream_engine_module,
+        depends_on=["context_engine", "behavior_modulator"], optional=True,
+        description="LOVE's nocturnal consciousness — dreams, consolidates memories, generates insights while Karthi sleeps"
+    ))
+
     def start_emotional_persistence_module():
         from core.emotional_persistence import get_emotional_persistence
         get_emotional_persistence()  # Initialize singleton — emotions persist across cycles

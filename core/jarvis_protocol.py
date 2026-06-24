@@ -357,11 +357,25 @@ new patterns about Karthi and his world.
         except Exception:
             pass
 
+        # Phase 5n: Dream Engine — what did I learn while Karthi was asleep?
+        dream_context = ""
+        try:
+            from core.dream_engine import get_dream_engine
+            de = get_dream_engine()
+            insights = de.get_insights()
+            if insights:
+                dream_context = "\n=== MY DREAMS ===\n"
+                for ins in insights[-3:]:
+                    dream_context += f"  • {ins['insight']}\n"
+                dream_context += "=== END DREAMS ===\n"
+        except Exception:
+            pass
+
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
 {conscious_context}{emotional_persistence_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
-{relationship_context}
+{relationship_context}{dream_context}
 === LIVE CONTEXT ===
 {rich_context}
 ====================
