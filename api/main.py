@@ -1,6 +1,9 @@
 # ── LOVE Self-Bootstrap: dependency preflight ──
 # Do not install packages during server boot unless explicitly enabled.
 import sys, subprocess, os as _os
+_parent_dir = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), ".."))
+if _parent_dir not in sys.path:
+    sys.path.insert(0, _parent_dir)
 import builtins
 
 _original_print = builtins.print
@@ -218,6 +221,11 @@ from core.awareness import start_awareness, get_full_snapshot, get_context_summa
 from core.context_engine import start_context_engine, get_context_dict, get_live_context
 from core.doc_analyst import start_doc_analyst, get_analyst
 from core.settings import get_settings as _get_settings
+try:
+    from core.bootstrap import run_bootstrap
+    BOOTSTRAP_AVAILABLE = True
+except ImportError:
+    BOOTSTRAP_AVAILABLE = False
 import uvicorn
 import socket
 
@@ -825,6 +833,47 @@ def register_all_modules(lm, _loop=None):
         depends_on=["neural_bus", "context_engine"], optional=False, description="Unified AGI consciousness loop — Active Inference + Homeostasis + World Model"
     ))
 
+    def start_cognitive_cortex_module():
+        from core.cognitive_cortex import get_cognitive_cortex
+        get_cognitive_cortex().start()
+        return {"status": "ready"}
+
+    def stop_cognitive_cortex_module():
+        from core.cognitive_cortex import get_cognitive_cortex
+        get_cognitive_cortex().stop()
+
+    lm.register(ModuleDescriptor(
+        name="cognitive_cortex", wave=2, start_fn=start_cognitive_cortex_module, stop_fn=stop_cognitive_cortex_module,
+        depends_on=["neural_bus", "agi_kernel"], optional=False, description="Human brain simulation — working memory, attention, predictive coding, emotional modulation"
+    ))
+
+    def start_sentinel_module():
+        from core.sentinel import start_sentinel
+        start_sentinel()
+        return {"status": "ready"}
+
+    def stop_sentinel_module():
+        from core.sentinel import get_sentinel
+        get_sentinel().stop()
+
+    lm.register(ModuleDescriptor(
+        name="sentinel", wave=2, start_fn=start_sentinel_module, stop_fn=stop_sentinel_module,
+        depends_on=["awareness", "neural_bus"], optional=True, description="Always-on watchdog: presence detection, cross-domain fusion, autonomous actions"
+    ))
+
+    def start_perception_engine_module():
+        from core.perception_engine import get_perception_engine
+        get_perception_engine().start()
+
+    def stop_perception_engine_module():
+        from core.perception_engine import get_perception_engine
+        get_perception_engine().stop()
+
+    lm.register(ModuleDescriptor(
+        name="perception_engine", wave=2, start_fn=start_perception_engine_module, stop_fn=stop_perception_engine_module,
+        depends_on=["awareness"], optional=True, description="Unified multimodal input pipeline (text, image, audio, PDF)"
+    ))
+
     # ── WAVE 3: NEURAL MESH ──
     def start_research_engine_module():
         from core.research_engine import get_research_engine
@@ -869,6 +918,43 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="neural_connectors", wave=3, start_fn=start_neural_connectors_module,
         depends_on=["neural_bus", "awareness", "context_engine", "jarvis_protocol"], optional=False, description="Cross-module RPC connectors"
+    ))
+
+    def start_reasoning_engine_module():
+        from core.reasoning_engine import get_reasoning_engine
+        get_reasoning_engine()
+
+    lm.register(ModuleDescriptor(
+        name="reasoning_engine", wave=3, start_fn=start_reasoning_engine_module,
+        depends_on=["consciousness"], optional=True, description="Chain-of-thought reasoning and reflection engine"
+    ))
+
+    def start_predictive_intelligence_module():
+        from core.predictive_intelligence import get_predictive_engine
+        get_predictive_engine()
+
+    lm.register(ModuleDescriptor(
+        name="predictive_intelligence", wave=3, start_fn=start_predictive_intelligence_module,
+        depends_on=["neural_bus", "context_engine"], optional=True, description="Anticipates user needs, behaviors, and future states"
+    ))
+
+    def start_psychological_model_module():
+        from core.psychological_model import get_psychological_model
+        get_psychological_model()
+
+    lm.register(ModuleDescriptor(
+        name="psychological_model", wave=3, start_fn=start_psychological_model_module,
+        depends_on=["consciousness"], optional=True, description="Deep psychological modeling of user profile"
+    ))
+
+    def start_cross_domain_intelligence_module():
+        # Stateless cross-domain correlation analyzer
+        from core import cross_domain_intelligence
+        return {"status": "ready"}
+
+    lm.register(ModuleDescriptor(
+        name="cross_domain_intelligence", wave=3, start_fn=start_cross_domain_intelligence_module,
+        depends_on=["neural_connectors"], optional=True, description="Detects correlations across all life domains"
     ))
 
     def start_autonomous_trading_module():
@@ -955,6 +1041,51 @@ def register_all_modules(lm, _loop=None):
         depends_on=["master_orchestrator", "evolution_engine", "sentinel"], optional=True,
         description="Central nervous system bridge -- wires all modules into unified organism"
     ))
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # AGI METAMORPHOSIS MODULES (Phases 1-3)
+    # ═══════════════════════════════════════════════════════════════════════
+    def start_action_executor_module():
+        from core.action_executor import get_action_executor
+        get_action_executor()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="action_executor", wave=4, start_fn=start_action_executor_module,
+        depends_on=["neural_bus", "proactive_push"], optional=True,
+        description="Execution bridge -- routes thoughts to TTS, push, GhostDev, system control"
+    ))
+
+    def start_active_inference_module():
+        from core.active_inference_engine import get_active_inference
+        ai = get_active_inference()
+        ai.start()
+
+    def stop_active_inference_module():
+        from core.active_inference_engine import get_active_inference
+        ai = get_active_inference()
+        ai.stop()
+
+    lm.register(ModuleDescriptor(
+        name="active_inference", wave=4, start_fn=start_active_inference_module, stop_fn=stop_active_inference_module,
+        depends_on=["neural_bus", "context_engine", "sentinel"], optional=True,
+        description="Free Energy Principle engine -- predict, surprise, act, learn"
+    ))
+
+    def start_behavior_modulator_module():
+        from core.behavior_modulator import get_behavior_modulator
+        bm = get_behavior_modulator()
+        bm.start()
+
+    def stop_behavior_modulator_module():
+        from core.behavior_modulator import get_behavior_modulator
+        bm = get_behavior_modulator()
+        bm.stop()
+
+    lm.register(ModuleDescriptor(
+        name="behavior_modulator", wave=4, start_fn=start_behavior_modulator_module, stop_fn=stop_behavior_modulator_module,
+        depends_on=["consciousness", "active_inference"], optional=True,
+        description="Consciousness-driven parameter modulation -- heartbeat, push cooldown, model tier"
+    ))
     lm.register(ModuleDescriptor(
         name="memory_architect", wave=4, start_fn=start_memory_architect_module, stop_fn=stop_memory_architect_module,
         depends_on=["neural_connectors"], optional=False, description="Auto-indexing vector & episodic memory"
@@ -971,6 +1102,42 @@ def register_all_modules(lm, _loop=None):
     lm.register(ModuleDescriptor(
         name="meta_cognition", wave=4, start_fn=start_meta_cognition_module,
         depends_on=["consciousness"], optional=True, description="Self-awareness and meta-cognitive reflection engine"
+    ))
+
+    def start_multi_agent_orchestrator_module():
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        get_multi_agent_orchestrator()
+
+    lm.register(ModuleDescriptor(
+        name="multi_agent_orchestrator", wave=4, start_fn=start_multi_agent_orchestrator_module,
+        depends_on=["neural_bus"], optional=True, description="Coordinated multi-agent task decomposition and execution"
+    ))
+
+    def start_global_workspace_module():
+        from core.global_workspace import get_global_workspace
+        get_global_workspace()
+
+    lm.register(ModuleDescriptor(
+        name="global_workspace", wave=4, start_fn=start_global_workspace_module,
+        depends_on=["consciousness"], optional=True, description="GWT-style gating layer with proactive ignition"
+    ))
+
+    def start_strategic_planning_module():
+        from core.strategic_planning import get_strategic_planner
+        get_strategic_planner()
+
+    lm.register(ModuleDescriptor(
+        name="strategic_planning", wave=4, start_fn=start_strategic_planning_module,
+        depends_on=["master_orchestrator"], optional=True, description="Long-term strategic planning across weeks and months"
+    ))
+
+    def start_continuous_learning_module():
+        from core.continuous_learning import get_continuous_learning_engine
+        get_continuous_learning_engine()
+
+    lm.register(ModuleDescriptor(
+        name="continuous_learning", wave=4, start_fn=start_continuous_learning_module,
+        depends_on=["neural_connectors"], optional=True, description="Integrates learnings from all systems continuously"
     ))
 
     # ── WAVE 5: SWARM & GOAL AGENTS ──
@@ -1304,17 +1471,6 @@ def register_all_modules(lm, _loop=None):
     ))
 
 
-    # ── WAVE 6: SENTINEL — ALWAYS-ON SELF-MONITORING PROTOCOL ──
-    def start_sentinel_module():
-        from core.sentinel import start_sentinel
-        start_sentinel()
-
-    lm.register(ModuleDescriptor(
-        name="sentinel", wave=6, start_fn=start_sentinel_module,
-        depends_on=["awareness", "proactive_push"], optional=True,
-        description="Always-on watchdog — monitors user presence, cross-domain intelligence, autonomous actions"
-    ))
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events using topological lifecycle management."""
@@ -1343,6 +1499,14 @@ async def lifespan(app: FastAPI):
         await asyncio.wait_for(_loop_cm.run_in_executor(None, start_consolidated_memory), timeout=10)
     except Exception as _cm_err:
         print(f"[API] ConsolidatedMemory start skipped: {_cm_err}")
+    # ── v2: Autonomous Bootstrap ────────────────────────────────────────────
+    if BOOTSTRAP_AVAILABLE:
+        try:
+            bootstrap_report = await asyncio.get_event_loop().run_in_executor(None, run_bootstrap)
+            print(f"[Bootstrap] Report: {bootstrap_report.get('modules_started', 0)} modules started")
+        except Exception as e:
+            print(f"[Bootstrap] Error during bootstrap: {e}")
+
     from core.module_lifecycle import get_lifecycle
     lm = get_lifecycle()
     # Clear any previously registered modules (useful when Uvicorn reloads)
@@ -1412,6 +1576,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="LOVE Core API", version="2.0.0", lifespan=lifespan)
+
+try:
+    from api.telemetry_routes import router as telemetry_router
+    app.include_router(telemetry_router)
+except Exception as _te:
+    print(f"[API] Telemetry routes not loaded: {_te}")
 
 # Dedicated thread pool for chat so background evolution/heartbeat tasks
 # cannot saturate the default executor and block user messages.
@@ -1684,8 +1854,173 @@ async def get_coordinated_swarm_agents():
     return {"success": True, "agents": Coordinator.AGENT_CATALOG}
 
 # ═══════════════════════════════════════════════════════════════════════════
+# AGI MODULE INTEGRATION ENDPOINTS (Phase 3 wiring)
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/agi/sentinel/state")
+async def get_sentinel_state():
+    """Get current sentinel presence and subsystem health."""
+    try:
+        from core.sentinel import get_sentinel
+        s = get_sentinel()
+        return s.get_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/sentinel/alerts")
+async def get_sentinel_alerts(limit: int = 20):
+    """Get recent sentinel events/decisions."""
+    try:
+        from core.sentinel import get_sentinel
+        s = get_sentinel()
+        return {"events": s.get_events(limit=limit)}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/spine/status")
+async def get_agi_spine_status():
+    """Get AGI Spine bridge health and cross-module status."""
+    try:
+        from core.agi_spine import get_agi_spine
+        spine = get_agi_spine()
+        return spine.get_status()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/orchestrator/narrative")
+async def get_orchestrator_narrative(limit: int = 50):
+    """Paginated access to orchestrator narrative log."""
+    try:
+        from core.master_orchestrator import NARRATIVE_FILE
+        if not NARRATIVE_FILE.exists():
+            return {"entries": []}
+        lines = NARRATIVE_FILE.read_text(encoding="utf-8").strip().split("\n")
+        entries = []
+        for line in lines[-limit:]:
+            try:
+                entries.append(json.loads(line))
+            except Exception:
+                pass
+        return {"entries": entries}
+    except Exception as e:
+        return {"error": str(e)}
+
+class SpeakRequest(BaseModel):
+    message: str
+    category: str = "general"
+    importance: str = "normal"
+
+@app.post("/agi/orchestrator/speak")
+async def orchestrator_speak(req: SpeakRequest):
+    """Inject a user-facing message through the orchestrator."""
+    try:
+        from core.master_orchestrator import get_orchestration_master
+        om = get_orchestration_master()
+        om.speak_to_user(req.message, category=req.category, importance=req.importance)
+        return {"success": True, "message": req.message}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/multi-agent/status")
+async def get_multi_agent_status():
+    """Get agents, tasks, and messages from the multi-agent orchestrator."""
+    try:
+        from core.multi_agent_orchestrator import get_multi_agent_orchestrator
+        ma = get_multi_agent_orchestrator()
+        return {
+            "agents": ma.get_agent_status(),
+            "tasks": ma.get_task_status(),
+            "messages": ma.get_recent_messages(limit=20),
+            "statistics": ma.get_statistics(),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+class ReasoningRequest(BaseModel):
+    prompt: str
+    context: dict = {}
+
+@app.post("/agi/reasoning/chain")
+async def reasoning_chain_endpoint(req: ReasoningRequest):
+    """Trigger chain-of-thought reasoning on a prompt."""
+    try:
+        from core.reasoning_engine import get_reasoning_engine
+        engine = get_reasoning_engine()
+        result = engine.analyze(req.prompt, context=req.context)
+        return {"success": True, "reasoning": result}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/predictions")
+async def get_predictions():
+    """Get active predictions from the predictive intelligence engine."""
+    try:
+        from core.predictive_intelligence import get_predictive_engine
+        engine = get_predictive_engine()
+        predictions = engine.get_active_predictions()
+        return {"predictions": predictions}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/strategy")
+async def get_strategy():
+    """Get active strategic plans."""
+    try:
+        from core.strategic_planning import get_strategic_planner
+        planner = get_strategic_planner()
+        return {"plans": planner.get_all_plans()}
+    except Exception as e:
+        return {"error": str(e)}
+
+# ═══════════════════════════════════════════════════════════════════════════
 # EXTREME AGI ENDPOINTS
 # ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/agi/llm/status")
+async def get_llm_status():
+    """Check which LLM model is active, Ollama reachability, and config."""
+    try:
+        from core.llm import get_current_model_info, DirectOllama
+        info = get_current_model_info()
+        # Probe Ollama directly
+        base_url = info.get("base_url", "http://127.0.0.1:11434")
+        import requests
+        try:
+            resp = requests.get(f"{base_url}/api/tags", timeout=3, proxies={"http": None, "https": None})
+            ollama_reachable = resp.status_code == 200
+            models = [m.get("name", "") for m in resp.json().get("models", [])] if ollama_reachable else []
+        except Exception:
+            ollama_reachable = False
+            models = []
+        return {
+            "ollama_reachable": ollama_reachable,
+            "available_models": models,
+            "active_config": info,
+            "num_predict_default": int(os.getenv("OLLAMA_NUM_PREDICT", "2048")),
+            "timeout_default": int(os.getenv("OLLAMA_TIMEOUT", "90")),
+            "chat_timeout": int(os.getenv("CHAT_LLM_TIMEOUT_SEC", "60")),
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/llm/test")
+async def test_llm(prompt: str = "Say 'hello' in one word."):
+    """Fire a quick test prompt to verify LLM is responding."""
+    try:
+        from core.llm import get_reasoning_llm
+        llm = get_reasoning_llm()
+        import time
+        t0 = time.time()
+        result = llm.invoke(prompt)
+        elapsed = round((time.time() - t0) * 1000, 1)
+        return {
+            "success": True,
+            "model": llm.model,
+            "elapsed_ms": elapsed,
+            "response": result[:200] if result else "(empty)",
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @app.get("/agi/consciousness")
 async def get_consciousness_state():
@@ -4279,6 +4614,52 @@ async def get_sentinel_health():
         return {"running": False, "error": str(e), "subsystems": []}
 
 
+@app.get("/neural/sentinel/status")
+async def neural_sentinel_status():
+    """Full sentinel status for SentinelPanel."""
+    try:
+        from core.sentinel import get_sentinel
+        sentinel = get_sentinel()
+        return sentinel.get_status()
+    except Exception as e:
+        return {"running": False, "error": str(e), "presence": {}, "recent_events": [], "subsystem_health": {}}
+
+
+@app.post("/neural/sentinel/scan")
+async def neural_sentinel_scan():
+    """Force a sentinel scan."""
+    try:
+        from core.sentinel import get_sentinel
+        sentinel = get_sentinel()
+        return sentinel.force_scan()
+    except Exception as e:
+        return {"scanned": False, "error": str(e)}
+
+
+@app.post("/neural/sentinel/away")
+async def neural_sentinel_away(data: dict = None):
+    """Mark user as away."""
+    try:
+        from core.sentinel import get_sentinel
+        sentinel = get_sentinel()
+        sentinel.set_user_away(data.get("reason", "manual") if data else "manual")
+        return {"status": "away"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.post("/neural/sentinel/back")
+async def neural_sentinel_back():
+    """Mark user as back."""
+    try:
+        from core.sentinel import get_sentinel
+        sentinel = get_sentinel()
+        sentinel.set_user_back()
+        return {"status": "back"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/devices/live-status")
 async def get_live_device_status():
     """Return live connection status of all device bridges."""
@@ -4307,17 +4688,21 @@ async def get_live_device_status():
     except Exception:
         devices.append({"id": "ntfy", "name": "Ntfy Listener", "type": "peripheral", "status": "offline"})
 
+    # WhatsApp Bridge — optional integration
     try:
-        from integrations.whatsapp_bridge import get_whatsapp_bridge
-        wa = get_whatsapp_bridge()
-        devices.append({
-            "id": "whatsapp",
-            "name": "WhatsApp Bridge",
-            "type": "peripheral",
-            "status": "connected" if wa and wa.is_connected() else "disconnected",
-        })
-    except Exception:
-        pass  # optional bridge
+        import importlib.util
+        if importlib.util.find_spec("integrations.whatsapp_bridge") is not None:
+            from integrations.whatsapp_bridge import get_whatsapp_bridge
+            wa = get_whatsapp_bridge()
+            devices.append({
+                "id": "whatsapp",
+                "name": "WhatsApp Bridge",
+                "type": "peripheral",
+                "status": "connected" if wa and wa.is_connected() else "disconnected",
+            })
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="api.main.devices")
 
     return {"devices": devices}
 
@@ -6991,24 +7376,27 @@ def get_self_evolution_status():
             from core.code_sandbox import get_code_sandbox
             from core.observability import get_observability_engine
             from core.guardrails import get_guardrails_engine
+            def _running(obj):
+                return getattr(obj, "_running", False) if obj else False
+
             evo_int = get_evolution_integration()
             result["health"] = {
-                "integration": {"running": evo_int._running},
-                "meta_evolution": {"running": get_meta_evolution()._running},
-                "swarm_evolution": {"running": get_swarm_evolution()._running},
-                "self_coder": {"running": get_self_coder()._running},
-                "cross_instance": {"running": get_cross_instance_learning()._running},
-                "capability_gap_detector": {"running": get_capability_gap_detector()._running},
-                "autonomous_cicd": {"running": get_autonomous_cicd()._running},
-                "neural_architecture_search": {"running": get_neural_architecture_search()._running},
-                "multimodal_evolution": {"running": get_multimodal_evolution()._running},
-                "task_evolution": {"running": get_task_evolution_integration()._running},
-                "fitness_evolution": {"running": get_fitness_evolution_integration()._running},
+                "integration": {"running": _running(evo_int)},
+                "meta_evolution": {"running": _running(get_meta_evolution())},
+                "swarm_evolution": {"running": _running(get_swarm_evolution())},
+                "self_coder": {"running": _running(get_self_coder())},
+                "cross_instance": {"running": _running(get_cross_instance_learning())},
+                "capability_gap_detector": {"running": _running(get_capability_gap_detector())},
+                "autonomous_cicd": {"running": _running(get_autonomous_cicd())},
+                "neural_architecture_search": {"running": _running(get_neural_architecture_search())},
+                "multimodal_evolution": {"running": _running(get_multimodal_evolution())},
+                "task_evolution": {"running": _running(get_task_evolution_integration())},
+                "fitness_evolution": {"running": _running(get_fitness_evolution_integration())},
                 "mcp_host": {"available": get_mcp_host().get_health().get("sdk_available", False)},
                 "reasoning_engine": {"available": True},
                 "vector_memory": {"available": True},
                 "code_sandbox": {"available": True},
-                "observability": {"running": get_observability_engine()._running},
+                "observability": {"running": _running(get_observability_engine())},
                 "guardrails": {"available": True},
                 "graph_rag": {"available": True},
                 "prompt_optimizer": {"available": True},
@@ -7038,7 +7426,7 @@ def get_self_evolution_status():
                 "deep_work_protector": {"available": True},
                 "energy_forecaster": {"available": True},
                 "smart_break_suggester": {"available": True},
-                "overall": "healthy" if evo_int._running else "degraded",
+                "overall": "healthy" if _running(evo_int) else "degraded",
             }
         except Exception as e:
             from core.execution_guard import log_error
@@ -7088,19 +7476,36 @@ def force_evolution():
 
 @app.get("/modern/patterns/insights")
 async def modern_patterns_insights():
-    return {"insights": []}
+    try:
+        from core.pattern_detector import get_recent_insights
+        return {"insights": get_recent_insights()[:20]}
+    except Exception:
+        return {"insights": []}
 
 @app.get("/modern/context/stats")
 async def modern_context_stats():
-    return {"window_size": 0, "entries": 0}
+    try:
+        from core.context_engine import get_context_dict
+        ctx = get_context_dict()
+        return {"window_size": len(ctx), "entries": len(ctx), "keys": list(ctx.keys())[:10]}
+    except Exception:
+        return {"window_size": 0, "entries": 0, "keys": []}
 
 @app.get("/modern/cache/stats")
 async def modern_cache_stats():
-    return {"hits": 0, "misses": 0, "size": 0}
+    try:
+        from core.response_cache import get_cache_stats
+        return get_cache_stats()
+    except Exception:
+        return {"hits": 0, "misses": 0, "size": 0}
 
 @app.get("/modern/kg/stats")
 async def modern_kg_stats():
-    return {"entities": 0, "relations": 0}
+    try:
+        from core.knowledge_graph import get_kg_stats
+        return get_kg_stats()
+    except Exception:
+        return {"entities": 0, "relations": 0}
 
 
 @app.get("/vision/desktop")
@@ -8217,25 +8622,25 @@ def _redirect_stderr_to_log():
             self._log = log_file
 
         def write(self, msg):
-            self._orig.write(msg)
+            try:
+                self._orig.write(msg)
+            except OSError:
+                pass
             try:
                 self._log.write(msg)
                 self._log.flush()
-            except Exception as e:
-                from core.execution_guard import log_error
-                log_error(e, module="api.main")
+            except OSError:
+                pass
 
         def flush(self):
             try:
                 self._orig.flush()
-            except Exception as e:
-                from core.execution_guard import log_error
-                log_error(e, module="api.main")
+            except OSError:
+                pass
             try:
                 self._log.flush()
-            except Exception as e:
-                from core.execution_guard import log_error
-                log_error(e, module="api.main")
+            except OSError:
+                pass
 
         def close(self):
             try:
@@ -8256,6 +8661,9 @@ def _redirect_stderr_to_log():
             return False
 
     try:
+        # Only redirect if stdout is in a healthy state
+        sys.stderr.flush()
+        sys.stdout.flush()
         # Rotate: keep last 5 MB
         if log_path.exists() and log_path.stat().st_size > 5 * 1024 * 1024:
             bak = log_path.with_suffix(".log.1")
@@ -8264,9 +8672,12 @@ def _redirect_stderr_to_log():
         sys.stderr = TeeStream(sys.stderr, log_file)
         sys.stdout = TeeStream(sys.stdout, log_file)
     except Exception as e:
-        print(f"[TerminalMonitor] Could not set up log capture: {e}")
+        # stdout may be in a bad state (e.g., IDE subprocess) — skip redirect
+        pass
 
-_redirect_stderr_to_log()
+# Only redirect when running as the main server process
+if __name__ == "__main__":
+    _redirect_stderr_to_log()
 
 
 # ========== WAVE 27: ACTIVE PLANNING + FOCUS-AWARE HEARTBEAT ==========
@@ -8453,6 +8864,103 @@ async def orchestrator_master_speak(req: dict):
     om.speak_to_user(message, category=category, importance=importance)
     return {"status": "sent", "message": message}
 
+
+# ═══ WAVE 30: FRONTIER INTELLIGENCE ROUTES ═══
+
+@app.get("/agi/tools")
+async def get_all_tools():
+    try:
+        from core.tool_registry import get_tool_registry
+        tr = get_tool_registry()
+        return {"tools": tr.list_tools(), "count": tr.count()}
+    except Exception as e:
+        return {"tools": [], "error": str(e)}
+
+@app.post("/agi/tool-call")
+async def execute_tool(request: dict):
+    try:
+        from core.tool_registry import get_tool_registry
+        result = get_tool_registry().execute_tool(request.get('name', ''), request.get('params', {}))
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/reason")
+async def run_reasoning(request: dict):
+    try:
+        from core.reasoning_engine import get_reasoning_engine
+        result = get_reasoning_engine().route_and_reason(request.get('query', ''), request.get('context', {}))
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/memory/semantic")
+async def get_semantic_memory(query: str, top_k: int = 5):
+    try:
+        from core.vector_memory import get_vector_memory
+        return {"results": get_vector_memory().search(query, top_k=top_k)}
+    except Exception as e:
+        return {"results": [], "error": str(e)}
+
+@app.post("/agi/critique")
+async def critique_response(request: dict):
+    try:
+        from core.constitutional_ai import get_constitutional_ai
+        cai = get_constitutional_ai()
+        scores = cai.critique(request.get('response', ''), request.get('query', ''))
+        return scores
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/moe-status")
+async def get_moe_status():
+    try:
+        from core.moe_router import get_moe_router
+        router = get_moe_router()
+        return {"experts": router.EXPERTS, "weights": router.get_weights()}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/context-budget")
+async def get_context_budget():
+    try:
+        from core.context_window_manager import get_context_window_manager
+        mgr = get_context_window_manager()
+        return mgr.get_usage()
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/agi/computer-use")
+async def computer_use(request: dict):
+    try:
+        from core.action_engine import get_action_engine
+        engine = get_action_engine()
+        result = engine.execute_goal(request.get('goal', ''), max_steps=request.get('max_steps', 5))
+        return result
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/agi/intelligence-summary")
+async def get_intelligence_summary():
+    """Returns a full summary of all active AGI capabilities."""
+    summary = {}
+    modules = [
+        ('constitutional_ai', 'core.constitutional_ai', 'get_constitutional_ai'),
+        ('vector_memory', 'core.vector_memory', 'get_vector_memory'),
+        ('moe_router', 'core.moe_router', 'get_moe_router'),
+        ('reasoning_engine', 'core.reasoning_engine', 'get_reasoning_engine'),
+        ('perception_engine', 'core.perception_engine', 'get_perception_engine'),
+        ('speculative_engine', 'core.speculative_engine', 'get_speculative_engine'),
+        ('function_calling', 'core.function_calling', 'get_function_calling_engine'),
+    ]
+    for name, module_path, factory in modules:
+        try:
+            mod = __import__(module_path, fromlist=[factory])
+            instance = getattr(mod, factory)()
+            summary[name] = {'active': True, 'status': 'ready'}
+        except Exception as e:
+            summary[name] = {'active': False, 'error': str(e)}
+    return {'wave': 30, 'capabilities': summary}
 
 # Wave 33: Modern AI Routes (MCP, Reasoning, Browser)
 try:

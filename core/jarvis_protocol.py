@@ -271,61 +271,82 @@ Return ONLY valid JSON:
             except Exception as e:
                 print(f"WS Broadcast Error: {e}")
 
-            # Proactive Speech
-            if speech and isinstance(speech, str) and len(speech) > 5 and speech.lower() not in ("null", "none"):
-                now = time.time()
-                # 5 minute global cooldown for unprompted speech (unless critical)
-                if now - self.last_speech_time > 300 or "critical" in speech.lower():
-                    print(f"\n[Jarvis] 🗣️ Proactive Speech: {speech}")
-                    speak_proactive_alert(speech, severity="info")
-                    self.last_speech_time = now
+            # ═══════════════════════════════════════════════════════════════════
+            # PHASE 1 AGI METAMORPHOSIS: Route ALL thoughts through the
+            # Action Executor — the single dispatch point for actions.
+            # This replaces the ad-hoc speech/background/action_plan routing
+            # with a unified bridge that also handles push, initiatives, and
+            # feeds outcomes back to the Active Inference Engine.
+            # ═══════════════════════════════════════════════════════════════════
+            try:
+                from core.action_executor import get_action_executor
+                executor = get_action_executor()
 
-                    # Publish to neural bus
-                    if NEURAL_BUS_AVAILABLE:
-                        try:
-                            bus = get_neural_bus()
-                            bus.publish(
-                                domain="speech",
-                                event_type="proactive_speech",
-                                payload={"speech": speech, "timestamp": datetime.now().isoformat()},
-                                source_module="jarvis_protocol",
-                                priority=EventPriority.HIGH
-                            )
-                        except Exception as e:
-                            print(f"[Jarvis] Neural bus publish error: {e}")
+                # Build the unified thought dict for the executor
+                thought_for_executor = {
+                    "internal_monologue": monologue,
+                    "proactive_speech": speech if (speech and isinstance(speech, str)
+                                                    and len(speech) > 5
+                                                    and speech.lower() not in ("null", "none")) else None,
+                    "background_action": action if (action and isinstance(action, str)
+                                                    and action.lower() not in ("null", "none", "")) else None,
+                    "action_plan": action_plan if (action_plan and isinstance(action_plan, list)
+                                                   and len(action_plan) > 0) else None,
+                }
 
-            # Background Action (Future hook to Swarm/Ghost Dev)
-            if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
-                now = time.time()
-                if now - self._last_background_action_time > 300:  # 5 minute debounce
-                    print(f"[Jarvis] ⚙️ Triggering background action: {action}")
-                    self._last_background_action_time = now
-                    self._trigger_action(action)
-                else:
-                    print(f"[Jarvis] ⏱️ Background action '{action}' debounced (5min cooldown)")
+                # If there's a proactive speech, also push it to WebSocket clients
+                if thought_for_executor["proactive_speech"]:
+                    thought_for_executor["push_category"] = "THOUGHT"
+                    thought_for_executor["push_message"] = thought_for_executor["proactive_speech"]
+                    thought_for_executor["push_priority"] = "high" if "critical" in speech.lower() else "normal"
 
-            # 🚀 Wave 9: Action Engine Computer Use
-            if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
-                if os.getenv("JARVIS_ENABLE_COMPUTER_USE", "").lower() in ("1", "true", "yes"):
-                    print(f"[Jarvis] ▶️ Executing action plan: {len(action_plan)} steps")
-                    self._execute_action_plan(action_plan)
-                else:
+                result = executor.execute(thought_for_executor, source="neural_cortex")
+
+                # Track speech time for backward-compatible cooldown
+                if thought_for_executor["proactive_speech"]:
+                    self.last_speech_time = time.time()
+                    if result.get("actions"):
+                        for a in result["actions"]:
+                            if a.get("action") == "speech" and a.get("status") == "success":
+                                print(f"\n[Jarvis] Proactive Speech routed via Action Executor: {speech[:80]}")
+
+                # Track background action time
+                if thought_for_executor["background_action"]:
+                    self._last_background_action_time = time.time()
+
+            except ImportError:
+                # Action Executor not available — fall back to legacy routing
+                if speech and isinstance(speech, str) and len(speech) > 5 and speech.lower() not in ("null", "none"):
                     now = time.time()
-                    if now - self._last_blocked_log > 300:  # 5 minute rate limit
-                        print(f"[Jarvis] ⚠️ Action plan BLOCKED (set JARVIS_ENABLE_COMPUTER_USE=1 to enable): {len(action_plan)} steps")
-                        self._last_blocked_log = now
-                    if NEURAL_BUS_AVAILABLE:
-                        try:
-                            bus = get_neural_bus()
-                            bus.publish(
-                                domain="action",
-                                event_type="autonomous_action_blocked",
-                                payload={"action_plan": action_plan, "timestamp": datetime.now().isoformat(), "reason": "Safety block - user approval required"},
-                                source_module="jarvis_protocol",
-                                priority=EventPriority.HIGH
-                            )
-                        except Exception as e:
-                            print(f"[Jarvis] Neural bus publish error: {e}")
+                    if now - self.last_speech_time > 300 or "critical" in speech.lower():
+                        print(f"\n[Jarvis] Proactive Speech (legacy): {speech}")
+                        speak_proactive_alert(speech, severity="info")
+                        self.last_speech_time = now
+
+                if action and isinstance(action, str) and action.lower() not in ("null", "none", ""):
+                    now = time.time()
+                    if now - self._last_background_action_time > 300:
+                        print(f"[Jarvis] Triggering background action (legacy): {action}")
+                        self._last_background_action_time = now
+                        self._trigger_action(action)
+
+                if action_plan and isinstance(action_plan, list) and len(action_plan) > 0:
+                    if os.getenv("JARVIS_ENABLE_COMPUTER_USE", "").lower() in ("1", "true", "yes"):
+                        self._execute_action_plan(action_plan)
+                    else:
+                        now = time.time()
+                        if now - self._last_blocked_log > 300:
+                            print(f"[Jarvis] Action plan BLOCKED (set JARVIS_ENABLE_COMPUTER_USE=1): {len(action_plan)} steps")
+                            self._last_blocked_log = now
+            except Exception as exec_e:
+                print(f"[Jarvis] Action Executor error: {exec_e}")
+                # Fall back to legacy speech routing on executor failure
+                if speech and isinstance(speech, str) and len(speech) > 5 and speech.lower() not in ("null", "none"):
+                    now = time.time()
+                    if now - self.last_speech_time > 300 or "critical" in speech.lower():
+                        speak_proactive_alert(speech, severity="info")
+                        self.last_speech_time = now
+
         except Exception as e:
             import traceback
             error_trace = traceback.format_exc()

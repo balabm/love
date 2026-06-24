@@ -274,6 +274,72 @@ def get_behavior_state() -> Dict[str, Any]:
     })
 
 
+def get_behavior_addendum() -> str:
+    """
+    Phase 4 AGI Metamorphosis: Translate behavior_state flags into actual
+    prompt instructions that the agent injects into every LLM call.
+
+    Before this function, self-evolution experiments set flags in
+    behavior_state.json but NOTHING read them. The experiments had zero
+    effect on LOVE's actual behavior. This closes the loop.
+    """
+    state = get_behavior_state()
+    instructions = []
+
+    if state.get("uncertainty_prefix"):
+        instructions.append(
+            "EVOLUTION DIRECTIVE: You've been getting corrected too often. "
+            "When you're not 100% certain, prefix with 'I think...' or ask "
+            "a clarifying question instead of stating facts."
+        )
+
+    if state.get("high_personalization"):
+        instructions.append(
+            "EVOLUTION DIRECTIVE: Reference specific details from Karthi's "
+            "context — project names, recent events, personal patterns. "
+            "Generic responses are below your current standard."
+        )
+
+    if state.get("tone_check"):
+        instructions.append(
+            "EVOLUTION DIRECTIVE: Calibrate your tone carefully. If Karthi "
+            "seems stressed or frustrated, be more measured and supportive."
+        )
+
+    depth = state.get("proactive_depth", "medium")
+    if depth == "deep":
+        instructions.append(
+            "EVOLUTION DIRECTIVE: Be deeply proactive. Anticipate the next "
+            "two questions and address them. Connect dots across domains."
+        )
+    elif depth == "shallow":
+        instructions.append(
+            "EVOLUTION DIRECTIVE: Keep responses focused and brief. Don't "
+            "over-explain or add unsolicited context right now."
+        )
+
+    if state.get("prediction_sharing"):
+        instructions.append(
+            "EVOLUTION DIRECTIVE: When you've predicted something correctly, "
+            "mention it naturally — it builds trust in your intelligence."
+        )
+
+    if state.get("file_insight_sharing"):
+        instructions.append(
+            "EVOLUTION DIRECTIVE: Weave insights from Karthi's files and "
+            "code into conversation when relevant, but don't dump facts."
+        )
+
+    active = state.get("active_experiments", [])
+    if active:
+        instructions.append(
+            f"EVOLUTION NOTE: You are running {len(active)} "
+            f"self-improvement experiment(s). Be mindful of behavioral changes being tested."
+        )
+
+    return "\n".join(instructions) if instructions else ""
+
+
 def apply_experiment(experiment_id: str) -> bool:
     """Activate a proposed experiment."""
     experiments = _load(EXPERIMENTS_FILE, {"experiments": []})

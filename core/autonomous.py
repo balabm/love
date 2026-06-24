@@ -312,3 +312,29 @@ def maybe_send_autonomous_message() -> Optional[str]:
     """Generate an autonomous message if appropriate."""
     initiative = generate_autonomous_initiative()
     return initiative["message"] if initiative else None
+
+
+def deliver_autonomous_initiative() -> Optional[Dict[str, Any]]:
+    """
+    Phase 1 AGI Metamorphosis: Generate AND deliver an autonomous initiative
+    through the Action Executor. This closes the loop — initiatives are no
+    longer just generated and forgotten, they actually reach the user via
+    TTS + WebSocket push.
+    """
+    initiative = generate_autonomous_initiative()
+    if not initiative:
+        return None
+
+    try:
+        from core.action_executor import get_action_executor
+        executor = get_action_executor()
+        result = executor.execute(
+            {"initiative": initiative},
+            source="autonomous"
+        )
+        return result
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.autonomous", context={"phase": "deliver_initiative"})
+        # Fall back to just returning the message
+        return {"status": "fallback", "message": initiative.get("message", "")}

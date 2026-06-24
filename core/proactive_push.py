@@ -25,6 +25,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from core.execution_guard import log_error
+from core.base_module import BaseLOVEModule, ModuleCapabilities
+
 
 # Neural Bus integration
 try:
@@ -52,13 +54,14 @@ class PushMessage:
     delivered: bool = False
 
 
-class ProactivePushEngine:
+class ProactivePushEngine(BaseLOVEModule):
     """
     Scans all LOVE systems periodically and pushes relevant messages
     to connected WebSocket clients.
     """
 
-    def __init__(self):
+    def __init__(self, name: Optional[str] = None):
+        super().__init__(name=name or "ProactivePushEngine")
         self._queue: deque = deque(maxlen=100)
         self._callbacks: List[Callable] = []  # async callbacks for WS push
         self._running = False
@@ -71,6 +74,58 @@ class ProactivePushEngine:
         self._last_category_push_time: Dict[str, float] = {}  # category → timestamp
         self._printed_suppressions: set = set()  # suppress duplicate log noise
 
+
+    # -- BaseLOVEModule contract --
+
+    def get_capabilities(self) -> ModuleCapabilities:
+        return ModuleCapabilities(
+            domain="proactivepush",
+            actions=[],
+            events_produced=[],
+            resource_heavy=False,
+            user_facing=False,
+        )
+
+    def stress_score(self) -> float:
+        return 0.3
+
+    def dependencies(self) -> list:
+        return []
+
+    def on_start(self):
+        pass
+
+    def on_stop(self):
+        pass
+
+    def on_bus_event(self, event: dict):
+        event_type = event.get("event_type", "")
+        payload = event.get("payload", {})
+        if event_type == "finance_alert":
+            alert = payload.get("alert", "")
+            symbol = payload.get("symbol", "")
+            if alert:
+                try:
+                    self.push(
+                        category="finance",
+                        message=f"Finance Alert ({symbol or 'General'}): {alert[:200]}",
+                        priority="high",
+                    )
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.proactive_push", context={"phase": "on_bus_event"})
+        elif event_type == "guardrails_intervention":
+            action = payload.get("action", "")
+            if action:
+                try:
+                    self.push(
+                        category="system",
+                        message=f"LOVE Intervention: Blocked risky action: {action[:100]}",
+                        priority="high",
+                    )
+                except Exception as e:
+                    from core.execution_guard import log_error
+                    log_error(e, module="core.proactive_push", context={"phase": "on_bus_event"})
     def set_async_loop(self, loop: asyncio.AbstractEventLoop):
         """Set the event loop for async callbacks."""
         self._async_loop = loop
@@ -93,17 +148,22 @@ class ProactivePushEngine:
         import hashlib
         now = time.time()
 
-        # Category cooldown: max 1 push per category per 2 hours (except high/critical)
+        # Phase 3 AGI Metamorphosis: Dynamic cooldown from Behavior Modulator
+        # The modulator sets _dynamic_cooldown_seconds based on LOVE's emotional state.
+        # Default is 7200 (2 hours) if modulator hasn't set a value.
+        cooldown = getattr(self, "_dynamic_cooldown_seconds", 7200)
+
+        # Category cooldown: max 1 push per category per cooldown period (except high/critical)
         if priority not in ("high", "critical"):
             last_cat = self._last_category_push_time.get(category, 0)
-            if now - last_cat < 7200:  # 2 hours
+            if now - last_cat < cooldown:
                 return  # silently skip
 
-        # Deduplication: same message within 2 hours = suppressed
+        # Deduplication: same message within cooldown period = suppressed
         msg_hash = hashlib.sha256(f"{category}:{message}".encode()).hexdigest()[:16]
         if msg_hash in self._recent_messages:
             last_time = self._recent_messages[msg_hash]
-            if now - last_time < 7200:  # 2 hours
+            if now - last_time < cooldown:
                 # Only print suppression once per hash to reduce log noise
                 if msg_hash not in self._printed_suppressions:
                     self._printed_suppressions.add(msg_hash)
@@ -112,7 +172,7 @@ class ProactivePushEngine:
         self._recent_messages[msg_hash] = now
         self._last_category_push_time[category] = now
         # Prune old entries to prevent memory growth
-        self._recent_messages = {k: v for k, v in self._recent_messages.items() if now - v < 7200}
+        self._recent_messages = {k: v for k, v in self._recent_messages.items() if now - v < cooldown}
         self._printed_suppressions.discard(msg_hash)
 
         msg = PushMessage(
@@ -206,9 +266,17 @@ class ProactivePushEngine:
         )
         self._thread.start()
         print("[ProactivePush] Started — LOVE will now reach out proactively")
+        super().start()
+        return True
+
+
 
     def stop(self):
         self._running = False
+        super().stop()
+        return True
+
+
 
     def _scan_loop(self):
         """Background loop: scan all systems, push insights."""
@@ -243,6 +311,8 @@ class ProactivePushEngine:
         pushed |= self._check_emotional_patterns()
         # 6. Check research findings
         pushed |= self._check_research()
+        # 7. Check predictive intelligence for high-confidence forecasts
+        pushed |= self._check_predictions()
 
         if pushed:
             self._last_push_time = now
@@ -384,6 +454,42 @@ class ProactivePushEngine:
                         f"I researched '{topic}' and found: {synthesis}",
                         priority="low",
                         metadata={"topic": topic},
+                    )
+                    return True
+        except Exception as e:
+            from core.execution_guard import log_error
+            log_error(e, module="core.proactive_push")
+        return False
+
+    def _check_predictions(self) -> bool:
+        """Check predictive intelligence for high-confidence actionable forecasts."""
+        try:
+            from core.predictive_intelligence import get_predictive_engine
+            engine = get_predictive_engine()
+            predictions = engine.get_active_predictions()
+            if not predictions:
+                return False
+            for p in predictions:
+                conf = p.get("confidence", 0)
+                ptype = p.get("type", "")
+                if conf >= 0.75 and ptype in ("NEED", "BEHAVIOR", "EMOTIONAL_STATE"):
+                    what = p.get("what", "")
+                    actions = p.get("suggested_actions", [])
+                    action_text = actions[0] if actions else ""
+                    if not hasattr(self, "_pushed_predictions"):
+                        self._pushed_predictions = set()
+                    pred_id = p.get("id", what)
+                    if pred_id in self._pushed_predictions:
+                        continue
+                    self._pushed_predictions.add(pred_id)
+                    msg = f"I anticipate: {what}"
+                    if action_text:
+                        msg += f" ({action_text})"
+                    self.push(
+                        "PREDICTION",
+                        msg,
+                        priority="normal",
+                        metadata={"confidence": conf, "prediction_type": ptype},
                     )
                     return True
         except Exception as e:

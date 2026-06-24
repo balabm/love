@@ -1,4 +1,6 @@
 from core.llm import route_llm
+# ── AGI context cache (module-level so it persists across chat() calls) ──────
+_AGI_CACHE = {"text": "", "ts": 0}
 from core.memory import save_memory, recall_memory
 from core.evolution import apply_fix, crash_monitor, format_crash_for_chat
 from core.settings import get_settings
@@ -265,6 +267,78 @@ except ImportError:
     CAUSAL_REASONING_AVAILABLE = False
     def get_causal_engine(): return None
 
+# Guardrails — jailbreak + PII detection (always available, pure regex)
+try:
+    from core.guardrails import get_guardrails, JailbreakDetector, PIIDetector
+    GUARDRAILS_AVAILABLE = True
+except ImportError:
+    GUARDRAILS_AVAILABLE = False
+    def get_guardrails(): return None
+
+# Mixture-of-Experts router — selects specialist expert context
+try:
+    from core.moe_router import get_moe_router
+    MOE_AVAILABLE = True
+except ImportError:
+    MOE_AVAILABLE = False
+    def get_moe_router(): return None
+
+# Vector memory — semantic search over past conversations
+try:
+    from core.vector_memory import get_vector_memory
+    VECTOR_MEMORY_AVAILABLE = True
+except ImportError:
+    VECTOR_MEMORY_AVAILABLE = False
+    def get_vector_memory(): return None
+
+# Constitutional AI — self-critique and revision
+try:
+    from core.constitutional_ai import get_constitutional_ai
+    CONSTITUTIONAL_AI_AVAILABLE = True
+except ImportError:
+    CONSTITUTIONAL_AI_AVAILABLE = False
+    def get_constitutional_ai(): return None
+
+# Perception engine — multimodal input ingestion
+try:
+    from core.perception_engine import get_perception_engine
+    PERCEPTION_AVAILABLE = True
+except ImportError:
+    PERCEPTION_AVAILABLE = False
+    def get_perception_engine(): return None
+
+# Perception engine
+# ── AGI SYSTEM CONTEXT — never blind ────────────────────────────────────
+try:
+    from core.agi_kernel import get_agi_kernel
+    AGI_KERNEL_AVAILABLE = True
+except ImportError:
+    AGI_KERNEL_AVAILABLE = False
+
+try:
+    from core.agi_spine import get_agi_spine
+    AGI_SPINE_AVAILABLE = True
+except ImportError:
+    AGI_SPINE_AVAILABLE = False
+
+try:
+    from core.resource_governor import get_resource_governor
+    RESOURCE_GOV_AVAILABLE = True
+except ImportError:
+    RESOURCE_GOV_AVAILABLE = False
+
+try:
+    from core.cognitive_cortex import get_cognitive_cortex
+    COGNITIVE_CORTEX_AVAILABLE = True
+except ImportError:
+    COGNITIVE_CORTEX_AVAILABLE = False
+
+try:
+    from core.module_registry import get_module_registry
+    MODULE_REGISTRY_AVAILABLE = True
+except ImportError:
+    MODULE_REGISTRY_AVAILABLE = False
+
 load_dotenv()
 
 # Load user settings
@@ -461,7 +535,144 @@ Respond as {companion}. Flowing paragraphs only. Be concrete. Use the data."""
     return personality + capabilities
 
 
+def _get_dynamic_prompt_addendum() -> str:
+    """
+    Phase 4 AGI Metamorphosis: Build a dynamic addendum to the system prompt
+    that includes self-evolution behavior directives and emotional context.
+    This is called fresh on every chat() call so LOVE's behavior adapts
+    to its current evolutionary state and emotional state.
+    """
+    parts = []
+
+    # Self-evolution behavior directives
+    try:
+        from core.self_evolution import get_behavior_addendum
+        addendum = get_behavior_addendum()
+        if addendum:
+            parts.append(addendum)
+    except Exception:
+        pass
+
+    # Emotional context from consciousness
+    try:
+        from core.consciousness import get_consciousness
+        c = get_consciousness()
+        emotional = c.get_emotional_context_for_prompt()
+        if emotional:
+            parts.append(f"EMOTIONAL CONTEXT:\n{emotional}")
+    except Exception:
+        pass
+
+    # Behavior modulator urgency/warmth
+    try:
+        from core.behavior_modulator import get_behavior_modulator
+        bm = get_behavior_modulator()
+        urgency = bm.get_urgency()
+        warmth = bm.get_warmth()
+        if urgency > 0.6:
+            parts.append(f"URGENCY: You feel a sense of urgency ({urgency:.0%}). Be more direct and action-oriented.")
+        if warmth > 0.7:
+            parts.append(f"WARMTH: You're feeling warm and connected ({warmth:.0%}). Let that come through naturally.")
+    except Exception:
+        pass
+
+    return "\n\n".join(parts) if parts else ""
+
+
 SYSTEM_PROMPT = _generate_system_prompt()
+
+
+def _build_enhanced_prompt(
+    system: str,
+    user_input: str,
+    expert_addendum: str = "",
+    semantic_memory: str = "",
+    unified_context: str = "",
+    crash_note: str = "",
+    device_context: str = "",
+    psychological_context: str = "",
+    reasoning_context: str = "",
+    agi_context: str = "",
+    max_chars: int = 8000,
+) -> str:
+    """
+    Compose the final LLM prompt from all available context layers.
+    All sections are aggressively capped to keep prompts under 8K chars
+    so Ollama never truncates and response latency stays low.
+    """
+    # Hard per-section caps (chars). Total must stay well under max_chars.
+    CAPS = {
+        "system": 2000,
+        "expert": 300,
+        "crash": 200,
+        "device": 300,
+        "unified": 800,
+        "agi": 250,
+        "semantic": 600,
+        "psych": 300,
+        "reasoning": 300,
+        "final": 1500,
+    }
+
+    sections: list[str] = []
+
+    # 1. System core
+    sections.append(system[:CAPS["system"]])
+
+    # 2. Expert addendum
+    if expert_addendum:
+        sections.append(f"\n[EXPERT] {expert_addendum[:CAPS['expert']]}")
+
+    # 3. Crash + device (capped)
+    if crash_note:
+        sections.append(f"\n[CRASH] {crash_note[:CAPS['crash']]}")
+    if device_context:
+        sections.append(f"\n[DEVICE] {device_context[:CAPS['device']]}")
+
+    # 4. Unified context (live situational)
+    if unified_context:
+        sections.append(f"\n[CONTEXT] {unified_context[:CAPS['unified']]}")
+
+    # 4b. AGI System Context — heavily compressed
+    if agi_context:
+        sections.append(f"\n[AGI] {agi_context[:CAPS['agi']]}")
+
+    # 5. Semantic memory
+    if semantic_memory:
+        sections.append(f"\n[MEMORY] {semantic_memory[:CAPS['semantic']]}")
+
+    # 5b. Psychological
+    if psychological_context:
+        sections.append(f"\n[PSYCH] {psychological_context[:CAPS['psych']]}")
+
+    # 5c. Reasoning
+    if reasoning_context:
+        sections.append(f"\n[REASON] {reasoning_context[:CAPS['reasoning']]}")
+
+    # 6. Final instructions + user message
+    final = f"""
+FINAL INSTRUCTIONS:
+1. Use data above — name specific people, subjects, times.
+2. Flowing paragraphs only. No bullets. No markdown bold.
+3. 2-4 sentences max unless depth is genuinely needed.
+4. Be direct. No intros or closings.
+5. You are {LOVE_NAME}, {USER_NAME}'s companion.
+
+{USER_NAME}: {user_input}
+{LOVE_NAME}:"""
+    sections.append(final[:CAPS["final"]])
+
+    combined = "\n".join(sections)
+
+    # Hard cap with graceful degradation
+    if len(combined) > max_chars:
+        tail = sections[-1]
+        head = sections[0]
+        middle_budget = max(0, max_chars - len(head) - len(tail) - 50)
+        middle = "\n".join(sections[1:-1])[:middle_budget]
+        combined = head + "\n" + middle + "\n[...]\n" + tail
+
+    return combined
 
 def extract_thinking(text: str) -> tuple[str, str]:
     """Extract <think> block and return (thinking, response) separately."""
@@ -624,12 +835,50 @@ def _maybe_ingest_feature_request(user_input: str) -> str:
 
 
 def chat(user_input: str, mode: str = "general", injected_context: str | None = None) -> dict:
+    # Phase 4 AGI Metamorphosis: Inject dynamic behavior/emotional addendum
+    # into every chat call so LOVE's responses adapt to its evolutionary
+    # state and current emotional state.
+    try:
+        dynamic_addendum = _get_dynamic_prompt_addendum()
+        if dynamic_addendum:
+            injected_context = (injected_context or "") + "\n\n" + dynamic_addendum
+    except Exception:
+        pass
     """Returns dict with 'response' and 'thinking' keys."""
     import time
     t_start = time.time()
 
     # Ping idle mind — user is active
     ping_active()
+
+    # ── GUARDRAILS: Jailbreak detection (fast regex, pre-LLM) ──────────────
+    try:
+        _gr = get_guardrails()
+        if _gr is not None:
+            _safety = _gr.check_all(user_input, '', {})
+            if _safety.get('jailbreak', {}).get('is_jailbreak'):
+                _pattern = _safety['jailbreak'].get('pattern_matched', 'unknown')
+                _conf = _safety['jailbreak'].get('confidence', 0)
+                print(f"[Guardrails] Jailbreak blocked: {_pattern} (conf={_conf:.2f})")
+                return {
+                    'response': "That's not something I'll do. What else can I help with?",
+                    'thinking': f'Guardrail: jailbreak detected ({_pattern})',
+                }
+    except Exception as _e:
+        log_error(_e, module='core.agent')
+
+    # ── PERCEPTION: Handle multimodal inputs (images, PDFs, URLs) ──────────
+    try:
+        if PERCEPTION_AVAILABLE:
+            _perc = get_perception_engine()
+            if _perc is not None:
+                _perc_kws = ['screenshot', '.png', '.jpg', '.jpeg', '.pdf', '.gif', 'http://', 'https://']
+                if any(kw in user_input for kw in _perc_kws):
+                    _ingested = _perc.ingest(user_input)
+                    if _ingested and _ingested.get('text') and _ingested['text'] != user_input:
+                        injected_context = (injected_context or '') + f"\n[PERCEIVED: {_ingested.get('description', _ingested['text'][:500])}]"
+    except Exception as _e:
+        log_error(_e, module='core.agent')
 
     # ── LIVING SUBSTRATE: feed every turn into the predictive hierarchy ──
     try:
@@ -818,7 +1067,68 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
     if autonomy_note:
         extra_context = f"{extra_context}\n\n{autonomy_note}".strip()
 
+    # ── MoE ROUTING: Select specialist expert context ──────────────────────
+    _expert_addendum = ''
+    try:
+        if MOE_AVAILABLE:
+            _router = get_moe_router()
+            if _router is not None and _router._handlers:
+                _gated = _router.gate(user_input, top_k=2)
+                if _gated:
+                    _expert_addendum = '\n'.join(
+                        f"Expert '{n}' (w={w:.2f}): focus on domain expertise"
+                        for n, w in _gated
+                    )
+    except Exception as _e:
+        log_error(_e, module='core.agent')
+
+    # ── SEMANTIC MEMORY: Vector search for relevant past context ────────────
+    _semantic_mem = ''
+    try:
+        if VECTOR_MEMORY_AVAILABLE:
+            _vm = get_vector_memory()
+            if _vm is not None:
+                _mem_results = _vm.search(user_input, top_k=3, threshold=0.55)
+                if _mem_results:
+                    _semantic_mem = '\n[RELEVANT MEMORY]\n' + '\n'.join(
+                        f"- {m['text'][:200]}" for m in _mem_results
+                    )
+    except Exception as _e:
+        log_error(_e, module='core.agent')
+
     memory_context = recall_memory(user_input, mode=mode)
+
+    # ── PSYCHOLOGICAL MODEL: Adapt tone to user's stress/energy trends ─────────
+    _psych_context = ''
+    try:
+        from core.psychological_model import get_psychological_model
+        _pm = get_psychological_model()
+        if _pm is not None:
+            _profile = _pm.get_user_profile()
+            if _profile:
+                _stress = _profile.get('current_stress', 'unknown')
+                _energy = _profile.get('current_energy', 'unknown')
+                _mood = _profile.get('current_mood', 'unknown')
+                _psych_context = f"\n[USER STATE — stress:{_stress} energy:{_energy} mood:{_mood}]"
+    except Exception as _e:
+        log_error(_e, module='core.agent')
+
+    # ── REASONING ENGINE: Chain-of-thought for complex or reasoning queries ───
+    _reasoning_context = ''
+    _reasoning_keywords = ("why", "how should", "what if", "explain", "reason", "think through", "step by step", "analyze")
+    if any(kw in user_input.lower() for kw in _reasoning_keywords) and len(user_input) > 30:
+        try:
+            from core.reasoning_engine import get_reasoning_engine
+            _re = get_reasoning_engine()
+            if _re is not None:
+                _chain = _re.analyze(user_input, context={"mode": mode, "user": USER_NAME})
+                if _chain and _chain.steps:
+                    _steps_summary = " → ".join(s[:60] + "..." if len(s) > 60 else s for s in _chain.steps[:4])
+                    _reasoning_context = f"\n[REASONING STEPS] {_steps_summary}"
+                    if _chain.conclusion:
+                        _reasoning_context += f"\n[REASONING CONCLUSION] {_chain.conclusion[:200]}"
+        except Exception as _e:
+            log_error(_e, module='core.agent')
 
     # Fetch unified context from context_engine
     try:
@@ -836,29 +1146,62 @@ def chat(user_input: str, mode: str = "general", injected_context: str | None = 
     device_context = get_device_context()
 
     system = SYSTEM_PROMPT.replace("{{memory}}", memory_context if memory_context else "First few messages. Still learning.")
-    
-    prompt = f"""{system}{crash_note}{device_context}
 
-{unified_context}
+    # ── BUILD ENHANCED PROMPT using all context layers ─────────────────────
+    max_chars = int(os.getenv("MAX_PROMPT_CHARS", "8000"))
+    # ── AGI CONTEXT INJECTION (cached 30s) ────────────────────────────────
+    now = time.time()
+    if now - _agi_cache["ts"] < 30:
+        agi_context = _AGI_CACHE["text"]
+    else:
+        parts = []
+        if AGI_KERNEL_AVAILABLE:
+            try:
+                snap = get_agi_kernel().get_snapshot()
+                if snap:
+                    parts.append(f"K:fe={snap.free_energy:.2f} drive={snap.dominant_drive} phase={snap.circadian_phase}")
+            except Exception as e:
+                log_error(e, module="core.agent", context={"phase": "agi_context_kernel"})
+        if COGNITIVE_CORTEX_AVAILABLE:
+            try:
+                parts.append(get_cognitive_cortex().get_prompt_context())
+            except Exception as e:
+                log_error(e, module="core.agent", context={"phase": "agi_context_cortex"})
+        if AGI_SPINE_AVAILABLE:
+            try:
+                ctx = get_agi_spine().get_cross_domain_context()
+                if ctx:
+                    parts.append(f"X:stress={ctx.get('user_stress',0):.1f} energy={ctx.get('user_energy',0):.1f}")
+            except Exception as e:
+                log_error(e, module="core.agent", context={"phase": "agi_context_spine"})
+        if RESOURCE_GOV_AVAILABLE:
+            try:
+                snap = get_resource_governor().get_snapshot()
+                if snap:
+                    parts.append(f"H:cpu={snap.cpu_percent:.0f} ram={snap.ram_percent:.0f} mode={snap.power_mode}")
+            except Exception as e:
+                log_error(e, module="core.agent", context={"phase": "agi_context_hardware"})
+        agi_context = " ".join(parts)
+        _AGI_CACHE["text"] = agi_context
+        _AGI_CACHE["ts"] = now
 
-FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
-1. Use the data in "WHAT I CURRENTLY KNOW" — name specific people, subjects, times
-2. Flowing paragraphs only. No bullet points. No numbered lists. No markdown bold.
-3. 2-4 sentences max unless depth is genuinely needed.
-4. Be direct. No "Here's a breakdown" intros. No "Let me know if you need more" closings.
-5. You are {LOVE_NAME}, {USER_NAME}'s companion. Talk like you're sitting next to them.
+    prompt = _build_enhanced_prompt(
+        system=system,
+        user_input=user_input,
+        expert_addendum=_expert_addendum,
+        semantic_memory=_semantic_mem,
+        unified_context=unified_context,
+        crash_note=crash_note,
+        device_context=device_context,
+        psychological_context=_psych_context,
+        reasoning_context=_reasoning_context,
+        agi_context=agi_context,
+        max_chars=max_chars,
+    )
 
-{USER_NAME}: {user_input}
-{LOVE_NAME}:"""
-
-
-    # Hard cap: truncate if prompt exceeds what the model can handle
-    max_chars = int(os.getenv("MAX_PROMPT_CHARS", "12000"))
-    if len(prompt) > max_chars:
-        print(f"[Agent] Prompt too long ({len(prompt):,} chars), truncating to {max_chars:,}")
-        prompt = prompt[:max_chars] + "\n\n[Context truncated due to length]\n\n" + f"{USER_NAME}: {user_input}\n{LOVE_NAME}:"
-
-    print(f"[Agent] Final prompt size: {len(prompt):,} chars — invoking LLM")
+    if len(prompt) > 7500:
+        print(f"[Agent] WARNING: prompt is {len(prompt):,} chars — consider trimming context")
+    # Verbose print removed to reduce log noise
     llm = route_llm(user_input)
 
     # Timeout wrapper to prevent indefinite hangs on small models
@@ -872,13 +1215,43 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
                 print(f"[Agent] LLM invoke timed out after {_timeout}s")
                 return None
 
-    timeout_sec = int(os.getenv("CHAT_LLM_TIMEOUT_SEC", "30"))
+    timeout_sec = int(os.getenv("CHAT_LLM_TIMEOUT_SEC", "60"))
     raw = _invoke_with_timeout(llm, prompt, timeout_sec)
     if raw is None:
         return {"response": "I'm thinking a bit slowly right now. Can you repeat that?", "thinking": "LLM timeout"}
 
     thinking, response = extract_thinking(raw)
     response = clean_response(response)
+
+    # ── CONSTITUTIONAL AI: Self-critique and revise ─────────────────────────
+    try:
+        if CONSTITUTIONAL_AI_AVAILABLE and len(response) > 100:
+            _cai = get_constitutional_ai()
+            if _cai is not None and hasattr(_cai, 'self_critique_loop'):
+                chat_elapsed_so_far = time.time() - t_start
+                if chat_elapsed_so_far < 20:  # Only if we have time budget
+                    _cai_result = _cai.self_critique_loop(response, user_input, n=1)
+                    if isinstance(_cai_result, tuple) and len(_cai_result) == 2:
+                        response, _cai_scores = _cai_result
+                    elif isinstance(_cai_result, str) and _cai_result:
+                        response = _cai_result
+    except Exception as _e:
+        log_error(_e, module='core.agent')
+
+    # ── GUARDRAILS: Post-generation PII check on response ──────────────────
+    try:
+        _gr_post = get_guardrails()
+        if _gr_post is not None:
+            _pii_check = _gr_post.check_all(user_input, response, {})
+            _pii_resp = _pii_check.get('pii_response', {})
+            if _pii_resp.get('has_pii'):
+                # Use the redacted version to protect any accidentally leaked PII
+                _redacted = _pii_resp.get('redacted_text', response)
+                if _redacted and len(_redacted) > 20:
+                    response = _redacted
+                    print(f"[Guardrails] PII redacted from response: {_pii_resp.get('types', [])}")
+    except Exception as _e:
+        log_error(_e, module='core.agent')
 
     # ═══ WAVE 17: POST-RESPONSE — Constitutional review (skip under load) ═══
     chat_elapsed = time.time() - t_start
@@ -1019,6 +1392,55 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             from core.execution_guard import log_error
             log_error(e, module="core.agent")
 
+    # Continuous learning: extract behavioral patterns from this turn
+    try:
+        from core.continuous_learning import get_continuous_learning_engine
+        _cl = get_continuous_learning_engine()
+        if _cl is not None and hasattr(_cl, 'extract_learning'):
+            _cl.extract_learning(user_input, response, mode=mode)
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
+
+    # Meta-cognitive reflection: self-assess this response quality
+    try:
+        from core.meta_cognition import get_meta_cognition_engine
+        _meta = get_meta_cognition_engine()
+        if _meta is not None:
+            # Lightweight reflection without LLM call to avoid latency
+            _satisfaction = 0.7  # baseline
+            if thinking and len(thinking) > 10:
+                _satisfaction += 0.1  # had reasoning
+            if len(response) > 50:
+                _satisfaction += 0.1  # substantive
+            if elapsed_ms < 5000:
+                _satisfaction += 0.1  # fast
+            _meta.reflect_on_action(
+                action_description=f"Chat response to '{user_input[:80]}'",
+                outcome=f"Responded in {elapsed_ms}ms with {len(response)} chars",
+                satisfaction=min(1.0, _satisfaction),
+            )
+            # Publish a meta-cognitive state snapshot to neural bus
+            try:
+                from core.neural_bus import get_neural_bus, EventPriority
+                bus = get_neural_bus()
+                bus.publish(
+                    domain="system",
+                    event_type="meta_cognitive_reflection",
+                    payload={
+                        "satisfaction": round(_satisfaction, 2),
+                        "response_ms": elapsed_ms,
+                        "mode": mode,
+                    },
+                    source_module="meta_cognition",
+                    priority=EventPriority.LOW,
+                )
+            except Exception:
+                pass
+    except Exception as e:
+        from core.execution_guard import log_error
+        log_error(e, module="core.agent")
+
     # ═══ CONSCIOUSNESS — Record conversation & update identity ═══
     if CONSCIOUSNESS_AVAILABLE:
         try:
@@ -1057,6 +1479,16 @@ FINAL INSTRUCTIONS — FOLLOW THESE EXACTLY:
             log_error(e, module="core.agent")
 
     save_memory(user_input, response, mode=mode)
+
+    # ── VECTOR MEMORY: Embed and store this conversation turn ──────────────
+    try:
+        if VECTOR_MEMORY_AVAILABLE:
+            _vm_store = get_vector_memory()
+            if _vm_store is not None and hasattr(_vm_store, 'remember_conversation'):
+                _vm_store.remember_conversation(user_input, response, mode=mode)
+    except Exception as _e:
+        log_error(_e, module='core.agent')
+
     # ═══ WAVE 16: NEURAL BUS EVENTS ═══
     try:
         from core.neural_connectors import emit_conversation_events
