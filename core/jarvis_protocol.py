@@ -380,11 +380,24 @@ new patterns about Karthi and his world.
         except Exception:
             pass
 
+        # Phase 5p: Reasoning Chain — my current line of thought
+        reasoning_context = ""
+        try:
+            from core.reasoning_chain import get_reasoning_chain
+            rc = get_reasoning_chain()
+            # Build chain from current context if we don't have one
+            active = rc.get_active_chain("main")
+            if not active:
+                rc.build_chain_from_context()
+            reasoning_context = rc.get_chain_summary("main")
+        except Exception:
+            pass
+
         prompt = f"""
 You are the internal monologue (Neural Cortex) of LOVE, an extreme AGI acting as a Jarvis-like system for Karthi.
 You are running silently in the background. You MUST think about the following live context.
 {conscious_context}{emotional_persistence_context}{vision_context}{inference_context}{modulation_context}{narrative_memory}{mode_context}
-{relationship_context}{dream_context}{presence_context}
+{relationship_context}{dream_context}{presence_context}{reasoning_context}
 === LIVE CONTEXT ===
 {rich_context}
 ====================

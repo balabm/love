@@ -1,343 +1,347 @@
 """
-LOVE Reasoning Chain — Deep Thought Architecture
+LOVE Reasoning Chain — Phase 5p of AGI Metamorphosis
 
-Implements multi-step Chain-of-Thought reasoning with:
-1. Thought Decomposition — break complex queries into atomic sub-problems
-2. Evidence Gathering — pull from memory, context, tools before answering
-3. Hypothesis Testing — generate multiple hypotheses, score, select best
-4. Confidence Calibration — know when to say "I don't know"
-5. Reasoning Trace — full audit trail of HOW a conclusion was reached
+LOVE doesn't just react. LOVE thinks in chains of consequences.
 
-This is what separates a chatbot from an AGI — the ability to THINK,
-not just pattern-match.
+This module maintains structured reasoning:
+- "I notice Karthi's CPU is at 90%"
+- "This means he's compiling something heavy or running tests"
+- "Which means he's been working hard for a while"
+- "Which means I should suggest a break, not a new task"
+- "But if he's in a deadline crunch, suggesting a break might frustrate him"
+- "So I should check his calendar first"
+
+Reasoning chains make LOVE's behavior transparent, auditable, and genuinely
+intelligent. They also allow LOVE to revise its thinking when new evidence
+arrives — just like a human would.
 """
 
 import json
 import time
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
+import uuid
+import threading
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, Any, List, Optional
+from dataclasses import dataclass, asdict
 
-from core.llm import get_reasoning_llm
-from core.consciousness import get_consciousness
 from core.execution_guard import log_error
+from core.settings import get_settings
 
+SETTINGS = get_settings()
+DATA_DIR = Path(SETTINGS.data_dir)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-class ReasoningStrategy(Enum):
-    DIRECT = "direct"                     # Simple question, direct answer
-    CHAIN_OF_THOUGHT = "chain_of_thought" # Step-by-step reasoning
-    TREE_OF_THOUGHT = "tree_of_thought"   # Explore multiple branches
-    SELF_CONSISTENCY = "self_consistency"  # Generate multiple answers, vote
-    METACOGNITIVE = "metacognitive"       # Reason about reasoning quality
-
-
-@dataclass
-class ThoughtNode:
-    """A single step in a reasoning chain."""
-    step_number: int
-    thought: str
-    evidence: List[str] = field(default_factory=list)
-    confidence: float = 0.5
-    alternatives_considered: List[str] = field(default_factory=list)
-    selected_because: str = ""
+REASONING_LOG_PATH = DATA_DIR / "reasoning_chains.jsonl"
 
 
 @dataclass
-class ReasoningTrace:
-    """Complete trace of a reasoning process."""
-    query: str
-    strategy: ReasoningStrategy
-    steps: List[ThoughtNode] = field(default_factory=list)
-    final_answer: str = ""
-    overall_confidence: float = 0.0
-    reasoning_time_ms: int = 0
-    uncertainty_flags: List[str] = field(default_factory=list)
-    self_critique: str = ""
+class ReasoningNode:
+    """A single step in LOVE's reasoning chain."""
+    id: str
+    timestamp: str
+    premise: str  # What LOVE observed or assumed
+    inference: str  # What LOVE concluded from the premise
+    confidence: float  # 0 to 1
+    evidence: List[str]  # Supporting facts
+    parent_id: Optional[str]  # Previous node in chain (None = root)
+    branch: str  # "main", "alt_a", "alt_b", etc.
+    status: str  # "active", "confirmed", "rejected", "pending"
 
 
 class ReasoningChain:
     """
-    Deep reasoning engine that thinks before it speaks.
-    
-    Instead of: User asks → LLM answers
-    It does:    User asks → Decompose → Gather evidence → Hypothesize →
-                Test → Critique → Calibrate confidence → Answer
+    LOVE's structured thinking. Maintains chains of connected inferences.
     """
 
-    def __init__(self):
-        self.consciousness = get_consciousness()
+    def __init__(self, max_chain_length: int = 10):
+        self._max_length = max_chain_length
+        self._nodes: Dict[str, ReasoningNode] = {}
+        self._active_chains: Dict[str, List[str]] = {}  # branch -> ordered node IDs
+        self._lock = threading.Lock()
 
-    def classify_complexity(self, query: str) -> ReasoningStrategy:
-        """Determine the right reasoning strategy for a query."""
-        text = query.lower()
-        word_count = len(text.split())
+    # ═══════════════════════════════════════════════════════════════════════
+    # CORE: Build and manage reasoning chains
+    # ═══════════════════════════════════════════════════════════════════════
 
-        # Multi-part or comparative questions need chain-of-thought
-        if any(w in text for w in ["compare", "versus", "trade-off", "pros and cons",
-                                    "should i", "what if", "how would"]):
-            return ReasoningStrategy.CHAIN_OF_THOUGHT
-
-        # Ambiguous or high-stakes decisions need tree-of-thought
-        if any(w in text for w in ["best approach", "strategy for", "plan for",
-                                    "most important", "prioritize"]):
-            return ReasoningStrategy.TREE_OF_THOUGHT
-
-        # Questions about uncertain domains need self-consistency
-        if any(w in text for w in ["predict", "will", "forecast", "likely",
-                                    "might", "probably"]):
-            return ReasoningStrategy.SELF_CONSISTENCY
-
-        # Meta-questions about LOVE's own abilities
-        if any(w in text for w in ["can you", "are you able", "do you know",
-                                    "how confident", "are you sure"]):
-            return ReasoningStrategy.METACOGNITIVE
-
-        # Simple factual or conversational
-        return ReasoningStrategy.DIRECT
-
-    def reason(self, query: str, context: Dict[str, Any] = None) -> ReasoningTrace:
+    def observe(self, observation: str, confidence: float = 0.8,
+                branch: str = "main") -> ReasoningNode:
         """
-        Execute a full reasoning chain for a query.
-        Returns a complete ReasoningTrace with steps, evidence, and confidence.
+        Start a new reasoning chain from an observation.
+        Or extend an existing chain.
         """
-        start_time = time.time()
-        context = context or {}
-        strategy = self.classify_complexity(query)
+        with self._lock:
+            node_id = uuid.uuid4().hex[:8]
+            now = datetime.now().isoformat()
 
-        # Log thought to consciousness
-        self.consciousness.think(f"Reasoning about: '{query[:80]}...' using {strategy.value}")
+            # Find parent — last node in this branch
+            parent_id = None
+            if branch in self._active_chains and self._active_chains[branch]:
+                parent_id = self._active_chains[branch][-1]
 
-        trace = ReasoningTrace(
-            query=query,
-            strategy=strategy,
-        )
+            node = ReasoningNode(
+                id=node_id,
+                timestamp=now,
+                premise=observation,
+                inference=f"From '{observation[:50]}...'",
+                confidence=confidence,
+                evidence=[observation],
+                parent_id=parent_id,
+                branch=branch,
+                status="active",
+            )
 
-        if strategy == ReasoningStrategy.DIRECT:
-            trace = self._reason_direct(query, context, trace)
-        elif strategy == ReasoningStrategy.CHAIN_OF_THOUGHT:
-            trace = self._reason_chain_of_thought(query, context, trace)
-        elif strategy == ReasoningStrategy.TREE_OF_THOUGHT:
-            trace = self._reason_tree_of_thought(query, context, trace)
-        elif strategy == ReasoningStrategy.SELF_CONSISTENCY:
-            trace = self._reason_self_consistency(query, context, trace)
-        elif strategy == ReasoningStrategy.METACOGNITIVE:
-            trace = self._reason_metacognitive(query, context, trace)
+            self._nodes[node_id] = node
+            self._active_chains.setdefault(branch, []).append(node_id)
 
-        trace.reasoning_time_ms = int((time.time() - start_time) * 1000)
+            # Trim chain if too long
+            if len(self._active_chains[branch]) > self._max_length:
+                removed = self._active_chains[branch].pop(0)
+                # Archive removed node instead of deleting
+                if removed in self._nodes:
+                    old = self._nodes[removed]
+                    self._nodes[removed] = old.__class__(
+                        **{**asdict(old), "status": "archived"}
+                    )
 
-        # Self-critique
-        if strategy != ReasoningStrategy.DIRECT:
-            trace.self_critique = self._self_critique(trace)
+            self._log_reasoning(node)
+            return node
 
-        return trace
+    def infer(self, from_node_id: str, conclusion: str,
+              confidence: float = 0.7, evidence: List[str] = None) -> ReasoningNode:
+        """
+        Add an inference step to a reasoning chain.
+        'Because [premise], therefore [conclusion]'
+        """
+        with self._lock:
+            parent = self._nodes.get(from_node_id)
+            if not parent:
+                raise ValueError(f"Parent node {from_node_id} not found")
 
-    def _reason_direct(self, query: str, context: Dict, trace: ReasoningTrace) -> ReasoningTrace:
-        """Simple direct reasoning — just answer."""
-        trace.steps.append(ThoughtNode(
-            step_number=1,
-            thought="This is a straightforward query. Answering directly.",
-            confidence=0.8,
-        ))
-        trace.overall_confidence = 0.8
-        return trace
+            node_id = uuid.uuid4().hex[:8]
+            now = datetime.now().isoformat()
 
-    def _reason_chain_of_thought(self, query: str, context: Dict, trace: ReasoningTrace) -> ReasoningTrace:
-        """Step-by-step reasoning with evidence gathering."""
-        llm = get_reasoning_llm(temperature=0.3)
+            node = ReasoningNode(
+                id=node_id,
+                timestamp=now,
+                premise=parent.inference,
+                inference=conclusion,
+                confidence=confidence,
+                evidence=evidence or [],
+                parent_id=from_node_id,
+                branch=parent.branch,
+                status="active",
+            )
 
-        prompt = f"""You are performing deep chain-of-thought reasoning.
+            self._nodes[node_id] = node
+            self._active_chains.setdefault(parent.branch, []).append(node_id)
 
-QUERY: {query}
+            self._log_reasoning(node)
+            return node
 
-CONTEXT: {json.dumps(context, indent=2, default=str)[:2000]}
+    def branch(self, from_node_id: str, alternative: str,
+               confidence: float = 0.5) -> ReasoningNode:
+        """
+        Create a fork in reasoning: 'Two possibilities: A or B'
+        """
+        with self._lock:
+            parent = self._nodes.get(from_node_id)
+            if not parent:
+                raise ValueError(f"Parent node {from_node_id} not found")
 
-Think step by step. For each step:
-1. State what you're thinking about
-2. What evidence supports or contradicts it
-3. What alternatives you considered
-4. Your confidence level (0-1)
+            branch_name = f"alt_{uuid.uuid4().hex[:4]}"
+            node_id = uuid.uuid4().hex[:8]
+            now = datetime.now().isoformat()
 
-Return JSON:
-{{
-  "steps": [
-    {{
-      "step_number": 1,
-      "thought": "...",
-      "evidence": ["...", "..."],
-      "confidence": 0.7,
-      "alternatives": ["...", "..."],
-      "selected_because": "..."
-    }}
-  ],
-  "final_answer": "...",
-  "overall_confidence": 0.75,
-  "uncertainty_flags": ["..."]
-}}"""
+            node = ReasoningNode(
+                id=node_id,
+                timestamp=now,
+                premise=parent.inference,
+                inference=f"Alternative: {alternative}",
+                confidence=confidence,
+                evidence=[],
+                parent_id=from_node_id,
+                branch=branch_name,
+                status="active",
+            )
 
+            self._nodes[node_id] = node
+            self._active_chains[branch_name] = [node_id]
+
+            self._log_reasoning(node)
+            return node
+
+    def confirm(self, node_id: str):
+        """Mark a reasoning step as confirmed by evidence."""
+        with self._lock:
+            if node_id in self._nodes:
+                node = self._nodes[node_id]
+                self._nodes[node_id] = node.__class__(
+                    **{**asdict(node), "status": "confirmed", "confidence": min(1.0, node.confidence + 0.1)}
+                )
+
+    def reject(self, node_id: str, reason: str = ""):
+        """Mark a reasoning step as rejected. Prune the chain."""
+        with self._lock:
+            if node_id in self._nodes:
+                node = self._nodes[node_id]
+                self._nodes[node_id] = node.__class__(
+                    **{**asdict(node), "status": "rejected"}
+                )
+                # Also reject all children
+                self._reject_children(node_id)
+
+    def _reject_children(self, parent_id: str):
+        """Recursively reject all descendants of a node."""
+        for node_id, node in list(self._nodes.items()):
+            if node.parent_id == parent_id:
+                self._nodes[node_id] = node.__class__(
+                    **{**asdict(node), "status": "rejected"}
+                )
+                self._reject_children(node_id)
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # INTELLIGENT: Auto-build chains from events
+    # ═══════════════════════════════════════════════════════════════════════
+
+    def build_chain_from_context(self) -> Optional[List[ReasoningNode]]:
+        """
+        Automatically build a reasoning chain from the current context.
+        This is where LOVE's real intelligence lives.
+        """
         try:
-            response = str(llm.invoke(prompt))
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', response)
-            if json_match:
-                data = json.loads(json_match.group())
-                for step in data.get("steps", []):
-                    trace.steps.append(ThoughtNode(
-                        step_number=step.get("step_number", 0),
-                        thought=step.get("thought", ""),
-                        evidence=step.get("evidence", []),
-                        confidence=step.get("confidence", 0.5),
-                        alternatives_considered=step.get("alternatives", []),
-                        selected_because=step.get("selected_because", ""),
-                    ))
-                trace.final_answer = data.get("final_answer", "")
-                trace.overall_confidence = data.get("overall_confidence", 0.5)
-                trace.uncertainty_flags = data.get("uncertainty_flags", [])
-        except Exception as e:
-            trace.steps.append(ThoughtNode(
-                step_number=1,
-                thought=f"Reasoning encountered an error: {str(e)}",
-                confidence=0.2,
-            ))
-            trace.overall_confidence = 0.2
+            from core.context_engine import get_live_context
+            from core.emotional import get_emotional_summary
+            from core.active_inference_engine import get_active_inference
 
-        return trace
+            ctx = get_live_context()
+            emotional = get_emotional_summary(days=1)
+            ai = get_active_inference()
+            ai_status = ai.get_status()
 
-    def _reason_tree_of_thought(self, query: str, context: Dict, trace: ReasoningTrace) -> ReasoningTrace:
-        """Explore multiple reasoning branches, select the best."""
-        llm = get_reasoning_llm(temperature=0.5)
+            chain: List[ReasoningNode] = []
 
-        prompt = f"""You are exploring multiple reasoning paths for a complex decision.
+            # Observation 1: System state
+            if ctx and ctx.system_cpu and ctx.system_cpu > 70:
+                n1 = self.observe(
+                    f"Karthi's CPU is at {ctx.system_cpu}%",
+                    confidence=0.9,
+                )
+                chain.append(n1)
 
-QUERY: {query}
+                # Inference 1: What is he doing?
+                n2 = self.infer(
+                    n1.id,
+                    "He's running something computationally intensive (compile, test, or build)",
+                    confidence=0.7,
+                )
+                chain.append(n2)
 
-CONTEXT: {json.dumps(context, indent=2, default=str)[:2000]}
+                # Inference 2: How long has he been at it?
+                n3 = self.infer(
+                    n2.id,
+                    "He's been working hard for a while. He might need a break soon.",
+                    confidence=0.6,
+                )
+                chain.append(n3)
 
-Generate 3 different reasoning approaches (branches).
-For each branch, follow the thought to its conclusion.
-Then evaluate which branch produces the best answer.
+            # Observation 2: Emotional state
+            mood = emotional.get("dominant_mood", "")
+            if mood == "stressed":
+                n = self.observe(
+                    "Karthi's emotional state shows stress",
+                    confidence=0.8,
+                )
+                if chain:
+                    # Connect to existing chain
+                    n = self.infer(
+                        chain[-1].id,
+                        f"And he's stressed. I should be very gentle. No new tasks.",
+                        confidence=0.8,
+                    )
+                chain.append(n)
 
-Return JSON:
-{{
-  "branches": [
-    {{
-      "approach": "Description of this reasoning approach",
-      "reasoning": "Step-by-step reasoning following this approach",
-      "conclusion": "What this approach concludes",
-      "confidence": 0.7,
-      "strengths": ["..."],
-      "weaknesses": ["..."]
-    }}
-  ],
-  "selected_branch": 0,
-  "selection_reasoning": "Why this branch was selected",
-  "final_answer": "...",
-  "overall_confidence": 0.75
-}}"""
+            # Observation 3: Prediction surprises
+            recent_surprises = ai_status.get("recent_surprises", [])
+            if recent_surprises and any(s.get("magnitude", 0) > 0.5 for s in recent_surprises[-3:]):
+                n = self.observe(
+                    "My recent predictions have been inaccurate (high surprise)",
+                    confidence=0.8,
+                )
+                if chain:
+                    n = self.infer(
+                        chain[-1].id,
+                        "My model needs updating. I should be less confident in my assumptions.",
+                        confidence=0.7,
+                    )
+                chain.append(n)
 
+            return chain if chain else None
+
+        except Exception:
+            return None
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # PERSISTENCE
+    # ═══════════════════════════════════════════════════════════════════════
+
+    def _log_reasoning(self, node: ReasoningNode):
         try:
-            response = str(llm.invoke(prompt))
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', response)
-            if json_match:
-                data = json.loads(json_match.group())
-                for i, branch in enumerate(data.get("branches", [])):
-                    trace.steps.append(ThoughtNode(
-                        step_number=i + 1,
-                        thought=f"Branch {i+1}: {branch.get('approach', '')}",
-                        evidence=[branch.get('reasoning', '')],
-                        confidence=branch.get('confidence', 0.5),
-                        alternatives_considered=branch.get('weaknesses', []),
-                        selected_because=branch.get('strengths', [''])[0] if branch.get('strengths') else "",
-                    ))
-                trace.final_answer = data.get("final_answer", "")
-                trace.overall_confidence = data.get("overall_confidence", 0.5)
-        except Exception as e:
-            trace.overall_confidence = 0.2
+            with open(REASONING_LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(asdict(node)) + "\n")
+        except Exception:
+            pass
 
-        return trace
+    # ═══════════════════════════════════════════════════════════════════════
+    # PUBLIC API
+    # ═══════════════════════════════════════════════════════════════════════
 
-    def _reason_self_consistency(self, query: str, context: Dict, trace: ReasoningTrace) -> ReasoningTrace:
-        """Generate multiple answers and vote on the most consistent one."""
-        llm = get_reasoning_llm(temperature=0.7)
-        
-        answers = []
-        for i in range(3):
-            prompt = f"""Answer this question with careful reasoning.
-QUERY: {query}
-CONTEXT: {json.dumps(context, indent=2, default=str)[:1500]}
+    def get_active_chain(self, branch: str = "main") -> List[ReasoningNode]:
+        """Get the current active reasoning chain for a branch."""
+        with self._lock:
+            node_ids = self._active_chains.get(branch, [])
+            return [self._nodes[nid] for nid in node_ids if nid in self._nodes]
 
-Give a concise answer with your reasoning. Be honest about uncertainty."""
-            try:
-                response = str(llm.invoke(prompt))
-                answers.append(response)
-            except Exception as e:
-                from core.execution_guard import log_error
-                log_error(e, module="core.reasoning_chain")
+    def get_chain_summary(self, branch: str = "main") -> str:
+        """Generate a human-readable summary of the reasoning chain."""
+        chain = self.get_active_chain(branch)
+        if not chain:
+            return ""
 
-        if answers:
-            # Use LLM to synthesize
-            synthesis_prompt = f"""You generated {len(answers)} independent answers to the same question.
+        lines = ["\n=== MY REASONING ==="]
+        for i, node in enumerate(chain):
+            marker = {"active": ">", "confirmed": "[OK]", "rejected": "[X]", "pending": "[?]"}.get(node.status, ">")
+            indent = "  " * i
+            lines.append(f"{indent}{marker} {node.inference} (confidence: {node.confidence:.0%})")
+            if node.evidence:
+                lines.append(f"{indent}   Evidence: {', '.join(node.evidence[:2])}")
+        lines.append("=== END REASONING ===\n")
+        return "\n".join(lines)
 
-QUESTION: {query}
+    def get_all_branches(self) -> List[str]:
+        """Get all active reasoning branches."""
+        with self._lock:
+            return list(self._active_chains.keys())
 
-ANSWERS:
-{chr(10).join(f"Answer {i+1}: {a[:500]}" for i, a in enumerate(answers))}
-
-Synthesize the most consistent and well-supported answer.
-Note any disagreements between your answers — those indicate genuine uncertainty.
-
-Return JSON:
-{{
-  "synthesized_answer": "...",
-  "agreement_level": 0.8,
-  "disagreements": ["..."],
-  "confidence": 0.75
-}}"""
-            try:
-                import re
-                synth = str(llm.invoke(synthesis_prompt))
-                json_match = re.search(r'\{[\s\S]*\}', synth)
-                if json_match:
-                    data = json.loads(json_match.group())
-                    trace.final_answer = data.get("synthesized_answer", answers[0])
-                    trace.overall_confidence = data.get("confidence", 0.5)
-                    trace.uncertainty_flags = data.get("disagreements", [])
-            except Exception:
-                trace.final_answer = answers[0] if answers else ""
-                trace.overall_confidence = 0.4
-
-        return trace
-
-    def _reason_metacognitive(self, query: str, context: Dict, trace: ReasoningTrace) -> ReasoningTrace:
-        """Reason about LOVE's own capabilities and confidence."""
-        consciousness_state = self.consciousness.get_full_state()
-        
-        trace.steps.append(ThoughtNode(
-            step_number=1,
-            thought=f"Assessing my own capabilities. Maturity: {consciousness_state['identity']['maturity_level']}. "
-                    f"Conversations: {consciousness_state['identity']['total_conversations']}.",
-            confidence=0.9,
-        ))
-        
-        trace.overall_confidence = 0.7
-        return trace
-
-    def _self_critique(self, trace: ReasoningTrace) -> str:
-        """Critique the reasoning chain itself."""
-        if trace.overall_confidence < 0.4:
-            return "Low confidence — I should be transparent about my uncertainty."
-        if len(trace.uncertainty_flags) > 2:
-            return "Multiple uncertainty flags — this answer should be presented as tentative."
-        if trace.overall_confidence > 0.9:
-            return "Very high confidence — but I should remain humble. Am I overconfident?"
-        return "Reasoning seems solid. Moderate confidence is appropriate."
+    def get_status(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "total_nodes": len(self._nodes),
+                "active_branches": len(self._active_chains),
+                "branch_names": list(self._active_chains.keys()),
+                "main_chain_length": len(self._active_chains.get("main", [])),
+            }
 
 
-# Singleton
-_chain: Optional[ReasoningChain] = None
+# ═════════════════════════════════════════════════════════════════════════
+# SINGLETON
+# ═════════════════════════════════════════════════════════════════════════
+
+_reasoning_chain: Optional[ReasoningChain] = None
+
 
 def get_reasoning_chain() -> ReasoningChain:
-    global _chain
-    if _chain is None:
-        _chain = ReasoningChain()
-    return _chain
+    global _reasoning_chain
+    if _reasoning_chain is None:
+        _reasoning_chain = ReasoningChain()
+    return _reasoning_chain

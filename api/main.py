@@ -1145,6 +1145,16 @@ def register_all_modules(lm, _loop=None):
         description="LOVE's awareness of Karthi's physical presence — arrivals, departures, greetings"
     ))
 
+    def start_reasoning_chain_module():
+        from core.reasoning_chain import get_reasoning_chain
+        get_reasoning_chain()  # Initialize singleton
+
+    lm.register(ModuleDescriptor(
+        name="reasoning_chain", wave=4, start_fn=start_reasoning_chain_module,
+        depends_on=["context_engine"], optional=True,
+        description="LOVE's structured multi-step reasoning — thinks in consequences, not just reactions"
+    ))
+
     def start_emotional_persistence_module():
         from core.emotional_persistence import get_emotional_persistence
         get_emotional_persistence()  # Initialize singleton — emotions persist across cycles
