@@ -153,6 +153,11 @@ class ActiveInferenceEngine:
         # Action policy: map surprise types to action strategies
         self._action_policies = self._init_action_policies()
 
+        # Phase 5f: Behavioral pattern tracking
+        self._behavior_log: list = []  # Recent behavioral observations
+        self._detected_patterns: dict = {}  # Pattern name -> {confidence, last_seen, count}
+        self._behavioral_predictions: list = []  # Predictions about user behavior
+
         self._bus_subscriber_id = "active_inference"
         self._bus_subscribed = False
 
@@ -320,6 +325,25 @@ class ActiveInferenceEngine:
         except Exception:
             pass
 
+        # Phase 5f: Behavioral observation — what is Karthi doing right now?
+        try:
+            if ctx:
+                behavior = {
+                    "hour": datetime.now().hour,
+                    "weekday": datetime.now().weekday(),
+                    "active_app": ctx.active_window,
+                    "cpu": ctx.system_cpu,
+                    "activity": ctx.activity,
+                }
+                self._behavior_log.append(behavior)
+                # Keep last 168 entries (one week of hourly snapshots)
+                if len(self._behavior_log) > 168:
+                    self._behavior_log = self._behavior_log[-168:]
+                # Update patterns immediately
+                self._update_behavioral_patterns()
+        except Exception:
+            pass
+
         return observations
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -350,6 +374,119 @@ class ActiveInferenceEngine:
                 )
                 self._active_predictions[pred.id] = pred
                 predictions.append(pred)
+
+        # Phase 5f: Generate behavioral predictions from detected patterns
+        behavioral_preds = self._generate_behavioral_predictions()
+        predictions.extend(behavioral_preds)
+
+        return predictions
+
+    def _update_behavioral_patterns(self):
+        """
+        Scan the behavior log for temporal patterns.
+        Detects: daily routines, app usage patterns, work hour patterns.
+        """
+        if len(self._behavior_log) < 24:
+            return  # Need at least a day of data
+
+        # Pattern 1: App usage by hour
+        app_by_hour = {}
+        for b in self._behavior_log:
+            app = b.get("active_app", "")
+            hour = b.get("hour")
+            if app and hour is not None:
+                key = f"app_{app}_at_hour_{hour}"
+                app_by_hour[key] = app_by_hour.get(key, 0) + 1
+
+        for key, count in app_by_hour.items():
+            if count >= 3:  # Seen at least 3 times
+                parts = key.split("_at_hour_")
+                app = parts[0].replace("app_", "")
+                hour = int(parts[1])
+                confidence = min(0.95, count / 7.0)  # Max confidence at 7 observations
+                self._detected_patterns[key] = {
+                    "type": "app_routine",
+                    "app": app,
+                    "hour": hour,
+                    "confidence": round(confidence, 3),
+                    "count": count,
+                    "last_seen": datetime.now().isoformat(),
+                }
+
+        # Pattern 2: Activity type by time of day
+        activity_by_time = {}
+        for b in self._behavior_log:
+            activity = b.get("activity", "")
+            hour = b.get("hour")
+            if activity and hour is not None:
+                key = f"activity_{activity}_at_hour_{hour}"
+                activity_by_time[key] = activity_by_time.get(key, 0) + 1
+
+        for key, count in activity_by_time.items():
+            if count >= 3:
+                parts = key.split("_at_hour_")
+                activity = parts[0].replace("activity_", "")
+                hour = int(parts[1])
+                confidence = min(0.95, count / 7.0)
+                self._detected_patterns[key] = {
+                    "type": "activity_routine",
+                    "activity": activity,
+                    "hour": hour,
+                    "confidence": round(confidence, 3),
+                    "count": count,
+                    "last_seen": datetime.now().isoformat(),
+                }
+
+    def _generate_behavioral_predictions(self) -> List[Prediction]:
+        """
+        Generate predictions about what Karthi will do next,
+        based on detected behavioral patterns.
+        """
+        import uuid
+        predictions = []
+        now = datetime.now()
+        current_hour = now.hour
+        current_weekday = now.weekday()
+
+        for pattern in self._detected_patterns.values():
+            pattern_hour = pattern.get("hour")
+            if pattern_hour is None:
+                continue
+
+            # Predict if the pattern is likely to occur within the next hour
+            hour_diff = (pattern_hour - current_hour) % 24
+            if hour_diff == 0 or hour_diff == 1:
+                confidence = pattern.get("confidence", 0.5)
+                if pattern["type"] == "app_routine":
+                    pred = Prediction(
+                        id=uuid.uuid4().hex[:8],
+                        timestamp=now.isoformat(),
+                        domain="user_behavior",
+                        predicted_state={
+                            "action": f"open_{pattern['app']}",
+                            "hour": pattern_hour,
+                            "confidence": confidence,
+                        },
+                        confidence=round(confidence, 3),
+                        horizon_minutes=60,
+                        source="behavioral_pattern",
+                    )
+                    predictions.append(pred)
+                elif pattern["type"] == "activity_routine":
+                    pred = Prediction(
+                        id=uuid.uuid4().hex[:8],
+                        timestamp=now.isoformat(),
+                        domain="user_behavior",
+                        predicted_state={
+                            "activity": pattern["activity"],
+                            "hour": pattern_hour,
+                            "confidence": confidence,
+                        },
+                        confidence=round(confidence, 3),
+                        horizon_minutes=60,
+                        source="behavioral_pattern",
+                    )
+                    predictions.append(pred)
 
         return predictions
 
@@ -876,6 +1013,8 @@ class ActiveInferenceEngine:
                 for s in list(self._surprise_history)[-10:]
             ],
             "world_model_domains": list(self._world_model.get("domains", {}).keys()),
+            "detected_behavioral_patterns": len(self._detected_patterns),
+            "behavioral_predictions": len(self._behavioral_predictions),
         }
 
     def get_world_model(self) -> Dict[str, Any]:
